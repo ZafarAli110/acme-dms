@@ -4,33 +4,29 @@ import type {UserContext} from '#business-logic-abstractions/user-context/user-c
 import type {PageQueryDto} from '#dto/paging/page-query.dto';
 import type {PageResponseDto} from '#dto/paging/page-response.dto';
 import type {StockListItemDto} from '#dto/stock/stock-list-item.dto';
-import {
-  type IPartInventoryRepository,
-  PART_INVENTORY_REPOSITORY,
-} from '#persistence/repositories/part-inventory.repository.interface';
+import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
 import {requireLocation} from '../../../user-context/require-location';
+import {findStockedPartsAsync} from '../../parts/part.queries';
 import {toStockListItemDto} from '../stock.mapper';
 
 /** Stock at the user's selected location. Stock is per location: never mix locations in one answer. */
 @Injectable()
 export class GetStockListQueryHandler implements IGetStockListQueryHandler {
-  private readonly _partInventoryRepository: IPartInventoryRepository;
+  private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
 
-  public constructor(@Inject(PART_INVENTORY_REPOSITORY) partInventoryRepository: IPartInventoryRepository) {
-    this._partInventoryRepository = partInventoryRepository;
+  public constructor(@Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory) {
+    this._unitOfWorkFactory = unitOfWorkFactory;
   }
 
   public async executeAsync(userContext: UserContext, query: PageQueryDto): Promise<PageResponseDto<StockListItemDto>> {
-    const locationId = requireLocation(userContext);
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
-    const {items, total} = await this._partInventoryRepository.findPageForLocationAsync(
-      userContext.dealerId,
-      locationId,
-      query.search ?? null,
+    await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
+    const {items, total} = await findStockedPartsAsync(work.db, requireLocation(userContext), {
+      search: query.search ?? null,
       page,
       pageSize,
-    );
+    });
     return {
       items: items.map(({part, inventory, bin}) => toStockListItemDto(part, inventory, bin)),
       total,

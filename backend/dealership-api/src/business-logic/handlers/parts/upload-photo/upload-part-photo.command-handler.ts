@@ -1,22 +1,19 @@
 import {BadRequestException, Inject, Injectable, NotFoundException} from '@nestjs/common';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import {createdAudit} from '../../../audit/audit-fields';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
+import {and, eq} from 'drizzle-orm';
 import type {IUploadPartPhotoCommandHandler} from '#business-logic-abstractions/handlers/parts/upload-photo/upload-part-photo.command-handler.interface';
 import {
   DOCUMENT_API_CLIENT,
   type IDocumentApiClient,
 } from '#business-logic-abstractions/rest-clients/document-api.client.interface';
+import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
+import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
 import type {PartPhotoResponseDto} from '#dto/parts/part-photo-response.dto';
 import type {PartPhotoUploadRequestDto} from '#dto/parts/part-photo-upload-request.dto';
-import type {NewEntity} from '#persistence/entities/generated-id';
-import type {PartPhoto} from '#persistence/entities/part-photo.entity';
-import {
-  type IPartPhotoRepository,
-  PART_PHOTO_REPOSITORY,
-} from '#persistence/repositories/part-photo.repository.interface';
-import {type IPartRepository, PART_REPOSITORY} from '#persistence/repositories/part.repository.interface';
+import {notDeleted, partPhotos, parts} from '#persistence/schema/index';
+import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
+import {createdAudit} from '../../../audit/audit-fields';
 import {toPartPhotoResponseDto} from '../part.mapper';
+import {findPhotosAsync} from '../part.queries';
 import {MAX_PHOTOS_PER_PART, PART_PHOTO_OWNER_TYPE, PART_PHOTO_VARIANTS, validatePhotoFile} from '../part-photo.rules';
 
 /**
@@ -25,19 +22,16 @@ import {MAX_PHOTOS_PER_PART, PART_PHOTO_OWNER_TYPE, PART_PHOTO_VARIANTS, validat
  */
 @Injectable()
 export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHandler {
-  private readonly _partRepository: IPartRepository;
-  private readonly _partPhotoRepository: IPartPhotoRepository;
+  private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
   private readonly _documentApiClient: IDocumentApiClient;
   private readonly _clock: IClock;
 
   public constructor(
-    @Inject(PART_REPOSITORY) partRepository: IPartRepository,
-    @Inject(PART_PHOTO_REPOSITORY) partPhotoRepository: IPartPhotoRepository,
+    @Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory,
     @Inject(DOCUMENT_API_CLIENT) documentApiClient: IDocumentApiClient,
     @Inject(CLOCK) clock: IClock,
   ) {
-    this._partRepository = partRepository;
-    this._partPhotoRepository = partPhotoRepository;
+    this._unitOfWorkFactory = unitOfWorkFactory;
     this._documentApiClient = documentApiClient;
     this._clock = clock;
   }
@@ -48,16 +42,12 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
     request: PartPhotoUploadRequestDto,
   ): Promise<PartPhotoResponseDto> {
     validatePhotoFile(request);
-
-    const part = await this._partRepository.findByIdAsync(userContext.dealerId, partId);
-    if (!part) {
-      throw new NotFoundException(`Part ${partId} was not found.`);
-    }
-    const existing = await this._partPhotoRepository.findForPartAsync(userContext.dealerId, partId);
-    if (existing.length >= MAX_PHOTOS_PER_PART) {
+    const existingCount = await this.countPhotosAsync(partId);
+    if (existingCount >= MAX_PHOTOS_PER_PART) {
       throw new BadRequestException(`A part can have at most ${MAX_PHOTOS_PER_PART} photos.`);
     }
 
+    // Outside any transaction: another service stores the file.
     const document = await this._documentApiClient.uploadDocumentAsync(userContext, {
       ownerType: PART_PHOTO_OWNER_TYPE,
       ownerId: partId,
@@ -67,17 +57,33 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
       variants: PART_PHOTO_VARIANTS,
     });
 
-    const photo: NewEntity<PartPhoto> = {
-      dealerId: userContext.dealerId,
-      partId,
-      documentId: document.id,
-      originalFileName: request.fileName,
-      status: 'pending' as const,
-      failureReason: null,
-      isDefault: existing.length === 0,
-      ...createdAudit(userContext.userId, this._clock.now()),
-    };
-    const saved = await this._partPhotoRepository.saveAsync(userContext.dealerId, photo);
-    return toPartPhotoResponseDto(saved);
+    await using work = await this._unitOfWorkFactory.beginAsync();
+    const [photo] = await work.db
+      .insert(partPhotos)
+      .values({
+        partId,
+        documentId: document.id,
+        originalFileName: request.fileName,
+        status: 'pending',
+        failureReason: null,
+        isDefault: existingCount === 0,
+        ...createdAudit(userContext.userId, this._clock.now()),
+      })
+      .returning();
+    await work.commitAsync();
+    return toPartPhotoResponseDto(photo!);
+  }
+
+  /** How many photos the part has; a part that doesn't exist is not found. */
+  private async countPhotosAsync(partId: string): Promise<number> {
+    await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
+    const [part] = await work.db
+      .select({id: parts.id})
+      .from(parts)
+      .where(and(eq(parts.id, partId), notDeleted(parts)));
+    if (!part) {
+      throw new NotFoundException(`Part ${partId} was not found.`);
+    }
+    return (await findPhotosAsync(work.db, partId)).length;
   }
 }

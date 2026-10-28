@@ -1,66 +1,30 @@
 import {BadRequestException, ConflictException} from '@nestjs/common';
-import {describe, expect, it, vi} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {Bin} from '#persistence/entities/bin.entity';
-import type {NewEntity} from '#persistence/entities/generated-id';
-import type {PartInventory} from '#persistence/entities/part-inventory.entity';
-import type {Part} from '#persistence/entities/part.entity';
-import type {IBinRepository} from '#persistence/repositories/bin.repository.interface';
-import type {IPartRepository} from '#persistence/repositories/part.repository.interface';
+import {AT_NORTHSIDE} from '#business-logic/user-context/__test__/test-users';
+import {NORTHSIDE, RIVERSIDE} from '#persistence/__test__/postgres/seed-kit';
+import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
 import {CreatePartCommandHandler} from '../create-part.command-handler';
 
-const alice: UserContext = {
-  userId: 'alice',
-  dealerId: 'northwind',
-  locationId: 'northside',
-  permissions: ['parts.write'],
-  accessToken: 't',
-};
-
-const shelfA = {id: 'bin-a', locationId: 'northside', code: 'A-01', description: 'Brakes'} as Bin;
-const request = {
-  partNumber: 'BRK-001',
-  description: 'Brake pads',
-  unitPrice: 49.99,
-  binId: 'bin-a',
-  quantityOnHand: 6,
-  reorderLevel: 4,
-};
-
-function setUp({partNumberTaken = false, bin = shelfA as Bin | null} = {}) {
-  // As the database does: the ids are assigned on insert, and the inventory is linked to the new part.
-  const createWithInventoryAsync = vi.fn(
-    (_dealerId: string, part: NewEntity<Part>, inventory: Omit<NewEntity<PartInventory>, 'partId'>) =>
-      Promise.resolve({
-        part: {...part, id: 'part-1'},
-        inventory: {...inventory, id: 'inventory-1', partId: 'part-1'},
-      }),
-  );
-  const parts = {
-    existsWithPartNumberAsync: vi.fn().mockResolvedValue(partNumberTaken),
-    createWithInventoryAsync,
-  } satisfies Partial<IPartRepository> as unknown as IPartRepository;
-  const findByIdAsync = vi.fn().mockResolvedValue(bin);
-  const bins = {findByIdAsync} satisfies Partial<IBinRepository> as unknown as IBinRepository;
-  return {handler: new CreatePartCommandHandler(parts, bins, fixedClock()), createWithInventoryAsync, findByIdAsync};
-}
-
 describe('CreatePartCommandHandler', () => {
-  it('adds the part to the catalogue and stocks it in the chosen bin of the selected location', async () => {
-    const {handler, createWithInventoryAsync, findByIdAsync} = setUp();
+  const database = useTestDatabase();
 
-    const part = await handler.executeAsync(alice, request);
+  function handler(): CreatePartCommandHandler {
+    return new CreatePartCommandHandler(database.unitOfWorkFactory, fixedClock());
+  }
 
-    expect(findByIdAsync).toHaveBeenCalledWith('northwind', 'northside', 'bin-a');
-    expect(createWithInventoryAsync).toHaveBeenCalledWith(
-      'northwind',
-      expect.objectContaining({partNumber: 'BRK-001', createdBy: 'alice'}),
-      expect.objectContaining({locationId: 'northside', binId: 'bin-a', quantityOnHand: 6, reorderLevel: 4}),
-    );
-    expect(part.id).toBe('part-1');
+  function request(partNumber: string, binId: string) {
+    return {partNumber, description: 'Brake pads', unitPrice: 49.99, binId, quantityOnHand: 6, reorderLevel: 4};
+  }
+
+  it('adds the part and stocks it in a bin of the selected location', async () => {
+    const bin = await database.seed.addBinAsync({locationId: NORTHSIDE, code: 'A-01'});
+
+    const part = await handler().executeAsync(AT_NORTHSIDE, request('BRK-001', bin.id));
+
+    expect(part).toMatchObject({partNumber: 'BRK-001', unitPrice: 49.99, photos: []});
     expect(part.inventory).toEqual({
-      binId: 'bin-a',
+      binId: bin.id,
       binCode: 'A-01',
       quantityOnHand: 6,
       reorderLevel: 4,
@@ -68,16 +32,29 @@ describe('CreatePartCommandHandler', () => {
     });
   });
 
-  it('refuses a bin that does not belong to the selected location', async () => {
-    const {handler, createWithInventoryAsync} = setUp({bin: null});
+  it("refuses another location's bin", async () => {
+    const riversideBin = await database.seed.addBinAsync({locationId: RIVERSIDE, code: 'R-01'});
 
-    await expect(handler.executeAsync(alice, request)).rejects.toThrow(BadRequestException);
-    expect(createWithInventoryAsync).not.toHaveBeenCalled();
+    await expect(handler().executeAsync(AT_NORTHSIDE, request('BRK-002', riversideBin.id))).rejects.toThrow(
+      BadRequestException,
+    );
   });
 
-  it('rejects a part number the dealer already uses', async () => {
-    const {handler} = setUp({partNumberTaken: true});
+  it('rejects a live duplicate part number with the catalogue message', async () => {
+    const bin = await database.seed.addBinAsync({locationId: NORTHSIDE, code: 'A-03'});
+    await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'BRK-003'});
 
-    await expect(handler.executeAsync(alice, request)).rejects.toThrow(ConflictException);
+    await expect(handler().executeAsync(AT_NORTHSIDE, request('BRK-003', bin.id))).rejects.toThrow(
+      new ConflictException('Part number BRK-003 already exists in your catalogue.'),
+    );
+  });
+
+  it('allows a deleted part number again', async () => {
+    const bin = await database.seed.addBinAsync({locationId: NORTHSIDE, code: 'A-04'});
+    await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'BRK-004', deleted: true});
+
+    await expect(handler().executeAsync(AT_NORTHSIDE, request('BRK-004', bin.id))).resolves.toMatchObject({
+      partNumber: 'BRK-004',
+    });
   });
 });

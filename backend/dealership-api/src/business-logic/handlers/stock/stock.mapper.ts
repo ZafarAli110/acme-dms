@@ -1,7 +1,5 @@
 import type {StockListItemDto} from '#dto/stock/stock-list-item.dto';
-import type {Bin} from '#persistence/entities/bin.entity';
-import type {PartInventory} from '#persistence/entities/part-inventory.entity';
-import type {Part} from '#persistence/entities/part.entity';
+import type {Bin, Part, PartInventory} from '#persistence/schema/index';
 
 export function toStockListItemDto(part: Part, inventory: PartInventory, bin: Bin): StockListItemDto {
   return {

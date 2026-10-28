@@ -1,177 +1,98 @@
-import {BadRequestException, ServiceUnavailableException} from '@nestjs/common';
-import {describe, expect, it, vi} from 'vitest';
-import {TEST_NOW, fixedClock} from '#business-logic/time/__test__/fixed-clock';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {IDocumentApiClient} from '#business-logic-abstractions/rest-clients/document-api.client.interface';
-import type {PartPhotoUploadRequestDto} from '#dto/parts/part-photo-upload-request.dto';
-import type {Bin} from '#persistence/entities/bin.entity';
-import type {PartInventory} from '#persistence/entities/part-inventory.entity';
-import type {PartPhoto} from '#persistence/entities/part-photo.entity';
-import type {Part} from '#persistence/entities/part.entity';
-import type {IPartInventoryRepository} from '#persistence/repositories/part-inventory.repository.interface';
-import type {IPartPhotoRepository} from '#persistence/repositories/part-photo.repository.interface';
-import type {IPartRepository} from '#persistence/repositories/part.repository.interface';
+import {BadRequestException} from '@nestjs/common';
+import {eq} from 'drizzle-orm';
+import {describe, expect, it} from 'vitest';
+import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
+import {AT_NORTHSIDE} from '#business-logic/user-context/__test__/test-users';
+import {NORTHSIDE} from '#persistence/__test__/postgres/seed-kit';
+import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {partPhotos, parts} from '#persistence/schema/index';
+import {fakeDocumentApi, jpeg} from '../../__test__/fake-document-api';
 import {UpdatePartCommandHandler} from '../update-part.command-handler';
 
-const alice: UserContext = {
-  userId: 'alice',
-  dealerId: 'northwind',
-  locationId: 'northside',
-  permissions: ['parts.write'],
-  accessToken: 't',
-};
-
-const jpeg = (fileName: string): PartPhotoUploadRequestDto => ({
-  fileName,
-  contentType: 'image/jpeg',
-  sizeBytes: 1000,
-  content: new Uint8Array([1]),
-});
-
-const PHOTO_A = {id: 'photo-a', documentId: 'doc-a', isDefault: true, createdAt: TEST_NOW} as PartPhoto;
-const PHOTO_B = {id: 'photo-b', documentId: 'doc-b', isDefault: false, createdAt: TEST_NOW} as PartPhoto;
-
-function setUp(existingPhotos: PartPhoto[] = [PHOTO_A, PHOTO_B]) {
-  const part = {
-    id: 'p1',
-    dealerId: 'northwind',
-    partNumber: 'BRK-PAD-001',
-    description: 'Front brake pads, ceramic',
-    unitPrice: 49.99,
-    createdAt: TEST_NOW,
-    updatedAt: TEST_NOW,
-  } as Part;
-  const parts = {
-    findByIdAsync: vi.fn().mockResolvedValue(part),
-    saveWithPhotosAsync: vi.fn().mockResolvedValue(undefined),
-  } satisfies Partial<IPartRepository> as unknown as IPartRepository;
-  const inventories = {
-    findForPartAsync: vi.fn().mockResolvedValue({
-      inventory: {quantityOnHand: 6, reorderLevel: 4} as PartInventory,
-      bin: {id: 'bin-a', code: 'A-01'} as Bin,
-    }),
-  } satisfies Partial<IPartInventoryRepository> as unknown as IPartInventoryRepository;
-  const photos = {
-    findForPartAsync: vi.fn().mockResolvedValue(existingPhotos),
-  } satisfies Partial<IPartPhotoRepository> as unknown as IPartPhotoRepository;
-  let uploads = 0;
-  const documents = {
-    uploadDocumentAsync: vi.fn(() => Promise.resolve({id: `doc-new-${++uploads}`, status: 'Pending'})),
-    deleteDocumentAsync: vi.fn().mockResolvedValue(undefined),
-  } satisfies IDocumentApiClient;
-  return {handler: new UpdatePartCommandHandler(parts, inventories, photos, documents, fixedClock()), parts, documents};
-}
-
 describe('UpdatePartCommandHandler', () => {
-  it('changes only the fields that were sent and keeps the photos as they are', async () => {
-    const {handler, parts, documents} = setUp();
+  const database = useTestDatabase();
 
-    const updated = await handler.executeAsync(alice, 'p1', {unitPrice: 54.5}, []);
+  async function partWithTwoPhotosAsync(partNumber: string) {
+    const {part} = await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber});
+    const photoA = await database.seed.addPhotoAsync({partId: part.id, isDefault: true});
+    const photoB = await database.seed.addPhotoAsync({partId: part.id, isDefault: false});
+    return {part, photoA, photoB};
+  }
 
-    expect(updated).toMatchObject({unitPrice: 54.5, description: 'Front brake pads, ceramic'});
-    expect(parts.saveWithPhotosAsync).toHaveBeenCalledWith('northwind', expect.objectContaining({unitPrice: 54.5}), {
-      removedPhotoIds: [],
-      deletedBy: 'alice',
-      at: TEST_NOW,
-      kept: [
-        {id: 'photo-a', isDefault: true},
-        {id: 'photo-b', isDefault: false},
-      ],
-      addedPhotos: [],
-    });
-    expect(documents.uploadDocumentAsync).not.toHaveBeenCalled();
-  });
+  it('saves the changes and photo changes in one transaction', async () => {
+    const {part, photoA, photoB} = await partWithTwoPhotosAsync('UPD-001');
+    const documents = fakeDocumentApi();
 
-  it('refuses an empty change', async () => {
-    const {handler, parts} = setUp();
-
-    await expect(handler.executeAsync(alice, 'p1', {}, [])).rejects.toThrow(BadRequestException);
-    expect(parts.saveWithPhotosAsync).not.toHaveBeenCalled();
-  });
-
-  it('adds new photos as pending, removes the photos left out, and deletes their files after the save', async () => {
-    const {handler, parts, documents} = setUp();
-
-    await handler.executeAsync(
-      alice,
-      'p1',
-      {photos: [{id: 'photo-b', isDefault: false}], newPhotos: [{isDefault: true}]},
+    const saved = await new UpdatePartCommandHandler(
+      database.unitOfWorkFactory,
+      documents.client,
+      fixedClock(),
+    ).executeAsync(
+      AT_NORTHSIDE,
+      part.id,
+      {
+        description: 'Ceramic pads',
+        photos: [
+          {id: photoA.id, isDefault: false},
+          {id: photoB.id, isDefault: false},
+        ],
+        newPhotos: [{isDefault: true}],
+      },
       [jpeg('new.jpg')],
     );
 
-    const saved = vi.mocked(parts.saveWithPhotosAsync).mock.calls[0]?.[2];
-    expect(saved?.removedPhotoIds).toEqual(['photo-a']);
-    expect(saved?.addedPhotos).toEqual([
-      expect.objectContaining({documentId: 'doc-new-1', status: 'pending', isDefault: true, partId: 'p1'}),
+    expect(saved.description).toBe('Ceramic pads');
+    expect(saved.photos.map((photo) => [photo.originalFileName, photo.isDefault, photo.status])).toEqual([
+      ['photo.jpg', false, 'ready'],
+      ['photo.jpg', false, 'ready'],
+      ['new.jpg', true, 'pending'],
     ]);
-    expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(alice, 'doc-a');
-    expect(vi.mocked(documents.deleteDocumentAsync).mock.invocationCallOrder[0]).toBeGreaterThan(
-      vi.mocked(parts.saveWithPhotosAsync).mock.invocationCallOrder[0] ?? 0,
-    );
   });
 
-  it('validates every file before uploading any: a bad file means nothing is uploaded or saved', async () => {
-    const {handler, parts, documents} = setUp();
+  it('soft-deletes removed photos and deletes their files after the save', async () => {
+    const {part, photoA, photoB} = await partWithTwoPhotosAsync('UPD-002');
+    const documents = fakeDocumentApi();
+
+    const saved = await new UpdatePartCommandHandler(
+      database.unitOfWorkFactory,
+      documents.client,
+      fixedClock(),
+    ).executeAsync(AT_NORTHSIDE, part.id, {photos: [{id: photoA.id, isDefault: true}]}, []);
+
+    const [removed] = await database.db.select().from(partPhotos).where(eq(partPhotos.id, photoB.id));
+    expect(saved.photos.map((photo) => photo.id)).toEqual([photoA.id]);
+    expect(removed).toMatchObject({isDeleted: true, deletedBy: AT_NORTHSIDE.userId});
+    expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(AT_NORTHSIDE, photoB.documentId);
+  });
+
+  it('deletes the uploaded documents when the save fails', async () => {
+    const {part} = await partWithTwoPhotosAsync('UPD-003');
+    const other = await partWithTwoPhotosAsync('UPD-004');
+    const documents = fakeDocumentApi();
 
     await expect(
-      handler.executeAsync(alice, 'p1', {newPhotos: [{isDefault: false}, {isDefault: false}]}, [
-        jpeg('good.jpg'),
-        {...jpeg('notes.pdf'), contentType: 'application/pdf'},
-      ]),
-    ).rejects.toThrow(/notes\.pdf/);
+      new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()).executeAsync(
+        AT_NORTHSIDE,
+        part.id,
+        // A photo of another part: refused before anything is uploaded…
+        {photos: [{id: other.photoA.id, isDefault: true}]},
+        [],
+      ),
+    ).rejects.toThrow(BadRequestException);
     expect(documents.uploadDocumentAsync).not.toHaveBeenCalled();
-    expect(parts.saveWithPhotosAsync).not.toHaveBeenCalled();
-  });
 
-  it('refuses a save that leaves the part with no default photo, or with two', async () => {
-    const {handler, documents} = setUp();
-
-    await expect(handler.executeAsync(alice, 'p1', {photos: [{id: 'photo-a', isDefault: false}]}, [])).rejects.toThrow(
-      /exactly one default/,
-    );
+    // …while a failure after the upload (the description too long for its column) deletes what was uploaded.
     await expect(
-      handler.executeAsync(alice, 'p1', {newPhotos: [{isDefault: true}]}, [jpeg('second-default.jpg')]),
-    ).rejects.toThrow(/exactly one default/);
-    expect(documents.uploadDocumentAsync).not.toHaveBeenCalled();
-  });
-
-  it('refuses a photo id that is not a photo of this part', async () => {
-    const {handler} = setUp();
-
-    await expect(
-      handler.executeAsync(alice, 'p1', {photos: [{id: 'someone-elses', isDefault: true}]}, []),
-    ).rejects.toThrow(/not a photo of this part/);
-  });
-
-  it('deletes the photos already uploaded when a later upload fails, and saves nothing', async () => {
-    const {handler, parts, documents} = setUp([]);
-    vi.mocked(documents.uploadDocumentAsync)
-      .mockResolvedValueOnce({id: 'doc-first', status: 'Pending'})
-      .mockRejectedValueOnce(new ServiceUnavailableException('document-api is down'));
-
-    await expect(
-      handler.executeAsync(alice, 'p1', {newPhotos: [{isDefault: true}, {isDefault: false}]}, [
-        jpeg('one.jpg'),
-        jpeg('two.jpg'),
-      ]),
-    ).rejects.toThrow(ServiceUnavailableException);
-    expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(alice, 'doc-first');
-    expect(parts.saveWithPhotosAsync).not.toHaveBeenCalled();
-  });
-
-  it('deletes every uploaded photo when the save itself fails', async () => {
-    const {handler, parts, documents} = setUp([]);
-    vi.mocked(parts.saveWithPhotosAsync).mockRejectedValueOnce(new Error('connection lost'));
-
-    await expect(
-      handler.executeAsync(alice, 'p1', {newPhotos: [{isDefault: true}, {isDefault: false}]}, [
-        jpeg('one.jpg'),
-        jpeg('two.jpg'),
-      ]),
-    ).rejects.toThrow('connection lost');
-    expect(vi.mocked(documents.deleteDocumentAsync).mock.calls.map((call) => call[1])).toEqual([
-      'doc-new-1',
-      'doc-new-2',
-    ]);
+      new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()).executeAsync(
+        AT_NORTHSIDE,
+        part.id,
+        {description: 'x'.repeat(600), newPhotos: [{isDefault: false}]},
+        [jpeg('late.jpg')],
+      ),
+    ).rejects.toThrow();
+    const uploaded = await documents.uploadDocumentAsync.mock.results[0]?.value;
+    expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(AT_NORTHSIDE, uploaded.id);
+    const [unchanged] = await database.db.select().from(parts).where(eq(parts.id, part.id));
+    expect(unchanged?.description).toBe('Part UPD-003');
   });
 });

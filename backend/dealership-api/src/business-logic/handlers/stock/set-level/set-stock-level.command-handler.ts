@@ -1,19 +1,15 @@
 import {BadRequestException, Inject, Injectable, NotFoundException} from '@nestjs/common';
+import {and, eq} from 'drizzle-orm';
 import type {ISetStockLevelCommandHandler} from '#business-logic-abstractions/handlers/stock/set-level/set-stock-level.command-handler.interface';
 import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import {createdAudit, updatedAudit} from '../../../audit/audit-fields';
 import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
 import type {StockLevelSetRequestDto} from '#dto/stock/stock-level-set-request.dto';
 import type {StockListItemDto} from '#dto/stock/stock-list-item.dto';
-import type {NewEntity} from '#persistence/entities/generated-id';
-import type {PartInventory} from '#persistence/entities/part-inventory.entity';
-import {BIN_REPOSITORY, type IBinRepository} from '#persistence/repositories/bin.repository.interface';
-import {
-  type IPartInventoryRepository,
-  PART_INVENTORY_REPOSITORY,
-} from '#persistence/repositories/part-inventory.repository.interface';
-import {type IPartRepository, PART_REPOSITORY} from '#persistence/repositories/part.repository.interface';
+import {bins, notDeleted, partInventories, parts} from '#persistence/schema/index';
+import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
+import {createdAudit, updatedAudit} from '../../../audit/audit-fields';
 import {requireLocation} from '../../../user-context/require-location';
+import {findStockedPartAsync} from '../../parts/part.queries';
 import {toStockListItemDto} from '../stock.mapper';
 
 /**
@@ -22,20 +18,14 @@ import {toStockListItemDto} from '../stock.mapper';
  */
 @Injectable()
 export class SetStockLevelCommandHandler implements ISetStockLevelCommandHandler {
-  private readonly _partRepository: IPartRepository;
-  private readonly _partInventoryRepository: IPartInventoryRepository;
-  private readonly _binRepository: IBinRepository;
+  private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
   private readonly _clock: IClock;
 
   public constructor(
-    @Inject(PART_REPOSITORY) partRepository: IPartRepository,
-    @Inject(PART_INVENTORY_REPOSITORY) partInventoryRepository: IPartInventoryRepository,
-    @Inject(BIN_REPOSITORY) binRepository: IBinRepository,
+    @Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory,
     @Inject(CLOCK) clock: IClock,
   ) {
-    this._partRepository = partRepository;
-    this._partInventoryRepository = partInventoryRepository;
-    this._binRepository = binRepository;
+    this._unitOfWorkFactory = unitOfWorkFactory;
     this._clock = clock;
   }
 
@@ -45,29 +35,37 @@ export class SetStockLevelCommandHandler implements ISetStockLevelCommandHandler
     request: StockLevelSetRequestDto,
   ): Promise<StockListItemDto> {
     const locationId = requireLocation(userContext);
-    const part = await this._partRepository.findByIdAsync(userContext.dealerId, partId);
+    await using work = await this._unitOfWorkFactory.beginAsync();
+    const [part] = await work.db
+      .select()
+      .from(parts)
+      .where(and(eq(parts.id, partId), notDeleted(parts)));
     if (!part) {
       throw new NotFoundException(`Part ${partId} was not found.`);
     }
-    const bin = await this._binRepository.findByIdAsync(userContext.dealerId, locationId, request.binId);
+    const [bin] = await work.db
+      .select()
+      .from(bins)
+      .where(and(eq(bins.id, request.binId), eq(bins.locationId, locationId), notDeleted(bins)));
     if (!bin) {
       throw new BadRequestException(`Bin ${request.binId} is not a bin of this location; pick one from GET /v1/bins.`);
     }
 
-    const existing = await this._partInventoryRepository.findForPartAsync(userContext.dealerId, locationId, partId);
     const now = this._clock.now();
     const levels = {binId: bin.id, quantityOnHand: request.quantityOnHand, reorderLevel: request.reorderLevel};
+    const existing = await findStockedPartAsync(work.db, locationId, partId);
     // Stocking the part here for the first time creates its inventory at this location.
-    const inventory: PartInventory | NewEntity<PartInventory> = existing
-      ? {...existing.inventory, ...levels, ...updatedAudit(userContext.userId, now)}
-      : {
-          dealerId: userContext.dealerId,
-          locationId,
-          partId,
-          ...levels,
-          ...createdAudit(userContext.userId, now),
-        };
-    const saved = await this._partInventoryRepository.saveAsync(userContext.dealerId, inventory);
-    return toStockListItemDto(part, saved, bin);
+    const [inventory] = existing
+      ? await work.db
+          .update(partInventories)
+          .set({...levels, ...updatedAudit(userContext.userId, now)})
+          .where(eq(partInventories.id, existing.inventory.id))
+          .returning()
+      : await work.db
+          .insert(partInventories)
+          .values({locationId, partId, ...levels, ...createdAudit(userContext.userId, now)})
+          .returning();
+    await work.commitAsync();
+    return toStockListItemDto(part, inventory!, bin);
   }
 }

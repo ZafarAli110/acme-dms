@@ -1,6 +1,16 @@
 import type {NodePgDatabase} from 'drizzle-orm/node-postgres';
 import * as schema from '../../schema';
-import {bins, type Bin, customers, type Customer, parts, type Part, partInventories} from '../../schema';
+import {
+  bins,
+  type Bin,
+  customers,
+  type Customer,
+  parts,
+  type Part,
+  partInventories,
+  partPhotos,
+  type PartPhoto,
+} from '../../schema';
 
 /** Northwind's two rooftops, with the ids the identity seed gives them. */
 export const NORTHSIDE = '20000000-0000-0000-0000-000000000001';
@@ -76,5 +86,25 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     return {part: part!, bin};
   }
 
-  return {addBinAsync, addCustomerAsync, addStockedPartAsync};
+  /** A photo of a part; its document id is made up unless given. */
+  async function addPhotoAsync(
+    photo: Pick<PartPhoto, 'partId' | 'isDefault'> & Partial<PartPhoto> & {deleted?: boolean},
+  ): Promise<PartPhoto> {
+    const {deleted, ...values} = photo;
+    const [row] = await db
+      .insert(partPhotos)
+      .values({
+        documentId: crypto.randomUUID(),
+        originalFileName: 'photo.jpg',
+        status: 'ready',
+        failureReason: null,
+        ...values,
+        ...SEEDED_AUDIT,
+        ...(deleted ? DELETED_AUDIT : {}),
+      })
+      .returning();
+    return row!;
+  }
+
+  return {addBinAsync, addCustomerAsync, addStockedPartAsync, addPhotoAsync};
 }

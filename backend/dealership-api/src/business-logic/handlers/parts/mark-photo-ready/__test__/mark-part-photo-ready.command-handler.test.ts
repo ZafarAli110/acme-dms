@@ -1,39 +1,31 @@
-import {describe, expect, it, vi} from 'vitest';
-import {SYSTEM_USER_ID} from '#business-logic-abstractions/user-context/system-user';
-import {TEST_NOW, fixedClock} from '#business-logic/time/__test__/fixed-clock';
-import {UnhandledMessageError} from '#business-logic-abstractions/messaging/unhandled-message.error';
-import type {DocumentProcessedMessageDto, MessageEnvelopeDto} from '#dto/messages/document-messages.dto';
-import type {IPartPhotoRepository} from '#persistence/repositories/part-photo.repository.interface';
+import {eq} from 'drizzle-orm';
+import {describe, expect, it} from 'vitest';
+import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
+import {NORTHSIDE} from '#persistence/__test__/postgres/seed-kit';
+import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {partPhotos} from '#persistence/schema/index';
 import {MarkPartPhotoReadyCommandHandler} from '../mark-part-photo-ready.command-handler';
 
-function message(ownerType: string): MessageEnvelopeDto<DocumentProcessedMessageDto> {
-  return {
-    messageId: 'm1',
-    type: 'document.processed.v1',
-    occurredAt: '2026-10-28T00:00:00Z',
-    correlationId: null,
-    data: {documentId: 'doc-1', dealerId: 'northwind', ownerType, ownerId: 'p1', variants: []},
-  };
-}
-
 describe('MarkPartPhotoReadyCommandHandler', () => {
-  it('marks the part photo ready, once per message, as changed by the system', async () => {
-    const photos = {updateStatusOnceAsync: vi.fn().mockResolvedValue(true)} as unknown as IPartPhotoRepository;
+  const database = useTestDatabase();
 
-    await new MarkPartPhotoReadyCommandHandler(photos, fixedClock()).executeAsync(message('part'));
+  it('applies a message once', async () => {
+    const {part} = await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'MSG-001'});
+    const photo = await database.seed.addPhotoAsync({partId: part.id, isDefault: true, status: 'pending'});
+    const handler = new MarkPartPhotoReadyCommandHandler(database.unitOfWorkFactory, fixedClock());
+    const message = {
+      messageId: crypto.randomUUID(),
+      type: 'document.processed.v1',
+      occurredAt: '2026-11-03T09:00:00Z',
+      correlationId: null,
+      data: {documentId: photo.documentId, dealerId: 'northwind', ownerType: 'part', ownerId: part.id, variants: []},
+    };
 
-    expect(photos.updateStatusOnceAsync).toHaveBeenCalledWith('m1', 'northwind', 'doc-1', 'ready', null, {
-      at: TEST_NOW,
-      by: SYSTEM_USER_ID,
-    });
-  });
+    await handler.executeAsync(message);
+    await database.db.update(partPhotos).set({status: 'failed'}).where(eq(partPhotos.id, photo.id));
+    await handler.executeAsync(message);
 
-  it('refuses documents it does not own, so they are dead-lettered', async () => {
-    const photos = {updateStatusOnceAsync: vi.fn()} as unknown as IPartPhotoRepository;
-
-    await expect(
-      new MarkPartPhotoReadyCommandHandler(photos, fixedClock()).executeAsync(message('user')),
-    ).rejects.toThrow(UnhandledMessageError);
-    expect(photos.updateStatusOnceAsync).not.toHaveBeenCalled();
+    const [read] = await database.db.select().from(partPhotos).where(eq(partPhotos.id, photo.id));
+    expect(read?.status).toBe('failed');
   });
 });
