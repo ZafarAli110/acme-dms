@@ -1,20 +1,85 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(bun run gate:fast)",
+      "Bash(bun run test)",
+      "Bash(bun run typecheck)",
+      "Bash(bun run lint)",
+      "Bash(bun run format)",
+      "Bash(bunx nx *)",
+      "Bash(bun run api as *)",
+      "Bash(bun run status)",
+      "Bash(bun run logs *)",
+      "Bash(bun run traces *)",
+      "Bash(bun run errors)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "mcp__acme-tracker__list_tickets",
+      "mcp__acme-tracker__get_ticket"
+    ],
+    "ask": [
+      "mcp__acme-tracker__update_ticket_status",
+      "mcp__acme-tracker__add_comment",
+      "Bash(bun run reset)",
+      "Bash(bun run seed)",
+      "Bash(bun add *)",
+      "Bash(bun install *)",
+      "Bash(dotnet add *)",
+      "Bash(dotnet ef *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Bash(git push *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(aspire *)",
+      "Bash(bun run dev)",
+      "Bash(podman *)",
+      "Bash(docker *)",
+      "Bash(psql *)",
+      "Bash(rm -rf *)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "Edit|MultiEdit|Write",
-        "hooks": [{"type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-files.ts\""}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-files.ts\""
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit|MultiEdit|Write",
-        "hooks": [{"type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-file.ts\""}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-file.ts\""
+          }
+        ]
       }
     ],
     "Stop": [
       {
-        "hooks": [{"type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/gate.ts\"", "timeout": 600}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/gate.ts\"",
+            "timeout": 600
+          }
+        ]
       }
     ]
   }
