@@ -5,11 +5,15 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 
 ## Rules that apply to every change
 
-- **Dealer and location.** A dealer is the tenant and is filtered automatically. A **location is not**: every query of
-  location-scoped data (customers, cars, inventory, bins, appointments) filters by `userContext.locationId` itself.
-  Read `docs/standards/multi-tenancy.md` before touching any of that data.
-- **One use case, one handler.** controller → handler interface → handler → persistence. Controllers stay thin.
-  `docs/standards/business-handlers.md`.
+- **One client, three locations.** This deployment serves one client (Northwind Motors), so nothing filters by dealer. A
+  **location is filtered nowhere for you**: every query of location-scoped data (customers, cars, inventory, bins,
+  appointments) filters by `requireLocation(userContext)` in its own `where`. Read `docs/standards/multi-tenancy.md`
+  before touching any of that data.
+- **One use case, one handler.** controller → handler interface → handler → unit of work. Controllers stay thin.
+  Handlers query with Drizzle through `await using work = await this._unitOfWorkFactory.beginAsync()`; no
+  repositories. `docs/standards/business-handlers.md`.
+- **Tests run against a real Postgres** (Testcontainers, Docker or Podman): seed the rows that must come back and the
+  ones that must not (another location's, a deleted one).
 - **Check permissions, never role names.**
 - **DTOs are contracts:** every field always present, `null` for no value. A `PUT` sends every field; a `PATCH` only
   what changed.
