@@ -28,12 +28,24 @@
               {
                 "group": ["#rest-clients/**", "../**/rest-clients/**"],
                 "message": "DTOs are plain shapes and depend on nothing."
+              },
+              {
+                "group": ["#persistence/unit-of-work/database-pool", "**/unit-of-work/database-pool"],
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ],
             "paths": [
               {
                 "name": "@nestjs/platform-node",
                 "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              },
+              {
+                "name": "pg",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ]
           }
@@ -62,12 +74,24 @@
               {
                 "group": ["#rest-clients/**", "../**/rest-clients/**"],
                 "message": "Abstractions may only depend on DTOs."
+              },
+              {
+                "group": ["#persistence/unit-of-work/database-pool", "**/unit-of-work/database-pool"],
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ],
             "paths": [
               {
                 "name": "@nestjs/platform-node",
                 "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              },
+              {
+                "name": "pg",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ]
           }
@@ -88,12 +112,24 @@
               {
                 "group": ["#rest-clients/**", "../**/rest-clients/**"],
                 "message": "Business logic depends on abstractions: inject IDocumentApiClient, never the client class or the HTTP layer."
+              },
+              {
+                "group": ["#persistence/unit-of-work/database-pool", "**/unit-of-work/database-pool"],
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ],
             "paths": [
               {
                 "name": "@nestjs/platform-node",
                 "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              },
+              {
+                "name": "pg",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ]
           }
@@ -152,12 +188,24 @@
               {
                 "group": ["#persistence/**", "../**/persistence/**"],
                 "message": "REST clients implement abstractions; they know nothing about handlers, the database or the HTTP layer."
+              },
+              {
+                "group": ["#persistence/unit-of-work/database-pool", "**/unit-of-work/database-pool"],
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ],
             "paths": [
               {
                 "name": "@nestjs/platform-node",
                 "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              },
+              {
+                "name": "pg",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ]
           }
@@ -182,12 +230,24 @@
               {
                 "group": ["#business-logic/handlers/**"],
                 "message": "Inject the handler's abstraction token, not the handler class."
+              },
+              {
+                "group": ["#persistence/unit-of-work/database-pool", "**/unit-of-work/database-pool"],
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ],
             "paths": [
               {
                 "name": "@nestjs/platform-node",
                 "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              },
+              {
+                "name": "pg",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ]
           }
@@ -208,12 +268,24 @@
               {
                 "group": ["#business-logic/handlers/**"],
                 "message": "Inject the handler's abstraction token, not the handler class."
+              },
+              {
+                "group": ["#persistence/unit-of-work/database-pool", "**/unit-of-work/database-pool"],
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ],
             "paths": [
               {
                 "name": "@nestjs/platform-node",
                 "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              },
+              {
+                "name": "pg",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ]
           }
@@ -238,6 +310,20 @@
               {
                 "group": ["#business-logic/handlers/**"],
                 "message": "Inject the handler's abstraction token, not the handler class."
+              },
+              {
+                "group": ["#persistence/unit-of-work/database-pool", "**/unit-of-work/database-pool"],
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              }
+            ],
+            "paths": [
+              {
+                "name": "pg",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
               }
             ]
           }
