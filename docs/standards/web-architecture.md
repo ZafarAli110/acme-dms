@@ -81,6 +81,11 @@ Next to its component, a route module exports what it needs:
   Hook Form `handleSubmit` (files as `multipart/form-data`). Never `onSubmit` with `useState` for busy and error. The
   page reads the result with `useActionData()` and the saving state with `useNavigation().state === 'submitting'`.
   `pages/SignIn.tsx` and `pages/SignOut.tsx` are the smallest examples.
+- **Redirects: guards throw, finished actions return.** A guard (middleware, a loader that sends the user elsewhere, a
+  `require…` helper) **throws** `redirect()`: it stops there, works from inside a helper, and the code after it can rely
+  on the condition. An action that finished successfully **returns** `redirect()`. A thrown redirect is an exception,
+  so never put one inside a `try`: a `catch` would swallow it. Where that cannot be avoided, the `catch` rethrows it
+  first (`if (error instanceof Response) { throw error; }`).
 
 ## Server data: three layers
 

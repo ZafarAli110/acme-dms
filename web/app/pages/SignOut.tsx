@@ -9,5 +9,5 @@ export async function clientAction() {
 
 /** Nothing to show: the route only has its action. Visiting it goes back to Home. */
 export async function clientLoader() {
-  return redirect('/');
+  throw redirect('/');
 }
