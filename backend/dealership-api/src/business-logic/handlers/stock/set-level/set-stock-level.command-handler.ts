@@ -5,6 +5,7 @@ import {createdAudit, updatedAudit} from '../../../audit/audit-fields';
 import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
 import type {StockLevelSetRequestDto} from '#dto/stock/stock-level-set-request.dto';
 import type {StockListItemDto} from '#dto/stock/stock-list-item.dto';
+import type {NewEntity} from '#persistence/entities/generated-id';
 import type {PartInventory} from '#persistence/entities/part-inventory.entity';
 import {BIN_REPOSITORY, type IBinRepository} from '#persistence/repositories/bin.repository.interface';
 import {
@@ -57,17 +58,16 @@ export class SetStockLevelCommandHandler implements ISetStockLevelCommandHandler
     const now = this._clock.now();
     const levels = {binId: bin.id, quantityOnHand: request.quantityOnHand, reorderLevel: request.reorderLevel};
     // Stocking the part here for the first time creates its inventory at this location.
-    const inventory: PartInventory = existing
+    const inventory: PartInventory | NewEntity<PartInventory> = existing
       ? {...existing.inventory, ...levels, ...updatedAudit(userContext.userId, now)}
       : {
-          id: crypto.randomUUID(),
           dealerId: userContext.dealerId,
           locationId,
           partId,
           ...levels,
           ...createdAudit(userContext.userId, now),
         };
-    await this._partInventoryRepository.saveAsync(userContext.dealerId, inventory);
-    return toStockListItemDto(part, inventory, bin);
+    const saved = await this._partInventoryRepository.saveAsync(userContext.dealerId, inventory);
+    return toStockListItemDto(part, saved, bin);
   }
 }

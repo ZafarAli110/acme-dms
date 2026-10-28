@@ -21,7 +21,6 @@ internal sealed class Outbox : IOutbox
     public void Add<TData>(string type, TData data) =>
         _dbContext.OutboxMessages.Add(new OutboxMessage
         {
-            Id = Guid.NewGuid(),
             Type = type,
             Payload = JsonSerializer.Serialize(data, JsonOptions),
             TraceParent = Activity.Current?.Id,

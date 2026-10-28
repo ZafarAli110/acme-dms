@@ -1,4 +1,6 @@
 using Acme.Documents.Persistence.Database;
+using Microsoft.EntityFrameworkCore;
+
 namespace Acme.Documents.Persistence.Transactions;
 
 internal sealed class UnitOfWork : IUnitOfWork
@@ -11,4 +13,14 @@ internal sealed class UnitOfWork : IUnitOfWork
     }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) => _dbContext.SaveChangesAsync(cancellationToken);
+
+    public async Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var result = await work(cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return result;
+    }
 }

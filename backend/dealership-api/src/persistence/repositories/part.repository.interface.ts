@@ -1,3 +1,4 @@
+import type {NewEntity} from '../entities/generated-id';
 import type {PartInventory} from '../entities/part-inventory.entity';
 import type {PartPhoto} from '../entities/part-photo.entity';
 import type {Part} from '../entities/part.entity';
@@ -6,8 +7,15 @@ import type {Part} from '../entities/part.entity';
 export interface IPartRepository {
   findByIdAsync(dealerId: string, partId: string): Promise<Part | null>;
   existsWithPartNumberAsync(dealerId: string, partNumber: string): Promise<boolean>;
-  /** Adds a new part together with its first inventory, in one transaction: a part never exists without stock. */
-  createWithInventoryAsync(dealerId: string, part: Part, inventory: PartInventory): Promise<void>;
+  /**
+   * Adds a new part together with its first inventory, in one transaction: a part never exists without stock. The
+   * database assigns both ids; the inventory is linked to the part's.
+   */
+  createWithInventoryAsync(
+    dealerId: string,
+    part: NewEntity<Part>,
+    inventory: Omit<NewEntity<PartInventory>, 'partId'>,
+  ): Promise<{part: Part; inventory: PartInventory}>;
   saveAsync(dealerId: string, part: Part): Promise<Part>;
   /**
    * Saves the part and its photo changes in one transaction: soft-deletes `removedPhotoIds`, sets `isDefault` on the
@@ -22,7 +30,8 @@ export interface PartPhotoChanges {
   deletedBy: string;
   at: Temporal.Instant;
   kept: {id: string; isDefault: boolean}[];
-  addedPhotos: PartPhoto[];
+  /** New photos; the database assigns their ids. */
+  addedPhotos: NewEntity<PartPhoto>[];
 }
 
 export const PART_REPOSITORY = Symbol('IPartRepository');

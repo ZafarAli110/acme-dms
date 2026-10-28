@@ -15,7 +15,10 @@ const sam: UserContext = {
 
 describe('CreateCustomerCommandHandler', () => {
   it('adds the customer to the location the user is working at', async () => {
-    const saveAsync = vi.fn((_dealerId: string, customer: Customer) => Promise.resolve(customer));
+    // As the database does: the id is assigned on insert.
+    const saveAsync = vi.fn((_dealerId: string, customer: Omit<Customer, 'id'>) =>
+      Promise.resolve({...customer, id: 'customer-1'} as Customer),
+    );
     const customers = {saveAsync} satisfies Partial<ICustomerRepository> as unknown as ICustomerRepository;
 
     const created = await new CreateCustomerCommandHandler(customers, fixedClock()).executeAsync(sam, {
@@ -30,6 +33,13 @@ describe('CreateCustomerCommandHandler', () => {
     });
 
     expect(saveAsync).toHaveBeenCalledWith('northwind', expect.objectContaining({locationId: 'northside'}));
-    expect(created).toMatchObject({locationId: 'northside', surname: 'Hopper', phone: null, status: 'prospect'});
+    expect(saveAsync.mock.calls[0]?.[1]).not.toHaveProperty('id');
+    expect(created).toMatchObject({
+      id: 'customer-1',
+      locationId: 'northside',
+      surname: 'Hopper',
+      phone: null,
+      status: 'prospect',
+    });
   });
 });

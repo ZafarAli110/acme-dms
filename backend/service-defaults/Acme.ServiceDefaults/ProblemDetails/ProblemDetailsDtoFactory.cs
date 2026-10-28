@@ -12,12 +12,22 @@ public static class ProblemDetailsDtoFactory
     {
         // Server errors never leak internals to the client; the full error is in the log and the trace.
         var safeDetail = status >= StatusCodes.Status500InternalServerError ? UnexpectedErrorDetail : detail;
+        return CreateWithSafeDetail(httpContext, status, safeDetail);
+    }
+
+    /// <summary>
+    /// For a detail written for the client, never taken from an exception (a fixed message such as "The database is
+    /// busy or unavailable"): shown as given, even on a 5xx.
+    /// </summary>
+    public static ProblemDetailsDto CreateWithSafeDetail(HttpContext httpContext, int status, string? detail)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
 
         return new ProblemDetailsDto(
             Type: ProblemTypes.ForStatus(status),
             Title: ReasonPhrases.GetReasonPhrase(status),
             Status: status,
-            Detail: safeDetail,
+            Detail: detail,
             Instance: httpContext.Request.Path.HasValue ? httpContext.Request.Path.Value : null,
             Location: httpContext.Request.Headers["x-location-id"].FirstOrDefault(),
             UserId: httpContext.User.FindFirst("sub")?.Value,

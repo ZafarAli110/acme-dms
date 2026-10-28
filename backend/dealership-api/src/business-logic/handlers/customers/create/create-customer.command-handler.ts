@@ -6,6 +6,7 @@ import type {UserContext} from '#business-logic-abstractions/user-context/user-c
 import type {CustomerCreateRequestDto} from '#dto/customers/customer-create-request.dto';
 import type {CustomerResponseDto} from '#dto/customers/customer-response.dto';
 import type {Customer} from '#persistence/entities/customer.entity';
+import type {NewEntity} from '#persistence/entities/generated-id';
 import {CUSTOMER_REPOSITORY, type ICustomerRepository} from '#persistence/repositories/customer.repository.interface';
 import {requireLocation} from '../../../user-context/require-location';
 import {toCustomerResponseDto} from '../customer.mapper';
@@ -26,8 +27,7 @@ export class CreateCustomerCommandHandler implements ICreateCustomerCommandHandl
 
   public async executeAsync(userContext: UserContext, request: CustomerCreateRequestDto): Promise<CustomerResponseDto> {
     const now = this._clock.now();
-    const customer: Customer = {
-      id: crypto.randomUUID(),
+    const customer: NewEntity<Customer> = {
       dealerId: userContext.dealerId,
       locationId: requireLocation(userContext),
       firstName: request.firstName,
@@ -40,7 +40,7 @@ export class CreateCustomerCommandHandler implements ICreateCustomerCommandHandl
       lastContactDate: request.lastContactDate === null ? null : Temporal.PlainDate.from(request.lastContactDate),
       ...createdAudit(userContext.userId, now),
     };
-    await this._customerRepository.saveAsync(userContext.dealerId, customer);
-    return toCustomerResponseDto(customer);
+    const saved = await this._customerRepository.saveAsync(userContext.dealerId, customer);
+    return toCustomerResponseDto(saved);
   }
 }

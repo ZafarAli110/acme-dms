@@ -7,6 +7,7 @@ using Acme.Identity.Persistence;
 using Acme.Identity.Service.Middleware;
 using Acme.ServiceDefaults;
 using Acme.ServiceDefaults.Authentication;
+using Acme.ServiceDefaults.DatabaseErrors;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,13 @@ builder.Services.AddPersistence(connectionString);
 builder.Services.AddBusinessLogic();
 builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+// After the service's own handler: Postgres failures become 409/400/503 with a meaningful message, not a 500. The
+// unique indexes get their own message (names from IdentityDbContext's HasIndex(...).IsUnique()).
+builder.Services.AddAcmeDatabaseErrors(options =>
+{
+    options.ConstraintMessages["ix_users_email"] = "A user with this email already exists.";
+    options.ConstraintMessages["ix_locations_dealer_id_code"] = "This dealer already has a location with this code.";
+});
 
 builder.Services.AddAcmeAuthentication(builder.Configuration);
 

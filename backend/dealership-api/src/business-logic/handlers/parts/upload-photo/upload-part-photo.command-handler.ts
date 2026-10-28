@@ -9,6 +9,7 @@ import {
 } from '#business-logic-abstractions/rest-clients/document-api.client.interface';
 import type {PartPhotoResponseDto} from '#dto/parts/part-photo-response.dto';
 import type {PartPhotoUploadRequestDto} from '#dto/parts/part-photo-upload-request.dto';
+import type {NewEntity} from '#persistence/entities/generated-id';
 import type {PartPhoto} from '#persistence/entities/part-photo.entity';
 import {
   type IPartPhotoRepository,
@@ -66,8 +67,7 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
       variants: PART_PHOTO_VARIANTS,
     });
 
-    const photo: PartPhoto = {
-      id: crypto.randomUUID(),
+    const photo: NewEntity<PartPhoto> = {
       dealerId: userContext.dealerId,
       partId,
       documentId: document.id,
@@ -77,7 +77,7 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
       isDefault: existing.length === 0,
       ...createdAudit(userContext.userId, this._clock.now()),
     };
-    await this._partPhotoRepository.saveAsync(userContext.dealerId, photo);
-    return toPartPhotoResponseDto(photo);
+    const saved = await this._partPhotoRepository.saveAsync(userContext.dealerId, photo);
+    return toPartPhotoResponseDto(saved);
   }
 }

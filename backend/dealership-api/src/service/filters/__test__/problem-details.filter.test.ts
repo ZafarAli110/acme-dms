@@ -1,4 +1,5 @@
 import {type ArgumentsHost, ConflictException} from '@nestjs/common';
+import {QueryFailedError} from 'typeorm';
 import {describe, expect, it} from 'vitest';
 import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
 import type {ProblemDetailsDto} from '../../problem-details/problem-details.dto';
@@ -64,4 +65,42 @@ describe('ProblemDetailsFilter', () => {
     expect(body.type).toBe('urn:acme:error:internal');
     expect(body.detail).toBe('An unexpected error occurred');
   });
+
+  it('answers a broken unique rule with 409 and the rule in words, never the SQL or the constraint name', () => {
+    const {status, body} = captureProblem(
+      failedQuery({code: '23505', constraint: 'uq_parts_dealer_part_number', table: 'parts'}),
+    );
+
+    expect(status).toBe(409);
+    expect(body.type).toBe('urn:acme:error:conflict');
+    expect(body.detail).toBe('A part with this part number already exists in your catalogue.');
+    expect(body.detail).not.toMatch(/uq_|INSERT|"parts"/);
+  });
+
+  it.each([
+    ['23505', 409, 'A record with the same value already exists.'],
+    ['23503', 409, 'This refers to a record that does not exist, or the record is still in use.'],
+    ['23502', 400, 'A value is missing or not allowed.'],
+    ['40001', 409, 'The record was changed at the same time by someone else. Try again.'],
+    ['40P01', 409, 'The record was changed at the same time by someone else. Try again.'],
+    ['55P03', 503, 'The database is busy or unavailable. Try again shortly.'],
+    ['08006', 503, 'The database is busy or unavailable. Try again shortly.'],
+  ])('maps SQLSTATE %s to %i', (code, expectedStatus, expectedDetail) => {
+    const {status, body} = captureProblem(failedQuery({code}));
+
+    expect(status).toBe(expectedStatus);
+    expect(body.detail).toBe(expectedDetail);
+  });
+
+  it('keeps an unknown database error a 500 with nothing leaked', () => {
+    const {status, body} = captureProblem(failedQuery({code: 'XX000'}));
+
+    expect(status).toBe(500);
+    expect(body.detail).toBe('An unexpected error occurred');
+  });
 });
+
+function failedQuery(fields: {code: string; constraint?: string; table?: string}): QueryFailedError {
+  const driverError = Object.assign(new Error('duplicate key value violates unique constraint'), fields);
+  return new QueryFailedError('INSERT INTO "parts" ...', [], driverError);
+}

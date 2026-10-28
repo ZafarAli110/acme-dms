@@ -50,6 +50,15 @@
 - Data access goes through a small repository per entity (`IPartRepository`). TypeORM has no global query filter, so
   the repository is where the dealer is applied (`DealerScopedRepository`) and where location-scoped methods take the
   location. Handlers depend on the interface, which keeps their tests free of query builders.
+- **No value is `null`, not `undefined`**, in our own types (as in the DTOs). Do not compare with `undefined` to mean
+  something else: use the API's own answer (`fieldState.invalid`, `response.ok`), `??` for a default, and let a JSON
+  log line drop the fields an object does not have. The one place `undefined` is the meaning is a PATCH request: a
+  field that was not sent, which is not the same as `null`.
+- **Calling another service** (dealership-api → document-api) goes through `rest-clients/`: a named client from
+  `@nestjs/http-client` (native `fetch`, a timeout per attempt, retries of idempotent methods only) and a
+  `@nestjs/resilience` preset of the same name (a circuit breaker). Retries happen in the HTTP client only, never in
+  the preset as well, or attempts multiply. A refusal (4xx) keeps the other service's reason; anything else is a 503.
+  Either way the original error is the `cause`.
 - Format with `bun fmt`; lint with `oxlint` (layer rules in `backend/dealership-api/.oxlintrc.json`).
 
 ## C# (.NET services)

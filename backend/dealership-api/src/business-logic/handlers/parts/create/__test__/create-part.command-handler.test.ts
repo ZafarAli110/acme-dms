@@ -3,6 +3,9 @@ import {describe, expect, it, vi} from 'vitest';
 import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
 import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
 import type {Bin} from '#persistence/entities/bin.entity';
+import type {NewEntity} from '#persistence/entities/generated-id';
+import type {PartInventory} from '#persistence/entities/part-inventory.entity';
+import type {Part} from '#persistence/entities/part.entity';
 import type {IBinRepository} from '#persistence/repositories/bin.repository.interface';
 import type {IPartRepository} from '#persistence/repositories/part.repository.interface';
 import {CreatePartCommandHandler} from '../create-part.command-handler';
@@ -26,7 +29,14 @@ const request = {
 };
 
 function setUp({partNumberTaken = false, bin = shelfA as Bin | null} = {}) {
-  const createWithInventoryAsync = vi.fn().mockResolvedValue(undefined);
+  // As the database does: the ids are assigned on insert, and the inventory is linked to the new part.
+  const createWithInventoryAsync = vi.fn(
+    (_dealerId: string, part: NewEntity<Part>, inventory: Omit<NewEntity<PartInventory>, 'partId'>) =>
+      Promise.resolve({
+        part: {...part, id: 'part-1'},
+        inventory: {...inventory, id: 'inventory-1', partId: 'part-1'},
+      }),
+  );
   const parts = {
     existsWithPartNumberAsync: vi.fn().mockResolvedValue(partNumberTaken),
     createWithInventoryAsync,
@@ -48,6 +58,7 @@ describe('CreatePartCommandHandler', () => {
       expect.objectContaining({partNumber: 'BRK-001', createdBy: 'alice'}),
       expect.objectContaining({locationId: 'northside', binId: 'bin-a', quantityOnHand: 6, reorderLevel: 4}),
     );
+    expect(part.id).toBe('part-1');
     expect(part.inventory).toEqual({
       binId: 'bin-a',
       binCode: 'A-01',

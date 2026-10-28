@@ -1,12 +1,13 @@
 import {Column, Entity, PrimaryColumn} from 'typeorm';
 import {AuditedEntity} from './audited-entity';
+import {UUID_V7_PRIMARY_KEY} from './generated-id';
 
 export type PartPhotoStatus = 'pending' | 'ready' | 'failed';
 
 /** A photo of a part. The image itself lives in document-api; this row holds the reference and its status. */
 @Entity('part_photos')
 export class PartPhoto extends AuditedEntity {
-  @PrimaryColumn('uuid')
+  @PrimaryColumn(UUID_V7_PRIMARY_KEY)
   public id: string;
 
   @Column('uuid')

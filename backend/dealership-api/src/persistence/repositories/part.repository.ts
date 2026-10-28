@@ -1,4 +1,5 @@
 import type {DataSource} from 'typeorm';
+import type {NewEntity} from '../entities/generated-id';
 import {PartInventory} from '../entities/part-inventory.entity';
 import {PartPhoto} from '../entities/part-photo.entity';
 import {Part} from '../entities/part.entity';
@@ -21,14 +22,19 @@ export class PartRepository extends DealerScopedRepository<Part> implements IPar
     return (await this.forDealer(dealerId).andWhere('part.partNumber = :partNumber', {partNumber}).getCount()) > 0;
   }
 
-  public async createWithInventoryAsync(dealerId: string, part: Part, inventory: PartInventory): Promise<void> {
+  public async createWithInventoryAsync(
+    dealerId: string,
+    part: NewEntity<Part>,
+    inventory: Omit<NewEntity<PartInventory>, 'partId'>,
+  ): Promise<{part: Part; inventory: PartInventory}> {
     this.assertSameDealer(dealerId, part);
     if (inventory.dealerId !== dealerId) {
       throw new Error(`Refusing to write inventory of dealer ${inventory.dealerId} on behalf of dealer ${dealerId}.`);
     }
-    await this._dataSource.transaction(async (manager) => {
-      await manager.save(Part, part);
-      await manager.save(PartInventory, inventory);
+    return this._dataSource.transaction(async (manager) => {
+      const savedPart = await manager.save(Part, part);
+      const savedInventory = await manager.save(PartInventory, {...inventory, partId: savedPart.id});
+      return {part: savedPart, inventory: savedInventory};
     });
   }
 

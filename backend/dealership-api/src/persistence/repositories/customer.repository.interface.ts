@@ -1,4 +1,5 @@
 import type {Customer} from '../entities/customer.entity';
+import type {NewEntity} from '../entities/generated-id';
 
 export interface CustomerPage {
   items: Customer[];
@@ -17,7 +18,8 @@ export interface ICustomerRepository {
   findByIdAsync(dealerId: string, locationId: string, customerId: string): Promise<Customer | null>;
   /** The customers contacted most recently, newest first. */
   findRecentlyContactedAsync(dealerId: string, limit: number): Promise<Customer[]>;
-  saveAsync(dealerId: string, customer: Customer): Promise<Customer>;
+  /** Inserts a new row (the database assigns its id) or updates an existing one; returns the row as saved. */
+  saveAsync(dealerId: string, customer: Customer | NewEntity<Customer>): Promise<Customer>;
 }
 
 export const CUSTOMER_REPOSITORY = Symbol('ICustomerRepository');

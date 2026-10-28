@@ -72,9 +72,8 @@ redirects to `/sign-in`.
 Next to its component, a route module exports what it needs:
 
 - **`clientLoader({context, params})`**: reads `context.get(RESOLVED_LOCATION_CONTEXT)` for the location, then
-  prefetches with `queryClient.query({...options, staleTime: 'static'})` (cached data if there is any, otherwise one
-  fetch; it replaces the deprecated `ensureQueryData`) using the same key as the page's hook, so the page renders
-  without a spinner.
+  prefetches with the resource's query options, `queryClient.query({...partQueryOptions.detail(…), staleTime: 'static'})`
+  (cached data if there is any, otherwise one fetch), so the page renders without a spinner.
 - **`clientAction({request, context, params})`**: reads the submitted form data, calls the queries function,
   invalidates the affected keys with `queryClient.invalidateQueries(...)`, then redirects (create → the new record's
   page) or returns `{error}` for the page to show.
@@ -88,15 +87,22 @@ Next to its component, a route module exports what it needs:
   so never put one inside a `try`: a `catch` would swallow it. Where that cannot be avoided, the `catch` rethrows it
   first (`if (error instanceof Response) { throw error; }`).
 
-## Server data: three layers
+## Server data: four layers
 
 1. **`queries/<resource>Queries.ts`**: `async` functions that call `apiClient` (`core/services/apiClient.ts`), named
-   with `Async` and taking `{signal}` so TanStack Query can cancel them. Called from loaders, actions and hooks. Pages
-   never call `apiClient` directly.
+   with `Async` and taking `{signal}` so TanStack Query can cancel them. Called from options and actions. Pages never
+   call `apiClient` directly.
 2. **`queries/<resource>QueryKey.ts`**: the keys. **A key for location-scoped data includes the location id**
    (`['bins', locationId]`), so a switch never shows the previous location's data.
-3. **`hooks/use<Thing>.ts`**: `useQuery`/`useMutation` built from the two. Components call hooks; they never build
-   keys.
+3. **`queries/<resource>QueryOptions.ts`**: each query's key and fetch together (`queryOptions()`), defined once. The
+   route's `clientLoader` prefetches with them and the hook reads with them, so the two never disagree.
+4. **`hooks/use<Thing>.ts`**: `useQuery(options)`, adding only what the page needs (`select`, `enabled`,
+   `refetchInterval`). Components call hooks; they never build keys.
+
+**Fetched once per page.** The `queryClient` keeps data fresh for five minutes (`staleTime`), so what a loader just
+fetched is not fetched again when the page's hook mounts; a loader passes `staleTime: 'static'` to use whatever is
+cached. Freshness comes from invalidation, not from refetching: every action invalidates the keys it changed, and a
+location switch invalidates everything.
 
 The cache is the single `queryClient` in `core/queries/queryClient.ts`. Errors are typed (`core/config/apiErrors.ts`):
 `ApiError` carries the service's problem details; `ServerUnreachableError` and `RequestTimeoutError` mean no answer.

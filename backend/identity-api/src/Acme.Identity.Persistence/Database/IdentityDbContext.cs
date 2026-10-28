@@ -63,5 +63,7 @@ public sealed class IdentityDbContext : DbContext
         });
 
         modelBuilder.Entity<SigningKey>(key => key.Property(k => k.Id).HasMaxLength(64));
+
+        modelBuilder.UseDatabaseGeneratedUuidV7Keys();
     }
 }

@@ -1,4 +1,5 @@
 import type {DataSource} from 'typeorm';
+import type {NewEntity} from '../entities/generated-id';
 import {PartPhoto, type PartPhotoStatus} from '../entities/part-photo.entity';
 import {DealerScopedRepository} from './dealer-scoped.repository';
 import type {IPartPhotoRepository} from './part-photo.repository.interface';
@@ -37,7 +38,7 @@ export class PartPhotoRepository extends DealerScopedRepository<PartPhoto> imple
     return thumbnails;
   }
 
-  public saveAsync(dealerId: string, photo: PartPhoto): Promise<PartPhoto> {
+  public saveAsync(dealerId: string, photo: PartPhoto | NewEntity<PartPhoto>): Promise<PartPhoto> {
     this.assertSameDealer(dealerId, photo);
     return this._repository.save(photo);
   }

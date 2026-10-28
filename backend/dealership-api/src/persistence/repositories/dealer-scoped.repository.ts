@@ -21,7 +21,7 @@ export abstract class DealerScopedRepository<TEntity extends AuditedEntity & {de
       .andWhere(`${this._alias}.isDeleted = false`);
   }
 
-  protected assertSameDealer(dealerId: string, entity: TEntity): void {
+  protected assertSameDealer(dealerId: string, entity: {dealerId: string}): void {
     if (entity.dealerId !== dealerId) {
       throw new Error(`Refusing to write a row of dealer ${entity.dealerId} on behalf of dealer ${dealerId}.`);
     }

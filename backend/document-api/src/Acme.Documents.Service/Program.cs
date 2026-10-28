@@ -5,6 +5,7 @@ using Acme.Documents.Service.Authorization;
 using Acme.Documents.Service.Middleware;
 using Acme.ServiceDefaults;
 using Acme.ServiceDefaults.Authentication;
+using Acme.ServiceDefaults.DatabaseErrors;
 using Acme.Documents.Persistence.Auditing;
 using Acme.Documents.Persistence.Database;
 
@@ -26,6 +27,8 @@ builder.Services.AddBusinessLogic();
 builder.Services.AddMessaging(rabbitMqConnectionString);
 builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+// After the service's own handler: Postgres failures become 409/400/503 with a meaningful message, not a 500.
+builder.Services.AddAcmeDatabaseErrors();
 builder.Services.AddAcmeAuthentication(builder.Configuration);
 
 var app = builder.Build();

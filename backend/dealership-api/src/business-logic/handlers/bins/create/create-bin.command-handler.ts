@@ -6,6 +6,7 @@ import type {UserContext} from '#business-logic-abstractions/user-context/user-c
 import type {BinCreateRequestDto} from '#dto/bins/bin-create-request.dto';
 import type {BinResponseDto} from '#dto/bins/bin-response.dto';
 import type {Bin} from '#persistence/entities/bin.entity';
+import type {NewEntity} from '#persistence/entities/generated-id';
 import {BIN_REPOSITORY, type IBinRepository} from '#persistence/repositories/bin.repository.interface';
 import {requireLocation} from '../../../user-context/require-location';
 import {toBinResponseDto} from '../bin.mapper';
@@ -27,15 +28,14 @@ export class CreateBinCommandHandler implements ICreateBinCommandHandler {
     if (existingBin) {
       throw new ConflictException(`Bin ${request.code} already exists at this location.`);
     }
-    const bin: Bin = {
-      id: crypto.randomUUID(),
+    const bin: NewEntity<Bin> = {
       dealerId: userContext.dealerId,
       locationId,
       code: request.code,
       description: request.description,
       ...createdAudit(userContext.userId, this._clock.now()),
     };
-    await this._binRepository.saveAsync(userContext.dealerId, bin);
-    return toBinResponseDto(bin);
+    const saved = await this._binRepository.saveAsync(userContext.dealerId, bin);
+    return toBinResponseDto(saved);
   }
 }

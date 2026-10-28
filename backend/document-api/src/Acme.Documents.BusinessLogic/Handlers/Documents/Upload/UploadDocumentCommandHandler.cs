@@ -40,7 +40,6 @@ internal sealed class UploadDocumentCommandHandler : IUploadDocumentCommandHandl
 
         var document = new Document
         {
-            Id = Guid.NewGuid(),
             DealerId = userContext.DealerId,
             OwnerType = request.OwnerType,
             OwnerId = request.OwnerId,
@@ -50,23 +49,31 @@ internal sealed class UploadDocumentCommandHandler : IUploadDocumentCommandHandl
             Status = request.Variants.Count == 0 ? DocumentStatus.Ready : DocumentStatus.Pending,
             RequestedVariants = JsonSerializer.Serialize(request.Variants, JsonOptions),
         };
+        // The content's DocumentId is filled in from the document when it is saved.
         document.Contents.Add(new DocumentContent
         {
-            DocumentId = document.Id,
             Name = DocumentContent.Original,
             ContentType = request.ContentType,
             Data = request.Content.ToArray(),
             SizeBytes = request.Content.Length,
         });
-        _dbContext.Documents.Add(document);
 
-        if (document.Status == DocumentStatus.Pending)
-        {
-            _outbox.Add(MessageTypes.ProcessDocument, new ProcessDocumentMessageDto(document.Id, document.DealerId));
-        }
+        return await _unitOfWork.ExecuteInTransactionAsync(
+            async token =>
+            {
+                _dbContext.Documents.Add(document);
+                // The database assigns the document's id (uuidv7()); the processing message needs it, so it is queued
+                // after this save, in the same transaction.
+                await _unitOfWork.SaveChangesAsync(token).ConfigureAwait(false);
+                if (document.Status == DocumentStatus.Pending)
+                {
+                    _outbox.Add(MessageTypes.ProcessDocument, new ProcessDocumentMessageDto(document.Id, document.DealerId));
+                    await _unitOfWork.SaveChangesAsync(token).ConfigureAwait(false);
+                }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return DocumentMapper.ToDocumentResponseDto(document);
+                return DocumentMapper.ToDocumentResponseDto(document);
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static void Validate(DocumentUploadRequestDto request)

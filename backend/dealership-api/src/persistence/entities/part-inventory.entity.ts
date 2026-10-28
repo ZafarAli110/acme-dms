@@ -1,5 +1,6 @@
 import {Column, Entity, PrimaryColumn} from 'typeorm';
 import {AuditedEntity} from './audited-entity';
+import {UUID_V7_PRIMARY_KEY} from './generated-id';
 
 /**
  * A part's inventory at one location: which bin it lives in and how many are on hand. A part is only stocked (and
@@ -7,7 +8,7 @@ import {AuditedEntity} from './audited-entity';
  */
 @Entity('part_inventories')
 export class PartInventory extends AuditedEntity {
-  @PrimaryColumn('uuid')
+  @PrimaryColumn(UUID_V7_PRIMARY_KEY)
   public id: string;
 
   @Column('uuid')

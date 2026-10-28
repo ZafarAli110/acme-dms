@@ -1,5 +1,6 @@
 import {Column, Entity, PrimaryColumn} from 'typeorm';
 import {AuditedEntity} from './audited-entity';
+import {UUID_V7_PRIMARY_KEY} from './generated-id';
 import {PLAIN_DATE_COLUMN} from '../transformers/temporal.transformers';
 
 export type CustomerStatus = 'active' | 'prospect' | 'inactive';
@@ -7,7 +8,7 @@ export type CustomerStatus = 'active' | 'prospect' | 'inactive';
 /** A customer of one location (rooftop). Location-scoped: always query it for a single location. */
 @Entity('customers')
 export class Customer extends AuditedEntity {
-  @PrimaryColumn('uuid')
+  @PrimaryColumn(UUID_V7_PRIMARY_KEY)
   public id: string;
 
   @Column('uuid')

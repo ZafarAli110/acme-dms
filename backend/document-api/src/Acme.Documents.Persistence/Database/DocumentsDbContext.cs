@@ -59,5 +59,7 @@ public sealed class DocumentsDbContext : DbContext
             message.Property(m => m.TraceParent).HasMaxLength(100);
             message.HasIndex(m => m.PublishedAt);
         });
+
+        modelBuilder.UseDatabaseGeneratedUuidV7Keys();
     }
 }

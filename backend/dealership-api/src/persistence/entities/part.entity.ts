@@ -1,11 +1,12 @@
 import {Column, Entity, PrimaryColumn} from 'typeorm';
 import {AuditedEntity} from './audited-entity';
+import {UUID_V7_PRIMARY_KEY} from './generated-id';
 import {decimalTransformer} from './decimal.transformer';
 
 /** A part in a dealer's catalogue. The master record is shared; each location stocks it through a PartInventory. */
 @Entity('parts')
 export class Part extends AuditedEntity {
-  @PrimaryColumn('uuid')
+  @PrimaryColumn(UUID_V7_PRIMARY_KEY)
   public id: string;
 
   @Column('uuid')

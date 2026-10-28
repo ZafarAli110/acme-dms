@@ -9,6 +9,7 @@ import {InitialSchema1761700000000} from '../migrations/1761700000000-initial-sc
 import {Customers1761800000000} from '../migrations/1761800000000-customers';
 import {PartInventoriesAndBins1761900000000} from '../migrations/1761900000000-part-inventories-and-bins';
 import {AuditColumns1762000000000} from '../migrations/1762000000000-audit-columns';
+import {UuidV7Ids1762100000000} from '../migrations/1762100000000-uuid-v7-ids';
 import {SnakeCaseNamingStrategy} from './snake-case-naming.strategy';
 
 /** Aspire injects ConnectionStrings__dealership as `Host=...;Port=...;Username=...;Password=...;Database=...`. */
@@ -43,6 +44,7 @@ export async function createDataSourceAsync(): Promise<DataSource> {
       Customers1761800000000,
       PartInventoriesAndBins1761900000000,
       AuditColumns1762000000000,
+      UuidV7Ids1762100000000,
     ],
     namingStrategy: new SnakeCaseNamingStrategy(),
     synchronize: false,

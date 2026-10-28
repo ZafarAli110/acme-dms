@@ -1,5 +1,6 @@
 import type {DataSource} from 'typeorm';
 import {Customer} from '../entities/customer.entity';
+import type {NewEntity} from '../entities/generated-id';
 import type {CustomerPage, ICustomerRepository} from './customer.repository.interface';
 import {DealerScopedRepository} from './dealer-scoped.repository';
 
@@ -49,7 +50,7 @@ export class CustomerRepository extends DealerScopedRepository<Customer> impleme
       .getMany();
   }
 
-  public saveAsync(dealerId: string, customer: Customer): Promise<Customer> {
+  public saveAsync(dealerId: string, customer: Customer | NewEntity<Customer>): Promise<Customer> {
     this.assertSameDealer(dealerId, customer);
     return this._repository.save(customer);
   }

@@ -1,5 +1,6 @@
 import type {DataSource} from 'typeorm';
 import {Bin} from '../entities/bin.entity';
+import type {NewEntity} from '../entities/generated-id';
 import type {IBinRepository} from './bin.repository.interface';
 import {DealerScopedRepository} from './dealer-scoped.repository';
 
@@ -30,7 +31,7 @@ export class BinRepository extends DealerScopedRepository<Bin> implements IBinRe
     return count > 0;
   }
 
-  public saveAsync(dealerId: string, bin: Bin): Promise<Bin> {
+  public saveAsync(dealerId: string, bin: Bin | NewEntity<Bin>): Promise<Bin> {
     this.assertSameDealer(dealerId, bin);
     return this._repository.save(bin);
   }

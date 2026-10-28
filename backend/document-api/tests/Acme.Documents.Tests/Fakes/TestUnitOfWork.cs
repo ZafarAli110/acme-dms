@@ -13,4 +13,11 @@ internal sealed class TestUnitOfWork : IUnitOfWork
     }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) => _dbContext.SaveChangesAsync(cancellationToken);
+
+    // The in-memory database has no transactions; the work runs as it is.
+    public Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        return work(cancellationToken);
+    }
 }

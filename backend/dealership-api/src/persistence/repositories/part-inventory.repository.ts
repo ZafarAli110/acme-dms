@@ -1,5 +1,6 @@
 import type {DataSource} from 'typeorm';
 import {Bin} from '../entities/bin.entity';
+import type {NewEntity} from '../entities/generated-id';
 import {PartInventory} from '../entities/part-inventory.entity';
 import {Part} from '../entities/part.entity';
 import {DealerScopedRepository} from './dealer-scoped.repository';
@@ -41,7 +42,7 @@ export class PartInventoryRepository extends DealerScopedRepository<PartInventor
     return row ? toStockedPart(row as JoinedInventory) : null;
   }
 
-  public saveAsync(dealerId: string, inventory: PartInventory): Promise<PartInventory> {
+  public saveAsync(dealerId: string, inventory: PartInventory | NewEntity<PartInventory>): Promise<PartInventory> {
     this.assertSameDealer(dealerId, inventory);
     return this._repository.save(inventory);
   }

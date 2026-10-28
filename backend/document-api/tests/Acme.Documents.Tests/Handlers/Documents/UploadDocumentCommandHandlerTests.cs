@@ -22,6 +22,9 @@ public sealed class UploadDocumentCommandHandlerTests
             .ExecuteAsync(TestDocuments.Alice, TestDocuments.PhotoUpload(), TestContext.CancellationToken);
 
         Assert.AreEqual(nameof(DocumentStatus.Pending), response.Status);
+        Assert.AreNotEqual(Guid.Empty, response.Id);
+        // The original is saved under the document's new id, which the code never set.
+        Assert.AreEqual(response.Id, dbContext.DocumentContents.Single().DocumentId);
         outbox.Verify(
             o => o.Add(MessageTypes.ProcessDocument, It.Is<ProcessDocumentMessageDto>(m => m.DocumentId == response.Id && m.DealerId == TestDocuments.Northwind)),
             Times.Once);

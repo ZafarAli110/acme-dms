@@ -7,6 +7,11 @@ rules apply to every table in all three.
 
 - Table and column names are `snake_case`, tables plural (`part_photos`). Keys are `uuid` named `id`; a reference to
   another row is `<thing>_id`.
+- **The database generates ids**: `id uuid DEFAULT uuidv7()` (PostgreSQL 18). UUID v7 sorts by creation time, which
+  keeps the index compact. Code never makes up an id: it saves the row and reads the id back. NestJS:
+  `@PrimaryColumn(UUID_V7_PRIMARY_KEY)` and `NewEntity<T>` (the row before it has an id); .NET: `UuidV7Keys`, applied
+  in `OnModelCreating`. When something must carry the new id in the same transaction (an outbox message), save, then
+  write it, then commit (`IUnitOfWork.ExecuteInTransactionAsync`).
 - Dealer-owned rows have `dealer_id`; location-owned rows also have `location_id` (`standards/multi-tenancy.md`).
 - A moment is `timestamptz` (UTC); a calendar day with no time is `date` (`standards/coding-standards.md`, "Time").
 - Money is `numeric(12,2)`, never a float.

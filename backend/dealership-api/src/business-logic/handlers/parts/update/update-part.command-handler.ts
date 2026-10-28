@@ -10,6 +10,7 @@ import {
 import type {PartPhotoUploadRequestDto} from '#dto/parts/part-photo-upload-request.dto';
 import type {PartResponseDto} from '#dto/parts/part-response.dto';
 import type {PartUpdateRequestDto} from '#dto/parts/part-update-request.dto';
+import type {NewEntity} from '#persistence/entities/generated-id';
 import type {PartPhoto} from '#persistence/entities/part-photo.entity';
 import {
   type IPartInventoryRepository,
@@ -107,7 +108,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     const now = this._clock.now();
     const uploadedDocumentIds: string[] = [];
     try {
-      const addedPhotos: PartPhoto[] = [];
+      const addedPhotos: NewEntity<PartPhoto>[] = [];
       for (const [index, file] of files.entries()) {
         const document = await this._documentApiClient.uploadDocumentAsync(userContext, {
           ownerType: PART_PHOTO_OWNER_TYPE,
@@ -118,8 +119,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
           variants: PART_PHOTO_VARIANTS,
         });
         uploadedDocumentIds.push(document.id);
-        const photo: PartPhoto = {
-          id: crypto.randomUUID(),
+        const photo: NewEntity<PartPhoto> = {
           dealerId: userContext.dealerId,
           partId,
           documentId: document.id,

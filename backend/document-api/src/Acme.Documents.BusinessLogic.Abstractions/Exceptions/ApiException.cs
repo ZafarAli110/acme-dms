@@ -9,6 +9,13 @@ public sealed class ApiException : Exception
         Category = category;
     }
 
+    /// <summary>An expected failure caused by another exception, kept as the cause so the log shows the whole chain.</summary>
+    public ApiException(ApiErrorCategory category, string message, Exception innerException)
+        : base(message, innerException)
+    {
+        Category = category;
+    }
+
     public ApiException()
     {
     }

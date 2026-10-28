@@ -1,4 +1,5 @@
 import type {Bin} from '../entities/bin.entity';
+import type {NewEntity} from '../entities/generated-id';
 import type {PartInventory} from '../entities/part-inventory.entity';
 import type {Part} from '../entities/part.entity';
 
@@ -30,7 +31,8 @@ export interface IPartInventoryRepository {
     locationId: string,
     partId: string,
   ): Promise<{inventory: PartInventory; bin: Bin} | null>;
-  saveAsync(dealerId: string, inventory: PartInventory): Promise<PartInventory>;
+  /** Inserts a new row (the database assigns its id) or updates an existing one; returns the row as saved. */
+  saveAsync(dealerId: string, inventory: PartInventory | NewEntity<PartInventory>): Promise<PartInventory>;
 }
 
 export const PART_INVENTORY_REPOSITORY = Symbol('IPartInventoryRepository');

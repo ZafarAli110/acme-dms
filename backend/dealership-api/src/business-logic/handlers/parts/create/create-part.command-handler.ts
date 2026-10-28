@@ -5,6 +5,7 @@ import {createdAudit} from '../../../audit/audit-fields';
 import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
 import type {PartCreateRequestDto} from '#dto/parts/part-create-request.dto';
 import type {PartResponseDto} from '#dto/parts/part-response.dto';
+import type {NewEntity} from '#persistence/entities/generated-id';
 import type {PartInventory} from '#persistence/entities/part-inventory.entity';
 import type {Part} from '#persistence/entities/part.entity';
 import {BIN_REPOSITORY, type IBinRepository} from '#persistence/repositories/bin.repository.interface';
@@ -40,25 +41,22 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
     }
 
     const now = this._clock.now();
-    const part: Part = {
-      id: crypto.randomUUID(),
+    const part: NewEntity<Part> = {
       dealerId: userContext.dealerId,
       partNumber: request.partNumber,
       description: request.description,
       unitPrice: request.unitPrice,
       ...createdAudit(userContext.userId, now),
     };
-    const inventory: PartInventory = {
-      id: crypto.randomUUID(),
+    const inventory: Omit<NewEntity<PartInventory>, 'partId'> = {
       dealerId: userContext.dealerId,
       locationId,
-      partId: part.id,
       binId: bin.id,
       quantityOnHand: request.quantityOnHand,
       reorderLevel: request.reorderLevel,
       ...createdAudit(userContext.userId, now),
     };
-    await this._partRepository.createWithInventoryAsync(userContext.dealerId, part, inventory);
-    return toPartResponseDto(part, inventory, bin, []);
+    const created = await this._partRepository.createWithInventoryAsync(userContext.dealerId, part, inventory);
+    return toPartResponseDto(created.part, created.inventory, bin, []);
   }
 }

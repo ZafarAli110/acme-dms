@@ -11,6 +11,8 @@ import {STATUS_CODES} from 'node:http';
 import {trace} from '@opentelemetry/api';
 import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
 import {toIsoString} from '#business-logic-abstractions/time/to-iso-string';
+import {serializeError} from '../logging/serialize-error';
+import {resolveDatabaseProblem} from '../problem-details/database-error';
 import type {ProblemDetailsDto} from '../problem-details/problem-details.dto';
 import {DEFAULT_PROBLEM_TYPE, PROBLEM_TYPE_BY_STATUS} from '../problem-details/problem-type';
 
@@ -28,7 +30,9 @@ type ProblemResponse = {
 
 /**
  * Turns every exception into RFC 9457 problem details (`application/problem+json`).
- * Handlers throw Nest's built-in exceptions (NotFoundException, ConflictException, ...); nothing else leaks internals.
+ * Handlers throw Nest's built-in exceptions (NotFoundException, ConflictException, ...). A failed query that breaks a
+ * database rule (a unique index, a foreign key, a lock timeout) gets its own status and a safe message
+ * (`database-error.ts`). Nothing else leaks internals: the log line has the whole error and its `cause` chain.
  */
 @Catch()
 export class ProblemDetailsFilter implements ExceptionFilter {
@@ -55,10 +59,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       method: request.method,
       instance: problem.instance,
       traceId: problem.traceId,
-      error:
-        exception instanceof Error
-          ? {name: exception.name, message: exception.message, stack: exception.stack}
-          : exception,
+      error: serializeError(exception),
     });
 
     response.setHeader('content-type', 'application/problem+json');
@@ -66,7 +67,10 @@ export class ProblemDetailsFilter implements ExceptionFilter {
   }
 
   private resolveStatus(exception: unknown): number {
-    return exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+    if (exception instanceof HttpException) {
+      return exception.getStatus();
+    }
+    return resolveDatabaseProblem(exception)?.status ?? HttpStatus.INTERNAL_SERVER_ERROR;
   }
 
   private buildProblemDetails(exception: unknown, request: ProblemRequest, status: number): ProblemDetailsDto {
@@ -87,7 +91,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
   private resolveDetail(exception: unknown): string {
     if (!(exception instanceof HttpException)) {
       // Unexpected errors: never leak internals to the client. The full error is in the log and the trace.
-      return 'An unexpected error occurred';
+      return resolveDatabaseProblem(exception)?.detail ?? 'An unexpected error occurred';
     }
     const body = exception.getResponse();
     if (typeof body === 'string') {
