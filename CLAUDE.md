@@ -49,7 +49,8 @@ The system must already be running (`bun run dev`) for `api`, `errors` and `rese
    a rooftop sam doesn't work at. `maria`, the manager, works at all three.
 3. `bun run errors` shows nothing new.
 
-Say what you ran and what it returned. "Should work" is not done.
+Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, have the **verifier**
+subagent check it, and the **standards-reviewer** subagent review the diff.
 
 ## Where to find what
 
