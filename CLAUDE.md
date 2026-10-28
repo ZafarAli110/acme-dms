@@ -55,3 +55,6 @@ Say what you ran and what it returned. "Should work" is not done.
 
 `docs/ARCHITECTURE.md` (services and layers), `docs/standards/` (the team's rules), `contracts/README.md` (messages),
 `README.md` "Where to find what". Follow an existing feature of the same kind before inventing a new shape.
+
+The backlog is the **acme-tracker** MCP server (`.mcp.json`): read a ticket with `get_ticket` rather than asking for it
+to be pasted. Moving a ticket or commenting on it is visible to the whole team.

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "acme-tracker": {
+      "type": "http",
+      "url": "http://localhost:4100/mcp"
+    }
+  }
+}
