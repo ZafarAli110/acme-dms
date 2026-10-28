@@ -1,7 +1,8 @@
-import type {AuditedEntity} from '#persistence/entities/audited-entity';
+import type {Bin} from '#persistence/schema/index';
 
+/** Every business table has the same audit columns (persistence/schema/columns/audit-columns.ts). */
 type AuditFields = Pick<
-  AuditedEntity,
+  Bin,
   'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy' | 'isDeleted' | 'deletedAt' | 'deletedBy'
 >;
 
