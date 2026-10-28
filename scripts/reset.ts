@@ -15,6 +15,28 @@ async function truncateAsync(database: string, tables: string[]): Promise<void> 
   await sql.close();
   console.log(`${database}: emptied ${tables.join(', ')}`);
 }
+// dealership-api moved from TypeORM to Drizzle with a fresh baseline: a database still holding TypeORM's history is
+// recreated empty and migrated, then seeded like any other. (Its business data is test data the seed restores.)
+async function migrateDealershipAsync(): Promise<void> {
+  const url = `postgres://${DEV_USER}:${DEV_PASSWORD}@${postgres.hostname}:${postgres.port}/dealership`;
+  const sql = new SQL(url);
+  const [history] = await sql`SELECT to_regclass('public.migrations') IS NOT NULL AS typeorm`;
+  if (history.typeorm) {
+    await sql.unsafe('DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA public CASCADE; CREATE SCHEMA public');
+    console.log('dealership: removed the old TypeORM schema');
+  }
+  await sql.close();
+  const migrate = Bun.spawnSync(['bun', 'run', 'db:migrate'], {
+    cwd: 'backend/dealership-api',
+    env: {...process.env, DATABASE_URL: url},
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
+  if (migrate.exitCode !== 0) {
+    process.exit(migrate.exitCode);
+  }
+}
+await migrateDealershipAsync();
 await truncateAsync('dealership', [
   'processed_messages',
   'customers',

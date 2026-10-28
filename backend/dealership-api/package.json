@@ -20,7 +20,8 @@
     "format": "bun fmt --check src",
     "test": "vitest run",
     "generate:clients": "bun scripts/generate-rest-clients.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun scripts/migrate.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.3.2",

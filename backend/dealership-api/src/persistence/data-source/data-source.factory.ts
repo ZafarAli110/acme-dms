@@ -23,7 +23,7 @@ function parseConnectionString(connectionString: string): Record<string, string>
   );
 }
 
-/** Creates the connection and applies pending migrations (a development convenience). */
+/** TypeORM's connection, for the handlers not moved to the unit of work yet. Drizzle owns the schema and migrations. */
 export async function createDataSourceAsync(): Promise<DataSource> {
   const connectionString = process.env['ConnectionStrings__dealership'];
   if (!connectionString) {
@@ -50,6 +50,5 @@ export async function createDataSourceAsync(): Promise<DataSource> {
     synchronize: false,
   });
   await dataSource.initialize();
-  await dataSource.runMigrations();
   return dataSource;
 }
