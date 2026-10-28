@@ -72,8 +72,9 @@ redirects to `/sign-in`.
 Next to its component, a route module exports what it needs:
 
 - **`clientLoader({context, params})`**: reads `context.get(RESOLVED_LOCATION_CONTEXT)` for the location, then
-  prefetches with `queryClient.ensureQueryData(...)` using the same key as the page's hook, so the page renders without
-  a spinner.
+  prefetches with `queryClient.query({...options, staleTime: 'static'})` (cached data if there is any, otherwise one
+  fetch; it replaces the deprecated `ensureQueryData`) using the same key as the page's hook, so the page renders
+  without a spinner.
 - **`clientAction({request, context, params})`**: reads the submitted form data, calls the queries function,
   invalidates the affected keys with `queryClient.invalidateQueries(...)`, then redirects (create → the new record's
   page) or returns `{error}` for the page to show.
@@ -100,14 +101,25 @@ Next to its component, a route module exports what it needs:
 The cache is the single `queryClient` in `core/queries/queryClient.ts`. Errors are typed (`core/config/apiErrors.ts`):
 `ApiError` carries the service's problem details; `ServerUnreachableError` and `RequestTimeoutError` mean no answer.
 
+**Lists keep their search and page in the URL** (`?search=brake&page=2&pageSize=50`), read and written with
+`useListParams()` (`core/hooks/useListParams.ts`), so a refresh, Back and a shared link all show the same list. The
+route's `clientLoader` reads the same params with `readListParams(new URL(request.url).searchParams)` and prefetches
+that page. The search box is uncontrolled (`defaultValue`), so typing never waits for the list. Never `useState` for
+what the URL can hold, and never `useEffect` to copy server data into state: give the form its `defaultValues`, and
+remount it with a `key` when the record changes.
+
 ## Forms: schema → mapper → form → page
 
-| Layer  | File                                      | Responsibility                                                                                                                                                                 |
-| ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Schema | `schemas/<entity>Schema.ts`               | Valibot rules at module level, never inside a component. Separate create and update schemas when they differ. Messages are translation keys.                                   |
-| Mapper | `mappers/<entity>FormMapper.ts`           | `toFormValues(dto)` for defaults; the request body built from the values, following the DTO rules (every field present, `null` for no value; a PATCH sends only what changed). |
-| Form   | `<Entity>Form.tsx`                        | `useForm` with `valibotResolver(schema)` and `defaultValues`; one `Controller` per field showing `fieldState.error` as `helperText`.                                           |
-| Page   | `<Entity>Create.tsx` / `<Entity>Edit.tsx` | the route module: `clientLoader`, `clientAction`, Save and Cancel, server errors, `<FormGuards>`.                                                                              |
+| Layer  | File                                      | Responsibility                                                                                                                                                                                         |
+| ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Schema | `schemas/<entity>Schema.ts`               | A factory `create<Entity>Schema(t)` that returns the Valibot schema with translated messages; the form calls it once per language with `useMemo`. Separate create and update schemas when they differ. |
+| Mapper | `mappers/<entity>FormMapper.ts`           | `toFormValues(dto)` for defaults; the request body built from the values, following the DTO rules (every field present, `null` for no value; a PATCH sends only what changed).                         |
+| Form   | `<Entity>Form.tsx`                        | `useForm` with `valibotResolver(schema)` and `defaultValues`; one `Controller` per field showing `fieldState.error` as `helperText`.                                                                   |
+| Page   | `<Entity>Create.tsx` / `<Entity>Edit.tsx` | the route module: `clientLoader`, `clientAction`, Save and Cancel, server errors, `<FormGuards>`.                                                                                                      |
+
+References: parts (`PartEdit`, `PartForm`) and customers (`CustomerCreate`, `CustomerEdit`, `CustomerForm`, with
+`components/CustomerFields.tsx` for fields shared by create and edit). `parts/PartCreateDialog.tsx` predates this
+standard (`useState` form, `useMutation`, no schema) and is due to be replaced; do not copy it.
 
 Rules:
 

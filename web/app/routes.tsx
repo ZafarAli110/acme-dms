@@ -17,6 +17,7 @@ export default [
 
       ...prefix('customers', [
         index('./pages/customers/CustomerList.tsx'),
+        route('new', './pages/customers/CustomerCreate.tsx'),
         route(':customerId', './pages/customers/CustomerEdit.tsx'),
       ]),
 

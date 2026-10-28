@@ -21,3 +21,16 @@ export interface Customer extends CustomerListItem {
   createdAt: string;
   updatedAt: string;
 }
+
+/** The customer form's values. Every text field is a string while being typed; the mapper turns an empty one into null. */
+export interface CustomerFormValues {
+  firstName: string;
+  surname: string;
+  companyName: string;
+  email: string;
+  phone: string;
+  city: string;
+  status: CustomerStatus;
+  /** `YYYY-MM-DD` from the date input, or empty. */
+  lastContactDate: string;
+}

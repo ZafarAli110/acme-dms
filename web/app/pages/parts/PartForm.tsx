@@ -1,6 +1,6 @@
 import {valibotResolver} from '@hookform/resolvers/valibot';
 import {Alert, Box, Button, Chip, Grid, Paper, Stack, TextField, Typography} from '@mui/material';
-import {useMemo} from 'react';
+import {Fragment, useMemo} from 'react';
 import {Controller, FormProvider, useForm} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
 import {useActionData, useNavigate, useNavigation, useSubmit} from 'react-router';
@@ -48,7 +48,7 @@ export function PartForm({part, locationName, canEdit}: PartFormProps) {
         trail={[{label: t('title'), to: '/parts'}]}
         actions={
           canEdit && (
-            <>
+            <Fragment>
               <Button onClick={() => navigate('/parts')} disabled={isSubmitting} data-testid="cancel">
                 {tCommon('actions.cancel')}
               </Button>
@@ -61,7 +61,7 @@ export function PartForm({part, locationName, canEdit}: PartFormProps) {
               >
                 {isSubmitting ? tCommon('actions.saving') : tCommon('actions.save')}
               </Button>
-            </>
+            </Fragment>
           )
         }
       />

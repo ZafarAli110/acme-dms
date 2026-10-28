@@ -6,6 +6,7 @@ import {
   Button,
   Chip,
   InputAdornment,
+  LinearProgress,
   Paper,
   Skeleton,
   Table,
@@ -18,38 +19,54 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import {keepPreviousData, useQuery} from '@tanstack/react-query';
-import {useState} from 'react';
+import {Fragment, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {useNavigate} from 'react-router';
-import {partQueries} from './queries/partQueries';
-import {useSelectedLocation} from '../../core/contexts/location/useSelectedLocation';
+import {type ClientLoaderFunctionArgs, useNavigate, useNavigation} from 'react-router';
 import {DocumentImage} from '../../components/DocumentImage';
 import {ErrorAlert} from '../../components/ErrorAlert';
 import {PageHeader} from '../../components/PageHeader';
+import {useSelectedLocation} from '../../core/contexts/location/useSelectedLocation';
+import {useListParams} from '../../core/hooks/useListParams';
+import {RESOLVED_LOCATION_CONTEXT} from '../../core/middleware/routerContext';
+import {PAGE_SIZES, readListParams} from '../../core/paging/listParams';
+import {queryClient} from '../../core/queries/queryClient';
 import {formatPrice} from './formatters/formatPrice';
+import {usePartList} from './hooks/usePartList';
 import {PartCreateDialog} from './PartCreateDialog';
+import {partQueries} from './queries/partQueries';
+import {PART_QUERY_KEYS} from './queries/partQueryKey';
+
+/** Fetches the page of parts the URL asks for (`?search=&page=&pageSize=`) before the list shows it. */
+export async function clientLoader({request, context}: ClientLoaderFunctionArgs) {
+  const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
+  if (resolved) {
+    const {search, page, pageSize} = readListParams(new URL(request.url).searchParams);
+    await queryClient
+      .query({
+        staleTime: 'static',
+        queryKey: PART_QUERY_KEYS.list(resolved.locationId, search, page, pageSize),
+        queryFn: ({signal}) => partQueries.getPartsAsync(search, page, pageSize, {signal}),
+      })
+      .catch(() => null);
+  }
+  return null;
+}
 
 export default function PartList() {
   const {t, i18n} = useTranslation('parts');
   const {t: tCommon} = useTranslation();
   const {location, can} = useSelectedLocation();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const {params, setSearch, setPage, setPageSize} = useListParams();
+  const {search, page, pageSize} = params;
+  // A new search or page loads in the route's clientLoader; meanwhile the list stays and a bar shows it is loading.
+  const isLoadingPage = useNavigation().state === 'loading';
+  const {data, error, isLoading} = usePartList(location?.id ?? '', params);
+  // Creating a part opens PartCreateDialog, which predates the web standard: its own form state, not a route.
   const [creating, setCreating] = useState(false);
 
-  // Parts are listed as stocked at the selected location, so the location is part of the key.
-  const {data, error, isLoading} = useQuery({
-    queryKey: ['parts', location?.id, search, page, pageSize],
-    queryFn: ({signal}) => partQueries.getPartsAsync(search, page + 1, pageSize, {signal}),
-    placeholderData: keepPreviousData,
-    enabled: location !== null,
-  });
-
   return (
-    <>
+    <Fragment>
       <PageHeader
         title={t('title')}
         subtitle={t('subtitle', {location: location?.name ?? ''})}
@@ -71,11 +88,9 @@ export default function PartList() {
         <TextField
           size="small"
           placeholder={t('search')}
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            setPage(0);
-          }}
+          // Uncontrolled: the box keeps what is typed while the URL, and then the list, catch up.
+          defaultValue={search}
+          onChange={(event) => setSearch(event.target.value)}
           sx={{m: 2, width: {xs: 'calc(100% - 32px)', sm: 380}}}
           slotProps={{
             input: {
@@ -88,6 +103,7 @@ export default function PartList() {
           }}
           data-testid="parts-search"
         />
+        <LinearProgress sx={{visibility: isLoadingPage ? 'visible' : 'hidden'}} />
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -153,18 +169,16 @@ export default function PartList() {
         <TablePagination
           component="div"
           count={data?.total ?? 0}
-          page={page}
+          page={page - 1}
           rowsPerPage={pageSize}
+          rowsPerPageOptions={PAGE_SIZES}
           labelRowsPerPage={tCommon('pagination.rowsPerPage')}
           labelDisplayedRows={({from, to, count}) => tCommon('pagination.displayed', {from, to, count})}
-          onPageChange={(_event, next) => setPage(next)}
-          onRowsPerPageChange={(event) => {
-            setPageSize(Number(event.target.value));
-            setPage(0);
-          }}
+          onPageChange={(_event, next) => setPage(next + 1)}
+          onRowsPerPageChange={(event) => setPageSize(Number(event.target.value))}
         />
       </Paper>
       <PartCreateDialog open={creating} onClose={() => setCreating(false)} />
-    </>
+    </Fragment>
   );
 }

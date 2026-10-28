@@ -1,102 +1,95 @@
 import {Grid, MenuItem, TextField} from '@mui/material';
+import {Controller, useFormContext} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
-import type {CustomerInput, CustomerStatus} from '../types/customer';
+import type {CustomerFormValues} from '../types/customer';
 
-export const EMPTY_CUSTOMER: CustomerInput = {
-  firstName: '',
-  surname: '',
-  companyName: null,
-  email: null,
-  phone: null,
-  city: null,
-  status: 'prospect',
-  lastContactDate: null,
-};
-
-type TextFieldName = Exclude<keyof CustomerInput, 'status'>;
+type TextFieldName = Exclude<keyof CustomerFormValues, 'status'>;
 
 interface CustomerFieldsProps {
-  value: CustomerInput;
-  onChange: (next: CustomerInput) => void;
-  disabled?: boolean;
+  disabled: boolean;
 }
 
-/** The editable fields of a customer, shared by the create dialog and the detail page. Empty text becomes null. */
-export function CustomerFields({value, onChange, disabled = false}: CustomerFieldsProps) {
+/** The editable fields of a customer, inside the customer form (`<FormProvider>`), for create and edit alike. */
+export function CustomerFields({disabled}: CustomerFieldsProps) {
   const {t} = useTranslation('customers');
-  const fieldProps = {value, onChange, disabled};
+  const {control} = useFormContext<CustomerFormValues>();
 
   return (
     <Grid container spacing={2}>
       <Grid size={{xs: 12, sm: 6}}>
-        <CustomerTextField {...fieldProps} field="firstName" required />
+        <CustomerTextField field="firstName" disabled={disabled} required />
       </Grid>
       <Grid size={{xs: 12, sm: 6}}>
-        <CustomerTextField {...fieldProps} field="surname" required />
+        <CustomerTextField field="surname" disabled={disabled} required />
       </Grid>
       <Grid size={12}>
-        <CustomerTextField {...fieldProps} field="companyName" />
+        <CustomerTextField field="companyName" disabled={disabled} />
       </Grid>
       <Grid size={{xs: 12, sm: 6}}>
-        <CustomerTextField {...fieldProps} field="email" type="email" />
+        <CustomerTextField field="email" disabled={disabled} type="email" />
       </Grid>
       <Grid size={{xs: 12, sm: 6}}>
-        <CustomerTextField {...fieldProps} field="phone" type="tel" />
+        <CustomerTextField field="phone" disabled={disabled} type="tel" />
       </Grid>
       <Grid size={{xs: 12, sm: 6}}>
-        <CustomerTextField {...fieldProps} field="city" />
+        <CustomerTextField field="city" disabled={disabled} />
       </Grid>
       <Grid size={{xs: 12, sm: 6}}>
-        <CustomerTextField {...fieldProps} field="lastContactDate" type="date" />
+        <CustomerTextField field="lastContactDate" disabled={disabled} type="date" />
       </Grid>
       <Grid size={{xs: 12, sm: 6}}>
-        <TextField
-          select
-          label={t('fields.status')}
-          value={value.status}
-          disabled={disabled}
-          fullWidth
-          onChange={(event) => onChange({...value, status: event.target.value as CustomerStatus})}
-          data-testid="customer-status"
-        >
-          <MenuItem value="active">{t('status.active')}</MenuItem>
-          <MenuItem value="prospect">{t('status.prospect')}</MenuItem>
-          <MenuItem value="inactive">{t('status.inactive')}</MenuItem>
-        </TextField>
+        <Controller
+          control={control}
+          name="status"
+          render={({field}) => (
+            <TextField
+              {...field}
+              select
+              label={t('fields.status')}
+              disabled={disabled}
+              fullWidth
+              data-testid="customer-status"
+            >
+              <MenuItem value="active">{t('status.active')}</MenuItem>
+              <MenuItem value="prospect">{t('status.prospect')}</MenuItem>
+              <MenuItem value="inactive">{t('status.inactive')}</MenuItem>
+            </TextField>
+          )}
+        />
       </Grid>
     </Grid>
   );
 }
 
-interface CustomerTextFieldProps extends CustomerFieldsProps {
+interface CustomerTextFieldProps {
   field: TextFieldName;
+  disabled: boolean;
   required?: boolean;
   type?: string;
 }
 
-function CustomerTextField({
-  value,
-  onChange,
-  disabled,
-  field,
-  required = false,
-  type = 'text',
-}: CustomerTextFieldProps) {
+function CustomerTextField({field: name, disabled, required = false, type = 'text'}: CustomerTextFieldProps) {
   const {t} = useTranslation('customers');
+  const {control} = useFormContext<CustomerFormValues>();
+
   return (
-    <TextField
-      label={t(`fields.${field}`)}
-      type={type}
-      value={value[field] ?? ''}
-      required={required}
-      disabled={disabled}
-      fullWidth
-      onChange={(event) => {
-        const raw = event.target.value;
-        onChange({...value, [field]: required ? raw : raw.trim() === '' ? null : raw});
-      }}
-      slotProps={type === 'date' ? {inputLabel: {shrink: true}} : undefined}
-      data-testid={`customer-${field}`}
+    <Controller
+      control={control}
+      name={name}
+      render={({field, fieldState}) => (
+        <TextField
+          {...field}
+          label={t(`fields.${name}`)}
+          type={type}
+          required={required}
+          disabled={disabled}
+          fullWidth
+          error={fieldState.error !== undefined}
+          helperText={fieldState.error?.message}
+          slotProps={type === 'date' ? {inputLabel: {shrink: true}} : undefined}
+          data-testid={`customer-${name}`}
+        />
+      )}
     />
   );
 }

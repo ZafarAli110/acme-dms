@@ -1,3 +1,4 @@
+import {Fragment} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useLocationChangePrompt} from '../core/hooks/useLocationChangePrompt';
 import {useUnsavedChangesGuard} from '../core/hooks/useUnsavedChangesGuard';
@@ -20,7 +21,7 @@ export function FormGuards({isDirty, redirectTo}: FormGuardsProps) {
   const switchLocation = useLocationChangePrompt(isDirty, redirectTo);
 
   return (
-    <>
+    <Fragment>
       <UnsavedChangesDialog
         open={leave.showDialog}
         title={t('unsavedChanges.leaveTitle')}
@@ -37,6 +38,6 @@ export function FormGuards({isDirty, redirectTo}: FormGuardsProps) {
         onStay={switchLocation.cancel}
         onLeave={switchLocation.confirm}
       />
-    </>
+    </Fragment>
   );
 }

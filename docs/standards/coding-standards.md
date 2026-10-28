@@ -41,6 +41,7 @@
   `routes.tsx`, `root.tsx`, and config files), and then a named function: `export default function SignIn() {…}`.
 - React components are `function` declarations with PascalCase names (`export function PartForm() {…}`), never arrow
   functions or JSX held in a constant. Arrow functions are fine inside a component, for event handlers and callbacks.
+- Group siblings with `<Fragment>` (imported from `react`), never the empty `<>…</>`.
 - A new entity or DTO is a typed object literal (`const photo: PartPhoto = {id: …, …}`): the compiler then requires every
   field and refuses unknown ones. Never `Object.assign(new PartPhoto(), {…})`, which checks nothing. A change to an
   existing one is a typed spread (`const updated: Customer = {...customer, firstName: …}`).

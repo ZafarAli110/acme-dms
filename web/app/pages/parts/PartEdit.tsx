@@ -22,7 +22,8 @@ export async function clientLoader({context, params}: ClientLoaderFunctionArgs) 
   const partId = params['partId'];
   if (resolved && partId) {
     await queryClient
-      .ensureQueryData({
+      .query({
+        staleTime: 'static',
         queryKey: PART_QUERY_KEYS.detail(resolved.locationId, partId),
         queryFn: ({signal}) => partQueries.getPartAsync(partId, {signal}),
       })

@@ -18,18 +18,61 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import {useQuery} from '@tanstack/react-query';
+import {Fragment} from 'react';
 import type {ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Link as RouterLink} from 'react-router';
-import {customerQueries} from './customers/queries/customerQueries';
-import {partQueries} from './parts/queries/partQueries';
+import {type ClientLoaderFunctionArgs, Link as RouterLink} from 'react-router';
+import {PageHeader} from '../components/PageHeader';
 import {useAuth} from '../core/contexts/auth/useAuth';
 import {useSelectedLocation} from '../core/contexts/location/useSelectedLocation';
 import {formatDaysAgo, formatPlainDate} from '../core/formatters/formatDate';
 import {formatRole} from '../core/formatters/formatRole';
-import {PageHeader} from '../components/PageHeader';
+import {RESOLVED_LOCATION_CONTEXT} from '../core/middleware/routerContext';
+import {queryClient} from '../core/queries/queryClient';
 import {CustomerStatusChip} from './customers/components/CustomerStatusChip';
+import {useCustomerCount} from './customers/hooks/useCustomerCount';
+import {useRecentCustomers} from './customers/hooks/useRecentCustomers';
+import {customerQueries} from './customers/queries/customerQueries';
+import {CUSTOMER_QUERY_KEYS} from './customers/queries/customerQueryKey';
+import {usePartCount} from './parts/hooks/usePartCount';
+import {partQueries} from './parts/queries/partQueries';
+import {PART_QUERY_KEYS} from './parts/queries/partQueryKey';
+
+/** Fetches what Home shows at the selected location, only what the user may read there, before the page shows. */
+export async function clientLoader({context}: ClientLoaderFunctionArgs) {
+  const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
+  if (!resolved) {
+    return null;
+  }
+  const {locationId, permissions} = resolved;
+  const prefetches: Promise<unknown>[] = [];
+  if (permissions.includes('parts.read')) {
+    prefetches.push(
+      queryClient.query({
+        staleTime: 'static',
+        queryKey: PART_QUERY_KEYS.count(locationId),
+        queryFn: ({signal}) => partQueries.getPartsAsync('', 1, 1, {signal}),
+      }),
+    );
+  }
+  if (permissions.includes('customers.read')) {
+    prefetches.push(
+      queryClient.query({
+        staleTime: 'static',
+        queryKey: CUSTOMER_QUERY_KEYS.count(locationId),
+        queryFn: ({signal}) => customerQueries.getCustomersAsync('', 1, 1, {signal}),
+      }),
+      queryClient.query({
+        staleTime: 'static',
+        queryKey: CUSTOMER_QUERY_KEYS.recent(locationId),
+        queryFn: ({signal}) => customerQueries.getRecentCustomersAsync({signal}),
+      }),
+    );
+  }
+  // A failure is shown by the page's hooks, not thrown.
+  await Promise.allSettled(prefetches);
+  return null;
+}
 
 interface ShortcutProps {
   to: string;
@@ -83,25 +126,13 @@ export default function Home() {
   const {location, can} = useSelectedLocation();
   const firstName = user?.displayName.split(' ')[0] ?? '';
 
-  // Location-scoped: the keys carry the location so a switch never shows the previous location's numbers.
-  const parts = useQuery({
-    queryKey: ['parts', location?.id, 'count'],
-    queryFn: ({signal}) => partQueries.getPartsAsync('', 1, 1, {signal}),
-    enabled: location !== null && can('parts.read'),
-  });
-  const customers = useQuery({
-    queryKey: ['customers', location?.id, 'count'],
-    queryFn: ({signal}) => customerQueries.getCustomersAsync('', 1, 1, {signal}),
-    enabled: location !== null && can('customers.read'),
-  });
-  const recent = useQuery({
-    queryKey: ['customers', location?.id, 'recent'],
-    queryFn: ({signal}) => customerQueries.getRecentCustomersAsync({signal}),
-    enabled: location !== null && can('customers.read'),
-  });
+  const locationId = location?.id ?? '';
+  const partCount = usePartCount(locationId, can('parts.read'));
+  const customerCount = useCustomerCount(locationId, can('customers.read'));
+  const recent = useRecentCustomers(locationId, can('customers.read'));
 
   return (
-    <>
+    <Fragment>
       <PageHeader
         title={t('welcome', {name: firstName})}
         subtitle={
@@ -115,7 +146,7 @@ export default function Home() {
               to="/customers"
               icon={<PeopleIcon />}
               title={t('customersAt', {location: location?.name ?? ''})}
-              count={customers.data?.total}
+              count={customerCount.data}
               caption={t('customersCaption')}
               testId="home-customers"
             />
@@ -127,7 +158,7 @@ export default function Home() {
               to="/parts"
               icon={<Inventory2Icon />}
               title={t('partsAt', {location: location?.name ?? ''})}
-              count={parts.data?.total}
+              count={partCount.data}
               caption={t('partsCaption')}
               testId="home-parts"
             />
@@ -195,6 +226,6 @@ export default function Home() {
           </Grid>
         )}
       </Grid>
-    </>
+    </Fragment>
   );
 }

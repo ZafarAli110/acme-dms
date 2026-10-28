@@ -30,14 +30,24 @@
   "edit": {
     "customerOf": "Customer of {{location}}",
     "details": "Details",
-    "saveChanges": "Save changes",
     "record": "Record",
     "location": "Location: {{location}}",
     "added": "Added: {{date}}",
-    "updated": "Updated: {{date}}"
+    "updated": "Updated: {{date}}",
+    "saved": "Saved.",
+    "notFound": "This is not a customer of {{location}}.",
+    "backToList": "Back to Customers"
   },
   "create": {
     "title": "New customer",
-    "create": "Create"
+    "intro": "The customer joins {{location}}.",
+    "notAllowed": "You cannot add customers at {{location}}."
+  },
+  "validation": {
+    "firstNameRequired": "Enter a first name.",
+    "surnameRequired": "Enter a surname.",
+    "tooLong": "Keep this to {{max}} characters.",
+    "emailInvalid": "Enter an email address such as name@example.com.",
+    "dateInvalid": "Enter a date."
   }
 }

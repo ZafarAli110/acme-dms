@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   InputAdornment,
+  LinearProgress,
   Paper,
   Skeleton,
   Table,
@@ -17,47 +18,61 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import {keepPreviousData, useQuery} from '@tanstack/react-query';
-import {useState} from 'react';
+import {Fragment} from 'react';
 import {useTranslation} from 'react-i18next';
-import {formatPlainDate} from '../../core/formatters/formatDate';
-import {useNavigate} from 'react-router';
-import {customerQueries} from './queries/customerQueries';
-import {useSelectedLocation} from '../../core/contexts/location/useSelectedLocation';
+import {type ClientLoaderFunctionArgs, Link as RouterLink, useNavigate, useNavigation} from 'react-router';
 import {ErrorAlert} from '../../components/ErrorAlert';
 import {PageHeader} from '../../components/PageHeader';
-import {CustomerCreateDialog} from './components/CustomerCreateDialog';
+import {useSelectedLocation} from '../../core/contexts/location/useSelectedLocation';
+import {formatPlainDate} from '../../core/formatters/formatDate';
+import {useListParams} from '../../core/hooks/useListParams';
+import {RESOLVED_LOCATION_CONTEXT} from '../../core/middleware/routerContext';
+import {PAGE_SIZES, readListParams} from '../../core/paging/listParams';
+import {queryClient} from '../../core/queries/queryClient';
 import {CustomerStatusChip} from './components/CustomerStatusChip';
+import {useCustomerList} from './hooks/useCustomerList';
+import {customerQueries} from './queries/customerQueries';
+import {CUSTOMER_QUERY_KEYS} from './queries/customerQueryKey';
+
+/** Fetches the page of customers the URL asks for (`?search=&page=&pageSize=`) before the list shows it. */
+export async function clientLoader({request, context}: ClientLoaderFunctionArgs) {
+  const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
+  if (resolved) {
+    const {search, page, pageSize} = readListParams(new URL(request.url).searchParams);
+    await queryClient
+      .query({
+        staleTime: 'static',
+        queryKey: CUSTOMER_QUERY_KEYS.list(resolved.locationId, search, page, pageSize),
+        queryFn: ({signal}) => customerQueries.getCustomersAsync(search, page, pageSize, {signal}),
+      })
+      .catch(() => null);
+  }
+  return null;
+}
 
 export default function CustomerList() {
   const {t, i18n} = useTranslation('customers');
   const {t: tCommon} = useTranslation();
   const {location, can} = useSelectedLocation();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
-  const [creating, setCreating] = useState(false);
-
-  // The location is part of the key: customers belong to one location, and another location's list must never show.
-  const {data, error, isLoading} = useQuery({
-    queryKey: ['customers', location?.id, search, page, pageSize],
-    queryFn: ({signal}) => customerQueries.getCustomersAsync(search, page + 1, pageSize, {signal}),
-    placeholderData: keepPreviousData,
-    enabled: location !== null,
-  });
+  const {params, setSearch, setPage, setPageSize} = useListParams();
+  const {search, page, pageSize} = params;
+  // A new search or page loads in the route's clientLoader; meanwhile the list stays and a bar shows it is loading.
+  const isLoadingPage = useNavigation().state === 'loading';
+  const {data, error, isLoading} = useCustomerList(location?.id ?? '', params);
 
   return (
-    <>
+    <Fragment>
       <PageHeader
         title={t('title')}
         subtitle={t('subtitle', {location: location?.name ?? ''})}
         actions={
           can('customers.write') && (
             <Button
+              component={RouterLink}
+              to="/customers/new"
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setCreating(true)}
               data-testid="create-customer"
             >
               {t('newCustomer')}
@@ -70,11 +85,9 @@ export default function CustomerList() {
         <TextField
           size="small"
           placeholder={t('search')}
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            setPage(0);
-          }}
+          // Uncontrolled: the box keeps what is typed while the URL, and then the list, catch up.
+          defaultValue={search}
+          onChange={(event) => setSearch(event.target.value)}
           sx={{m: 2, width: {xs: 'calc(100% - 32px)', sm: 380}}}
           slotProps={{
             input: {
@@ -87,6 +100,7 @@ export default function CustomerList() {
           }}
           data-testid="customers-search"
         />
+        <LinearProgress sx={{visibility: isLoadingPage ? 'visible' : 'hidden'}} />
         <TableContainer>
           <Table size="small" data-testid="customers-table">
             <TableHead>
@@ -163,18 +177,15 @@ export default function CustomerList() {
         <TablePagination
           component="div"
           count={data?.total ?? 0}
-          page={page}
+          page={page - 1}
           rowsPerPage={pageSize}
+          rowsPerPageOptions={PAGE_SIZES}
           labelRowsPerPage={tCommon('pagination.rowsPerPage')}
           labelDisplayedRows={({from, to, count}) => tCommon('pagination.displayed', {from, to, count})}
-          onPageChange={(_event, next) => setPage(next)}
-          onRowsPerPageChange={(event) => {
-            setPageSize(Number(event.target.value));
-            setPage(0);
-          }}
+          onPageChange={(_event, next) => setPage(next + 1)}
+          onRowsPerPageChange={(event) => setPageSize(Number(event.target.value))}
         />
       </Paper>
-      <CustomerCreateDialog open={creating} onClose={() => setCreating(false)} />
-    </>
+    </Fragment>
   );
 }

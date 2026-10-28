@@ -30,14 +30,24 @@
   "edit": {
     "customerOf": "Client de {{location}}",
     "details": "Coordonnées",
-    "saveChanges": "Enregistrer les modifications",
     "record": "Fiche",
     "location": "Site : {{location}}",
     "added": "Créé le : {{date}}",
-    "updated": "Modifié le : {{date}}"
+    "updated": "Modifié le : {{date}}",
+    "saved": "Enregistré.",
+    "notFound": "Ce client n’est pas un client de {{location}}.",
+    "backToList": "Retour aux clients"
   },
   "create": {
     "title": "Nouveau client",
-    "create": "Créer"
+    "intro": "Le client est rattaché à {{location}}.",
+    "notAllowed": "Vous ne pouvez pas ajouter de clients à {{location}}."
+  },
+  "validation": {
+    "firstNameRequired": "Saisissez un prénom.",
+    "surnameRequired": "Saisissez un nom.",
+    "tooLong": "{{max}} caractères au maximum.",
+    "emailInvalid": "Saisissez une adresse e-mail comme nom@exemple.com.",
+    "dateInvalid": "Saisissez une date."
   }
 }

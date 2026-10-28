@@ -1,54 +1,84 @@
-import {Button, Grid, Paper, Skeleton, Stack, Typography} from '@mui/material';
-import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
-import {useEffect, useState} from 'react';
+import {Alert, Button, Grid, Paper, Skeleton, Stack, Typography} from '@mui/material';
+import {Fragment} from 'react';
 import {useTranslation} from 'react-i18next';
-import {formatInstant} from '../../core/formatters/formatDate';
-import {useParams} from 'react-router';
-import {customerQueries} from './queries/customerQueries';
-import type {CustomerInput} from './types/customer';
-import {useSelectedLocation} from '../../core/contexts/location/useSelectedLocation';
-import {ErrorAlert} from '../../components/ErrorAlert';
+import {
+  type ClientActionFunctionArgs,
+  type ClientLoaderFunctionArgs,
+  Link as RouterLink,
+  useActionData,
+  useParams,
+} from 'react-router';
 import {PageHeader} from '../../components/PageHeader';
-import {CustomerFields, EMPTY_CUSTOMER} from './components/CustomerFields';
+import {problemErrorMessage} from '../../core/config/apiErrors';
+import {useSelectedLocation} from '../../core/contexts/location/useSelectedLocation';
+import {formatInstant} from '../../core/formatters/formatDate';
+import {RESOLVED_LOCATION_CONTEXT} from '../../core/middleware/routerContext';
+import {queryClient} from '../../core/queries/queryClient';
+import {i18n} from '../../i18n';
 import {CustomerStatusChip} from './components/CustomerStatusChip';
+import {CustomerForm} from './CustomerForm';
+import {useCustomer} from './hooks/useCustomer';
+import {customerQueries} from './queries/customerQueries';
+import {CUSTOMER_QUERY_KEYS} from './queries/customerQueryKey';
+import type {CustomerInput} from './types/customer';
 
-function toInput(customer: CustomerInput): CustomerInput {
-  const {firstName, surname, companyName, email, phone, city, status, lastContactDate} = customer;
-  return {firstName, surname, companyName, email, phone, city, status, lastContactDate};
+/** Fetches the customer before the page shows. Another location's customer is shown by the page, not thrown. */
+export async function clientLoader({context, params}: ClientLoaderFunctionArgs) {
+  const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
+  const customerId = params['customerId'];
+  if (resolved && customerId) {
+    await queryClient
+      .query({
+        staleTime: 'static',
+        queryKey: CUSTOMER_QUERY_KEYS.detail(resolved.locationId, customerId),
+        queryFn: ({signal}) => customerQueries.getCustomerAsync(customerId, {signal}),
+      })
+      .catch(() => null);
+  }
+  return null;
+}
+
+/** One Save: a PUT with every field; the page then shows the customer as saved. */
+export async function clientAction({request, context, params}: ClientActionFunctionArgs) {
+  const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
+  const customerId = params['customerId'];
+  if (!resolved || !customerId) {
+    return {saved: false, error: i18n.t('errors.unexpected')};
+  }
+  try {
+    await customerQueries.updateCustomerAsync(customerId, (await request.json()) as CustomerInput);
+  } catch (error) {
+    return {saved: false, error: problemErrorMessage(error, i18n.t('errors.unexpected'))};
+  }
+  await queryClient.invalidateQueries({queryKey: CUSTOMER_QUERY_KEYS.all(resolved.locationId)});
+  return {saved: true, error: null};
 }
 
 export default function CustomerEdit() {
-  const {t, i18n} = useTranslation('customers');
+  const {t, i18n: activeI18n} = useTranslation('customers');
   const {customerId = ''} = useParams();
   const {location, can} = useSelectedLocation();
-  const queryClient = useQueryClient();
+  const {data: customer, isLoading} = useCustomer(location?.id ?? '', customerId);
+  const actionData = useActionData<typeof clientAction>();
 
-  const {data: customer, error} = useQuery({
-    queryKey: ['customers', location?.id, 'detail', customerId],
-    queryFn: ({signal}) => customerQueries.getCustomerAsync(customerId, {signal}),
-    enabled: location !== null,
-  });
-
-  const [draft, setDraft] = useState<CustomerInput>(EMPTY_CUSTOMER);
-  useEffect(() => {
-    if (customer) {
-      setDraft(toInput(customer));
-    }
-  }, [customer]);
-
-  const save = useMutation({
-    mutationFn: () => customerQueries.updateCustomerAsync(customerId, draft),
-    onSuccess: () => queryClient.invalidateQueries({queryKey: ['customers']}),
-  });
-
+  if (isLoading) {
+    return <Skeleton variant="rounded" height={420} />;
+  }
   if (!customer) {
-    return error ? <ErrorAlert error={error} /> : <Skeleton variant="rounded" height={240} />;
+    return (
+      <Stack sx={{gap: 2, alignItems: 'flex-start'}}>
+        <Alert severity="warning" data-testid="customer-not-found">
+          {t('edit.notFound', {location: location?.name ?? ''})}
+        </Alert>
+        <Button component={RouterLink} to="/customers">
+          {t('edit.backToList')}
+        </Button>
+      </Stack>
+    );
   }
 
-  const canEdit = can('customers.write');
-  const changed = JSON.stringify(draft) !== JSON.stringify(toInput(customer));
   return (
-    <>
+    <Fragment>
       <PageHeader
         title={`${customer.firstName} ${customer.surname}`}
         subtitle={customer.companyName ?? t('edit.customerOf', {location: location?.name ?? ''})}
@@ -57,25 +87,14 @@ export default function CustomerEdit() {
       />
       <Grid container spacing={3}>
         <Grid size={{xs: 12, md: 8}}>
-          <Paper sx={{p: 3}}>
-            <Typography variant="h6" sx={{mb: 2}}>
-              {t('edit.details')}
-            </Typography>
-            <CustomerFields value={draft} onChange={setDraft} disabled={!canEdit} />
-            {canEdit && (
-              <Stack direction="row" sx={{justifyContent: 'flex-end', mt: 2}}>
-                <Button
-                  variant="contained"
-                  onClick={() => save.mutate()}
-                  disabled={!changed || save.isPending || !draft.firstName.trim() || !draft.surname.trim()}
-                  data-testid="save-customer"
-                >
-                  {t('edit.saveChanges')}
-                </Button>
-              </Stack>
-            )}
-            <ErrorAlert error={save.error} />
-          </Paper>
+          {/* Keyed by when the customer was saved: after a Save the form starts again from what was saved, clean. */}
+          <CustomerForm
+            key={customer.updatedAt}
+            customer={customer}
+            canEdit={can('customers.write')}
+            error={actionData?.error ?? null}
+            saved={actionData?.saved ?? false}
+          />
         </Grid>
         <Grid size={{xs: 12, md: 4}}>
           <Paper sx={{p: 3}}>
@@ -87,15 +106,15 @@ export default function CustomerEdit() {
                 {t('edit.location', {location: location?.name ?? ''})}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {t('edit.added', {date: formatInstant(customer.createdAt, i18n.language)})}
+                {t('edit.added', {date: formatInstant(customer.createdAt, activeI18n.language)})}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {t('edit.updated', {date: formatInstant(customer.updatedAt, i18n.language)})}
+                {t('edit.updated', {date: formatInstant(customer.updatedAt, activeI18n.language)})}
               </Typography>
             </Stack>
           </Paper>
         </Grid>
       </Grid>
-    </>
+    </Fragment>
   );
 }
