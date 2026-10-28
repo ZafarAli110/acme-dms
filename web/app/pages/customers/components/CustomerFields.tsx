@@ -84,7 +84,7 @@ function CustomerTextField({field: name, disabled, required = false, type = 'tex
           required={required}
           disabled={disabled}
           fullWidth
-          error={fieldState.error !== undefined}
+          error={fieldState.invalid}
           helperText={fieldState.error?.message}
           slotProps={type === 'date' ? {inputLabel: {shrink: true}} : undefined}
           data-testid={`customer-${name}`}

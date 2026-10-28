@@ -20,6 +20,7 @@ import {CustomerForm} from './CustomerForm';
 import {useCustomer} from './hooks/useCustomer';
 import {customerQueries} from './queries/customerQueries';
 import {CUSTOMER_QUERY_KEYS} from './queries/customerQueryKey';
+import {customerQueryOptions} from './queries/customerQueryOptions';
 import type {CustomerInput} from './types/customer';
 
 /** Fetches the customer before the page shows. Another location's customer is shown by the page, not thrown. */
@@ -28,11 +29,7 @@ export async function clientLoader({context, params}: ClientLoaderFunctionArgs) 
   const customerId = params['customerId'];
   if (resolved && customerId) {
     await queryClient
-      .query({
-        staleTime: 'static',
-        queryKey: CUSTOMER_QUERY_KEYS.detail(resolved.locationId, customerId),
-        queryFn: ({signal}) => customerQueries.getCustomerAsync(customerId, {signal}),
-      })
+      .query({...customerQueryOptions.detail(resolved.locationId, customerId), staleTime: 'static'})
       .catch(() => null);
   }
   return null;

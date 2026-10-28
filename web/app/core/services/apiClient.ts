@@ -24,15 +24,15 @@ class ApiClient {
   }
 
   public postAsync<T>(url: string, body: unknown, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, {method: 'POST', body: JSON.stringify(body)}, options);
+    return this.requestAsync<T>(url, jsonInit('POST', body), options);
   }
 
   public putAsync<T>(url: string, body: unknown, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, {method: 'PUT', body: JSON.stringify(body)}, options);
+    return this.requestAsync<T>(url, jsonInit('PUT', body), options);
   }
 
   public patchAsync<T>(url: string, body: unknown, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, {method: 'PATCH', body: JSON.stringify(body)}, options);
+    return this.requestAsync<T>(url, jsonInit('PATCH', body), options);
   }
 
   public deleteAsync<T>(url: string, options?: RequestOptions): Promise<T> {
@@ -74,17 +74,17 @@ class ApiClient {
 
     const token = session.getToken();
     const locationId = session.getLocationId();
-    const isJson = init.body !== undefined && !(init.body instanceof FormData);
+    // The caller's headers (a JSON body's content type) plus who is asking and where. A FormData body gets its
+    // multipart content type, with the boundary, from fetch itself.
+    const headers = new Headers(init.headers);
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    }
+    if (locationId) {
+      headers.set('x-location-id', locationId);
+    }
     try {
-      return await fetch(url, {
-        ...init,
-        signal: controller.signal,
-        headers: {
-          ...(isJson ? {'content-type': 'application/json'} : {}),
-          ...(token ? {authorization: `Bearer ${token}`} : {}),
-          ...(locationId ? {'x-location-id': locationId} : {}),
-        },
-      });
+      return await fetch(url, {...init, signal: controller.signal, headers});
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         // Cancelled by the caller: let TanStack Query see its own abort. Otherwise the timeout fired.
@@ -120,6 +120,11 @@ class ApiClient {
       timestamp: Temporal.Now.instant().toString({smallestUnit: 'millisecond'}),
     });
   }
+}
+
+/** A request with a JSON body: serialised here, and labelled as JSON where it is serialised. */
+function jsonInit(method: string, body: unknown): RequestInit {
+  return {method, body: JSON.stringify(body), headers: {'content-type': 'application/json'}};
 }
 
 function problemTypeForStatus(status: number): string {

@@ -32,11 +32,9 @@ import {queryClient} from '../core/queries/queryClient';
 import {CustomerStatusChip} from './customers/components/CustomerStatusChip';
 import {useCustomerCount} from './customers/hooks/useCustomerCount';
 import {useRecentCustomers} from './customers/hooks/useRecentCustomers';
-import {customerQueries} from './customers/queries/customerQueries';
-import {CUSTOMER_QUERY_KEYS} from './customers/queries/customerQueryKey';
+import {customerQueryOptions} from './customers/queries/customerQueryOptions';
 import {usePartCount} from './parts/hooks/usePartCount';
-import {partQueries} from './parts/queries/partQueries';
-import {PART_QUERY_KEYS} from './parts/queries/partQueryKey';
+import {partQueryOptions} from './parts/queries/partQueryOptions';
 
 /** Fetches what Home shows at the selected location, only what the user may read there, before the page shows. */
 export async function clientLoader({context}: ClientLoaderFunctionArgs) {
@@ -47,26 +45,12 @@ export async function clientLoader({context}: ClientLoaderFunctionArgs) {
   const {locationId, permissions} = resolved;
   const prefetches: Promise<unknown>[] = [];
   if (permissions.includes('parts.read')) {
-    prefetches.push(
-      queryClient.query({
-        staleTime: 'static',
-        queryKey: PART_QUERY_KEYS.count(locationId),
-        queryFn: ({signal}) => partQueries.getPartsAsync('', 1, 1, {signal}),
-      }),
-    );
+    prefetches.push(queryClient.query({...partQueryOptions.count(locationId), staleTime: 'static'}));
   }
   if (permissions.includes('customers.read')) {
     prefetches.push(
-      queryClient.query({
-        staleTime: 'static',
-        queryKey: CUSTOMER_QUERY_KEYS.count(locationId),
-        queryFn: ({signal}) => customerQueries.getCustomersAsync('', 1, 1, {signal}),
-      }),
-      queryClient.query({
-        staleTime: 'static',
-        queryKey: CUSTOMER_QUERY_KEYS.recent(locationId),
-        queryFn: ({signal}) => customerQueries.getRecentCustomersAsync({signal}),
-      }),
+      queryClient.query({...customerQueryOptions.count(locationId), staleTime: 'static'}),
+      queryClient.query({...customerQueryOptions.recent(locationId), staleTime: 'static'}),
     );
   }
   // A failure is shown by the page's hooks, not thrown.

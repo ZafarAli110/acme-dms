@@ -31,20 +31,15 @@ import {PAGE_SIZES, readListParams} from '../../core/paging/listParams';
 import {queryClient} from '../../core/queries/queryClient';
 import {CustomerStatusChip} from './components/CustomerStatusChip';
 import {useCustomerList} from './hooks/useCustomerList';
-import {customerQueries} from './queries/customerQueries';
-import {CUSTOMER_QUERY_KEYS} from './queries/customerQueryKey';
+import {customerQueryOptions} from './queries/customerQueryOptions';
 
 /** Fetches the page of customers the URL asks for (`?search=&page=&pageSize=`) before the list shows it. */
 export async function clientLoader({request, context}: ClientLoaderFunctionArgs) {
   const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
   if (resolved) {
-    const {search, page, pageSize} = readListParams(new URL(request.url).searchParams);
+    const params = readListParams(new URL(request.url).searchParams);
     await queryClient
-      .query({
-        staleTime: 'static',
-        queryKey: CUSTOMER_QUERY_KEYS.list(resolved.locationId, search, page, pageSize),
-        queryFn: ({signal}) => customerQueries.getCustomersAsync(search, page, pageSize, {signal}),
-      })
+      .query({...customerQueryOptions.list(resolved.locationId, params), staleTime: 'static'})
       .catch(() => null);
   }
   return null;

@@ -14,6 +14,7 @@ import {i18n} from '../../i18n';
 import {usePart} from './hooks/usePart';
 import {PartForm} from './PartForm';
 import {partQueries} from './queries/partQueries';
+import {partQueryOptions} from './queries/partQueryOptions';
 import {PART_QUERY_KEYS} from './queries/partQueryKey';
 
 /** Fetches the part before the page shows. A part not stocked here is shown by the page, not thrown. */
@@ -22,11 +23,7 @@ export async function clientLoader({context, params}: ClientLoaderFunctionArgs) 
   const partId = params['partId'];
   if (resolved && partId) {
     await queryClient
-      .query({
-        staleTime: 'static',
-        queryKey: PART_QUERY_KEYS.detail(resolved.locationId, partId),
-        queryFn: ({signal}) => partQueries.getPartAsync(partId, {signal}),
-      })
+      .query({...partQueryOptions.detail(resolved.locationId, partId), staleTime: 'static'})
       .catch(() => null);
   }
   return null;

@@ -101,7 +101,7 @@ export function PartForm({part, locationName, canEdit}: PartFormProps) {
                       required
                       fullWidth
                       disabled={disabled}
-                      error={fieldState.error !== undefined}
+                      error={fieldState.invalid}
                       helperText={fieldState.error?.message}
                       data-testid="part-description"
                     />
@@ -118,7 +118,7 @@ export function PartForm({part, locationName, canEdit}: PartFormProps) {
                       fullWidth
                       disabled={disabled}
                       slotProps={{htmlInput: {inputMode: 'decimal'}}}
-                      error={fieldState.error !== undefined}
+                      error={fieldState.invalid}
                       helperText={fieldState.error?.message}
                       data-testid="part-unit-price"
                     />

@@ -33,20 +33,15 @@ import {queryClient} from '../../core/queries/queryClient';
 import {formatPrice} from './formatters/formatPrice';
 import {usePartList} from './hooks/usePartList';
 import {PartCreateDialog} from './PartCreateDialog';
-import {partQueries} from './queries/partQueries';
-import {PART_QUERY_KEYS} from './queries/partQueryKey';
+import {partQueryOptions} from './queries/partQueryOptions';
 
 /** Fetches the page of parts the URL asks for (`?search=&page=&pageSize=`) before the list shows it. */
 export async function clientLoader({request, context}: ClientLoaderFunctionArgs) {
   const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
   if (resolved) {
-    const {search, page, pageSize} = readListParams(new URL(request.url).searchParams);
+    const params = readListParams(new URL(request.url).searchParams);
     await queryClient
-      .query({
-        staleTime: 'static',
-        queryKey: PART_QUERY_KEYS.list(resolved.locationId, search, page, pageSize),
-        queryFn: ({signal}) => partQueries.getPartsAsync(search, page, pageSize, {signal}),
-      })
+      .query({...partQueryOptions.list(resolved.locationId, params), staleTime: 'static'})
       .catch(() => null);
   }
   return null;
