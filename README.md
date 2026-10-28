@@ -216,15 +216,16 @@ bun run api as alice POST /api/dealership/v1/parts '{"partNumber":"BRK-PAD-009",
 
 Every project, in either language, has the same targets, run through [Nx](https://nx.dev).
 
-| Command                           | What it does                                                 |
-| --------------------------------- | ------------------------------------------------------------ |
-| `bun run dev`                     | Start everything under Aspire                                |
-| `bun run typecheck`               | Type-check every project (TypeScript and .NET)               |
-| `bun run lint`                    | Lint every project (oxlint, .NET analyzers)                  |
-| `bun run test`                    | Run every project's unit tests                               |
-| `bun run format`                  | Format TypeScript, JSON and Markdown                         |
-| `bun run gate:fast`               | Format check, lint, typecheck and tests for changed projects |
-| `bunx nx test @acme/identity-api` | One target for one project                                   |
+| Command                           | What it does                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `bun run dev`                     | Start everything under Aspire                                                              |
+| `bun run typecheck`               | Type-check every project (TypeScript and .NET)                                             |
+| `bun run lint`                    | Lint every project (oxlint, .NET analyzers)                                                |
+| `bun run test`                    | Run every project's unit tests                                                             |
+| `bun run format`                  | Format TypeScript, JSON and Markdown                                                       |
+| `bun run gate:fast`               | Format check, lint, typecheck and tests for changed projects                               |
+| `bun run gate:slow`               | End-to-end tests of the web app (Playwright, installed Chrome), against the running system |
+| `bunx nx test @acme/identity-api` | One target for one project                                                                 |
 
 | Target      | TypeScript        | .NET                                    |
 | ----------- | ----------------- | --------------------------------------- |

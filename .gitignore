@@ -20,3 +20,6 @@ obj/
 # React Router
 .react-router/
 build/
+# Playwright
+test-results/
+playwright-report/
