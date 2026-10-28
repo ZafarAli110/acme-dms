@@ -50,6 +50,11 @@
 - Data access goes through a small repository per entity (`IPartRepository`). TypeORM has no global query filter, so
   the repository is where the dealer is applied (`DealerScopedRepository`) and where location-scoped methods take the
   location. Handlers depend on the interface, which keeps their tests free of query builders.
+- **Use the platform first.** TypeScript targets ES2025 (Node 26, Bun and current browsers run all of it): `toSorted`,
+  `Object.groupBy`, `Set#union`/`intersection`, iterator helpers (`Iterator.from(...).filter(...).toArray()`),
+  `Promise.allSettled`/`Promise.try`/`Promise.withResolvers`, `AbortSignal.timeout`/`AbortSignal.any` instead of a
+  hand-made timer, `structuredClone`, Temporal for time. A resource that must be released (a query runner, a lock, a
+  temporary file) is held with `using` / `await using` (or a `DisposableStack`), not a `try`/`finally`.
 - **No value is `null`, not `undefined`**, in our own types (as in the DTOs). Do not compare with `undefined` to mean
   something else: use the API's own answer (`fieldState.invalid`, `response.ok`), `??` for a default, and let a JSON
   log line drop the fields an object does not have. The one place `undefined` is the meaning is a PATCH request: a

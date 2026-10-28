@@ -5,7 +5,7 @@
     "moduleResolution": "Bundler",
     "types": ["bun", "node"],
     "noEmit": true,
-    "lib": ["ES2024", "ESNext.Temporal", "DOM"]
+    "lib": ["ES2025", "ESNext.Disposable", "ESNext.Error", "ESNext.Temporal", "DOM"]
   },
   "include": ["*.ts"]
 }

@@ -163,13 +163,16 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     return toPartResponseDto(part, stocked.inventory, stocked.bin, photos);
   }
 
-  /** Best effort: a document left behind is logged, never turned into a failed save. */
+  /** Best effort, all at once: a document left behind is logged, never turned into a failed save. */
   private async deleteDocumentsAsync(userContext: UserContext, documentIds: string[]): Promise<void> {
-    for (const documentId of documentIds) {
-      try {
-        await this._documentApiClient.deleteDocumentAsync(userContext, documentId);
-      } catch (error) {
-        this._logger.warn(`Document ${documentId} could not be deleted and is left without an owner: ${String(error)}`);
+    const results = await Promise.allSettled(
+      documentIds.map((documentId) => this._documentApiClient.deleteDocumentAsync(userContext, documentId)),
+    );
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'rejected') {
+        this._logger.warn(
+          `Document ${documentIds[index]} could not be deleted and is left without an owner: ${String(result.reason)}`,
+        );
       }
     }
   }

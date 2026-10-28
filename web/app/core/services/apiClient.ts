@@ -67,10 +67,9 @@ class ApiClient {
   }
 
   private async sendAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
-    const controller = new AbortController();
-    const abort = () => controller.abort();
-    options?.signal?.addEventListener('abort', abort, {once: true});
-    const timeout = setTimeout(abort, API_CONFIG.timeoutMs);
+    // Stops at the timeout or when the caller cancels (TanStack Query, when a query is no longer needed).
+    const timeout = AbortSignal.timeout(API_CONFIG.timeoutMs);
+    const signal = options?.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
 
     const token = session.getToken();
     const locationId = session.getLocationId();
@@ -84,22 +83,16 @@ class ApiClient {
       headers.set('x-location-id', locationId);
     }
     try {
-      return await fetch(url, {...init, signal: controller.signal, headers});
+      return await fetch(url, {...init, signal, headers});
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        // Cancelled by the caller: let TanStack Query see its own abort. Otherwise the timeout fired.
-        if (options?.signal?.aborted) {
-          throw error;
-        }
+      if (timeout.aborted) {
         throw new RequestTimeoutError();
       }
+      // A network failure; a caller's cancellation is passed on as it is, so TanStack Query sees its own abort.
       if (error instanceof TypeError) {
         throw new ServerUnreachableError();
       }
       throw error;
-    } finally {
-      clearTimeout(timeout);
-      options?.signal?.removeEventListener('abort', abort);
     }
   }
 
