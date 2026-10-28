@@ -29,7 +29,7 @@
     "typecheck": "nx run-many -t typecheck && tsc --noEmit -p scripts/tsconfig.json",
     "test": "nx run-many -t test",
     "gate:fast": "nx affected -t format lint typecheck test",
-    "gate:slow": "nx affected -t e2e"
+    "gate:slow": "nx run @acme/web:e2e"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

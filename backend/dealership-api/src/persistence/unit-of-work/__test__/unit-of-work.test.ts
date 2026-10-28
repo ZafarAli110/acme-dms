@@ -1,4 +1,4 @@
-import {eq} from 'drizzle-orm';
+import {eq, sql} from 'drizzle-orm';
 import type {Pool} from 'pg';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 import {createTestDatabaseAsync, type TestDatabase} from '../../__test__/postgres/test-database';
@@ -91,5 +91,23 @@ describe('UnitOfWork', () => {
     await work.commitAsync();
 
     await expect(work.commitAsync()).rejects.toThrow('The unit of work is already committed.');
+  });
+
+  it('survives an idle connection being dropped by the server', async () => {
+    {
+      await using work = await factory.beginAsync();
+      await work.commitAsync();
+    }
+    // The connection is idle in the pool now; the server ends it, as a restart or a network reset would.
+    await database.db.execute(
+      sql`select pg_terminate_backend(pid) from pg_stat_activity
+          where datname = current_database() and pid <> pg_backend_pid() and state = 'idle'`,
+    );
+    await new Promise((settle) => setTimeout(settle, 200));
+
+    await using work = await factory.beginAsync();
+    await work.db.insert(bins).values(newBin('I-01'));
+    await work.commitAsync();
+    expect(await binExistsAsync('I-01')).toBe(true);
   });
 });

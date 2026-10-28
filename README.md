@@ -171,6 +171,9 @@ The first run takes a few minutes: it builds the .NET projects and pulls the con
    `http://localhost:5200`.
 5. Press **Ctrl+C** in the first terminal to stop everything.
 
+**Ran Acme DMS before 29 October 2026?** dealership-api then used TypeORM, and its database must be recreated once: run
+`bun run reset`, then restart `dealership-api` in the dashboard (it says so in its log if you forget).
+
 `bun run reset` puts the data back to the seeded state at any time (parts, stock, photos, customers and queues; users
 are kept).
 

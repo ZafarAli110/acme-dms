@@ -9,9 +9,9 @@ rules apply to every table in all three.
   another row is `<thing>_id`.
 - **The database generates ids**: `id uuid DEFAULT uuidv7()` (PostgreSQL 18). UUID v7 sorts by creation time, which
   keeps the index compact. Code never makes up an id: it saves the row and reads the id back. NestJS: the schema's
-  `uuid('id').primaryKey().default(sql\`uuidv7()\`)`and`insert(…).returning()`; .NET: `UuidV7Keys`, applied in
-`OnModelCreating`. When something must carry the new id in the same transaction (an outbox message), save, then
-write it, then commit (`IUnitOfWork.ExecuteInTransactionAsync`).
+  ``uuid('id').primaryKey().default(sql`uuidv7()`)`` and `insert(…).returning()`; .NET: `UuidV7Keys`, applied in
+  `OnModelCreating`. When something must carry the new id in the same transaction (an outbox message), save, then
+  write it, then commit (`IUnitOfWork.ExecuteInTransactionAsync`).
 - Location-owned rows have `location_id` (`standards/multi-tenancy.md`). The dealership database has no `dealer_id`: it
   holds one client's data.
 - A moment is `timestamptz` (UTC); a calendar day with no time is `date` (`standards/coding-standards.md`, "Time").
