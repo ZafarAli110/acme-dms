@@ -17,10 +17,11 @@ and real conventions.
 
 ## The business
 
-**Acme** sells this DMS to dealer groups. Each **dealer** (the tenant) has one or more **locations**: physical
-dealership sites, often called "rooftops" in the motor trade. Every dealer's data is separate. Within a dealer, some
-data is shared by all its locations (the part master records) and some belongs to one location (each part's inventory
-and bin, customers, vehicles, appointments, documents).
+**Acme** sells this DMS to dealer groups. Each **dealer** is a client with one or more **locations**: physical
+dealership sites, often called "rooftops" in the motor trade. Each deployment of Acme DMS serves one client, with its
+own databases; this one is **Northwind Motors**. Within the client, some data is shared by all its locations (the part
+master records) and some belongs to one location (each part's inventory and bin, customers, vehicles, appointments,
+documents).
 
 People hold a **role per location**, and roles grant **permissions** (`parts.write`, `stock.adjust`, ...).
 

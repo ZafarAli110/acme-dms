@@ -1,14 +1,14 @@
 # Architecture
 
-Acme DMS is a multi-tenant dealership management system. A **dealer** (dealer group) is the tenant; each dealer has
-**locations** (physical sites). People hold a **role per location**; roles grant **permissions**.
+Acme DMS is a dealership management system. Each deployment serves one client, a **dealer** (dealer group), with its
+**locations** (physical sites, "rooftops"); `standards/multi-tenancy.md` explains what that means for data. People hold a **role per location**; roles grant **permissions**.
 
 ## Services
 
 | Service          | Stack                         | Owns                                                   | Database     |
 | ---------------- | ----------------------------- | ------------------------------------------------------ | ------------ |
 | `identity-api`   | .NET 10, EF Core              | dealers, locations, users, roles; issues access tokens | `identity`   |
-| `dealership-api` | NestJS 12, TypeORM            | parts catalogue, stock, part photos (references)       | `dealership` |
+| `dealership-api` | NestJS 12, Drizzle            | parts catalogue, stock, part photos (references)       | `dealership` |
 | `document-api`   | .NET 10, EF Core              | files and their processed variants                     | `documents`  |
 | `gateway`        | .NET 10, YARP                 | routing `/api/<service>/…` to the services             | —            |
 | `web`            | React 19, MUI, TanStack Query | the dealership UI                                      | —            |
@@ -30,7 +30,7 @@ Both stacks use the same layers, named the same way.
 service (controllers, consumers, problem details, observability)   ← HTTP and messages come in here
   └─► business-logic-abstractions (handler interfaces, client interfaces, UserContext)
         └─► business-logic (one handler per use case)
-              └─► persistence (entities, repositories, migrations)
+              └─► persistence (schema, unit of work, migrations)
 dto (request/response contracts)                                    ← used by every layer, depends on nothing
 rest-clients (typed clients for other services)                    ← implements abstractions
 ```

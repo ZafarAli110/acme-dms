@@ -13,8 +13,8 @@
 - Anything asynchronous ends in `Async`: methods, functions and API-object members that return a promise or `Task`
   (`executeAsync`, `findByIdAsync`, `dealershipApi.getPartsAsync`). Framework hooks keep their framework names
   (`canActivate`, `onModuleInit`, migrations' `up`/`down`).
-- Constructor injection assigns explicit backing fields (`this._partRepository = partRepository;` /
-  `_partRepository = partRepository;`). No TypeScript parameter properties, no C# primary constructors for services.
+- Constructor injection assigns explicit backing fields (`this._unitOfWorkFactory = unitOfWorkFactory;` /
+  `_dbContext = dbContext;`). No TypeScript parameter properties, no C# primary constructors for services.
 - DTOs are contracts: every field is always present; a missing value is `null`, never left out. The one exception is
   a PATCH request body: it carries only the fields to change, and a field left out keeps its value.
 - Updates: PATCH when the client changes some fields (`PATCH /v1/parts/{id}`); PUT when it sets the whole thing
@@ -42,14 +42,14 @@
 - React components are `function` declarations with PascalCase names (`export function PartForm() {…}`), never arrow
   functions or JSX held in a constant. Arrow functions are fine inside a component, for event handlers and callbacks.
 - Group siblings with `<Fragment>` (imported from `react`), never the empty `<>…</>`.
-- A new entity or DTO is a typed object literal (`const photo: PartPhoto = {id: …, …}`): the compiler then requires every
+- A new row or DTO is a typed object literal (`const photo: NewPartPhoto = {…}`): the compiler then requires every
   field and refuses unknown ones. Never `Object.assign(new PartPhoto(), {…})`, which checks nothing. A change to an
   existing one is a typed spread (`const updated: Customer = {...customer, firstName: …}`).
 - Response DTOs are `interface`s. Request DTOs are classes validated with `class-validator`.
 - Tests live in `__test__/` next to the code they test; Vitest.
-- Data access goes through a small repository per entity (`IPartRepository`). TypeORM has no global query filter, so
-  the repository is where the dealer is applied (`DealerScopedRepository`) and where location-scoped methods take the
-  location. Handlers depend on the interface, which keeps their tests free of query builders.
+- Data access goes through the unit of work and Drizzle (`standards/business-handlers.md`, "Data access"): no
+  repository classes. Handler tests run against a real Postgres that Testcontainers starts (`useTestDatabase()`), not
+  mocks: a test that can't see the SQL can't see a missing filter.
 - **Use the platform first.** TypeScript targets ES2025 (Node 26, Bun and current browsers run all of it): `toSorted`,
   `Object.groupBy`, `Set#union`/`intersection`, iterator helpers (`Iterator.from(...).filter(...).toArray()`),
   `Promise.allSettled`/`Promise.try`/`Promise.withResolvers`, `AbortSignal.timeout`/`AbortSignal.any` instead of a
@@ -75,7 +75,7 @@
   Expected failures are `ApiException`s; the service's `ApiExceptionHandler` turns them into problem details, like
   `ProblemDetailsFilter` does in NestJS. No try/catch or result wrappers in controllers.
 - Handlers use the `DbContext` directly; no repository classes on top. EF Core already is a repository and unit of
-  work, and its global query filter applies the dealer to every query.
+  work, and its global query filter applies the dealer and soft delete to every query.
 - Tests: MSTest + Moq in `tests/`, one test class per handler (`CreateTokenCommandHandlerTests`), test methods named
   `MethodUnderTest_Behaviour` (`ExecuteAsync_RejectsAWrongPassword`).
 

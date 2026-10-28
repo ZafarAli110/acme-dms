@@ -8,11 +8,12 @@ rules apply to every table in all three.
 - Table and column names are `snake_case`, tables plural (`part_photos`). Keys are `uuid` named `id`; a reference to
   another row is `<thing>_id`.
 - **The database generates ids**: `id uuid DEFAULT uuidv7()` (PostgreSQL 18). UUID v7 sorts by creation time, which
-  keeps the index compact. Code never makes up an id: it saves the row and reads the id back. NestJS:
-  `@PrimaryColumn(UUID_V7_PRIMARY_KEY)` and `NewEntity<T>` (the row before it has an id); .NET: `UuidV7Keys`, applied
-  in `OnModelCreating`. When something must carry the new id in the same transaction (an outbox message), save, then
-  write it, then commit (`IUnitOfWork.ExecuteInTransactionAsync`).
-- Dealer-owned rows have `dealer_id`; location-owned rows also have `location_id` (`standards/multi-tenancy.md`).
+  keeps the index compact. Code never makes up an id: it saves the row and reads the id back. NestJS: the schema's
+  `uuid('id').primaryKey().default(sql\`uuidv7()\`)`and`insert(…).returning()`; .NET: `UuidV7Keys`, applied in
+`OnModelCreating`. When something must carry the new id in the same transaction (an outbox message), save, then
+write it, then commit (`IUnitOfWork.ExecuteInTransactionAsync`).
+- Location-owned rows have `location_id` (`standards/multi-tenancy.md`). The dealership database has no `dealer_id`: it
+  holds one client's data.
 - A moment is `timestamptz` (UTC); a calendar day with no time is `date` (`standards/coding-standards.md`, "Time").
 - Money is `numeric(12,2)`, never a float.
 
@@ -34,7 +35,7 @@ A check constraint (`ck_<table>_deleted`) keeps the three delete columns consist
   does: seeding, processing document events.
 - **Technical tables are exempt** and keep their own timestamp: `processed_messages`, `outbox_messages`,
   `document_contents` (part of its document), `signing_keys`.
-- **NestJS**: entities extend `AuditedEntity` (`persistence/entities/audited-entity.ts`); handlers fill the columns
+- **NestJS**: every table spreads `auditColumns()` (`persistence/schema/columns/audit-columns.ts`); handlers fill the columns
   with `createdAudit(userId, now)` / `updatedAudit(userId, now)` from `business-logic/audit/audit-fields.ts`, with the
   time from the injected clock.
 - **.NET**: entities extend `AuditedEntity` (`Persistence/Auditing/`); `AuditingInterceptor` fills the columns on every
@@ -44,8 +45,8 @@ A check constraint (`ck_<table>_deleted`) keeps the three delete columns consist
 
 Business rows are never removed; a delete sets `is_deleted`, `deleted_at` and `deleted_by` (and `updated_*`).
 
-- **Reads leave deleted rows out automatically**: `DealerScopedRepository.forDealer` in NestJS (joins add
-  `AND <alias>.isDeleted = false`), the global query filter in EF Core. Code that lifts the filters on purpose
+- **Reads leave deleted rows out**: in NestJS every query of a business table, and every join, adds
+  `notDeleted(table)` (`persistence/schema/soft-delete/not-deleted.ts`); in EF Core the global query filter does it. Code that lifts the filters on purpose
   (background work uses `IgnoreQueryFilters()`) checks `IsDeleted` itself.
 - **In .NET, `Remove()` is a soft delete**: the interceptor turns it into an update. Rows that belong to a deleted row
   and are not audited (a document's `document_contents`) are removed with it, so stored files do not outlive their
@@ -55,9 +56,11 @@ Business rows are never removed; a delete sets `is_deleted`, `deleted_at` and `d
 
 ## Migrations
 
-- NestJS: TypeORM migrations in `persistence/migrations/`, registered in `persistence/data-source/`; .NET: EF Core
-  migrations in the Persistence project (`dotnet ef migrations add <Name>`). Every service applies its migrations when
-  it starts.
+- NestJS: the schema is TypeScript (`persistence/schema/`, one file per table, Drizzle). Change it, then generate the
+  SQL migration from the difference with `bun run db:generate` (in `backend/dealership-api`); read the SQL before
+  committing it. Migrations live in `persistence/migrations/drizzle/`. .NET: EF Core migrations in the Persistence
+  project (`dotnet ef migrations add <Name>`). Every service applies its migrations when it starts;
+  `bun run db:migrate` applies dealership-api's without starting it.
 - A migration that adds a `NOT NULL` column to a table with data backfills it from data the row already has (see
-  `1762000000000-audit-columns.ts`, `AuditColumns`), and has a working `down`.
+  .NET's `AuditColumns` migration), and has a working `down`.
 - Never edit a migration that has run anywhere else; add a new one.
