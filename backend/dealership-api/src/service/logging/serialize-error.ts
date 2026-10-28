@@ -20,8 +20,8 @@ export function serializeError(error: unknown, depth = 0): unknown {
   if (depth > MAX_ERROR_CAUSE_DEPTH) {
     return CAUSE_DEPTH_REACHED;
   }
-  // TypeORM's QueryFailedError carries the driver's error; a driver error carries its fields itself.
-  const database: PostgresDriverError = (error as {driverError?: PostgresDriverError}).driverError ?? error;
+  // A PostgreSQL error carries its fields itself; Drizzle's wrapper has it as the cause, serialized below.
+  const database: PostgresDriverError = error;
   return {
     name: error.name,
     message: error.message,

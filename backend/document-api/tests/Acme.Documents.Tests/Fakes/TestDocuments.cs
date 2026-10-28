@@ -10,7 +10,7 @@ namespace Acme.Documents.Tests;
 internal static class TestDocuments
 {
     public static readonly Guid Northwind = Guid.Parse("10000000-0000-0000-0000-000000000001");
-    public static readonly Guid Contoso = Guid.Parse("10000000-0000-0000-0000-000000000002");
+    public static readonly Guid OtherDealer = Guid.Parse("10000000-0000-0000-0000-000000000002");
     public static readonly UserContext Alice = new(Guid.NewGuid(), Northwind, Guid.NewGuid());
 
     public static DocumentUploadRequestDto PhotoUpload() =>

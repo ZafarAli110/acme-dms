@@ -27,7 +27,6 @@ People hold a **role per location**, and roles grant **permissions** (`parts.wri
 | Dealer           | Locations            |
 | ---------------- | -------------------- |
 | Northwind Motors | Northside, Riverside |
-| Contoso Auto     | Downtown             |
 
 Demo users, all with the password **`Acme123!`**:
 
@@ -38,7 +37,6 @@ Demo users, all with the password **`Acme123!`**:
 | `sam@northwind.test`   | Northwind Motors | Northside + Riverside: Service Advisor |
 | `tom@northwind.test`   | Northwind Motors | Northside: Technician                  |
 | `bob@northwind.test`   | Northwind Motors | Riverside: Parts Clerk                 |
-| `carol@contoso.test`   | Contoso Auto     | Downtown: Dealer Admin                 |
 
 ## What it does
 

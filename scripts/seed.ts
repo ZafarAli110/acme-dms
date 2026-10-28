@@ -41,17 +41,6 @@ const NORTHWIND_PARTS: PartSeed[] = [
   ['WSH-FLD-005', 'Windscreen washer fluid, 5 L', 7.5],
 ];
 
-const CONTOSO_PARTS: PartSeed[] = [
-  ['CA-BRAKE-PAD', 'Brake pad set, front axle', 52.0],
-  ['CA-OIL-FILTER', 'Oil filter, cartridge', 9.5],
-  ['CA-AIR-FILTER', 'Air filter, panel', 15.0],
-  ['CA-WIPER-SET', 'Wiper blade set, front pair', 29.9],
-  ['CA-BATTERY-60', 'Battery 12 V 60 Ah', 112.0],
-  ['CA-SPARK-PLUG', 'Spark plug, platinum', 9.9],
-  ['CA-COOLANT', 'Coolant concentrate, 1 L', 8.4],
-  ['CA-BULB-H4', 'Headlight bulb H4', 8.8],
-];
-
 type Category = 'brakes' | 'filters' | 'electrical' | 'engine' | 'chassis' | 'fluids';
 
 /** First match wins, so the fluid prefixes come before the brake and oil ones. */
@@ -101,11 +90,6 @@ const BINS: Record<string, BinSeed[]> = {
     {code: 'R-02', description: 'Back store', holds: ['electrical', 'engine', 'chassis']},
     {code: 'R-03', description: 'Fluids cage', holds: ['fluids']},
   ],
-  Downtown: [
-    {code: 'D-01', description: 'Brakes and filters', holds: ['brakes', 'filters']},
-    {code: 'D-02', description: 'Electrical', holds: ['electrical', 'engine']},
-    {code: 'D-03', description: 'Fluids and wipers', holds: ['fluids', 'chassis']},
-  ],
 };
 
 function binCodeFor(locationName: string, partNumber: string): string {
@@ -119,13 +103,12 @@ function binCodeFor(locationName: string, partNumber: string): string {
 
 /**
  * Each location stocks differently, so switching location visibly changes the parts list: Northside is the main store
- * and stocks everything, Riverside is a small branch that skips every third part and runs low, Downtown is Contoso's
- * only site. A part only appears at locations that stock it.
+ * and stocks everything, Riverside is a small branch that skips every third part and runs low. A part only appears at
+ * locations that stock it.
  */
 const STOCK_PROFILES: Record<string, (index: number) => {quantityOnHand: number; reorderLevel: number} | null> = {
   Northside: (index) => ({quantityOnHand: 12 + ((index * 7) % 28), reorderLevel: 6}),
   Riverside: (index) => (index % 3 === 0 ? null : {quantityOnHand: (index * 5) % 9, reorderLevel: 4}),
-  Downtown: (index) => ({quantityOnHand: 6 + ((index * 3) % 15), reorderLevel: 5}),
 };
 
 interface CustomerSeed {
@@ -180,14 +163,6 @@ const CUSTOMERS: Record<string, CustomerSeed[]> = {
     customerSeed('Olivia', 'Nowak', 'Nowak Florists', 'Millbrook', 'active', '2026-10-11', '+44 7700 900205'),
     customerSeed('Priya', 'Sharma', null, 'Riverside', 'inactive', '2026-01-22', '+44 7700 900206'),
     customerSeed('Rory', 'Doyle', null, 'Riverside', 'prospect', '2026-10-23', '+44 7700 900207'),
-  ],
-  Downtown: [
-    customerSeed('Sofia', 'Alvarez', null, 'Downtown', 'active', '2026-10-22', '+44 7700 900301'),
-    customerSeed('Tomás', 'Silva', 'Silva Removals', 'Downtown', 'active', '2026-10-09', '+44 7700 900302'),
-    customerSeed('Uma', 'Reddy', null, 'Harbourside', 'prospect', null, '+44 7700 900303'),
-    customerSeed('Victor', 'Hale', null, 'Downtown', 'active', '2026-09-17', null),
-    customerSeed('Wen', 'Li', 'Li Catering', 'Harbourside', 'active', '2026-10-27', '+44 7700 900305'),
-    customerSeed('Yusuf', 'Kaya', null, 'Downtown', 'inactive', '2025-11-03', '+44 7700 900306'),
   ],
 };
 
@@ -445,5 +420,4 @@ function crc32(bytes: Buffer): number {
 
 const gateway = resourceUrl('gateway', 'http');
 await seedDealerAsync(gateway, 'alice', NORTHWIND_PARTS, 6);
-await seedDealerAsync(gateway, 'carol', CONTOSO_PARTS, 3);
 console.log('Seeded. Photos finish processing in the background within a few seconds.');

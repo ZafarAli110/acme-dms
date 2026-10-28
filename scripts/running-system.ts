@@ -8,7 +8,6 @@ export const DEMO_USERS: Record<string, string> = {
   sam: 'sam@northwind.test',
   tom: 'tom@northwind.test',
   bob: 'bob@northwind.test',
-  carol: 'carol@contoso.test',
 };
 
 export interface Location {

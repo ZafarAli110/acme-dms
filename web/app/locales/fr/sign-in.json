@@ -1,6 +1,6 @@
 {
   "title": "Connexion",
-  "subtitle": "Gestion de concession pour Northwind Motors et Contoso Auto",
+  "subtitle": "Gestion de concession pour Northwind Motors",
   "email": "E-mail",
   "password": "Mot de passe",
   "signIn": "Se connecter",
@@ -11,8 +11,7 @@
     "maria": "Maria · Responsable atelier, Riverside",
     "sam": "Sam · Conseiller service, Northside et Riverside",
     "tom": "Tom · Technicien, Northside",
-    "bob": "Bob · Magasinier, Riverside",
-    "carol": "Carol · Administratrice concession, Contoso Downtown"
+    "bob": "Bob · Magasinier, Riverside"
   },
   "invalidCredentials": "L'e-mail ou le mot de passe est incorrect."
 }

@@ -48,12 +48,12 @@ public sealed class DeleteDocumentCommandHandlerTests
     {
         var database = new TestDatabase();
         var documentId = await TestDocuments.UploadPhotoAsync(database, TestContext.CancellationToken);
-        await using var contosoContext = database.CreateContext(TestDocuments.Contoso);
-        var carol = new UserContext(Guid.NewGuid(), TestDocuments.Contoso, Guid.NewGuid());
+        await using var otherDealerContext = database.CreateContext(TestDocuments.OtherDealer);
+        var otherDealerUser = new UserContext(Guid.NewGuid(), TestDocuments.OtherDealer, Guid.NewGuid());
 
         var ex = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            new DeleteDocumentCommandHandler(contosoContext, new TestUnitOfWork(contosoContext))
-                .ExecuteAsync(carol, documentId, TestContext.CancellationToken));
+            new DeleteDocumentCommandHandler(otherDealerContext, new TestUnitOfWork(otherDealerContext))
+                .ExecuteAsync(otherDealerUser, documentId, TestContext.CancellationToken));
 
         Assert.AreEqual(ApiErrorCategory.NotFound, ex.Category);
         await using var check = database.CreateContext(TestDocuments.Northwind);

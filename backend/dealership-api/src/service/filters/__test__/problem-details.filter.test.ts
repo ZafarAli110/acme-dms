@@ -1,5 +1,4 @@
 import {type ArgumentsHost, ConflictException} from '@nestjs/common';
-import {QueryFailedError} from 'typeorm';
 import {describe, expect, it} from 'vitest';
 import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
 import type {ProblemDetailsDto} from '../../problem-details/problem-details.dto';
@@ -68,7 +67,7 @@ describe('ProblemDetailsFilter', () => {
 
   it('answers a broken unique rule with 409 and the rule in words, never the SQL or the constraint name', () => {
     const {status, body} = captureProblem(
-      failedQuery({code: '23505', constraint: 'uq_parts_dealer_part_number', table: 'parts'}),
+      failedQuery({code: '23505', constraint: 'uq_parts_part_number', table: 'parts'}),
     );
 
     expect(status).toBe(409);
@@ -92,6 +91,12 @@ describe('ProblemDetailsFilter', () => {
     expect(body.detail).toBe(expectedDetail);
   });
 
+  it('recognises the PostgreSQL error when the driver throws it directly', () => {
+    const postgresError = Object.assign(new Error('deadlock detected'), {severity: 'ERROR', code: '40P01'});
+
+    expect(captureProblem(postgresError).status).toBe(409);
+  });
+
   it('keeps an unknown database error a 500 with nothing leaked', () => {
     const {status, body} = captureProblem(failedQuery({code: 'XX000'}));
 
@@ -100,7 +105,11 @@ describe('ProblemDetailsFilter', () => {
   });
 });
 
-function failedQuery(fields: {code: string; constraint?: string; table?: string}): QueryFailedError {
-  const driverError = Object.assign(new Error('duplicate key value violates unique constraint'), fields);
-  return new QueryFailedError('INSERT INTO "parts" ...', [], driverError);
+/** What Drizzle throws for a failed query: its own error, with the driver's PostgreSQL error as the cause. */
+function failedQuery(fields: {code: string; constraint?: string; table?: string}): Error {
+  const postgresError = Object.assign(new Error('duplicate key value violates unique constraint'), {
+    severity: 'ERROR',
+    ...fields,
+  });
+  return new Error('Failed query: insert into "parts" ...', {cause: postgresError});
 }

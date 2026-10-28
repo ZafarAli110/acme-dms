@@ -1,8 +1,11 @@
 import {HttpStatus} from '@nestjs/common';
-import {QueryFailedError} from 'typeorm';
 
-/** The fields of a PostgreSQL error the driver (`pg`) puts on TypeORM's `QueryFailedError.driverError`. */
+/**
+ * The fields of a PostgreSQL error as the driver (`pg`) throws it. Drizzle wraps it in its own error, as the `cause`.
+ */
 export interface PostgresDriverError extends Error {
+  /** `ERROR`, `FATAL`, …: every error that came from the server has one. */
+  severity?: string;
   /** The SQLSTATE code, e.g. `23505`. */
   code?: string;
   detail?: string;
@@ -76,7 +79,7 @@ const PROBLEM_BY_CODE: Readonly<Record<string, DatabaseProblem>> = {
  * handlers check these first for a friendlier message; this is the answer when two requests race past that check.
  */
 const UNIQUE_RULES: Readonly<Record<string, string>> = {
-  uq_parts_dealer_part_number: 'A part with this part number already exists in your catalogue.',
+  uq_parts_part_number: 'A part with this part number already exists in your catalogue.',
   uq_bins_location_code: 'A bin with this code already exists at this location.',
   uq_part_inventories_location_part: 'This part is already stocked at this location.',
 };
@@ -84,18 +87,22 @@ const UNIQUE_RULES: Readonly<Record<string, string>> = {
 /** Connection exceptions (`08xxx`): the database could not be reached at all. */
 const CONNECTION_EXCEPTION_CLASS = '08';
 
+/** How far down an error's `cause` chain to look for the PostgreSQL error. */
+const MAX_CAUSE_DEPTH = 3;
+const SQLSTATE = /^[0-9A-Z]{5}$/;
+
 /**
  * The problem to answer with for a failed query, or null when the error is not a database error this service knows
  * (it is then a 500 like any unexpected error).
  */
 export function resolveDatabaseProblem(exception: unknown): DatabaseProblem | null {
-  if (!(exception instanceof QueryFailedError)) {
+  const postgresError = findPostgresError(exception);
+  if (!postgresError) {
     return null;
   }
-  const driverError = (exception as QueryFailedError<PostgresDriverError>).driverError;
-  const code = driverError.code ?? '';
-  if (code === POSTGRES_ERROR.UNIQUE_VIOLATION && driverError.constraint) {
-    const detail = UNIQUE_RULES[driverError.constraint];
+  const code = postgresError.code ?? '';
+  if (code === POSTGRES_ERROR.UNIQUE_VIOLATION && postgresError.constraint) {
+    const detail = UNIQUE_RULES[postgresError.constraint];
     if (detail) {
       return {status: HttpStatus.CONFLICT, detail};
     }
@@ -104,4 +111,20 @@ export function resolveDatabaseProblem(exception: unknown): DatabaseProblem | nu
     return DATABASE_UNAVAILABLE;
   }
   return PROBLEM_BY_CODE[code] ?? null;
+}
+
+/**
+ * The PostgreSQL error the exception is, or was caused by. Recognised by its shape (a server `severity` and a
+ * SQLSTATE `code`), so this layer doesn't depend on the driver.
+ */
+function findPostgresError(exception: unknown): PostgresDriverError | null {
+  let current: unknown = exception;
+  for (let depth = 0; depth <= MAX_CAUSE_DEPTH && current instanceof Error; depth++) {
+    const candidate = current as PostgresDriverError;
+    if (typeof candidate.severity === 'string' && SQLSTATE.test(candidate.code ?? '')) {
+      return candidate;
+    }
+    current = current.cause;
+  }
+  return null;
 }

@@ -27,7 +27,6 @@ const DEMO_USERS = [
   {email: 'sam@northwind.test', key: 'sam'},
   {email: 'tom@northwind.test', key: 'tom'},
   {email: 'bob@northwind.test', key: 'bob'},
-  {email: 'carol@contoso.test', key: 'carol'},
 ] as const;
 
 /** Someone already signed in goes straight to Home. */
