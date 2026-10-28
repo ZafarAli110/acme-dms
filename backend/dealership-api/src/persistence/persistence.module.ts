@@ -6,8 +6,6 @@ import {createDataSourceAsync} from './data-source/data-source.factory';
 import {migrateDatabaseAsync} from './migrations/migrate-database';
 import {BIN_REPOSITORY} from './repositories/bin.repository.interface';
 import {BinRepository} from './repositories/bin.repository';
-import {CUSTOMER_REPOSITORY} from './repositories/customer.repository.interface';
-import {CustomerRepository} from './repositories/customer.repository';
 import {PART_INVENTORY_REPOSITORY} from './repositories/part-inventory.repository.interface';
 import {PartInventoryRepository} from './repositories/part-inventory.repository';
 import {PART_PHOTO_REPOSITORY} from './repositories/part-photo.repository.interface';
@@ -61,11 +59,6 @@ const REPOSITORIES = [
   {
     provide: PART_PHOTO_REPOSITORY,
     useFactory: (dataSource: DataSource) => new PartPhotoRepository(dataSource),
-    inject: [DATA_SOURCE],
-  },
-  {
-    provide: CUSTOMER_REPOSITORY,
-    useFactory: (dataSource: DataSource) => new CustomerRepository(dataSource),
     inject: [DATA_SOURCE],
   },
 ];

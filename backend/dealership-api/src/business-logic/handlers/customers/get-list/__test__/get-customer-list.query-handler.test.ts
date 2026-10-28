@@ -1,36 +1,38 @@
-import {BadRequestException} from '@nestjs/common';
-import {describe, expect, it, vi} from 'vitest';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {ICustomerRepository} from '#persistence/repositories/customer.repository.interface';
+import {describe, expect, it} from 'vitest';
+import {AT_NORTHSIDE} from '#business-logic/user-context/__test__/test-users';
+import {NORTHSIDE, RIVERSIDE} from '#persistence/__test__/postgres/seed-kit';
+import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
 import {GetCustomerListQueryHandler} from '../get-customer-list.query-handler';
 
-const maria: UserContext = {
-  userId: 'maria',
-  dealerId: 'northwind',
-  locationId: 'riverside',
-  permissions: ['customers.read'],
-  accessToken: 't',
-};
-
 describe('GetCustomerListQueryHandler', () => {
-  it("lists customers of the user's selected location only", async () => {
-    const customers = {
-      findPageForLocationAsync: vi.fn().mockResolvedValue({items: [], total: 0}),
-    } satisfies Partial<ICustomerRepository> as unknown as ICustomerRepository;
+  const database = useTestDatabase();
 
-    await new GetCustomerListQueryHandler(customers).executeAsync(maria, {search: 'hopper'});
+  it("lists only the selected location's customers, searching name, company, email and phone", async () => {
+    await database.seed.addCustomerAsync({locationId: NORTHSIDE, surname: 'Hopper', companyName: 'Hopper Logistics'});
+    await database.seed.addCustomerAsync({locationId: NORTHSIDE, surname: 'Lovelace'});
+    await database.seed.addCustomerAsync({locationId: RIVERSIDE, surname: 'Hopper'});
+    await database.seed.addCustomerAsync({locationId: NORTHSIDE, surname: 'Hopperton', deleted: true});
+    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
 
-    expect(customers.findPageForLocationAsync).toHaveBeenCalledWith('northwind', 'riverside', 'hopper', 1, 25);
+    const all = await handler.executeAsync(AT_NORTHSIDE, {page: 1, pageSize: 25, search: undefined});
+    const found = await handler.executeAsync(AT_NORTHSIDE, {page: 1, pageSize: 25, search: 'hopper'});
+
+    expect(all.items.map((customer) => customer.surname)).toEqual(['Hopper', 'Lovelace']);
+    expect(all.total).toBe(2);
+    expect(found.items.map((customer) => customer.companyName)).toEqual(['Hopper Logistics']);
+    expect(found.total).toBe(1);
   });
 
-  it('needs a selected location', async () => {
-    const customers = {
-      findPageForLocationAsync: vi.fn(),
-    } satisfies Partial<ICustomerRepository> as unknown as ICustomerRepository;
+  it('pages the list', async () => {
+    for (const surname of ['Adams', 'Brown', 'Clark']) {
+      await database.seed.addCustomerAsync({locationId: RIVERSIDE, surname});
+    }
+    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+    const riverside = {...AT_NORTHSIDE, locationId: RIVERSIDE};
 
-    await expect(
-      new GetCustomerListQueryHandler(customers).executeAsync({...maria, locationId: null}, {}),
-    ).rejects.toThrow(BadRequestException);
-    expect(customers.findPageForLocationAsync).not.toHaveBeenCalled();
+    const second = await handler.executeAsync(riverside, {page: 2, pageSize: 2, search: undefined});
+
+    expect(second.items.map((customer) => customer.surname)).toEqual(['Clark', 'Hopper']);
+    expect(second).toMatchObject({total: 4, page: 2, pageSize: 2});
   });
 });

@@ -1,38 +1,26 @@
-import {describe, expect, it, vi} from 'vitest';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {Customer} from '#persistence/entities/customer.entity';
-import type {ICustomerRepository} from '#persistence/repositories/customer.repository.interface';
-import {GetRecentCustomersQueryHandler, RECENT_CUSTOMERS_LIMIT} from '../get-recent-customers.query-handler';
-
-const maria: UserContext = {
-  userId: 'maria',
-  dealerId: 'northwind',
-  locationId: 'riverside',
-  permissions: ['customers.read'],
-  accessToken: 't',
-};
-
-const contacted = (surname: string, lastContactDate: string) =>
-  ({
-    id: surname,
-    firstName: 'Test',
-    surname,
-    lastContactDate: Temporal.PlainDate.from(lastContactDate),
-    status: 'active',
-  }) as Customer;
+import {describe, expect, it} from 'vitest';
+import {NORTHSIDE} from '#persistence/__test__/postgres/seed-kit';
+import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {GetRecentCustomersQueryHandler} from '../get-recent-customers.query-handler';
 
 describe('GetRecentCustomersQueryHandler', () => {
-  it('returns the most recently contacted customers, newest first, as the repository orders them', async () => {
-    const findRecentlyContactedAsync = vi
-      .fn()
-      .mockResolvedValue([contacted('Byrne', '2026-10-26'), contacted('Doyle', '2026-10-23')]);
-    const customers = {
-      findRecentlyContactedAsync,
-    } satisfies Partial<ICustomerRepository> as unknown as ICustomerRepository;
+  const database = useTestDatabase();
 
-    const recent = await new GetRecentCustomersQueryHandler(customers).executeAsync(maria);
+  it('returns the most recently contacted customers, newest first', async () => {
+    await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      surname: 'Doyle',
+      lastContactDate: Temporal.PlainDate.from('2026-10-23'),
+    });
+    await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      surname: 'Byrne',
+      lastContactDate: Temporal.PlainDate.from('2026-10-26'),
+    });
+    await database.seed.addCustomerAsync({locationId: NORTHSIDE, surname: 'Never'});
 
-    expect(findRecentlyContactedAsync).toHaveBeenCalledWith('northwind', RECENT_CUSTOMERS_LIMIT);
+    const recent = await new GetRecentCustomersQueryHandler(database.unitOfWorkFactory).executeAsync();
+
     expect(recent.map((customer) => customer.surname)).toEqual(['Byrne', 'Doyle']);
   });
 });
