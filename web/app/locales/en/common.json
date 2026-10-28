@@ -1,0 +1,56 @@
+{
+  "appName": "Acme DMS",
+  "loading": "Loading…",
+  "actions": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back"
+  },
+  "roles": {
+    "DealerAdmin": "Dealer admin",
+    "ServiceManager": "Service manager",
+    "ServiceAdvisor": "Service advisor",
+    "Technician": "Technician",
+    "PartsManager": "Parts manager",
+    "PartsClerk": "Parts clerk",
+    "Sales": "Sales"
+  },
+  "topBar": {
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "language": "Language",
+    "profileMenu": "Profile menu",
+    "roleAtLocation": "{{role}} at {{location}}",
+    "signOut": "Sign out",
+    "signOutQuestion": "Are you sure you want to sign out?"
+  },
+  "unsavedChanges": {
+    "leaveTitle": "Leave without saving?",
+    "leaveMessage": "You have changes that are not saved. If you leave now, they are lost.",
+    "leave": "Leave",
+    "switchTitle": "Switch location without saving?",
+    "switchMessage": "This form belongs to the current location. Switching discards what you have not saved.",
+    "switch": "Switch location",
+    "stay": "Stay"
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "unexpected": "An unexpected error occurred.",
+    "reload": "Reload",
+    "serverUnreachable": "The server cannot be reached. Check that the system is running and try again.",
+    "timeout": "The server took too long to answer. Try again.",
+    "traceId": "Trace id: {{traceId}}",
+    "accountNotLoaded": "You are signed in, but your account could not be loaded. Try again."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "There is no page at this address.",
+    "home": "Go to Home"
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "displayed": "{{from}}–{{to}} of {{count}}"
+  }
+}

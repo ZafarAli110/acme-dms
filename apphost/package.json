@@ -1,0 +1,11 @@
+{
+  "name": "@acme/apphost",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "dotnet build Acme.AppHost -c Release",
+    "typecheck": "dotnet build Acme.AppHost -c Debug",
+    "lint": "dotnet build Acme.AppHost -c Debug -warnaserror",
+    "format": "dotnet format Acme.AppHost/Acme.AppHost.csproj --verify-no-changes"
+  }
+}

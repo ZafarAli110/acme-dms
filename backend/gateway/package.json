@@ -1,0 +1,12 @@
+{
+  "name": "@acme/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "dotnet build Acme.Gateway -c Release",
+    "typecheck": "dotnet build Acme.Gateway -c Debug",
+    "lint": "dotnet build Acme.Gateway -c Debug -warnaserror",
+    "format": "dotnet format Acme.Gateway/Acme.Gateway.csproj --verify-no-changes",
+    "dev": "dotnet run --project Acme.Gateway"
+  }
+}

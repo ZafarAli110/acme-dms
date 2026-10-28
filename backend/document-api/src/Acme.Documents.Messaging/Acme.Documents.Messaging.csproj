@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- RabbitMQ: topology, the outbox relay (publishing) and the consumers (inbound adapters, like controllers). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Acme.Documents.BusinessLogic.Abstractions\Acme.Documents.BusinessLogic.Abstractions.csproj" />
+    <ProjectReference Include="..\Acme.Documents.Persistence\Acme.Documents.Persistence.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="RabbitMQ.Client" />
+  </ItemGroup>
+</Project>

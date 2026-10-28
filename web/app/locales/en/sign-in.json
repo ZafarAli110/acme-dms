@@ -1,0 +1,18 @@
+{
+  "title": "Sign in",
+  "subtitle": "Dealer management for Northwind Motors and Contoso Auto",
+  "email": "Email",
+  "password": "Password",
+  "signIn": "Sign in",
+  "signingIn": "Signing in…",
+  "demoUsers": "Demo users · password {{password}}",
+  "demoUser": {
+    "alice": "Alice · Dealer admin, Northside and Riverside",
+    "maria": "Maria · Service manager, Riverside",
+    "sam": "Sam · Service advisor, Northside and Riverside",
+    "tom": "Tom · Technician, Northside",
+    "bob": "Bob · Parts clerk, Riverside",
+    "carol": "Carol · Dealer admin, Contoso Downtown"
+  },
+  "invalidCredentials": "The email or password is not right."
+}

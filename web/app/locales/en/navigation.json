@@ -1,0 +1,21 @@
+{
+  "home": "Home",
+  "sections": {
+    "inventory": "Inventory",
+    "customerRelations": "Customer relations",
+    "communication": "Communication"
+  },
+  "items": {
+    "parts": "Parts",
+    "stock": "Stock",
+    "vehiclesInStock": "Vehicles in stock",
+    "customers": "Customers",
+    "messages": "Messages"
+  },
+  "expandMenu": "Expand menu",
+  "collapseMenu": "Collapse menu",
+  "comingSoon": {
+    "body": "This screen has not been built yet.",
+    "close": "OK"
+  }
+}

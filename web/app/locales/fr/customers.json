@@ -1,0 +1,43 @@
+{
+  "title": "Clients",
+  "subtitle": "Clients de {{location}}",
+  "newCustomer": "Nouveau client",
+  "search": "Rechercher un nom, une société, un e-mail ou un téléphone",
+  "columns": {
+    "name": "Nom",
+    "contact": "Contact",
+    "city": "Ville",
+    "status": "Statut",
+    "lastContact": "Dernier contact"
+  },
+  "noMatch": "Aucun client ne correspond à « {{search}} ».",
+  "none": "Aucun client à {{location}} pour l'instant.",
+  "fields": {
+    "firstName": "Prénom",
+    "surname": "Nom",
+    "companyName": "Société",
+    "email": "E-mail",
+    "phone": "Téléphone",
+    "city": "Ville",
+    "lastContactDate": "Dernier contact",
+    "status": "Statut"
+  },
+  "status": {
+    "active": "Actif",
+    "prospect": "Prospect",
+    "inactive": "Inactif"
+  },
+  "edit": {
+    "customerOf": "Client de {{location}}",
+    "details": "Coordonnées",
+    "saveChanges": "Enregistrer les modifications",
+    "record": "Fiche",
+    "location": "Site : {{location}}",
+    "added": "Créé le : {{date}}",
+    "updated": "Modifié le : {{date}}"
+  },
+  "create": {
+    "title": "Nouveau client",
+    "create": "Créer"
+  }
+}

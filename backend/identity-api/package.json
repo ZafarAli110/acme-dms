@@ -1,0 +1,13 @@
+{
+  "name": "@acme/identity-api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "dotnet build Acme.Identity.slnx -c Release",
+    "typecheck": "dotnet build Acme.Identity.slnx -c Debug",
+    "lint": "dotnet build Acme.Identity.slnx -c Debug -warnaserror",
+    "format": "dotnet format Acme.Identity.slnx --verify-no-changes",
+    "test": "dotnet test --solution Acme.Identity.slnx",
+    "dev": "dotnet run --project src/Acme.Identity.Service"
+  }
+}

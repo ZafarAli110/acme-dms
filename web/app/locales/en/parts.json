@@ -1,0 +1,59 @@
+{
+  "title": "Parts",
+  "subtitle": "Parts stocked at {{location}}",
+  "newPart": "New part",
+  "search": "Search part number or description",
+  "columns": {
+    "partNumber": "Part number",
+    "description": "Description",
+    "bin": "Bin",
+    "onHand": "On hand",
+    "unitPrice": "Unit price",
+    "reorderLevel": "Reorder level"
+  },
+  "noMatch": "No parts match \"{{search}}\".",
+  "noneStocked": "{{location}} does not stock any parts yet.",
+  "low": "Low",
+  "create": {
+    "title": "New part",
+    "intro": "The part is added to the catalogue and stocked at {{location}}.",
+    "partNumberHelp": "Capital letters, digits and dashes",
+    "bin": "Bin",
+    "binHelp": "A bin at {{location}}",
+    "noBins": "{{location}} has no bins yet",
+    "create": "Create"
+  },
+  "edit": {
+    "details": "Details",
+    "stockHere": "Stock at {{location}}",
+    "stockReadOnly": "Stock is counted and moved on the Stock screen.",
+    "belowReorder": "Below reorder level",
+    "photos": "Photos",
+    "photoCount": "{{count}} of {{max}}",
+    "addPhotos": "Add photos",
+    "photoTypes": "JPEG, PNG, WebP, GIF or HEIC, up to {{maxMb}} MB each.",
+    "noPhotos": "No photos yet.",
+    "makeDefault": "Make this the default photo",
+    "isDefault": "Default photo",
+    "removePhoto": "Remove photo",
+    "photoStatus": {
+      "new": "Saved when you press Save",
+      "pending": "Processing…",
+      "ready": "Ready",
+      "failed": "Could not be processed"
+    },
+    "saved": "Saved.",
+    "notFound": "This part is not stocked at {{location}}.",
+    "backToList": "Back to Parts",
+    "validation": {
+      "descriptionRequired": "Enter a description.",
+      "descriptionTooLong": "Keep the description to {{max}} characters.",
+      "priceRequired": "Enter a price.",
+      "priceInvalid": "Enter a price of 0 or more, with at most two decimals.",
+      "tooManyPhotos": "A part can have at most {{max}} photos.",
+      "oneDefault": "Choose one default photo.",
+      "photoType": "{{name}} is not a JPEG, PNG, WebP, GIF or HEIC image.",
+      "photoSize": "{{name}} is larger than {{maxMb}} MB."
+    }
+  }
+}

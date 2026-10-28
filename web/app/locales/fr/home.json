@@ -1,0 +1,13 @@
+{
+  "welcome": "Bienvenue, {{name}}",
+  "customersAt": "Clients de {{location}}",
+  "customersCaption": "Le fichier clients de ce site",
+  "partsAt": "Pièces en stock à {{location}}",
+  "partsCaption": "Avec leur casier et leur quantité ici",
+  "recentTitle": "Contactés récemment",
+  "recentSubtitle": "Les clients de {{location}} contactés en dernier",
+  "noRecent": "Aucun contact récent.",
+  "lastContact": "Dernier contact {{date}}",
+  "permissionsTitle": "Ce que vous pouvez faire à {{location}}",
+  "permissionsSubtitle": "Les droits viennent de votre rôle sur le site sélectionné. Changez de site dans la barre du haut."
+}

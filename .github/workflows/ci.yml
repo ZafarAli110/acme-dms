@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Install the Aspire CLI (the AppHost build needs it)
+        run: dotnet tool install -g Aspire.Cli --version 13.6.4
+      - run: bun install --frozen-lockfile
+      - name: Format, lint, typecheck and test every project
+        run: bunx nx run-many -t format lint typecheck test
+        env:
+          NX_TUI: 'false'

@@ -1,0 +1,56 @@
+{
+  "appName": "Acme DMS",
+  "loading": "Chargement…",
+  "actions": {
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "back": "Retour"
+  },
+  "roles": {
+    "DealerAdmin": "Administrateur concession",
+    "ServiceManager": "Responsable atelier",
+    "ServiceAdvisor": "Conseiller service",
+    "Technician": "Technicien",
+    "PartsManager": "Responsable magasin",
+    "PartsClerk": "Magasinier",
+    "Sales": "Vente"
+  },
+  "topBar": {
+    "lightMode": "Mode clair",
+    "darkMode": "Mode sombre",
+    "language": "Langue",
+    "profileMenu": "Menu du profil",
+    "roleAtLocation": "{{role}} à {{location}}",
+    "signOut": "Se déconnecter",
+    "signOutQuestion": "Voulez-vous vraiment vous déconnecter ?"
+  },
+  "unsavedChanges": {
+    "leaveTitle": "Quitter sans enregistrer ?",
+    "leaveMessage": "Certaines modifications ne sont pas enregistrées. Si vous quittez maintenant, elles seront perdues.",
+    "leave": "Quitter",
+    "switchTitle": "Changer de site sans enregistrer ?",
+    "switchMessage": "Ce formulaire concerne le site actuel. Changer de site abandonne ce qui n'est pas enregistré.",
+    "switch": "Changer de site",
+    "stay": "Rester"
+  },
+  "errors": {
+    "title": "Une erreur s'est produite",
+    "unexpected": "Une erreur inattendue s'est produite.",
+    "reload": "Recharger",
+    "serverUnreachable": "Le serveur est injoignable. Vérifiez que le système fonctionne et réessayez.",
+    "timeout": "Le serveur a mis trop de temps à répondre. Réessayez.",
+    "traceId": "Identifiant de trace : {{traceId}}",
+    "accountNotLoaded": "Vous êtes connecté, mais votre compte n'a pas pu être chargé. Réessayez."
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "body": "Aucune page ne correspond à cette adresse.",
+    "home": "Aller à l'accueil"
+  },
+  "pagination": {
+    "rowsPerPage": "Lignes par page",
+    "displayed": "{{from}}–{{to}} sur {{count}}"
+  }
+}

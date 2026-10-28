@@ -1,0 +1,43 @@
+{
+  "title": "Customers",
+  "subtitle": "Customers of {{location}}",
+  "newCustomer": "New customer",
+  "search": "Search name, company, email or phone",
+  "columns": {
+    "name": "Name",
+    "contact": "Contact",
+    "city": "City",
+    "status": "Status",
+    "lastContact": "Last contact"
+  },
+  "noMatch": "No customers match \"{{search}}\".",
+  "none": "No customers at {{location}} yet.",
+  "fields": {
+    "firstName": "First name",
+    "surname": "Surname",
+    "companyName": "Company",
+    "email": "Email",
+    "phone": "Phone",
+    "city": "City",
+    "lastContactDate": "Last contact",
+    "status": "Status"
+  },
+  "status": {
+    "active": "Active",
+    "prospect": "Prospect",
+    "inactive": "Inactive"
+  },
+  "edit": {
+    "customerOf": "Customer of {{location}}",
+    "details": "Details",
+    "saveChanges": "Save changes",
+    "record": "Record",
+    "location": "Location: {{location}}",
+    "added": "Added: {{date}}",
+    "updated": "Updated: {{date}}"
+  },
+  "create": {
+    "title": "New customer",
+    "create": "Create"
+  }
+}

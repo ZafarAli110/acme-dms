@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "ignorePatterns": ["**/dist/**", "**/bin/**", "**/obj/**", "apphost/.aspire/**", "**/node_modules/**"],
+  "rules": {
+    "no-console": "off",
+    "no-underscore-dangle": "off",
+    "typescript/no-extraneous-class": [
+      "warn",
+      {
+        "allowWithDecorator": true
+      }
+    ]
+  }
+}

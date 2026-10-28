@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.nx/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+# .NET
+bin/
+obj/
+*.user
+# Aspire
+.aspire/
+# OS / editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+# React Router
+.react-router/
+build/

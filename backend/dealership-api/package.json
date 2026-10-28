@@ -1,0 +1,58 @@
+{
+  "name": "@acme/dealership-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#service/*": "./src/service/*.ts",
+    "#business-logic/*": "./src/business-logic/*.ts",
+    "#business-logic-abstractions/*": "./src/business-logic-abstractions/*.ts",
+    "#dto/*": "./src/dto/*.ts",
+    "#persistence/*": "./src/persistence/*.ts",
+    "#rest-clients/*": "./src/rest-clients/*.ts"
+  },
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "start": "node --enable-source-maps --import ./dist/observability/telemetry.js dist/main.js",
+    "dev": "bun scripts/dev.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p scripts/tsconfig.json",
+    "lint": "oxlint -c .oxlintrc.json src && oxlint scripts",
+    "format": "bun fmt --check src",
+    "test": "vitest run",
+    "generate:clients": "bun scripts/generate-rest-clients.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.3.2",
+    "@nestjs/core": "12.3.2",
+    "@nestjs/platform-node": "12.3.2",
+    "@nestjs/swagger": "12.0.5",
+    "@opentelemetry/api": "1.10.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "0.300.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "0.300.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "0.300.0",
+    "@opentelemetry/instrumentation": "0.300.0",
+    "@opentelemetry/instrumentation-http": "0.300.0",
+    "@opentelemetry/instrumentation-pino": "0.70.0",
+    "@opentelemetry/sdk-logs": "3.0.0",
+    "@opentelemetry/sdk-metrics": "3.0.0",
+    "@opentelemetry/sdk-node": "0.300.0",
+    "amqplib": "2.2.0",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
+    "jose": "6.2.13",
+    "nestjs-pino": "5.3.1",
+    "openapi-fetch": "0.17.0",
+    "pg": "8.23.1",
+    "pino": "10.4.0",
+    "pino-http": "11.0.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "temporal-polyfill": "1.0.6",
+    "typeorm": "1.1.2"
+  },
+  "devDependencies": {
+    "@opentelemetry/instrumentation-amqplib": "0.71.0",
+    "@types/pg": "8.23.1",
+    "vitest": "5.0.5"
+  }
+}

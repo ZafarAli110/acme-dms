@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Acme.Identity.BusinessLogic.Abstractions/Acme.Identity.BusinessLogic.Abstractions.csproj" />
+    <Project Path="src/Acme.Identity.BusinessLogic/Acme.Identity.BusinessLogic.csproj" />
+    <Project Path="src/Acme.Identity.DTO/Acme.Identity.DTO.csproj" />
+    <Project Path="src/Acme.Identity.Persistence/Acme.Identity.Persistence.csproj" />
+    <Project Path="src/Acme.Identity.Service/Acme.Identity.Service.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Acme.Identity.Tests/Acme.Identity.Tests.csproj" />
+  </Folder>
+  <Project Path="../service-defaults/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
+</Solution>

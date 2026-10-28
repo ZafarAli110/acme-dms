@@ -1,0 +1,59 @@
+{
+  "title": "Pièces",
+  "subtitle": "Pièces en stock à {{location}}",
+  "newPart": "Nouvelle pièce",
+  "search": "Rechercher une référence ou une désignation",
+  "columns": {
+    "partNumber": "Référence",
+    "description": "Désignation",
+    "bin": "Casier",
+    "onHand": "En stock",
+    "unitPrice": "Prix unitaire",
+    "reorderLevel": "Seuil de réappro."
+  },
+  "noMatch": "Aucune pièce ne correspond à « {{search}} ».",
+  "noneStocked": "{{location}} n'a encore aucune pièce en stock.",
+  "low": "Bas",
+  "create": {
+    "title": "Nouvelle pièce",
+    "intro": "La pièce est ajoutée au catalogue et mise en stock à {{location}}.",
+    "partNumberHelp": "Majuscules, chiffres et tirets",
+    "bin": "Casier",
+    "binHelp": "Un casier de {{location}}",
+    "noBins": "{{location}} n'a pas encore de casier",
+    "create": "Créer"
+  },
+  "edit": {
+    "details": "Informations",
+    "stockHere": "Stock à {{location}}",
+    "stockReadOnly": "Le stock se compte et se déplace dans l'écran Stock.",
+    "belowReorder": "Sous le seuil de réapprovisionnement",
+    "photos": "Photos",
+    "photoCount": "{{count}} sur {{max}}",
+    "addPhotos": "Ajouter des photos",
+    "photoTypes": "JPEG, PNG, WebP, GIF ou HEIC, {{maxMb}} Mo maximum chacune.",
+    "noPhotos": "Aucune photo pour l'instant.",
+    "makeDefault": "Choisir comme photo principale",
+    "isDefault": "Photo principale",
+    "removePhoto": "Retirer la photo",
+    "photoStatus": {
+      "new": "Enregistrée quand vous cliquez sur Enregistrer",
+      "pending": "Traitement…",
+      "ready": "Prête",
+      "failed": "Traitement impossible"
+    },
+    "saved": "Enregistré.",
+    "notFound": "Cette pièce n'est pas en stock à {{location}}.",
+    "backToList": "Retour aux pièces",
+    "validation": {
+      "descriptionRequired": "Saisissez une désignation.",
+      "descriptionTooLong": "La désignation ne doit pas dépasser {{max}} caractères.",
+      "priceRequired": "Saisissez un prix.",
+      "priceInvalid": "Saisissez un prix de 0 ou plus, avec au plus deux décimales.",
+      "tooManyPhotos": "Une pièce peut avoir au plus {{max}} photos.",
+      "oneDefault": "Choisissez une photo principale.",
+      "photoType": "{{name}} n'est pas une image JPEG, PNG, WebP, GIF ou HEIC.",
+      "photoSize": "{{name}} dépasse {{maxMb}} Mo."
+    }
+  }
+}

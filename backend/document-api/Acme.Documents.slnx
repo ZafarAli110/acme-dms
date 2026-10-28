@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Acme.Documents.BusinessLogic.Abstractions/Acme.Documents.BusinessLogic.Abstractions.csproj" />
+    <Project Path="src/Acme.Documents.BusinessLogic/Acme.Documents.BusinessLogic.csproj" />
+    <Project Path="src/Acme.Documents.DTO/Acme.Documents.DTO.csproj" />
+    <Project Path="src/Acme.Documents.Messaging/Acme.Documents.Messaging.csproj" />
+    <Project Path="src/Acme.Documents.Persistence/Acme.Documents.Persistence.csproj" />
+    <Project Path="src/Acme.Documents.Service/Acme.Documents.Service.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Acme.Documents.Tests/Acme.Documents.Tests.csproj" />
+  </Folder>
+  <Project Path="../service-defaults/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
+</Solution>

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Acme.Identity.BusinessLogic.Abstractions\Acme.Identity.BusinessLogic.Abstractions.csproj" />
+    <ProjectReference Include="..\Acme.Identity.Persistence\Acme.Identity.Persistence.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Acme.Identity.Tests" />
+  </ItemGroup>
+</Project>

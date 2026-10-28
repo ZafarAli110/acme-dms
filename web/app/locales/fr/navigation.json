@@ -1,0 +1,21 @@
+{
+  "home": "Accueil",
+  "sections": {
+    "inventory": "Inventaire",
+    "customerRelations": "Relation client",
+    "communication": "Communication"
+  },
+  "items": {
+    "parts": "Pièces",
+    "stock": "Stock",
+    "vehiclesInStock": "Véhicules en stock",
+    "customers": "Clients",
+    "messages": "Messages"
+  },
+  "expandMenu": "Déplier le menu",
+  "collapseMenu": "Replier le menu",
+  "comingSoon": {
+    "body": "Cet écran n'est pas encore disponible.",
+    "close": "OK"
+  }
+}

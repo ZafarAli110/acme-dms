@@ -1,0 +1,248 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../.oxlintrc.json"],
+  "overrides": [
+    {
+      "files": ["src/dto/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "DTOs are plain shapes and depend on nothing."
+              },
+              {
+                "group": ["#business-logic/**", "../**/business-logic/**"],
+                "message": "DTOs are plain shapes and depend on nothing."
+              },
+              {
+                "group": ["#business-logic-abstractions/**", "../**/business-logic-abstractions/**"],
+                "message": "DTOs are plain shapes and depend on nothing."
+              },
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "DTOs are plain shapes and depend on nothing."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "DTOs are plain shapes and depend on nothing."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@nestjs/platform-node",
+                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/business-logic-abstractions/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "Abstractions may only depend on DTOs."
+              },
+              {
+                "group": ["#business-logic/**", "../**/business-logic/**"],
+                "message": "Abstractions may only depend on DTOs."
+              },
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "Abstractions may only depend on DTOs."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Abstractions may only depend on DTOs."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@nestjs/platform-node",
+                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/business-logic/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "Business logic depends on abstractions: inject IDocumentApiClient, never the client class or the HTTP layer."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Business logic depends on abstractions: inject IDocumentApiClient, never the client class or the HTTP layer."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@nestjs/platform-node",
+                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/persistence/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "Persistence must not depend on business logic, other services or the HTTP layer."
+              },
+              {
+                "group": ["#business-logic/**", "../**/business-logic/**"],
+                "message": "Persistence must not depend on business logic, other services or the HTTP layer."
+              },
+              {
+                "group": ["#business-logic-abstractions/**", "../**/business-logic-abstractions/**"],
+                "message": "Persistence must not depend on business logic, other services or the HTTP layer."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Persistence must not depend on business logic, other services or the HTTP layer."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@nestjs/platform-node",
+                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/rest-clients/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "REST clients implement abstractions; they know nothing about handlers, the database or the HTTP layer."
+              },
+              {
+                "group": ["#business-logic/**", "../**/business-logic/**"],
+                "message": "REST clients implement abstractions; they know nothing about handlers, the database or the HTTP layer."
+              },
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "REST clients implement abstractions; they know nothing about handlers, the database or the HTTP layer."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@nestjs/platform-node",
+                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/service/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "Controllers go through a business handler, never straight to persistence."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Controllers go through a business handler, never straight to another service."
+              },
+              {
+                "group": ["#business-logic/handlers/**"],
+                "message": "Inject the handler's abstraction token, not the handler class."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@nestjs/platform-node",
+                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/service/app.module.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "Controllers go through a business handler, never straight to persistence."
+              },
+              {
+                "group": ["#business-logic/handlers/**"],
+                "message": "Inject the handler's abstraction token, not the handler class."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@nestjs/platform-node",
+                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/service/main.ts", "src/service/interceptors/file-upload.interceptor.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "Controllers go through a business handler, never straight to persistence."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Controllers go through a business handler, never straight to another service."
+              },
+              {
+                "group": ["#business-logic/handlers/**"],
+                "message": "Inject the handler's abstraction token, not the handler class."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

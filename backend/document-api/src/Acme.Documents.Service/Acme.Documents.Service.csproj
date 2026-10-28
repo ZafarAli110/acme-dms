@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\service-defaults\Acme.ServiceDefaults\Acme.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Acme.Documents.BusinessLogic\Acme.Documents.BusinessLogic.csproj" />
+    <ProjectReference Include="..\Acme.Documents.Messaging\Acme.Documents.Messaging.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,13 @@
+{
+  "welcome": "Welcome, {{name}}",
+  "customersAt": "Customers at {{location}}",
+  "customersCaption": "This location's customer book",
+  "partsAt": "Parts stocked at {{location}}",
+  "partsCaption": "With their bin and quantity here",
+  "recentTitle": "Recently contacted",
+  "recentSubtitle": "Customers of {{location}} you spoke to last",
+  "noRecent": "No recent contacts.",
+  "lastContact": "Last contact {{date}}",
+  "permissionsTitle": "What you can do at {{location}}",
+  "permissionsSubtitle": "Permissions come from your role at the selected location. Switch location in the top bar."
+}

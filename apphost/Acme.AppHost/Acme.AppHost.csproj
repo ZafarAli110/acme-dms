@@ -1,0 +1,17 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.4">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>acme-dms-apphost</UserSecretsId>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.JavaScript" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\backend\gateway\Acme.Gateway\Acme.Gateway.csproj" />
+    <ProjectReference Include="..\..\backend\identity-api\src\Acme.Identity.Service\Acme.Identity.Service.csproj" />
+    <ProjectReference Include="..\..\backend\document-api\src\Acme.Documents.Service\Acme.Documents.Service.csproj" />
+  </ItemGroup>
+</Project>

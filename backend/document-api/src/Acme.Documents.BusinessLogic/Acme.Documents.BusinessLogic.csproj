@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Acme.Documents.BusinessLogic.Abstractions\Acme.Documents.BusinessLogic.Abstractions.csproj" />
+    <ProjectReference Include="..\Acme.Documents.Persistence\Acme.Documents.Persistence.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NetVips" />
+    <PackageReference Include="NetVips.Native" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Acme.Documents.Tests" />
+  </ItemGroup>
+</Project>

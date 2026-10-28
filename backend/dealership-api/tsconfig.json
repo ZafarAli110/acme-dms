@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strictPropertyInitialization": false
+  },
+  "include": ["src/**/*.ts"]
+}
