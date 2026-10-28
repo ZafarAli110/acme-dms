@@ -139,6 +139,18 @@ echo 'export ASPIRE_CONTAINER_RUNTIME=podman' >> ~/.zshrc && source ~/.zshrc
 > Using Docker Desktop instead? Skip the Podman steps, do not set `ASPIRE_CONTAINER_RUNTIME`, and make sure Docker
 > Desktop is running.
 
+**The tests use the same container runtime.** dealership-api's tests run against a real Postgres that
+[Testcontainers](https://testcontainers.com) starts for each test run. Docker Desktop works as it is. With Podman,
+point Testcontainers at Podman's socket and turn off its cleanup container (once, in your shell profile):
+
+```bash
+export DOCKER_HOST="unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')"
+export TESTCONTAINERS_RYUK_DISABLED=true
+```
+
+On Windows (PowerShell), with Podman: `[Environment]::SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true", "User")`;
+Podman Desktop's Docker compatibility (Settings → Docker Compatibility) provides the socket.
+
 ## Run it
 
 ```bash
