@@ -13,7 +13,7 @@ the running system returns.
 2. Read the change: `git diff main...` and `git status`.
 3. Run `bun run gate:fast`.
 4. For **each** requirement, design a check against the running system with `bun run api as <user> …` and run it.
-   Anything per location is checked as two users at different locations: `sam` at Northside and `rita` at Westgate (`--location westgate`), a rooftop sam doesn't work at. Try the edge the ticket names, not only the happy path. Finish with `bun run errors`.
+   For a change the web app shows, also check it in the browser (the `browser` skill). Anything per location is checked as two users at different locations: `sam` at Northside and `rita` at Westgate (`--location westgate`), a rooftop sam doesn't work at. Try the edge the ticket names, not only the happy path. Finish with `bun run errors`.
 5. Do not edit files and do not change data beyond what a check needs. If a check needs data reset, say so instead.
 
 Report, and nothing else:

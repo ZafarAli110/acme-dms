@@ -33,6 +33,7 @@
     "gate:slow": "nx run @acme/web:e2e"
   },
   "devDependencies": {
+    "@playwright/cli": "0.1.22",
     "@types/bun": "1.4.4",
     "@types/node": "26.6.5",
     "nx": "24.0.2",

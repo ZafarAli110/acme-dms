@@ -23,3 +23,5 @@ build/
 # Playwright
 test-results/
 playwright-report/
+# playwright-cli snapshots and screenshots
+.playwright-cli/

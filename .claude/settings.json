@@ -17,7 +17,8 @@
       "Bash(git log *)",
       "Bash(git show *)",
       "mcp__acme-tracker__list_tickets",
-      "mcp__acme-tracker__get_ticket"
+      "mcp__acme-tracker__get_ticket",
+      "Bash(bunx playwright-cli *)"
     ],
     "ask": [
       "mcp__acme-tracker__update_ticket_status",
