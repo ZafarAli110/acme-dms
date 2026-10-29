@@ -57,5 +57,23 @@
     "columns": "Colonnes",
     "filters": "Filtres",
     "search": "Rechercher"
+  },
+  "exports": {
+    "export": "Exporter vers Excel",
+    "queued": "En attente d'une place ({{position}} dans la file)…",
+    "counting": "Comptage des lignes…",
+    "sorting": "Tri de {{total}} lignes…",
+    "writing": "{{rows}} sur {{total}} lignes",
+    "completed": "{{rows}} lignes, prêt à télécharger",
+    "failed": "L'export a échoué. Réessayez.",
+    "cancelled": "Annulé.",
+    "expired": "Ce fichier a expiré. Exportez à nouveau.",
+    "rate": "{{rate}} lignes par seconde",
+    "elapsed": "{{time}} écoulé",
+    "left": "environ {{time}} restant",
+    "cancel": "Annuler",
+    "download": "Télécharger ({{size}} Mo)",
+    "close": "Fermer",
+    "customersTitle": "Clients de {{location}}"
   }
 }

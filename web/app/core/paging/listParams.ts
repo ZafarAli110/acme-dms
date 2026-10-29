@@ -85,6 +85,14 @@ export function toListApiQuery(params: ListParams): string {
   return searchParams.toString();
 }
 
+/** The list's search, sort and filter as a request body (an export): every row, so no page. */
+export function toListQueryBody(params: ListParams): Record<string, string> {
+  const query = Object.fromEntries(toListSearchParams(params));
+  delete query['page'];
+  delete query['pageSize'];
+  return query;
+}
+
 /** The first page of a list, unsorted and unfiltered. */
 export const FIRST_PAGE: ListParams = {
   search: '',

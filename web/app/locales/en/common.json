@@ -57,5 +57,23 @@
     "columns": "Columns",
     "filters": "Filters",
     "search": "Search"
+  },
+  "exports": {
+    "export": "Export to Excel",
+    "queued": "Waiting for a free slot ({{position}} in line)…",
+    "counting": "Counting the rows…",
+    "sorting": "Sorting {{total}} rows…",
+    "writing": "{{rows}} of {{total}} rows",
+    "completed": "{{rows}} rows, ready to download",
+    "failed": "The export failed. Try again.",
+    "cancelled": "Cancelled.",
+    "expired": "This file has expired. Export again.",
+    "rate": "{{rate}} rows a second",
+    "elapsed": "{{time}} elapsed",
+    "left": "about {{time}} left",
+    "cancel": "Cancel",
+    "download": "Download ({{size}} MB)",
+    "close": "Close",
+    "customersTitle": "Customers of {{location}}"
   }
 }
