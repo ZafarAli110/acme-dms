@@ -27,7 +27,9 @@ test.describe('the Locations page', () => {
 
     await assignment(page, 'rita@northwind.test', 'NWM-R').click();
 
-    await expect(page.getByTestId('assignment-error')).toHaveText('Rita Service Advisor must keep at least one location.');
+    await expect(page.getByTestId('assignment-error')).toHaveText(
+      'Rita Service Advisor must keep at least one location.',
+    );
     await expect(assignment(page, 'rita@northwind.test', 'NWM-R')).toBeChecked();
     await expect(assignment(page, MARIA, 'NWM-N')).toBeDisabled();
   });
