@@ -10,7 +10,7 @@ import {
   type GridValidRowModel,
 } from '@mui/x-data-grid';
 import {frFR} from '@mui/x-data-grid/locales';
-import {type ReactNode, useState} from 'react';
+import {type ReactNode, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {type ListParams, PAGE_SIZES} from '../../core/paging/listParams';
 import {INSET_SURFACE} from '../../theme';
@@ -67,6 +67,10 @@ export function AppDataGrid<Row extends GridValidRowModel>({
   if (editing.key !== urlFilterKey) {
     setEditing({key: urlFilterKey, model: urlFilter});
   }
+  // Built again only when the sort changes: the grid takes a new sort model as a new sort and goes back to page 1.
+  const sort = server?.params.sort ?? null;
+  const direction = server?.params.direction ?? 'asc';
+  const sortModel = useMemo(() => toSortModel({sort, direction}), [sort, direction]);
 
   const handlePaginationModelChange = (model: GridPaginationModel): void => {
     if (!server) {
@@ -143,7 +147,7 @@ export function AppDataGrid<Row extends GridValidRowModel>({
               rowCount: server.rowCount,
               paginationModel: toPaginationModel(server.params),
               onPaginationModelChange: handlePaginationModelChange,
-              sortModel: toSortModel(server.params),
+              sortModel,
               onSortModelChange: handleSortModelChange,
             }
           : {initialState: {pagination: {paginationModel: {pageSize: 25}}}})}

@@ -33,7 +33,11 @@ test.describe('parts', () => {
     await page.getByRole('button', {name: 'Go to next page'}).click();
 
     await expect(page).toHaveURL(/page=2/);
-    await expect(page.locator('.MuiTablePagination-displayedRows')).toContainText('11–20');
+    await expect(page.locator('.MuiTablePagination-displayedRows')).toContainText(/^11–/);
+    // The grid once went back to page 1 as soon as page 2 had loaded, so look again once it has.
+    await expect(page.getByTestId('parts-table').locator('.MuiLinearProgress-root')).toHaveCount(0);
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator('.MuiTablePagination-displayedRows')).toContainText(/^11–/);
   });
 
   test('a part edit is saved', async ({page, request}) => {

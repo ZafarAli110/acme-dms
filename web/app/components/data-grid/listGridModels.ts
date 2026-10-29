@@ -21,7 +21,7 @@ export function toPaginationModel(params: ListParams): GridPaginationModel {
   return {page: params.page - 1, pageSize: params.pageSize};
 }
 
-export function toSortModel(params: ListParams): GridSortModel {
+export function toSortModel(params: Pick<ListParams, 'sort' | 'direction'>): GridSortModel {
   return params.sort ? [{field: params.sort, sort: params.direction}] : [];
 }
 
