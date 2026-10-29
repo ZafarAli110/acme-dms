@@ -33,7 +33,7 @@ this._unitOfWorkFactory.beginAsync()` (`{readOnly: true}` for a query), Drizzle 
    Copy `bins/create` and `bins/get-list`. No repositories; a query several handlers share is a function next to the
    mapper (`parts/part.queries.ts`).
 6. The test in `__test__/` runs against a real Postgres: `useTestDatabase()`, `fixedClock()`, the users in
-   `business-logic/user-context/__test__/test-users.ts`. It must fail if the rule the ticket is about were broken: seed
+   `#test-setup/users/test-users` (shared test setup lives in `src/test-setup/`; `__test__/` holds only tests). It must fail if the rule the ticket is about were broken: seed
    the rows that must come back **and the rows that must not** (another location's, a deleted one), as
    `bins/get-list/__test__` does.
 7. Register the handler in the module; add the action to `<Resource>Controller` (read) or `<Resource>CommandController`
