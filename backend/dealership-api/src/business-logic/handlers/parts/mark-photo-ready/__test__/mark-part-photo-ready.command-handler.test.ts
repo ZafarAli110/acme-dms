@@ -1,8 +1,8 @@
 import {eq} from 'drizzle-orm';
 import {describe, expect, it} from 'vitest';
-import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
-import {NORTHSIDE} from '#persistence/__test__/postgres/seed-kit';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {fixedClock} from '#test-setup/time/fixed-clock';
+import {NORTHSIDE} from '#test-setup/postgres/seed-kit';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {partPhotos} from '#persistence/schema/index';
 import {MarkPartPhotoReadyCommandHandler} from '../mark-part-photo-ready.command-handler';
 

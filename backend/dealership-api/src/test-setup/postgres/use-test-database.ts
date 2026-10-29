@@ -1,5 +1,5 @@
 import {afterAll, beforeAll} from 'vitest';
-import type {IUnitOfWorkFactory} from '../../unit-of-work/unit-of-work.factory.interface';
+import type {IUnitOfWorkFactory} from '#persistence/unit-of-work/unit-of-work.factory.interface';
 import {seedKit} from './seed-kit';
 import {createTestDatabaseAsync, type TestDatabase} from './test-database';
 import {createTestUnitOfWork, type TestUnitOfWork} from './test-unit-of-work';

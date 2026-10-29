@@ -1,6 +1,6 @@
-import type {IUnitOfWorkFactory} from '../../unit-of-work/unit-of-work.factory.interface';
-import {createDatabasePool} from '../../unit-of-work/database-pool';
-import {UnitOfWorkFactory} from '../../unit-of-work/unit-of-work.factory';
+import type {IUnitOfWorkFactory} from '#persistence/unit-of-work/unit-of-work.factory.interface';
+import {createDatabasePool} from '#persistence/unit-of-work/database-pool';
+import {UnitOfWorkFactory} from '#persistence/unit-of-work/unit-of-work.factory';
 import type {TestDatabase} from './test-database';
 
 /** The service's own unit of work factory, on a test database: what handler tests construct handlers with. */

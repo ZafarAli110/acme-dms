@@ -1,12 +1,12 @@
 import {BadRequestException} from '@nestjs/common';
 import {eq} from 'drizzle-orm';
 import {describe, expect, it} from 'vitest';
-import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
-import {AT_NORTHSIDE} from '#business-logic/user-context/__test__/test-users';
-import {NORTHSIDE} from '#persistence/__test__/postgres/seed-kit';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {fixedClock} from '#test-setup/time/fixed-clock';
+import {AT_NORTHSIDE} from '#test-setup/users/test-users';
+import {NORTHSIDE} from '#test-setup/postgres/seed-kit';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {partPhotos, parts} from '#persistence/schema/index';
-import {fakeDocumentApi, jpeg} from '../../__test__/fake-document-api';
+import {fakeDocumentApi, jpeg} from '#test-setup/document-api/fake-document-api';
 import {UpdatePartCommandHandler} from '../update-part.command-handler';
 
 describe('UpdatePartCommandHandler', () => {

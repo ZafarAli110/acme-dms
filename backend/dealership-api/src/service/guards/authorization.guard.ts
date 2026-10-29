@@ -47,7 +47,6 @@ export class AuthorizationGuard implements CanActivate {
 
     const userContext: UserContext = {
       userId: token.sub,
-      dealerId: token.dealer_id,
       locationId,
       permissions: location?.permissions ?? [],
       accessToken: request.rawAccessToken ?? '',

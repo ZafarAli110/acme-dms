@@ -1,8 +1,8 @@
 import {eq, sql} from 'drizzle-orm';
 import type {Pool} from 'pg';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
-import {createTestDatabaseAsync, type TestDatabase} from '../../__test__/postgres/test-database';
-import {NORTHSIDE, SEEDED_AT, TEST_USER_ID} from '../../__test__/postgres/seed-kit';
+import {createTestDatabaseAsync, type TestDatabase} from '#test-setup/postgres/test-database';
+import {NORTHSIDE, SEEDED_AT, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
 import {bins} from '../../schema';
 import {createDatabasePool} from '../database-pool';
 import {UnitOfWorkFactory} from '../unit-of-work.factory';

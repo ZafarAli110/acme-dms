@@ -1,5 +1,5 @@
 import type {NodePgDatabase} from 'drizzle-orm/node-postgres';
-import * as schema from '../../schema';
+import * as schema from '#persistence/schema/index';
 import {
   bins,
   type Bin,
@@ -10,7 +10,7 @@ import {
   partInventories,
   partPhotos,
   type PartPhoto,
-} from '../../schema';
+} from '#persistence/schema/index';
 
 /** Northwind's two rooftops, with the ids the identity seed gives them. */
 export const NORTHSIDE = '20000000-0000-0000-0000-000000000001';

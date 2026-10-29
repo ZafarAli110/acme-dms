@@ -1,8 +1,8 @@
 import {ConflictException} from '@nestjs/common';
 import {describe, expect, it} from 'vitest';
-import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
-import {AT_NORTHSIDE, AT_RIVERSIDE} from '#business-logic/user-context/__test__/test-users';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {fixedClock} from '#test-setup/time/fixed-clock';
+import {AT_NORTHSIDE, AT_RIVERSIDE} from '#test-setup/users/test-users';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {CreateBinCommandHandler} from '../create-bin.command-handler';
 
 describe('CreateBinCommandHandler', () => {

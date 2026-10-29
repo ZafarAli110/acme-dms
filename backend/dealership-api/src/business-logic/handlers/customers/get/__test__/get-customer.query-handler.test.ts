@@ -1,8 +1,8 @@
 import {NotFoundException} from '@nestjs/common';
 import {describe, expect, it} from 'vitest';
-import {AT_NORTHSIDE, AT_RIVERSIDE} from '#business-logic/user-context/__test__/test-users';
-import {NORTHSIDE} from '#persistence/__test__/postgres/seed-kit';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {AT_NORTHSIDE, AT_RIVERSIDE} from '#test-setup/users/test-users';
+import {NORTHSIDE} from '#test-setup/postgres/seed-kit';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {GetCustomerQueryHandler} from '../get-customer.query-handler';
 
 describe('GetCustomerQueryHandler', () => {

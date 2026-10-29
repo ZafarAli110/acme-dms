@@ -1,8 +1,8 @@
 import {NotFoundException} from '@nestjs/common';
 import {describe, expect, it} from 'vitest';
-import {AT_NORTHSIDE} from '#business-logic/user-context/__test__/test-users';
-import {RIVERSIDE} from '#persistence/__test__/postgres/seed-kit';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {AT_NORTHSIDE} from '#test-setup/users/test-users';
+import {RIVERSIDE} from '#test-setup/postgres/seed-kit';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {GetPartQueryHandler} from '../get-part.query-handler';
 
 describe('GetPartQueryHandler', () => {

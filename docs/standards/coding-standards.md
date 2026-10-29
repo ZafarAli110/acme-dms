@@ -47,7 +47,10 @@
   field and refuses unknown ones. Never `Object.assign(new PartPhoto(), {…})`, which checks nothing. A change to an
   existing one is a typed spread (`const updated: Customer = {...customer, firstName: …}`).
 - Response DTOs are `interface`s. Request DTOs are classes validated with `class-validator`.
-- Tests live in `__test__/` next to the code they test; Vitest.
+- Tests live in `__test__/` next to the code they test, and a `__test__/` folder holds only tests (`*.test.ts`);
+  Vitest. What several tests share (the Testcontainers Postgres and `useTestDatabase()`, the seed kit, test users, a
+  fixed clock, fakes of other services) is in `src/test-setup/`, imported as `#test-setup/...`. Production code never
+  imports it.
 - Data access goes through the unit of work and Drizzle (`standards/business-handlers.md`, "Data access"): no
   repository classes. Handler tests run against a real Postgres that Testcontainers starts (`useTestDatabase()`), not
   mocks: a test that can't see the SQL can't see a missing filter.

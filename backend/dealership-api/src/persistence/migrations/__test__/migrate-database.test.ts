@@ -1,7 +1,7 @@
 import {resolve} from 'node:path';
 import {sql} from 'drizzle-orm';
 import {describe, expect, it} from 'vitest';
-import {createTestDatabaseAsync} from '../../__test__/postgres/test-database';
+import {createTestDatabaseAsync} from '#test-setup/postgres/test-database';
 import {migrateDatabaseAsync} from '../migrate-database';
 
 const MIGRATIONS_FOLDER = resolve(import.meta.dirname, '../drizzle');

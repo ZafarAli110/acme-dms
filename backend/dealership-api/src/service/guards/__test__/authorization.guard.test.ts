@@ -47,7 +47,6 @@ describe('AuthorizationGuard', () => {
 
     expect(userContext).toEqual({
       userId: 'bob',
-      dealerId: 'northwind',
       locationId: RIVERSIDE,
       permissions: ['parts.read', 'stock.adjust'],
       accessToken: 'raw-token',

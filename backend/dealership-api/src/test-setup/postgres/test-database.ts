@@ -1,7 +1,7 @@
 import {drizzle, type NodePgDatabase} from 'drizzle-orm/node-postgres';
 import {Client, Pool} from 'pg';
 import {inject} from 'vitest';
-import * as schema from '../../schema';
+import * as schema from '#persistence/schema/index';
 import {databaseUrl, TEMPLATE_DATABASE} from './global-setup';
 
 /** A database of its own for one test file, cloned from the migrated template, dropped when disposed. */

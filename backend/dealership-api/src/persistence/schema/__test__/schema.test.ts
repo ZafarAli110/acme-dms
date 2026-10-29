@@ -1,7 +1,7 @@
 import {eq, sql} from 'drizzle-orm';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
-import {createTestDatabaseAsync, type TestDatabase} from '../../__test__/postgres/test-database';
-import {NORTHSIDE, SEEDED_AT, seedKit, TEST_USER_ID} from '../../__test__/postgres/seed-kit';
+import {createTestDatabaseAsync, type TestDatabase} from '#test-setup/postgres/test-database';
+import {NORTHSIDE, SEEDED_AT, seedKit, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
 import {customers, parts} from '..';
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;

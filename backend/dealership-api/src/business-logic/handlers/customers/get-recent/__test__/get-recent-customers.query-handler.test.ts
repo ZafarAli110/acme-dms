@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import {NORTHSIDE} from '#persistence/__test__/postgres/seed-kit';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {NORTHSIDE} from '#test-setup/postgres/seed-kit';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {GetRecentCustomersQueryHandler} from '../get-recent-customers.query-handler';
 
 describe('GetRecentCustomersQueryHandler', () => {

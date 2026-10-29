@@ -2,13 +2,13 @@ import {resolve} from 'node:path';
 import {PostgreSqlContainer} from '@testcontainers/postgresql';
 import {Client} from 'pg';
 import type {TestProject} from 'vitest/node';
-import {migrateDatabaseAsync} from '../../migrations/migrate-database';
+import {migrateDatabaseAsync} from '#persistence/migrations/migrate-database';
 
 /** The database every test database is cloned from: migrated once per run. */
 export const TEMPLATE_DATABASE = 'template_dealership';
 
 const POSTGRES_IMAGE = 'postgres:18.3';
-const MIGRATIONS_FOLDER = resolve(import.meta.dirname, '../../migrations/drizzle');
+const MIGRATIONS_FOLDER = resolve(import.meta.dirname, '../../persistence/migrations/drizzle');
 
 declare module 'vitest' {
   export interface ProvidedContext {

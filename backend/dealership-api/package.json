@@ -9,7 +9,8 @@
     "#business-logic-abstractions/*": "./src/business-logic-abstractions/*.ts",
     "#dto/*": "./src/dto/*.ts",
     "#persistence/*": "./src/persistence/*.ts",
-    "#rest-clients/*": "./src/rest-clients/*.ts"
+    "#rest-clients/*": "./src/rest-clients/*.ts",
+    "#test-setup/*": "./src/test-setup/*.ts"
   },
   "scripts": {
     "build": "bun scripts/build.ts",

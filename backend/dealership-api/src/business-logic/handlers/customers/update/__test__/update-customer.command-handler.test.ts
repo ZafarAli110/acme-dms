@@ -1,9 +1,9 @@
 import {NotFoundException} from '@nestjs/common';
 import {describe, expect, it} from 'vitest';
-import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
-import {AT_NORTHSIDE, AT_RIVERSIDE} from '#business-logic/user-context/__test__/test-users';
-import {NORTHSIDE} from '#persistence/__test__/postgres/seed-kit';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {fixedClock} from '#test-setup/time/fixed-clock';
+import {AT_NORTHSIDE, AT_RIVERSIDE} from '#test-setup/users/test-users';
+import {NORTHSIDE} from '#test-setup/postgres/seed-kit';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {UpdateCustomerCommandHandler} from '../update-customer.command-handler';
 
 const ALL_FIELDS = {

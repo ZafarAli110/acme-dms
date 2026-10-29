@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
-import {AT_NORTHSIDE} from '#business-logic/user-context/__test__/test-users';
-import {NORTHSIDE, RIVERSIDE} from '#persistence/__test__/postgres/seed-kit';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {AT_NORTHSIDE} from '#test-setup/users/test-users';
+import {NORTHSIDE, RIVERSIDE} from '#test-setup/postgres/seed-kit';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {GetCustomerListQueryHandler} from '../get-customer-list.query-handler';
 
 describe('GetCustomerListQueryHandler', () => {

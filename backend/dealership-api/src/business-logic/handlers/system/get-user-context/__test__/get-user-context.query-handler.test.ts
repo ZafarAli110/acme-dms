@@ -5,7 +5,6 @@ describe('GetUserContextQueryHandler', () => {
   it('returns the user context as resolved from the token and location header, without the token itself', async () => {
     const userContext = {
       userId: 'u1',
-      dealerId: 'd1',
       locationId: 'l1',
       permissions: ['parts.read'],
       accessToken: 'secret',
@@ -13,7 +12,6 @@ describe('GetUserContextQueryHandler', () => {
 
     await expect(new GetUserContextQueryHandler().executeAsync(userContext)).resolves.toEqual({
       userId: 'u1',
-      dealerId: 'd1',
       locationId: 'l1',
       permissions: ['parts.read'],
     });

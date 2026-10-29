@@ -1,6 +1,6 @@
 import {type ArgumentsHost, ConflictException} from '@nestjs/common';
 import {describe, expect, it} from 'vitest';
-import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
+import {fixedClock} from '#test-setup/time/fixed-clock';
 import type {ProblemDetailsDto} from '../../problem-details/problem-details.dto';
 import {ProblemDetailsFilter} from '../problem-details.filter';
 

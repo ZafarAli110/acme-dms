@@ -1,8 +1,8 @@
 import {describe, expect, it} from 'vitest';
-import {fixedClock} from '#business-logic/time/__test__/fixed-clock';
-import {AT_RIVERSIDE} from '#business-logic/user-context/__test__/test-users';
-import {NORTHSIDE, RIVERSIDE} from '#persistence/__test__/postgres/seed-kit';
-import {useTestDatabase} from '#persistence/__test__/postgres/use-test-database';
+import {fixedClock} from '#test-setup/time/fixed-clock';
+import {AT_RIVERSIDE} from '#test-setup/users/test-users';
+import {NORTHSIDE, RIVERSIDE} from '#test-setup/postgres/seed-kit';
+import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {SetStockLevelCommandHandler} from '../set-stock-level.command-handler';
 
 describe('SetStockLevelCommandHandler', () => {

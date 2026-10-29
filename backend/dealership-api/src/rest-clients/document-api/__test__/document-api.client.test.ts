@@ -7,7 +7,6 @@ import {DocumentApiClient} from '../document-api.client';
 
 const alice: UserContext = {
   userId: 'alice',
-  dealerId: 'northwind',
   locationId: 'northside',
   permissions: ['parts.write'],
   accessToken: 'token',
