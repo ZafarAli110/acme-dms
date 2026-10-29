@@ -17,6 +17,15 @@ test.describe('customers', () => {
     await expect(page.getByRole('heading', {name: `Pat ${surname}`})).toBeVisible();
   });
 
+  test('a filter from a shared link shows only the matching rows, with the filter marked', async ({page}) => {
+    await page.goto('/customers?filterField=status&filterOperator=is&filterValue=prospect');
+
+    const statuses = page.getByTestId('customers-table').locator('[role="gridcell"][data-field="status"]');
+    await expect(statuses.first()).toHaveText('Prospect');
+    expect(new Set(await statuses.allTextContents())).toEqual(new Set(['Prospect']));
+    await expect(page.getByTestId('grid-filters').locator('.MuiBadge-dot')).toBeVisible();
+  });
+
   test('missing names are shown on their fields', async ({page}) => {
     await page.goto('/customers/new');
     await page.getByTestId('save-customer').click();

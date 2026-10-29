@@ -67,3 +67,13 @@ await work.commitAsync();
 5. An action on the resource's controller in `service/controllers/<area>/`: `<Resource>Controller` for a read,
    `<Resource>CommandController` for a write. A new resource gets both, registered in the app module.
 6. The permission it needs (`@RequirePermission` / `[RequirePermission]`).
+
+## List endpoints: one sort, one filter
+
+A list endpoint takes `ListQueryDto`: the page, a free-text `search`, and the data grid's one sort (`sort`,
+`direction`) and one filter (`filterField`, `filterOperator`, `filterValue`). The list declares which fields can be
+sorted and filtered, once, as `ListColumns` next to its handler (`CUSTOMER_LIST_COLUMNS`, `STOCKED_PART_COLUMNS`):
+each field's SQL (a column, or an expression such as "surname, first name") and its type (`text`, `number`, `date`,
+`choice`), which decides the operators. `listOrderBy()` and `listFilter()` (`business-logic/list-query/`) turn the query
+into SQL; any other field or operator is a 400, so a sort or filter never reaches SQL as text. The sort always ends with
+the id, so rows with equal values keep one order from page to page. Count with the same joins as the page.

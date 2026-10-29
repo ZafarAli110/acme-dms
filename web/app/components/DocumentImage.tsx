@@ -1,6 +1,6 @@
 import {Box, Skeleton} from '@mui/material';
 import {useQuery} from '@tanstack/react-query';
-import {useEffect, useMemo} from 'react';
+import {useObjectUrl} from '../core/hooks/useObjectUrl';
 import {documentQueries} from '../core/queries/documentQueries';
 
 /** Images need the bearer token, so they are fetched as blobs and shown through an object URL. */
@@ -19,8 +19,7 @@ export function DocumentImage({
     queryFn: () => documentQueries.getContentAsync(documentId, variant),
     staleTime: Number.POSITIVE_INFINITY,
   });
-  const url = useMemo(() => (blob ? URL.createObjectURL(blob) : null), [blob]);
-  useEffect(() => () => (url ? URL.revokeObjectURL(url) : undefined), [url]);
+  const url = useObjectUrl(blob);
 
   if (!url) {
     return <Skeleton variant="rectangular" width={size} height={size} />;

@@ -36,4 +36,24 @@ describe('GetPartListQueryHandler', () => {
 
     expect(list.items.map((item) => item.partNumber)).toEqual(['BRK-777']);
   });
+
+  it('sorts by quantity and filters by the bin, counting the same rows it shows', async () => {
+    await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'QTY-1', quantityOnHand: 3});
+    await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'QTY-2', quantityOnHand: 9});
+    await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'QTY-3', quantityOnHand: 6});
+    const handler = new GetPartListQueryHandler(database.unitOfWorkFactory);
+
+    const list = await handler.executeAsync(AT_NORTHSIDE, {
+      page: 1,
+      pageSize: 2,
+      sort: 'onHand',
+      direction: 'desc',
+      filterField: 'bin',
+      filterOperator: 'startsWith',
+      filterValue: 'B-QTY',
+    });
+
+    expect(list.items.map((item) => item.partNumber)).toEqual(['QTY-2', 'QTY-3']);
+    expect(list.total).toBe(3);
+  });
 });

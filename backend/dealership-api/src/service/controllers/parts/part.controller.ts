@@ -8,7 +8,7 @@ import {
   GET_PART_QUERY_HANDLER,
   type IGetPartQueryHandler,
 } from '#business-logic-abstractions/handlers/parts/get/get-part.query-handler.interface';
-import {PageQueryDto} from '#dto/paging/page-query.dto';
+import {ListQueryDto} from '#dto/paging/list-query.dto';
 import type {PageResponseDto} from '#dto/paging/page-response.dto';
 import type {PartListItemDto} from '#dto/parts/part-list-item.dto';
 import type {PartResponseDto} from '#dto/parts/part-response.dto';
@@ -33,7 +33,7 @@ export class PartController {
   @RequirePermission('parts.read')
   public findAllAsync(
     @CurrentUser() userContext: UserContext,
-    @Query() query: PageQueryDto,
+    @Query() query: ListQueryDto,
   ): Promise<PageResponseDto<PartListItemDto>> {
     return this._getPartListQueryHandler.executeAsync(userContext, query);
   }

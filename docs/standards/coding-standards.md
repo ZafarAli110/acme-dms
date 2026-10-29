@@ -40,7 +40,8 @@
 - Named exports only. A default export only where a tool requires one (a React Router route module's component, its
   `routes.tsx`, `root.tsx`, and config files), and then a named function: `export default function SignIn() {…}`.
 - React components are `function` declarations with PascalCase names (`export function PartForm() {…}`), never arrow
-  functions or JSX held in a constant. Arrow functions are fine inside a component, for event handlers and callbacks.
+  functions or JSX held in a constant. Inside a component (or a hook), event handlers and callbacks are arrow functions
+  held in a `const` (`const openPart = (part: PartListItem): void => {…};`), never nested `function` declarations.
 - Group siblings with `<Fragment>` (imported from `react`), never the empty `<>…</>`.
 - A new row or DTO is a typed object literal (`const photo: NewPartPhoto = {…}`): the compiler then requires every
   field and refuses unknown ones. Never `Object.assign(new PartPhoto(), {…})`, which checks nothing. A change to an

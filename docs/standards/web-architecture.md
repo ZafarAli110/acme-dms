@@ -18,7 +18,8 @@ app/
     contexts/            React adapters: auth/useAuth.ts, location/useSelectedLocation.ts,
                          location/LocationChangeGuardContext.tsx
     formatters/          display formats shared by features (formatRole.ts)
-    hooks/               useUnsavedChangesGuard.ts, useLocationChangePrompt.ts
+    hooks/               useUnsavedChangesGuard.ts, useLocationChangePrompt.ts, useListParams.ts,
+                         useColumnVisibility.ts, useObjectUrl.ts (a Blob or File as an <img> URL)
     kernel/              authKernel.ts, locationKernel.ts
     middleware/          routerContext.ts, authClientMiddleware.ts
     queries/             queryClient.ts, QueryProvider.tsx, and API calls shared by features (identity, documents)
@@ -26,7 +27,8 @@ app/
     storage/             sessionStore.ts: token and selected location
     types/               types shared by features (page.ts)
   components/            React components used by several features: Layout, Sidebar, TopBar, LanguageSwitcher,
-                         FormGuards, PageHeader, ErrorAlert, DocumentImage
+                         FormGuards, PageHeader, ErrorAlert, DocumentImage; data-grid/ (AppDataGrid, its toolbar,
+                         the URL ↔ grid models, serverColumn)
   locales/<language>/    translations: one JSON file per namespace (common, navigation, home, sign-in, parts, …)
   pages/                 route modules: SignIn, SignOut, ProtectedLayout, Home, NotFound, and one folder per feature
   root.tsx               the document (RootLayout), HydrateFallback and ErrorBoundary
@@ -107,12 +109,23 @@ location switch invalidates everything.
 The cache is the single `queryClient` in `core/queries/queryClient.ts`. Errors are typed (`core/config/apiErrors.ts`):
 `ApiError` carries the service's problem details; `ServerUnreachableError` and `RequestTimeoutError` mean no answer.
 
-**Lists keep their search and page in the URL** (`?search=brake&page=2&pageSize=50`), read and written with
-`useListParams()` (`core/hooks/useListParams.ts`), so a refresh, Back and a shared link all show the same list. The
-route's `clientLoader` reads the same params with `readListParams(new URL(request.url).searchParams)` and prefetches
-that page. The search box is uncontrolled (`defaultValue`), so typing never waits for the list. Never `useState` for
-what the URL can hold, and never `useEffect` to copy server data into state: give the form its `defaultValues`, and
-remount it with a `key` when the record changes.
+**Every list is an `AppDataGrid`** (`components/data-grid/`): the free MUI X data grid with one toolbar (columns,
+filter, the list's own actions, search), one sort and one filter at a time, at most 100 rows a page. Never a hand-built
+`Table`: one grid everywhere is one way to sort, filter and page. A list the API pages passes `server`; a short list
+the page already holds in full (the Locations page) leaves it out and the grid sorts and filters itself.
+
+**Server lists keep their state in the URL**
+(`?search=brake&page=2&pageSize=50&sort=onHand&direction=desc&filterField=bin&filterOperator=startsWith&filterValue=A`),
+read and written with `useListParams()` (`core/hooks/useListParams.ts`), so a refresh, Back and a shared link all show
+the same rows. The route's `clientLoader` reads the same params with `readListParams(new URL(request.url).searchParams)`
+and prefetches that page; the query sends them as they are (`toListApiQuery`). Each column's `field` is the name the
+API sorts and filters by (its list's `ListColumns`, e.g. `CUSTOMER_LIST_COLUMNS`), and `serverColumn()` limits the
+column's filter to the operators the API takes for its type. Column definitions live in the feature's `columns/`
+folder; a cell that needs more than text is a small component in `components/`, rendered by a module-level `renderX`
+function. Which columns are shown is kept per grid in this browser (`useColumnVisibility`).
+
+Never `useState` for what the URL can hold, and never `useEffect` to copy server data into state: give the form its
+`defaultValues`, and remount it with a `key` when the record changes.
 
 ## Forms: schema → mapper → form → page
 

@@ -8,12 +8,24 @@ test.describe('parts', () => {
 
   test('the search goes into the URL and survives a reload', async ({page}) => {
     await page.goto('/parts');
-    await page.getByTestId('parts-search').locator('input').fill('filter');
+    await page.getByTestId('grid-search').locator('input').fill('filter');
 
     await expect(page).toHaveURL(/\?search=filter/);
     await page.reload();
-    await expect(page.getByTestId('parts-search').locator('input')).toHaveValue('filter');
-    await expect(page.getByTestId('part-row').first()).toContainText(/filter/i);
+    await expect(page.getByTestId('grid-search').locator('input')).toHaveValue('filter');
+    await expect(page.getByTestId('parts-table').locator('.MuiDataGrid-row').first()).toContainText(/filter/i);
+  });
+
+  test('a sort by a column goes into the URL and orders the rows', async ({page}) => {
+    await page.goto('/parts');
+    await page.getByRole('columnheader', {name: 'On hand'}).click();
+    await page.getByRole('columnheader', {name: 'On hand'}).click();
+
+    await expect(page).toHaveURL(/sort=onHand&direction=desc/);
+    const onHand = page.getByTestId('parts-table').locator('[role="gridcell"][data-field="onHand"]');
+    await expect(onHand.first()).toBeVisible();
+    const quantities = (await onHand.allTextContents()).map((text) => Number(text.replace(/\D/g, '')));
+    expect(quantities).toEqual([...quantities].sort((a, b) => b - a));
   });
 
   test('the next page goes into the URL', async ({page}) => {

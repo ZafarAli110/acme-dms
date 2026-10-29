@@ -1,16 +1,32 @@
 import {Inject, Injectable} from '@nestjs/common';
-import {and, asc, count, eq, ilike, or, type SQL} from 'drizzle-orm';
+import {and, asc, count, eq, ilike, or, sql, type SQL} from 'drizzle-orm';
 import type {IGetCustomerListQueryHandler} from '#business-logic-abstractions/handlers/customers/get-list/get-customer-list.query-handler.interface';
 import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
 import type {CustomerListItemDto} from '#dto/customers/customer-list-item.dto';
-import type {PageQueryDto} from '#dto/paging/page-query.dto';
+import type {ListQueryDto} from '#dto/paging/list-query.dto';
 import type {PageResponseDto} from '#dto/paging/page-response.dto';
 import {customers, notDeleted} from '#persistence/schema/index';
 import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
+import {listFilter, listOrderBy, type ListColumns} from '../../../list-query/list-columns';
 import {requireLocation} from '../../../user-context/require-location';
 import {toCustomerListItemDto} from '../customer.mapper';
 
-/** Customers of the user's selected location; `search` matches name, company, email or phone. */
+/** What the customer list can be sorted and filtered by: the grid's field names. */
+export const CUSTOMER_LIST_COLUMNS: ListColumns = {
+  // "Surname, First name": sorts by surname, and a filter on the name matches either.
+  name: {source: sql`${customers.surname} || ', ' || ${customers.firstName}`, type: 'text'},
+  companyName: {source: customers.companyName, type: 'text'},
+  email: {source: customers.email, type: 'text'},
+  phone: {source: customers.phone, type: 'text'},
+  city: {source: customers.city, type: 'text'},
+  status: {source: customers.status, type: 'choice'},
+  lastContactDate: {source: customers.lastContactDate, type: 'date'},
+};
+
+/**
+ * Customers of the user's selected location, by name unless the query sorts otherwise; `search` matches name,
+ * company, email or phone, and the query's filter narrows it further.
+ */
 @Injectable()
 export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler {
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
@@ -21,7 +37,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
 
   public async executeAsync(
     userContext: UserContext,
-    query: PageQueryDto,
+    query: ListQueryDto,
   ): Promise<PageResponseDto<CustomerListItemDto>> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
@@ -29,6 +45,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
       eq(customers.locationId, requireLocation(userContext)),
       notDeleted(customers),
       query.search ? matching(`%${query.search}%`) : undefined,
+      listFilter(CUSTOMER_LIST_COLUMNS, query),
     );
 
     await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
@@ -36,7 +53,14 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
       .select()
       .from(customers)
       .where(where)
-      .orderBy(asc(customers.surname), asc(customers.firstName))
+      .orderBy(
+        ...listOrderBy(
+          CUSTOMER_LIST_COLUMNS,
+          query,
+          [asc(customers.surname), asc(customers.firstName)],
+          [asc(customers.id)],
+        ),
+      )
       .limit(pageSize)
       .offset((page - 1) * pageSize);
     const [counted] = await work.db.select({total: count()}).from(customers).where(where);

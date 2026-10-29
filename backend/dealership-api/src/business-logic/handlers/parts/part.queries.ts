@@ -11,6 +11,8 @@ import {
   type Part,
 } from '#persistence/schema/index';
 import type {Database} from '#persistence/unit-of-work/unit-of-work';
+import type {ListQueryDto} from '#dto/paging/list-query.dto';
+import {listFilter, listOrderBy, type ListColumns} from '../../list-query/list-columns';
 
 /** A part as one location stocks it: the catalogue record, its inventory there, and the bin it is in. */
 export interface StockedPart {
@@ -19,25 +21,45 @@ export interface StockedPart {
   bin: Bin;
 }
 
-/** One page of the parts `locationId` stocks, by part number; `search` matches the number or the description. */
+/** What a list of stocked parts can be sorted and filtered by: the grid's field names. */
+export const STOCKED_PART_COLUMNS: ListColumns = {
+  partNumber: {source: parts.partNumber, type: 'text'},
+  description: {source: parts.description, type: 'text'},
+  bin: {source: bins.code, type: 'text'},
+  onHand: {source: partInventories.quantityOnHand, type: 'number'},
+  reorderLevel: {source: partInventories.reorderLevel, type: 'number'},
+  unitPrice: {source: parts.unitPrice, type: 'number'},
+};
+
+/**
+ * One page of the parts `locationId` stocks, by part number unless the query sorts otherwise. `search` matches the
+ * number or the description; the query's filter narrows it further.
+ */
 export async function findStockedPartsAsync(
   db: Database,
   locationId: string,
-  {search, page, pageSize}: {search: string | null; page: number; pageSize: number},
+  query: ListQueryDto,
 ): Promise<{items: StockedPart[]; total: number}> {
+  const page = query.page ?? 1;
+  const pageSize = query.pageSize ?? 25;
   const where = and(
     eq(partInventories.locationId, locationId),
     notDeleted(partInventories),
-    search ? or(ilike(parts.partNumber, `%${search}%`), ilike(parts.description, `%${search}%`)) : undefined,
+    query.search
+      ? or(ilike(parts.partNumber, `%${query.search}%`), ilike(parts.description, `%${query.search}%`))
+      : undefined,
+    listFilter(STOCKED_PART_COLUMNS, query),
   );
   const items = await stockedParts(db, where)
-    .orderBy(asc(parts.partNumber))
+    .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, [asc(parts.partNumber)], [asc(parts.id)]))
     .limit(pageSize)
     .offset((page - 1) * pageSize);
+  // The same joins as the page, so a filter on the bin counts the same rows it shows.
   const [counted] = await db
     .select({total: count()})
     .from(partInventories)
     .innerJoin(parts, and(eq(parts.id, partInventories.partId), notDeleted(parts)))
+    .innerJoin(bins, and(eq(bins.id, partInventories.binId), notDeleted(bins)))
     .where(where);
   return {items, total: counted?.total ?? 0};
 }

@@ -2,9 +2,9 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import {Box, Chip, IconButton, Paper, Stack, Tooltip, Typography} from '@mui/material';
-import {useEffect, useMemo} from 'react';
 import {useFormContext, useWatch} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
+import {useObjectUrl} from '../../../core/hooks/useObjectUrl';
 import {DocumentImage} from '../../../components/DocumentImage';
 import type {PartFormValues, PartPhoto} from '../types/part';
 
@@ -84,7 +84,6 @@ export function PartPhotoTile({index, saved, disabled, onMakeDefault, onRemove}:
 
 /** A picked file shown before it is saved. The object URL is released when the tile goes. */
 function NewPhotoPreview({file}: {file: File}) {
-  const url = useMemo(() => URL.createObjectURL(file), [file]);
-  useEffect(() => () => URL.revokeObjectURL(url), [url]);
-  return <Box component="img" src={url} alt="" sx={{width: '100%', height: '100%', objectFit: 'cover'}} />;
+  const url = useObjectUrl(file);
+  return url && <Box component="img" src={url} alt="" sx={{width: '100%', height: '100%', objectFit: 'cover'}} />;
 }

@@ -52,5 +52,10 @@
   "pagination": {
     "rowsPerPage": "Lignes par page",
     "displayed": "{{from}}–{{to}} sur {{count}}"
+  },
+  "grid": {
+    "columns": "Colonnes",
+    "filters": "Filtres",
+    "search": "Rechercher"
   }
 }
