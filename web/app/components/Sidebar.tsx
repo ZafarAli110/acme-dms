@@ -1,8 +1,10 @@
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ChatIcon from '@mui/icons-material/Chat';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HomeIcon from '@mui/icons-material/Home';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import MailIcon from '@mui/icons-material/Mail';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
@@ -75,6 +77,11 @@ const NAV_SECTIONS: NavSection[] = [
     key: 'communication',
     icon: <ChatIcon />,
     items: [{key: 'messages', icon: <MailIcon />, route: null, permission: null}],
+  },
+  {
+    key: 'administration',
+    icon: <AdminPanelSettingsIcon />,
+    items: [{key: 'locations', icon: <LocationOnIcon />, route: '/locations', permission: 'users.manage'}],
   },
 ];
 

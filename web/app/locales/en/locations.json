@@ -1,0 +1,13 @@
+{
+  "title": "Locations",
+  "subtitle": "Who works at which of {{dealer}}'s locations. A change shows the next time that person signs in.",
+  "columns": {
+    "name": "Name",
+    "role": "Role"
+  },
+  "search": "Search people",
+  "none": "No one to show.",
+  "assign": "Assign {{name}} to {{location}}",
+  "unassign": "Take {{name}} off {{location}}",
+  "notYourself": "You can't change your own locations."
+}

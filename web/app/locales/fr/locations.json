@@ -1,0 +1,13 @@
+{
+  "title": "Sites",
+  "subtitle": "Qui travaille sur quel site de {{dealer}}. Un changement s'applique à la prochaine connexion de la personne.",
+  "columns": {
+    "name": "Nom",
+    "role": "Rôle"
+  },
+  "search": "Rechercher une personne",
+  "none": "Personne à afficher.",
+  "assign": "Affecter {{name}} à {{location}}",
+  "unassign": "Retirer {{name}} de {{location}}",
+  "notYourself": "Vous ne pouvez pas modifier vos propres sites."
+}

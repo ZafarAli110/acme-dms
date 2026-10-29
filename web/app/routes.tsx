@@ -21,6 +21,8 @@ export default [
         route(':customerId', './pages/customers/CustomerEdit.tsx'),
       ]),
 
+      route('locations', './pages/locations/Locations.tsx'),
+
       route('*', './pages/NotFound.tsx'),
     ]),
   ]),

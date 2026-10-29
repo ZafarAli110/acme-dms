@@ -4,12 +4,14 @@ import {initReactI18next} from 'react-i18next';
 import enCommon from './locales/en/common.json';
 import enCustomers from './locales/en/customers.json';
 import enHome from './locales/en/home.json';
+import enLocations from './locales/en/locations.json';
 import enNavigation from './locales/en/navigation.json';
 import enParts from './locales/en/parts.json';
 import enSignIn from './locales/en/sign-in.json';
 import frCommon from './locales/fr/common.json';
 import frCustomers from './locales/fr/customers.json';
 import frHome from './locales/fr/home.json';
+import frLocations from './locales/fr/locations.json';
 import frNavigation from './locales/fr/navigation.json';
 import frParts from './locales/fr/parts.json';
 import frSignIn from './locales/fr/sign-in.json';
@@ -34,6 +36,7 @@ void i18n
         common: enCommon,
         customers: enCustomers,
         home: enHome,
+        locations: enLocations,
         navigation: enNavigation,
         parts: enParts,
         'sign-in': enSignIn,
@@ -42,6 +45,7 @@ void i18n
         common: frCommon,
         customers: frCustomers,
         home: frHome,
+        locations: frLocations,
         navigation: frNavigation,
         parts: frParts,
         'sign-in': frSignIn,

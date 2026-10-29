@@ -3,14 +3,16 @@
   "sections": {
     "inventory": "Inventaire",
     "customerRelations": "Relation client",
-    "communication": "Communication"
+    "communication": "Communication",
+    "administration": "Administration"
   },
   "items": {
     "parts": "Pièces",
     "stock": "Stock",
     "vehiclesInStock": "Véhicules en stock",
     "customers": "Clients",
-    "messages": "Messages"
+    "messages": "Messages",
+    "locations": "Sites"
   },
   "expandMenu": "Déplier le menu",
   "collapseMenu": "Replier le menu",
