@@ -21,12 +21,11 @@ import {authKernel} from '../core/kernel/authKernel';
 import {i18n} from '../i18n';
 
 const DEMO_PASSWORD = 'Acme123!';
+// Sam first: the form starts filled in with him, the user most of the workshop's tickets are written for.
 const DEMO_USERS = [
-  {email: 'alice@northwind.test', key: 'alice'},
-  {email: 'maria@northwind.test', key: 'maria'},
   {email: 'sam@northwind.test', key: 'sam'},
-  {email: 'tom@northwind.test', key: 'tom'},
-  {email: 'bob@northwind.test', key: 'bob'},
+  {email: 'rita@northwind.test', key: 'rita'},
+  {email: 'maria@northwind.test', key: 'maria'},
 ] as const;
 
 /** Someone already signed in goes straight to Home. */
@@ -57,7 +56,7 @@ export default function SignIn() {
   const actionData = useActionData<typeof clientAction>();
   const isSubmitting = useNavigation().state === 'submitting';
   // The fields are controlled only so that picking a demo user fills them in; the Form submits their values.
-  const [email, setEmail] = useState('alice@northwind.test');
+  const [email, setEmail] = useState<string>(DEMO_USERS[0].email);
   const [password, setPassword] = useState(DEMO_PASSWORD);
 
   return (

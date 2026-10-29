@@ -51,6 +51,18 @@ using (var scope = app.Services.CreateScope())
 app.UseServiceDefaults();
 app.UseAcmeAuthorization();
 app.MapControllers();
+
+// Development only: `bun run reset` puts every demo user back on the locations DemoData lists, undoing what a manager
+// changed on the Locations page. It has no token to send, so the endpoint takes none; it doesn't exist outside
+// Development.
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost("v1/dev/demo-users/reset", async (IdentitySeeder seeder, CancellationToken cancellationToken) =>
+    {
+        await seeder.ResetDemoUsersAsync(cancellationToken);
+        return Results.NoContent();
+    }).AllowAnonymous();
+}
 app.MapServiceDefaults();
 
 await app.RunAsync();

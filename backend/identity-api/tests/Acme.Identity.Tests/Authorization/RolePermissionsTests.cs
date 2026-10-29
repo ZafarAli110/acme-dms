@@ -32,5 +32,12 @@ public sealed class RolePermissionsTests
     }
 
     [TestMethod]
+    public void For_LetsAServiceManagerAssignPeopleToLocationsButNotAServiceAdvisor()
+    {
+        CollectionAssert.Contains(RolePermissions.For(Roles.ServiceManager).ToList(), Permissions.UsersManage);
+        CollectionAssert.DoesNotContain(RolePermissions.For(Roles.ServiceAdvisor).ToList(), Permissions.UsersManage);
+    }
+
+    [TestMethod]
     public void For_GivesAnUnknownRoleNoPermissions() => Assert.AreEqual(0, RolePermissions.For("Janitor").Count);
 }

@@ -26,18 +26,18 @@ public static class DemoData
         (Riverside, NorthwindMotors, "NWM-R", "Riverside"),
     ];
 
+    /// <summary>
+    /// A manager who looks after both rooftops and assigns people to them, and one service advisor at each rooftop, so
+    /// work handed from one rooftop to the other has someone on both ends.
+    /// </summary>
     public static IReadOnlyList<DemoUser> Users { get; } =
     [
-        new(Guid.Parse("30000000-0000-0000-0000-000000000001"), NorthwindMotors, "alice@northwind.test", "Alice Admin",
-            [(Northside, Roles.DealerAdmin), (Riverside, Roles.DealerAdmin)]),
         new(Guid.Parse("30000000-0000-0000-0000-000000000002"), NorthwindMotors, "maria@northwind.test", "Maria Service Manager",
-            [(Riverside, Roles.ServiceManager)]),
+            [(Northside, Roles.ServiceManager), (Riverside, Roles.ServiceManager)]),
         new(Guid.Parse("30000000-0000-0000-0000-000000000003"), NorthwindMotors, "sam@northwind.test", "Sam Service Advisor",
-            [(Northside, Roles.ServiceAdvisor), (Riverside, Roles.ServiceAdvisor)]),
-        new(Guid.Parse("30000000-0000-0000-0000-000000000004"), NorthwindMotors, "tom@northwind.test", "Tom Technician",
-            [(Northside, Roles.Technician)]),
-        new(Guid.Parse("30000000-0000-0000-0000-000000000005"), NorthwindMotors, "bob@northwind.test", "Bob Parts Clerk",
-            [(Riverside, Roles.PartsClerk)]),
+            [(Northside, Roles.ServiceAdvisor)]),
+        new(Guid.Parse("30000000-0000-0000-0000-000000000006"), NorthwindMotors, "rita@northwind.test", "Rita Service Advisor",
+            [(Riverside, Roles.ServiceAdvisor)]),
     ];
 
     public sealed record DemoUser(Guid Id, Guid DealerId, string Email, string DisplayName, IReadOnlyList<(Guid LocationId, string Role)> Roles);

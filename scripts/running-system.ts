@@ -3,11 +3,9 @@
 
 export const DEMO_PASSWORD = 'Acme123!';
 export const DEMO_USERS: Record<string, string> = {
-  alice: 'alice@northwind.test',
-  maria: 'maria@northwind.test',
   sam: 'sam@northwind.test',
-  tom: 'tom@northwind.test',
-  bob: 'bob@northwind.test',
+  rita: 'rita@northwind.test',
+  maria: 'maria@northwind.test',
 };
 
 export interface Location {

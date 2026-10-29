@@ -8,7 +8,7 @@ public static class RolePermissions
     private static readonly Dictionary<string, string[]> PermissionsByRole = new(StringComparer.Ordinal)
     {
         [Roles.DealerAdmin] = [PartsRead, PartsWrite, StockRead, StockAdjust, CustomersRead, CustomersWrite, DocumentsRead, DocumentsWrite, AppointmentsRead, AppointmentsManage, UsersManage],
-        [Roles.ServiceManager] = [PartsRead, StockRead, CustomersRead, CustomersWrite, DocumentsRead, DocumentsWrite, AppointmentsRead, AppointmentsManage],
+        [Roles.ServiceManager] = [PartsRead, PartsWrite, StockRead, StockAdjust, CustomersRead, CustomersWrite, DocumentsRead, DocumentsWrite, AppointmentsRead, AppointmentsManage, UsersManage],
         [Roles.ServiceAdvisor] = [PartsRead, StockRead, CustomersRead, CustomersWrite, DocumentsRead, DocumentsWrite, AppointmentsRead, AppointmentsManage],
         [Roles.Technician] = [PartsRead, StockRead, CustomersRead, DocumentsRead, AppointmentsRead],
         [Roles.PartsManager] = [PartsRead, PartsWrite, StockRead, StockAdjust, CustomersRead, DocumentsRead, DocumentsWrite],

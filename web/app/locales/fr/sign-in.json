@@ -7,11 +7,9 @@
   "signingIn": "Connexion…",
   "demoUsers": "Utilisateurs de démonstration · mot de passe {{password}}",
   "demoUser": {
-    "alice": "Alice · Administratrice concession, Northside et Riverside",
-    "maria": "Maria · Responsable atelier, Riverside",
-    "sam": "Sam · Conseiller service, Northside et Riverside",
-    "tom": "Tom · Technicien, Northside",
-    "bob": "Bob · Magasinier, Riverside"
+    "sam": "Sam · Conseiller service, Northside",
+    "rita": "Rita · Conseillère service, Riverside",
+    "maria": "Maria · Responsable atelier, Northside et Riverside"
   },
   "invalidCredentials": "L'e-mail ou le mot de passe est incorrect."
 }

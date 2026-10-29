@@ -1,8 +1,8 @@
 // Calls the running system as one of the demo users, through the gateway, the way the web app does.
 //
-//   bun run api as bob GET /api/dealership/v1/system/user-context
-//   bun run api as alice --location riverside GET /api/dealership/v1/stock
-//   bun run api as alice POST /api/dealership/v1/parts '{"partNumber":"BP-100","description":"Brake pads","unitPrice":49}'
+//   bun run api as rita GET /api/dealership/v1/system/user-context
+//   bun run api as maria --location riverside GET /api/dealership/v1/stock
+//   bun run api as maria POST /api/dealership/v1/parts '{"partNumber":"BP-100","description":"Brake pads","unitPrice":49}'
 //
 // It signs in through identity-api, picks the user's first location unless --location is given, and prints the
 // status, the correlation id and the JSON body.

@@ -33,11 +33,12 @@ Demo users, all with the password **`Acme123!`**:
 
 | User                   | Dealer           | Location(s) and role                   |
 | ---------------------- | ---------------- | -------------------------------------- |
-| `alice@northwind.test` | Northwind Motors | Northside + Riverside: Dealer Admin    |
-| `maria@northwind.test` | Northwind Motors | Riverside: Service Manager             |
-| `sam@northwind.test`   | Northwind Motors | Northside + Riverside: Service Advisor |
-| `tom@northwind.test`   | Northwind Motors | Northside: Technician                  |
-| `bob@northwind.test`   | Northwind Motors | Riverside: Parts Clerk                 |
+| `sam@northwind.test`   | Northwind Motors | Northside: Service Advisor             |
+| `rita@northwind.test`  | Northwind Motors | Riverside: Service Advisor             |
+| `maria@northwind.test` | Northwind Motors | Northside + Riverside: Service Manager |
+
+Maria assigns people to locations on the **Locations** page; a change shows after that person's next sign-in.
+`bun run reset` puts everyone back on the locations above.
 
 ## What it does
 
@@ -167,7 +168,7 @@ The first run takes a few minutes: it builds the .NET projects and pulls the con
    ```bash
    bun run seed
    ```
-4. Open the **web** URL and sign in (the form is pre-filled with `alice`). The gateway is always at
+4. Open the **web** URL and sign in (the form is pre-filled with `sam`). The gateway is always at
    `http://localhost:5200`.
 5. Press **Ctrl+C** in the first terminal to stop everything.
 
@@ -202,18 +203,18 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run logs dealership-api`                      | console output of one service                  |
 | `bun run traces dealership-api`                    | recent traces of one service                   |
 | `bun run errors`                                   | only failed (5xx) traces, across all services  |
-| `bun run api as bob GET /api/identity/v1/users/me` | call the system as a demo user (see below)     |
+| `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)    |
 | `bun run seed`                                     | add the sample parts, stock, photos, customers |
-| `bun run reset`                                    | empty business data and queues, then seed      |
+| `bun run reset`                                    | empty business data and queues, reset demo users' locations, then seed |
 
 `bun run api` signs in as a demo user, picks their first location (or the one given with `--location`), and calls the
 gateway exactly as the web app does:
 
 ```bash
-bun run api as alice --location riverside GET /api/dealership/v1/stock
-bun run api as alice --location riverside GET /api/dealership/v1/customers
-bun run api as bob GET "/api/dealership/v1/parts?search=brake"
-bun run api as alice POST /api/dealership/v1/parts '{"partNumber":"BRK-PAD-009","description":"Pads","unitPrice":45}'
+bun run api as maria --location riverside GET /api/dealership/v1/stock
+bun run api as rita GET /api/dealership/v1/customers
+bun run api as sam GET "/api/dealership/v1/parts?search=brake"
+bun run api as maria POST /api/dealership/v1/parts '{"partNumber":"BRK-PAD-009","description":"Pads","unitPrice":45}'
 ```
 
 ## Everyday commands

@@ -7,11 +7,9 @@
   "signingIn": "Signing in…",
   "demoUsers": "Demo users · password {{password}}",
   "demoUser": {
-    "alice": "Alice · Dealer admin, Northside and Riverside",
-    "maria": "Maria · Service manager, Riverside",
-    "sam": "Sam · Service advisor, Northside and Riverside",
-    "tom": "Tom · Technician, Northside",
-    "bob": "Bob · Parts clerk, Riverside"
+    "sam": "Sam · Service advisor, Northside",
+    "rita": "Rita · Service advisor, Riverside",
+    "maria": "Maria · Service manager, Northside and Riverside"
   },
   "invalidCredentials": "The email or password is not right."
 }

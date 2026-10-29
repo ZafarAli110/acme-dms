@@ -1,7 +1,9 @@
 import {expect, type APIRequestContext, type Page} from '@playwright/test';
 
 export const DEMO_PASSWORD = 'Acme123!';
-export const ALICE = 'alice@northwind.test';
+export const SAM = 'sam@northwind.test';
+/** The manager: she works at both rooftops and may add parts. */
+export const MARIA = 'maria@northwind.test';
 
 /** A name no seeded record has, so a test only ever changes what it created. */
 export function throwawayName(what: string): string {
@@ -9,7 +11,7 @@ export function throwawayName(what: string): string {
 }
 
 /** Signs in through the sign-in page, as a person would, and waits for Home. */
-export async function signInAsync(page: Page, email = ALICE): Promise<void> {
+export async function signInAsync(page: Page, email = MARIA): Promise<void> {
   await page.goto('/sign-in');
   // By field name rather than label, so it works in any language.
   await page.locator('input[name="email"]').fill(email);
@@ -18,9 +20,9 @@ export async function signInAsync(page: Page, email = ALICE): Promise<void> {
   await expect(page).toHaveURL(/\/$/);
 }
 
-/** Creates a throwaway part at alice's first location, in one of its bins, through the API (the web app's proxy). */
+/** Creates a throwaway part at maria's first location, in one of its bins, through the API (the web app's proxy). */
 export async function createPartAsync(request: APIRequestContext): Promise<{id: string; partNumber: string}> {
-  const tokens = await request.post('/api/identity/v1/tokens', {data: {email: ALICE, password: DEMO_PASSWORD}});
+  const tokens = await request.post('/api/identity/v1/tokens', {data: {email: MARIA, password: DEMO_PASSWORD}});
   const {accessToken} = (await tokens.json()) as {accessToken: string};
   const headers = {authorization: `Bearer ${accessToken}`};
   const me = (await (await request.get('/api/identity/v1/users/me', {headers})).json()) as {locations: {id: string}[]};

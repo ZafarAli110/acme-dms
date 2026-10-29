@@ -1,5 +1,6 @@
 // Puts the running system back to the known starting state: deletes all business data (parts, bins, stock, photos, customers,
-// documents), empties every queue, then runs the seed. Dealers, locations and users are kept.
+// documents), empties every queue, puts every demo user back on their own locations (undoing the Locations page),
+// then runs the seed. Dealers, locations and users are kept.
 //
 //   bun run reset
 import {SQL} from 'bun';
@@ -60,6 +61,15 @@ for (const queue of queues) {
   });
 }
 console.log(`rabbitmq: purged ${queues.map((q) => q.name).join(', ') || 'no queues'}`);
+
+// identity-api's development-only endpoint: it has no database of ours to truncate, the demo users' rows are its own.
+const identityReset = await fetch(`${resourceUrl('gateway', 'http')}/api/identity/v1/dev/demo-users/reset`, {
+  method: 'POST',
+});
+if (!identityReset.ok) {
+  throw new Error(`identity: resetting the demo users failed: ${identityReset.status} ${await identityReset.text()}`);
+}
+console.log('identity: demo users back on their own locations');
 
 const seed = Bun.spawnSync(['bun', 'scripts/seed.ts'], {stdout: 'inherit', stderr: 'inherit'});
 process.exit(seed.exitCode);

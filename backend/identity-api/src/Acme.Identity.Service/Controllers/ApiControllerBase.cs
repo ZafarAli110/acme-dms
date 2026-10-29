@@ -1,4 +1,6 @@
+using Acme.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Acme.Identity.BusinessLogic.Abstractions.Authorization;
 
 namespace Acme.Identity.Service.Controllers;
 
@@ -9,4 +11,13 @@ namespace Acme.Identity.Service.Controllers;
 [ApiController]
 public abstract class ApiControllerBase : ControllerBase
 {
+    /// <summary>The signed-in user of this request, at their selected location, in the shape the business handlers expect.</summary>
+    protected UserContext CurrentUser
+    {
+        get
+        {
+            var userContext = HttpContext.GetUserContext();
+            return new UserContext(userContext.UserId, userContext.DealerId, userContext.LocationId);
+        }
+    }
 }

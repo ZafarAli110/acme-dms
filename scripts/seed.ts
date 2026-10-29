@@ -419,5 +419,6 @@ function crc32(bytes: Buffer): number {
 }
 
 const gateway = resourceUrl('gateway', 'http');
-await seedDealerAsync(gateway, 'alice', NORTHWIND_PARTS, 6);
+// As the manager: she works at both rooftops and may add parts and set stock.
+await seedDealerAsync(gateway, 'maria', NORTHWIND_PARTS, 6);
 console.log('Seeded. Photos finish processing in the background within a few seconds.');
