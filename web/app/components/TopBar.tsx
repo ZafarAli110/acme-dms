@@ -68,8 +68,8 @@ export function TopBar({sidebarWidth}: {sidebarWidth: number}) {
         <Typography variant="subtitle1" sx={{fontWeight: 600}} noWrap>
           {user?.dealerName}
         </Typography>
-        {/* A real dropdown when there is a choice (outlined, a chevron, a menu); just the name when there is not. */}
-        {location && locations.length > 1 && (
+        {/* Always a dropdown, so every user finds the location switch in the same place. */}
+        {location && (
           <Button
             color="inherit"
             startIcon={<PlaceIcon fontSize="small" />}
@@ -94,17 +94,6 @@ export function TopBar({sidebarWidth}: {sidebarWidth: number}) {
               {location.name}
             </Box>
           </Button>
-        )}
-        {location && locations.length < 2 && (
-          <Box
-            sx={{display: 'flex', alignItems: 'center', gap: 0.75, ml: 1.5, opacity: 0.9}}
-            data-testid="location-switcher"
-          >
-            <PlaceIcon fontSize="small" />
-            <Typography variant="body2" sx={{fontWeight: 500}}>
-              {location.name}
-            </Typography>
-          </Box>
         )}
         <Menu
           anchorEl={locationAnchor}

@@ -7,9 +7,9 @@
   "signingIn": "Connexion…",
   "demoUsers": "Utilisateurs de démonstration · mot de passe {{password}}",
   "demoUser": {
-    "sam": "Sam · Conseiller service, Northside",
-    "rita": "Rita · Conseillère service, Riverside",
-    "maria": "Maria · Responsable atelier, Northside et Riverside"
+    "sam": "Sam · Conseiller service, Northside et Riverside",
+    "rita": "Rita · Conseillère service, Riverside et Westgate",
+    "maria": "Maria · Responsable atelier, Northside, Riverside et Westgate"
   },
   "invalidCredentials": "L'e-mail ou le mot de passe est incorrect."
 }

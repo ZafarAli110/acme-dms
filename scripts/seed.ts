@@ -90,6 +90,10 @@ const BINS: Record<string, BinSeed[]> = {
     {code: 'R-02', description: 'Back store', holds: ['electrical', 'engine', 'chassis']},
     {code: 'R-03', description: 'Fluids cage', holds: ['fluids']},
   ],
+  Westgate: [
+    {code: 'W-01', description: 'Service bay rack', holds: ['brakes', 'filters', 'fluids']},
+    {code: 'W-02', description: 'Mezzanine', holds: ['electrical', 'engine', 'chassis']},
+  ],
 };
 
 function binCodeFor(locationName: string, partNumber: string): string {
@@ -103,12 +107,14 @@ function binCodeFor(locationName: string, partNumber: string): string {
 
 /**
  * Each location stocks differently, so switching location visibly changes the parts list: Northside is the main store
- * and stocks everything, Riverside is a small branch that skips every third part and runs low. A part only appears at
- * locations that stock it.
+ * and stocks everything, Riverside is a small branch that skips every third part and runs low, and Westgate is a
+ * service-only site that keeps the fast movers (every other part) in middling numbers. A part only appears at locations
+ * that stock it.
  */
 const STOCK_PROFILES: Record<string, (index: number) => {quantityOnHand: number; reorderLevel: number} | null> = {
   Northside: (index) => ({quantityOnHand: 12 + ((index * 7) % 28), reorderLevel: 6}),
   Riverside: (index) => (index % 3 === 0 ? null : {quantityOnHand: (index * 5) % 9, reorderLevel: 4}),
+  Westgate: (index) => (index % 2 === 1 ? null : {quantityOnHand: 4 + ((index * 3) % 14), reorderLevel: 5}),
 };
 
 interface CustomerSeed {
@@ -163,6 +169,14 @@ const CUSTOMERS: Record<string, CustomerSeed[]> = {
     customerSeed('Olivia', 'Nowak', 'Nowak Florists', 'Millbrook', 'active', '2026-10-11', '+44 7700 900205'),
     customerSeed('Priya', 'Sharma', null, 'Riverside', 'inactive', '2026-01-22', '+44 7700 900206'),
     customerSeed('Rory', 'Doyle', null, 'Riverside', 'prospect', '2026-10-23', '+44 7700 900207'),
+  ],
+  Westgate: [
+    customerSeed('Sophie', 'Lindqvist', null, 'Westgate', 'active', '2026-10-21', '+44 7700 900301'),
+    customerSeed('Tariq', 'Hussain', 'Hussain Removals', 'Westgate', 'active', '2026-10-15', '+44 7700 900302'),
+    customerSeed('Una', 'Brennan', null, 'Thornbury', 'prospect', null, '+44 7700 900303'),
+    customerSeed('Victor', 'Mensah', null, 'Westgate', 'active', '2026-06-08', null),
+    customerSeed('Wren', 'Ashworth', 'Ashworth Joinery', 'Thornbury', 'active', '2026-10-09', '+44 7700 900305'),
+    customerSeed('Yusuf', 'Demir', null, 'Westgate', 'inactive', '2025-10-30', '+44 7700 900306'),
   ],
 };
 
@@ -419,6 +433,6 @@ function crc32(bytes: Buffer): number {
 }
 
 const gateway = resourceUrl('gateway', 'http');
-// As the manager: she works at both rooftops and may add parts and set stock.
+// As the manager: she works at every rooftop and may add parts and set stock.
 await seedDealerAsync(gateway, 'maria', NORTHWIND_PARTS, 6);
 console.log('Seeded. Photos finish processing in the background within a few seconds.');

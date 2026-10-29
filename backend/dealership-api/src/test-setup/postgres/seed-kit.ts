@@ -12,7 +12,7 @@ import {
   type PartPhoto,
 } from '#persistence/schema/index';
 
-/** Northwind's two rooftops, with the ids the identity seed gives them. */
+/** Two of Northwind's rooftops, with the ids the identity seed gives them. */
 export const NORTHSIDE = '20000000-0000-0000-0000-000000000001';
 export const RIVERSIDE = '20000000-0000-0000-0000-000000000002';
 

@@ -25,17 +25,17 @@ documents).
 
 People hold a **role per location**, and roles grant **permissions** (`parts.write`, `stock.adjust`, ...).
 
-| Dealer           | Locations            |
-| ---------------- | -------------------- |
-| Northwind Motors | Northside, Riverside |
+| Dealer           | Locations                      |
+| ---------------- | ------------------------------ |
+| Northwind Motors | Northside, Riverside, Westgate |
 
 Demo users, all with the password **`Acme123!`**:
 
-| User                   | Dealer           | Location(s) and role                   |
-| ---------------------- | ---------------- | -------------------------------------- |
-| `sam@northwind.test`   | Northwind Motors | Northside: Service Advisor             |
-| `rita@northwind.test`  | Northwind Motors | Riverside: Service Advisor             |
-| `maria@northwind.test` | Northwind Motors | Northside + Riverside: Service Manager |
+| User                   | Dealer           | Location(s) and role                              |
+| ---------------------- | ---------------- | ------------------------------------------------- |
+| `sam@northwind.test`   | Northwind Motors | Northside + Riverside: Service Advisor            |
+| `rita@northwind.test`  | Northwind Motors | Riverside + Westgate: Service Advisor             |
+| `maria@northwind.test` | Northwind Motors | Northside + Riverside + Westgate: Service Manager |
 
 Maria assigns people to locations on the **Locations** page; a change shows after that person's next sign-in.
 `bun run reset` puts everyone back on the locations above.
@@ -205,7 +205,7 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run errors`                                    | only failed (5xx) traces, across all services                          |
 | `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)                             |
 | `bun run seed`                                      | add the sample parts, stock, photos, customers                         |
-| `bun run seed:bulk`                                 | add 1.2M customers at Northside, 400,000 at Riverside (ACME-108)       |
+| `bun run seed:bulk`                                 | add 1.2M customers at Northside, 400k at Riverside, 250k at Westgate   |
 | `bun run reset`                                     | empty business data and queues, reset demo users' locations, then seed |
 
 `bun run api` signs in as a demo user, picks their first location (or the one given with `--location`), and calls the

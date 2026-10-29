@@ -1,8 +1,11 @@
 import {expect, type APIRequestContext, type Page} from '@playwright/test';
 
 export const DEMO_PASSWORD = 'Acme123!';
+/** A service advisor at Northside and Riverside. */
 export const SAM = 'sam@northwind.test';
-/** The manager: she works at both rooftops and may add parts. */
+/** A service advisor at Riverside and Westgate. */
+export const RITA = 'rita@northwind.test';
+/** The manager: she works at all three rooftops and may add parts. */
 export const MARIA = 'maria@northwind.test';
 
 const SURNAMES = ['Ackroyd', 'Barraclough', 'Crowther', 'Fairclough', 'Greenwood', 'Hargreaves', 'Lockwood', 'Ormerod'];

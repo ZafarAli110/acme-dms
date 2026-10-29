@@ -1,5 +1,5 @@
 import {expect, type Locator, type Page, test} from '@playwright/test';
-import {MARIA, SAM, signInAsync} from './support/demo-users';
+import {MARIA, RITA, SAM, signInAsync} from './support/demo-users';
 
 function assignment(page: Page, email: string, locationCode: string) {
   return page.getByTestId(`assignment-${email}-${locationCode}`).locator('input');
@@ -16,32 +16,38 @@ async function toggleAndSaveAsync(page: Page, assignmentSwitch: Locator): Promis
 }
 
 test.describe('the Locations page', () => {
-  test('the manager gives an advisor a second rooftop and takes it away again', async ({page}) => {
+  test('the manager gives an advisor a third rooftop and takes it away again', async ({page}) => {
     await signInAsync(page, MARIA);
     await page.goto('/locations');
-    const samAtRiverside = assignment(page, SAM, 'NWM-R');
-    await expect(samAtRiverside).not.toBeChecked();
+    const samAtWestgate = assignment(page, SAM, 'NWM-W');
+    await expect(samAtWestgate).not.toBeChecked();
 
-    await toggleAndSaveAsync(page, samAtRiverside);
-    await expect(samAtRiverside).toBeChecked();
+    await toggleAndSaveAsync(page, samAtWestgate);
+    await expect(samAtWestgate).toBeChecked();
     await page.reload();
-    await expect(samAtRiverside).toBeChecked();
+    await expect(samAtWestgate).toBeChecked();
 
-    await toggleAndSaveAsync(page, samAtRiverside);
-    await expect(samAtRiverside).not.toBeChecked();
+    await toggleAndSaveAsync(page, samAtWestgate);
+    await expect(samAtWestgate).not.toBeChecked();
   });
 
   test("an advisor's only rooftop can't be taken away, and the manager's own row is locked", async ({page}) => {
     await signInAsync(page, MARIA);
     await page.goto('/locations');
+    const ritaAtRiverside = assignment(page, RITA, 'NWM-R');
+    const ritaAtWestgate = assignment(page, RITA, 'NWM-W');
+    // Rita works at two rooftops; down to one, that one can't go.
+    await toggleAndSaveAsync(page, ritaAtWestgate);
 
-    await assignment(page, 'rita@northwind.test', 'NWM-R').click();
+    await toggleAndSaveAsync(page, ritaAtRiverside);
 
     await expect(page.getByTestId('assignment-error')).toHaveText(
       'Rita Service Advisor must keep at least one location.',
     );
-    await expect(assignment(page, 'rita@northwind.test', 'NWM-R')).toBeChecked();
+    await expect(ritaAtRiverside).toBeChecked();
     await expect(assignment(page, MARIA, 'NWM-N')).toBeDisabled();
+    await toggleAndSaveAsync(page, ritaAtWestgate);
+    await expect(ritaAtWestgate).toBeChecked();
   });
 
   test('an advisor has no Locations page', async ({page}) => {

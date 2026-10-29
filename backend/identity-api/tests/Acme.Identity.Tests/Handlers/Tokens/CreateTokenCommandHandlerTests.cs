@@ -32,8 +32,12 @@ public sealed class CreateTokenCommandHandlerTests
 
         var token = new JsonWebToken(response.AccessToken);
         Assert.AreEqual(DemoData.NorthwindMotors.ToString(), token.GetClaim("dealer_id").Value);
-        StringAssert.Contains(token.GetClaim("locations").Value, DemoData.Riverside.ToString());
-        StringAssert.Contains(token.GetClaim("locations").Value, "customers.write");
+        // One claim per location the user works at, each with the role's permissions there.
+        var locations = token.Claims.Where(c => c.Type == "locations").Select(c => c.Value).ToList();
+        Assert.HasCount(2, locations);
+        Assert.IsTrue(locations.Any(l => l.Contains(DemoData.Riverside.ToString())));
+        Assert.IsTrue(locations.Any(l => l.Contains(DemoData.Westgate.ToString())));
+        Assert.IsTrue(locations.All(l => l.Contains("customers.write")));
         Assert.AreEqual(TokenSettings.Audience, token.Audiences.Single());
     }
 

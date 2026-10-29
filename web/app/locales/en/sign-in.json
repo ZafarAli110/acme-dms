@@ -7,9 +7,9 @@
   "signingIn": "Signing in…",
   "demoUsers": "Demo users · password {{password}}",
   "demoUser": {
-    "sam": "Sam · Service advisor, Northside",
-    "rita": "Rita · Service advisor, Riverside",
-    "maria": "Maria · Service manager, Northside and Riverside"
+    "sam": "Sam · Service advisor, Northside and Riverside",
+    "rita": "Rita · Service advisor, Riverside and Westgate",
+    "maria": "Maria · Service manager, Northside, Riverside and Westgate"
   },
   "invalidCredentials": "The email or password is not right."
 }

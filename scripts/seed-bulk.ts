@@ -1,9 +1,10 @@
-// A merged dealer group's customer book: 1.2 million customers at Northside and 400,000 at Riverside (ACME-108).
+// A merged dealer group's customer book: 1.2 million customers at Northside, 400,000 at Riverside and 250,000 at
+// Westgate (ACME-108).
 // Written straight into the dealership database with one INSERT … SELECT per location, so it takes seconds, not hours
 // of API calls. Run `bun run seed` first; `bun run reset` removes these customers with the rest of the business data.
 //
-//   bun run seed:bulk                 the default sizes
-//   bun run seed:bulk 50000 20000     smaller, for a quick look
+//   bun run seed:bulk                     the default sizes
+//   bun run seed:bulk 50000 20000 10000   smaller, for a quick look
 import {SQL} from 'bun';
 import {resourceUrl} from './running-system';
 
@@ -11,6 +12,7 @@ const DEV_USER = 'acme';
 const DEV_PASSWORD = 'acme';
 const NORTHSIDE = '20000000-0000-0000-0000-000000000001';
 const RIVERSIDE = '20000000-0000-0000-0000-000000000002';
+const WESTGATE = '20000000-0000-0000-0000-000000000003';
 /** Maria, the manager: who the rows say created them. */
 const CREATED_BY = '30000000-0000-0000-0000-000000000002';
 
@@ -115,7 +117,7 @@ const COMPANIES = [
 ];
 const EMAIL_DOMAINS = ['gmail.com', 'outlook.com', 'hotmail.co.uk', 'yahoo.co.uk', 'btinternet.com', 'icloud.com'];
 
-const [northside = 1_200_000, riverside = 400_000] = process.argv.slice(2).map(Number);
+const [northside = 1_200_000, riverside = 400_000, westgate = 250_000] = process.argv.slice(2).map(Number);
 
 function textArray(values: string[]): string {
   return `ARRAY[${values.map((value) => `'${value.replaceAll("'", "''")}'`).join(', ')}]`;
@@ -124,7 +126,8 @@ function textArray(values: string[]): string {
 const postgres = new URL(resourceUrl('postgres', 'tcp').replace('tcp://', 'http://'));
 const sql = new SQL(`postgres://${DEV_USER}:${DEV_PASSWORD}@${postgres.hostname}:${postgres.port}/dealership`);
 
-async function seedLocationAsync(locationId: string, name: string, count: number): Promise<void> {
+/** `first` is where the location's run of row numbers starts, so each rooftop gets different people. */
+async function seedLocationAsync(locationId: string, name: string, first: number, count: number): Promise<void> {
   const started = performance.now();
   // hashint4 spreads the values so neighbouring rows differ; the same count always gives the same customers.
   await sql.unsafe(`
@@ -144,7 +147,7 @@ async function seedLocationAsync(locationId: string, name: string, count: number
            (ARRAY['active', 'active', 'active', 'prospect', 'inactive'])[1 + abs(hashint4(i * 43)) % 5],
            CASE WHEN abs(hashint4(i * 47)) % 11 <> 0 THEN date '2023-01-01' + (abs(hashint4(i * 13)) % 1400) END,
            now(), '${CREATED_BY}', now(), '${CREATED_BY}'
-    FROM generate_series(1, ${count}) AS i,
+    FROM generate_series(${first}, ${first + count - 1}) AS i,
          LATERAL (SELECT (${textArray(FIRST_NAMES)})[1 + abs(hashint4(i)) % ${FIRST_NAMES.length}] AS first_name,
                          CASE WHEN abs(hashint4(i * 7)) % ${SURNAME_COUNT} < ${SURNAMES.length}
                            THEN (${textArray(SURNAMES)})[1 + abs(hashint4(i * 7)) % ${SURNAME_COUNT}]
@@ -156,7 +159,8 @@ async function seedLocationAsync(locationId: string, name: string, count: number
   );
 }
 
-await seedLocationAsync(NORTHSIDE, 'Northside', northside);
-await seedLocationAsync(RIVERSIDE, 'Riverside', riverside);
+await seedLocationAsync(NORTHSIDE, 'Northside', 1, northside);
+await seedLocationAsync(RIVERSIDE, 'Riverside', 10_000_001, riverside);
+await seedLocationAsync(WESTGATE, 'Westgate', 20_000_001, westgate);
 await sql.unsafe('ANALYZE customers');
 await sql.close();

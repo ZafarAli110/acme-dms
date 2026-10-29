@@ -34,7 +34,7 @@ public sealed class UserLocationAssignmentTests
         CollectionAssert.AreEqual(EveryoneByName, users.Select(u => u.DisplayName).ToList());
         var sam = users.Single(u => u.Id == Sam);
         Assert.AreEqual(Roles.ServiceAdvisor, sam.Role);
-        CollectionAssert.AreEqual(new[] { DemoData.Northside }, sam.LocationIds.ToList());
+        CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside }, sam.LocationIds.ToList());
     }
 
     [TestMethod]
@@ -42,10 +42,10 @@ public sealed class UserLocationAssignmentTests
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
 
-        var sam = await Assign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Riverside, TestContext.CancellationToken);
+        var sam = await Assign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Westgate, TestContext.CancellationToken);
 
-        CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside }, sam.LocationIds.ToList());
-        Assert.AreEqual(Roles.ServiceAdvisor, dbContext.UserLocationRoles.Single(r => r.UserId == Sam && r.LocationId == DemoData.Riverside).Role);
+        CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside, DemoData.Westgate }, sam.LocationIds.ToList());
+        Assert.AreEqual(Roles.ServiceAdvisor, dbContext.UserLocationRoles.Single(r => r.UserId == Sam && r.LocationId == DemoData.Westgate).Role);
     }
 
     [TestMethod]
@@ -55,15 +55,13 @@ public sealed class UserLocationAssignmentTests
 
         var sam = await Assign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Northside, TestContext.CancellationToken);
 
-        CollectionAssert.AreEqual(new[] { DemoData.Northside }, sam.LocationIds.ToList());
+        CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside }, sam.LocationIds.ToList());
     }
 
     [TestMethod]
     public async Task Unassign_TakesTheLocationAwayAndItCanBeAssignedAgain()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
-        await Assign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Riverside, TestContext.CancellationToken);
-
         var afterUnassign = await Unassign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Riverside, TestContext.CancellationToken);
         var afterAssign = await Assign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Riverside, TestContext.CancellationToken);
 
@@ -75,6 +73,7 @@ public sealed class UserLocationAssignmentTests
     public async Task Unassign_RefusesTheUsersLastLocation()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        await Unassign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Riverside, TestContext.CancellationToken);
 
         var ex = await Assert.ThrowsExactlyAsync<ApiException>(() =>
             Unassign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Northside, TestContext.CancellationToken));

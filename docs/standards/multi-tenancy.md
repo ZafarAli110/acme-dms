@@ -1,7 +1,7 @@
 # The client and its locations
 
 Each Acme DMS deployment serves **one client**: a dealer (dealer group), here Northwind Motors, with its **locations**
-(rooftops: Northside and Riverside). Another dealer is another deployment with its own databases. So the dealership
+(rooftops: Northside, Riverside and Westgate). Another dealer is another deployment with its own databases. So the dealership
 database holds one client's data and has no dealer column, and nothing in dealership-api filters by dealer.
 
 identity-api is shared and still knows the dealer (the token carries `dealer_id`); identity-api and document-api keep
