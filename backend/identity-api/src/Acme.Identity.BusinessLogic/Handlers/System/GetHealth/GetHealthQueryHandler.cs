@@ -15,7 +15,7 @@ internal sealed class GetHealthQueryHandler : IGetHealthQueryHandler
 
     public async Task<HealthCheckResponseDto> ExecuteAsync(CancellationToken cancellationToken)
     {
-        var databaseReachable = await _dbContext.Database.CanConnectAsync(cancellationToken).ConfigureAwait(false);
+        var databaseReachable = await _dbContext.Database.CanConnectAsync(cancellationToken);
         return new HealthCheckResponseDto(databaseReachable ? "ok" : "degraded", databaseReachable);
     }
 }

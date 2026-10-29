@@ -26,5 +26,5 @@ public sealed class WellKnownController : ApiControllerBase
 
     [HttpGet(".well-known/jwks.json")]
     public async Task<ActionResult<JsonWebKeySetDto>> GetJsonWebKeySetAsync(CancellationToken cancellationToken) =>
-        await _getJsonWebKeySetQueryHandler.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        await _getJsonWebKeySetQueryHandler.ExecuteAsync(cancellationToken);
 }

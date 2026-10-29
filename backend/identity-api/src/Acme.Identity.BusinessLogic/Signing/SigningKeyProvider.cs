@@ -32,10 +32,10 @@ internal sealed class SigningKeyProvider : ISigningKeyProvider, IDisposable
             return _signingKey;
         }
 
-        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _lock.WaitAsync(cancellationToken);
         try
         {
-            _signingKey ??= await LoadOrCreateAsync(cancellationToken).ConfigureAwait(false);
+            _signingKey ??= await LoadOrCreateAsync(cancellationToken);
             return _signingKey;
         }
         finally
@@ -51,7 +51,7 @@ internal sealed class SigningKeyProvider : ISigningKeyProvider, IDisposable
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
 
-        var stored = await dbContext.SigningKeys.OrderByDescending(k => k.CreatedAt).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var stored = await dbContext.SigningKeys.OrderByDescending(k => k.CreatedAt).FirstOrDefaultAsync(cancellationToken);
         if (stored is null)
         {
             using var rsa = RSA.Create(2048);
@@ -62,7 +62,7 @@ internal sealed class SigningKeyProvider : ISigningKeyProvider, IDisposable
                 CreatedAt = _timeProvider.GetUtcNow(),
             };
             dbContext.SigningKeys.Add(stored);
-            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         var key = RSA.Create();

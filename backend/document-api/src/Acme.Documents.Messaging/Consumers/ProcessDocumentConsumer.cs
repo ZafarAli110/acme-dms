@@ -43,14 +43,14 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _channel = await _rabbitMq.CreateChannelAsync(publisherConfirms: false, stoppingToken).ConfigureAwait(false);
-        await _channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 4, global: false, stoppingToken).ConfigureAwait(false);
+        _channel = await _rabbitMq.CreateChannelAsync(publisherConfirms: false, stoppingToken);
+        await _channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 4, global: false, stoppingToken);
 
         var consumer = new AsyncEventingBasicConsumer(_channel);
         consumer.ReceivedAsync += (_, delivery) => HandleAsync(_channel, delivery, stoppingToken);
-        await _channel.BasicConsumeAsync(RabbitMqConnection.ProcessDocumentQueue, autoAck: false, consumer, stoppingToken).ConfigureAwait(false);
+        await _channel.BasicConsumeAsync(RabbitMqConnection.ProcessDocumentQueue, autoAck: false, consumer, stoppingToken);
 
-        await Task.Delay(Timeout.Infinite, stoppingToken).ConfigureAwait(false);
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
     private async Task HandleAsync(IChannel channel, BasicDeliverEventArgs delivery, CancellationToken cancellationToken)
@@ -58,7 +58,7 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
         var envelope = JsonSerializer.Deserialize<MessageEnvelope<ProcessDocumentMessageDto>>(delivery.Body.Span, JsonOptions);
         if (envelope is null)
         {
-            await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken).ConfigureAwait(false);
+            await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);
             return;
         }
 
@@ -66,23 +66,23 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         try
         {
-            await scope.ServiceProvider.GetRequiredService<IProcessDocumentCommandHandler>().ExecuteAsync(envelope.Data, cancellationToken).ConfigureAwait(false);
-            await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken).ConfigureAwait(false);
+            await scope.ServiceProvider.GetRequiredService<IProcessDocumentCommandHandler>().ExecuteAsync(envelope.Data, cancellationToken);
+            await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             if (attempt < MaxAttempts)
             {
                 LogRetrying(_logger, envelope.Data.DocumentId, attempt, ex);
-                await Task.Delay(TimeSpan.FromSeconds(2 * attempt), cancellationToken).ConfigureAwait(false);
-                await RepublishAsync(channel, delivery, attempt + 1, cancellationToken).ConfigureAwait(false);
-                await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(2 * attempt), cancellationToken);
+                await RepublishAsync(channel, delivery, attempt + 1, cancellationToken);
+                await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken);
                 return;
             }
 
             LogGivingUp(_logger, envelope.Data.DocumentId, attempt, ex);
-            await scope.ServiceProvider.GetRequiredService<IFailDocumentCommandHandler>().ExecuteAsync(envelope.Data, ex.Message, cancellationToken).ConfigureAwait(false);
-            await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken).ConfigureAwait(false);
+            await scope.ServiceProvider.GetRequiredService<IFailDocumentCommandHandler>().ExecuteAsync(envelope.Data, ex.Message, cancellationToken);
+            await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);
         }
     }
 
@@ -93,7 +93,7 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
     {
         var headers = new Dictionary<string, object?>(delivery.BasicProperties.Headers ?? new Dictionary<string, object?>()) { [AttemptHeader] = attempt };
         var properties = new BasicProperties(delivery.BasicProperties) { Headers = headers };
-        await channel.BasicPublishAsync(delivery.Exchange, delivery.RoutingKey, mandatory: false, properties, delivery.Body, cancellationToken).ConfigureAwait(false);
+        await channel.BasicPublishAsync(delivery.Exchange, delivery.RoutingKey, mandatory: false, properties, delivery.Body, cancellationToken);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Processing document {DocumentId} failed on attempt {Attempt}; retrying")]

@@ -35,7 +35,7 @@ public sealed class CorrelationIdMiddleware
 
         using (_logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
         {
-            await _next(context).ConfigureAwait(false);
+            await _next(context);
         }
     }
 

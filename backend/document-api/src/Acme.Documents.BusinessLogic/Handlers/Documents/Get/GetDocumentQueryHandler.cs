@@ -23,7 +23,6 @@ internal sealed class GetDocumentQueryHandler : IGetDocumentQueryHandler
             .AsNoTracking()
             .Include(d => d.Contents.Where(c => c.Name != "original"))
             .SingleOrDefaultAsync(d => d.Id == documentId, cancellationToken)
-            .ConfigureAwait(false)
             ?? throw new ApiException(ApiErrorCategory.NotFound, $"Document {documentId} was not found.");
 
         return DocumentMapper.ToDocumentResponseDto(document);

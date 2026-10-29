@@ -45,7 +45,7 @@ internal sealed partial class DatabaseExceptionHandler : IExceptionHandler
         httpContext.Response.StatusCode = error.Status;
         // The detail is one of the mapper's fixed messages, so it is safe to show even on a 503.
         var problem = ProblemDetailsDtoFactory.CreateWithSafeDetail(httpContext, error.Status, error.Detail);
-        await httpContext.Response.WriteAsJsonAsync(problem, JsonOptions, "application/problem+json", cancellationToken).ConfigureAwait(false);
+        await httpContext.Response.WriteAsJsonAsync(problem, JsonOptions, "application/problem+json", cancellationToken);
         return true;
     }
 

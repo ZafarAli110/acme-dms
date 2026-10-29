@@ -24,7 +24,7 @@ public sealed class ApiExceptionHandler : IExceptionHandler
         var status = (int)apiException.Category;
         httpContext.Response.StatusCode = status;
         var problem = ProblemDetailsDtoFactory.Create(httpContext, status, apiException.Message);
-        await httpContext.Response.WriteAsJsonAsync(problem, JsonOptions, "application/problem+json", cancellationToken).ConfigureAwait(false);
+        await httpContext.Response.WriteAsJsonAsync(problem, JsonOptions, "application/problem+json", cancellationToken);
         return true;
     }
 }

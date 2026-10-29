@@ -27,7 +27,7 @@ public sealed class UserContextMiddleware
 
         if (context.User.Identity?.IsAuthenticated != true)
         {
-            await _next(context).ConfigureAwait(false);
+            await _next(context);
             return;
         }
 
@@ -42,7 +42,7 @@ public sealed class UserContextMiddleware
             {
                 var problem = ProblemDetailsDtoFactory.Create(context, StatusCodes.Status403Forbidden, $"You do not work at location {header}.");
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsJsonAsync(problem, (JsonSerializerOptions?)null, "application/problem+json").ConfigureAwait(false);
+                await context.Response.WriteAsJsonAsync(problem, (JsonSerializerOptions?)null, "application/problem+json");
                 return;
             }
 
@@ -51,7 +51,7 @@ public sealed class UserContextMiddleware
         }
 
         context.Items[ItemKey] = new AcmeUserContext(context.User.GetUserId(), context.User.GetDealerId(), locationId, permissions);
-        await _next(context).ConfigureAwait(false);
+        await _next(context);
     }
 
     /// <summary>

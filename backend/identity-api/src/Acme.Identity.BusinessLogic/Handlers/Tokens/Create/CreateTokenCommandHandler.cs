@@ -46,15 +46,14 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
             .Include(u => u.Dealer)
             .Include(u => u.LocationRoles).ThenInclude(r => r.Location)
             .AsNoTracking()
-            .SingleOrDefaultAsync(u => u.Email == email, cancellationToken)
-            .ConfigureAwait(false);
+            .SingleOrDefaultAsync(u => u.Email == email, cancellationToken);
 
         if (user is null || _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
         {
             throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
         }
 
-        var signingKey = await _signingKeyProvider.GetSigningKeyAsync(cancellationToken).ConfigureAwait(false);
+        var signingKey = await _signingKeyProvider.GetSigningKeyAsync(cancellationToken);
         var now = _timeProvider.GetUtcNow();
         var locations = UserLocationMapper.ToUserLocationDtos(user)
             .Select(l => new { id = l.Id, code = l.Code, name = l.Name, role = l.Role, permissions = l.Permissions });

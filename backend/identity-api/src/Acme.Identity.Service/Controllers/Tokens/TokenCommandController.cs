@@ -18,5 +18,5 @@ public sealed class TokenCommandController : ApiControllerBase
     [HttpPost("v1/tokens")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<TokenCreateResponseDto>> CreateAsync([FromBody] TokenCreateRequestDto request, CancellationToken cancellationToken) =>
-        await _createTokenCommandHandler.ExecuteAsync(request, cancellationToken).ConfigureAwait(false);
+        await _createTokenCommandHandler.ExecuteAsync(request, cancellationToken);
 }

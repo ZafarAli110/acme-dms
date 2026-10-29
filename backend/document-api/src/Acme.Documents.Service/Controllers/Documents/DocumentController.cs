@@ -21,7 +21,7 @@ public sealed class DocumentController : ApiControllerBase
     [HttpGet("v1/documents/{documentId:guid}")]
     [RequirePermission("documents.read")]
     public async Task<ActionResult<DocumentResponseDto>> GetAsync(Guid documentId, CancellationToken cancellationToken) =>
-        await _getDocumentQueryHandler.ExecuteAsync(CurrentUser, documentId, cancellationToken).ConfigureAwait(false);
+        await _getDocumentQueryHandler.ExecuteAsync(CurrentUser, documentId, cancellationToken);
 
     /// <summary>The bytes of the original ("original") or a processed variant (e.g. "display").</summary>
     [HttpGet("v1/documents/{documentId:guid}/content/{name}")]
@@ -30,7 +30,7 @@ public sealed class DocumentController : ApiControllerBase
     [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Client)]
     public async Task<ActionResult> GetContentAsync(Guid documentId, string name, CancellationToken cancellationToken)
     {
-        var content = await _getDocumentContentQueryHandler.ExecuteAsync(CurrentUser, documentId, name, cancellationToken).ConfigureAwait(false);
+        var content = await _getDocumentContentQueryHandler.ExecuteAsync(CurrentUser, documentId, name, cancellationToken);
         return File(content.Data.ToArray(), content.ContentType);
     }
 }

@@ -19,4 +19,4 @@ app.UseServiceDefaults();
 app.MapReverseProxy();
 app.MapServiceDefaults();
 
-await app.RunAsync().ConfigureAwait(false);
+await app.RunAsync();

@@ -40,14 +40,14 @@ public sealed partial class OutboxRelay : BackgroundService
         {
             try
             {
-                await PublishPendingAsync(stoppingToken).ConfigureAwait(false);
+                await PublishPendingAsync(stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 LogPublishFailed(_logger, ex);
             }
 
-            await Task.Delay(PollInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(PollInterval, _timeProvider, stoppingToken);
         }
     }
 
@@ -59,15 +59,14 @@ public sealed partial class OutboxRelay : BackgroundService
             .Where(m => m.PublishedAt == null)
             .OrderBy(m => m.OccurredAt)
             .Take(50)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .ToListAsync(cancellationToken);
 
         if (pending.Count == 0)
         {
             return;
         }
 
-        await using var channel = await _rabbitMq.CreateChannelAsync(publisherConfirms: true, cancellationToken).ConfigureAwait(false);
+        await using var channel = await _rabbitMq.CreateChannelAsync(publisherConfirms: true, cancellationToken);
         foreach (var message in pending)
         {
             // Continue the trace of the request that wrote the message, so the dashboard shows one trace end to end.
@@ -90,11 +89,11 @@ public sealed partial class OutboxRelay : BackgroundService
                 Persistent = true,
             };
 
-            await channel.BasicPublishAsync(MessageTypes.Exchange, message.Type, mandatory: false, properties, Encoding.UTF8.GetBytes(envelope.ToJsonString()), cancellationToken).ConfigureAwait(false);
+            await channel.BasicPublishAsync(MessageTypes.Exchange, message.Type, mandatory: false, properties, Encoding.UTF8.GetBytes(envelope.ToJsonString()), cancellationToken);
             message.PublishedAt = _timeProvider.GetUtcNow();
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Publishing outbox messages failed; they will be retried")]

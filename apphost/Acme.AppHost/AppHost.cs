@@ -58,4 +58,4 @@ builder.AddExecutable("web", "bun", "../../web", "run", "dev")
     .WithReference(gateway)
     .WaitFor(gateway);
 
-await builder.Build().RunAsync().ConfigureAwait(false);
+await builder.Build().RunAsync();

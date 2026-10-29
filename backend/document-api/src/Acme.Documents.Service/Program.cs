@@ -33,11 +33,11 @@ builder.Services.AddAcmeAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
-await app.Services.MigrateDocumentsDatabaseAsync(CancellationToken.None).ConfigureAwait(false);
+await app.Services.MigrateDocumentsDatabaseAsync(CancellationToken.None);
 
 app.UseServiceDefaults();
 app.UseAcmeAuthorization();
 app.MapControllers();
 app.MapServiceDefaults();
 
-await app.RunAsync().ConfigureAwait(false);
+await app.RunAsync();

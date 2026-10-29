@@ -25,7 +25,6 @@ internal sealed class GetDocumentContentQueryHandler : IGetDocumentContentQueryH
             .Where(c => c.Name == name)
             .AsNoTracking()
             .SingleOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false)
             ?? throw new ApiException(ApiErrorCategory.NotFound, $"Document {documentId} has no '{name}' content.");
 
         return new DocumentContentDto(content.Data, content.ContentType);

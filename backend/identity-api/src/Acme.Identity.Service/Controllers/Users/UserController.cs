@@ -18,5 +18,5 @@ public sealed class UserController : ApiControllerBase
 
     [HttpGet("v1/users/me")]
     public async Task<ActionResult<CurrentUserResponseDto>> GetCurrentAsync(CancellationToken cancellationToken) =>
-        await _getCurrentUserQueryHandler.ExecuteAsync(User.GetUserId(), cancellationToken).ConfigureAwait(false);
+        await _getCurrentUserQueryHandler.ExecuteAsync(User.GetUserId(), cancellationToken);
 }

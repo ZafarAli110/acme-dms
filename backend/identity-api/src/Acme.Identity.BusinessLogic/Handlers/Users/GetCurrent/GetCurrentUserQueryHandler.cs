@@ -22,7 +22,6 @@ internal sealed class GetCurrentUserQueryHandler : IGetCurrentUserQueryHandler
             .Include(u => u.LocationRoles).ThenInclude(r => r.Location)
             .AsNoTracking()
             .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken)
-            .ConfigureAwait(false)
             ?? throw new ApiException(ApiErrorCategory.NotFound, $"User {userId} was not found.");
 
         return new CurrentUserResponseDto(

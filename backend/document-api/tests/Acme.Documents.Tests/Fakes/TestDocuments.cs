@@ -23,6 +23,6 @@ internal static class TestDocuments
     public static async Task<Guid> UploadPhotoAsync(TestDatabase database, CancellationToken cancellationToken)
     {
         await using var dbContext = database.CreateContext(Northwind);
-        return (await CreateUploadHandler(dbContext).ExecuteAsync(Alice, PhotoUpload(), cancellationToken).ConfigureAwait(false)).Id;
+        return (await CreateUploadHandler(dbContext).ExecuteAsync(Alice, PhotoUpload(), cancellationToken)).Id;
     }
 }

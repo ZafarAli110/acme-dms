@@ -64,16 +64,16 @@ internal sealed class UploadDocumentCommandHandler : IUploadDocumentCommandHandl
                 _dbContext.Documents.Add(document);
                 // The database assigns the document's id (uuidv7()); the processing message needs it, so it is queued
                 // after this save, in the same transaction.
-                await _unitOfWork.SaveChangesAsync(token).ConfigureAwait(false);
+                await _unitOfWork.SaveChangesAsync(token);
                 if (document.Status == DocumentStatus.Pending)
                 {
                     _outbox.Add(MessageTypes.ProcessDocument, new ProcessDocumentMessageDto(document.Id, document.DealerId));
-                    await _unitOfWork.SaveChangesAsync(token).ConfigureAwait(false);
+                    await _unitOfWork.SaveChangesAsync(token);
                 }
 
                 return DocumentMapper.ToDocumentResponseDto(document);
             },
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 
     private static void Validate(DocumentUploadRequestDto request)

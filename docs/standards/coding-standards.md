@@ -69,7 +69,8 @@
 ## C# (.NET services)
 
 - Warnings are errors; analyzers at `latest-recommended`; `dotnet format` clean.
-- `ConfigureAwait(false)` on awaits in libraries; `[LoggerMessage]` for log statements.
+- No `ConfigureAwait(false)`: ASP.NET Core has no `SynchronizationContext`, so it changes nothing and only adds noise.
+- `[LoggerMessage]` for log statements.
 - EF Core with snake_case naming; migrations in the Persistence project (`dotnet ef migrations add …`).
 - Controller actions return `ActionResult<TResponseDto>` (or `ActionResult` for a file) and simply await the handler.
   Expected failures are `ApiException`s; the service's `ApiExceptionHandler` turns them into problem details, like

@@ -16,7 +16,7 @@ internal sealed class GetJsonWebKeySetQueryHandler : IGetJsonWebKeySetQueryHandl
 
     public async Task<JsonWebKeySetDto> ExecuteAsync(CancellationToken cancellationToken)
     {
-        var signingKey = await _signingKeyProvider.GetSigningKeyAsync(cancellationToken).ConfigureAwait(false);
+        var signingKey = await _signingKeyProvider.GetSigningKeyAsync(cancellationToken);
         var parameters = signingKey.Rsa.ExportParameters(includePrivateParameters: false);
 
         var key = new JsonWebKeyDto(

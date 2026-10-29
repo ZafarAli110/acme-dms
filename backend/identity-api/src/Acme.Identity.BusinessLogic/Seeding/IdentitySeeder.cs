@@ -19,11 +19,11 @@ public sealed class IdentitySeeder
 
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
-        await _dbContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        await _dbContext.Database.MigrateAsync(cancellationToken);
 
-        if (await _dbContext.Dealers.AnyAsync(cancellationToken).ConfigureAwait(false))
+        if (await _dbContext.Dealers.AnyAsync(cancellationToken))
         {
-            await AddMissingLocationRolesAsync(cancellationToken).ConfigureAwait(false);
+            await AddMissingLocationRolesAsync(cancellationToken);
             return;
         }
 
@@ -49,7 +49,7 @@ public sealed class IdentitySeeder
             _dbContext.Users.Add(user);
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -63,8 +63,7 @@ public sealed class IdentitySeeder
             .IgnoreQueryFilters()
             .Where(r => demoUserIds.Contains(r.UserId))
             .Select(r => new { r.UserId, r.LocationId })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .ToListAsync(cancellationToken);
 
         foreach (var demoUser in DemoData.Users)
         {
@@ -77,6 +76,6 @@ public sealed class IdentitySeeder
             }
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

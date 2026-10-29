@@ -18,9 +18,9 @@ internal sealed class UnitOfWork : IUnitOfWork
     {
         ArgumentNullException.ThrowIfNull(work);
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var result = await work(cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var result = await work(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return result;
     }
 }

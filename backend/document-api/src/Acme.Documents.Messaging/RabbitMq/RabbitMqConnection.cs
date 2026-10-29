@@ -21,16 +21,16 @@ public sealed class RabbitMqConnection : IAsyncDisposable
 
     public async Task<IChannel> CreateChannelAsync(bool publisherConfirms, CancellationToken cancellationToken)
     {
-        var connection = await GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        var connection = await GetConnectionAsync(cancellationToken);
         var options = new CreateChannelOptions(publisherConfirmationsEnabled: publisherConfirms, publisherConfirmationTrackingEnabled: publisherConfirms);
-        return await connection.CreateChannelAsync(options, cancellationToken).ConfigureAwait(false);
+        return await connection.CreateChannelAsync(options, cancellationToken);
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_connection is not null)
         {
-            await _connection.DisposeAsync().ConfigureAwait(false);
+            await _connection.DisposeAsync();
         }
 
         _lock.Dispose();
@@ -43,13 +43,13 @@ public sealed class RabbitMqConnection : IAsyncDisposable
             return _connection;
         }
 
-        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _lock.WaitAsync(cancellationToken);
         try
         {
             if (_connection is not { IsOpen: true })
             {
-                _connection = await _factory.CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
-                await DeclareTopologyAsync(_connection, cancellationToken).ConfigureAwait(false);
+                _connection = await _factory.CreateConnectionAsync(cancellationToken);
+                await DeclareTopologyAsync(_connection, cancellationToken);
             }
 
             return _connection;
@@ -62,15 +62,15 @@ public sealed class RabbitMqConnection : IAsyncDisposable
 
     private static async Task DeclareTopologyAsync(IConnection connection, CancellationToken cancellationToken)
     {
-        await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        await channel.ExchangeDeclareAsync(MessageTypes.Exchange, ExchangeType.Topic, durable: true, cancellationToken: cancellationToken).ConfigureAwait(false);
-        await channel.ExchangeDeclareAsync(DeadLetterExchange, ExchangeType.Topic, durable: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+        await channel.ExchangeDeclareAsync(MessageTypes.Exchange, ExchangeType.Topic, durable: true, cancellationToken: cancellationToken);
+        await channel.ExchangeDeclareAsync(DeadLetterExchange, ExchangeType.Topic, durable: true, cancellationToken: cancellationToken);
 
-        await channel.QueueDeclareAsync(ProcessDocumentDeadLetterQueue, durable: true, exclusive: false, autoDelete: false, cancellationToken: cancellationToken).ConfigureAwait(false);
-        await channel.QueueBindAsync(ProcessDocumentDeadLetterQueue, DeadLetterExchange, MessageTypes.ProcessDocument, cancellationToken: cancellationToken).ConfigureAwait(false);
+        await channel.QueueDeclareAsync(ProcessDocumentDeadLetterQueue, durable: true, exclusive: false, autoDelete: false, cancellationToken: cancellationToken);
+        await channel.QueueBindAsync(ProcessDocumentDeadLetterQueue, DeadLetterExchange, MessageTypes.ProcessDocument, cancellationToken: cancellationToken);
 
         var arguments = new Dictionary<string, object?> { ["x-dead-letter-exchange"] = DeadLetterExchange };
-        await channel.QueueDeclareAsync(ProcessDocumentQueue, durable: true, exclusive: false, autoDelete: false, arguments: arguments, cancellationToken: cancellationToken).ConfigureAwait(false);
-        await channel.QueueBindAsync(ProcessDocumentQueue, MessageTypes.Exchange, MessageTypes.ProcessDocument, cancellationToken: cancellationToken).ConfigureAwait(false);
+        await channel.QueueDeclareAsync(ProcessDocumentQueue, durable: true, exclusive: false, autoDelete: false, arguments: arguments, cancellationToken: cancellationToken);
+        await channel.QueueBindAsync(ProcessDocumentQueue, MessageTypes.Exchange, MessageTypes.ProcessDocument, cancellationToken: cancellationToken);
     }
 }

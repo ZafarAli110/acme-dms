@@ -27,6 +27,6 @@ public static class PersistenceServiceCollectionExtensions
     {
         using var scope = services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<DocumentsDbContext>();
-        await dbContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        await dbContext.Database.MigrateAsync(cancellationToken);
     }
 }

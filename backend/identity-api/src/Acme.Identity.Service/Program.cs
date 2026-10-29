@@ -45,7 +45,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync(CancellationToken.None).ConfigureAwait(false);
+    await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync(CancellationToken.None);
 }
 
 app.UseServiceDefaults();
@@ -53,4 +53,4 @@ app.UseAcmeAuthorization();
 app.MapControllers();
 app.MapServiceDefaults();
 
-await app.RunAsync().ConfigureAwait(false);
+await app.RunAsync();

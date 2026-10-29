@@ -29,10 +29,9 @@ internal sealed class DeleteDocumentCommandHandler : IDeleteDocumentCommandHandl
         var document = await _dbContext.Documents
             .Include(d => d.Contents)
             .SingleOrDefaultAsync(d => d.Id == documentId, cancellationToken)
-            .ConfigureAwait(false)
             ?? throw new ApiException(ApiErrorCategory.NotFound, $"Document {documentId} was not found.");
 
         _dbContext.Documents.Remove(document);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

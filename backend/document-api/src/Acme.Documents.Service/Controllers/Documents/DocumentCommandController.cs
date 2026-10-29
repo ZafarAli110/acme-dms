@@ -41,11 +41,11 @@ public sealed class DocumentCommandController : ApiControllerBase
         ArgumentNullException.ThrowIfNull(file);
 
         using var buffer = new MemoryStream();
-        await file.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+        await file.CopyToAsync(buffer, cancellationToken);
         var variantSpecs = string.IsNullOrWhiteSpace(variants) ? [] : JsonSerializer.Deserialize<List<VariantSpecDto>>(variants, JsonOptions) ?? [];
         var request = new DocumentUploadRequestDto(ownerType, ownerId, file.FileName, file.ContentType, buffer.ToArray(), variantSpecs);
 
-        var response = await _uploadDocumentCommandHandler.ExecuteAsync(CurrentUser, request, cancellationToken).ConfigureAwait(false);
+        var response = await _uploadDocumentCommandHandler.ExecuteAsync(CurrentUser, request, cancellationToken);
         return Accepted($"/v1/documents/{response.Id}", response);
     }
 
@@ -55,7 +55,7 @@ public sealed class DocumentCommandController : ApiControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<ActionResult> DeleteAsync(Guid documentId, CancellationToken cancellationToken)
     {
-        await _deleteDocumentCommandHandler.ExecuteAsync(CurrentUser, documentId, cancellationToken).ConfigureAwait(false);
+        await _deleteDocumentCommandHandler.ExecuteAsync(CurrentUser, documentId, cancellationToken);
         return NoContent();
     }
 }

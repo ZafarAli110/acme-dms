@@ -17,5 +17,5 @@ public sealed class SystemController : ApiControllerBase
     [AllowAnonymous]
     [HttpGet("v1/system/health")]
     public async Task<ActionResult<HealthCheckResponseDto>> GetHealthAsync(CancellationToken cancellationToken) =>
-        await _getHealthQueryHandler.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        await _getHealthQueryHandler.ExecuteAsync(cancellationToken);
 }
