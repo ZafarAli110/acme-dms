@@ -10,7 +10,7 @@ are in `bunx playwright-cli --help`; read that first.
 
 1. The web app's URL: `bun run status` (the `web` resource). The system must already be running.
 2. `bunx playwright-cli open <web url>/sign-in`, then sign in as the demo user the ticket is about (the form is
-   pre-filled with alice; the demo users and their locations are in the README). Use `snapshot` to see the page and
+   pre-filled with sam; the demo users and their locations are in the README). Use `snapshot` to see the page and
    the element references to `click` and `fill`.
 3. Check what the ticket asks, as the user it is for. Anything per location: switch location in the top bar and
    check again.
