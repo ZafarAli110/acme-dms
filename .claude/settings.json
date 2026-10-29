@@ -18,7 +18,9 @@
       "Bash(git show *)",
       "mcp__acme-tracker__list_tickets",
       "mcp__acme-tracker__get_ticket",
-      "Bash(bunx playwright-cli *)"
+      "Bash(bunx playwright-cli *)",
+      "mcp__acme-tracker__create_ticket",
+      "Bash(bun run xlsx:inspect *)"
     ],
     "ask": [
       "mcp__acme-tracker__update_ticket_status",
@@ -33,7 +35,10 @@
       "Bash(git checkout *)",
       "Bash(git switch *)",
       "WebFetch",
-      "WebSearch"
+      "WebSearch",
+      "Write(.claude/skills/**)",
+      "Edit(.claude/skills/**)",
+      "Bash(bun run seed:bulk*)"
     ],
     "deny": [
       "Read(./**/.env)",

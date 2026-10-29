@@ -61,6 +61,10 @@ Say what you ran and what it returned. "Should work" is not done. Before calling
 The skills in `.claude/skills/` hold the procedures for the common kinds of change: an API use case, a record saved
 with its files, a web form page.
 
+After a ticket is done: `/qa <KEY>` has the **qa** subagent test it in the running system and file a bug for each
+failure; when QA is clean, `/retro <KEY>` writes what went wrong as lessons with evidence (`docs/lessons/`), and
+`/learn` turns lessons that apply again into skills. A skill is the team's memory; a person approves each one.
+
 Work a ticket with `/ticket <KEY>`. Its plan, `docs/plans/<KEY>.md`, is the record of the work: if one exists, read it
 before doing anything else on that ticket.
 
