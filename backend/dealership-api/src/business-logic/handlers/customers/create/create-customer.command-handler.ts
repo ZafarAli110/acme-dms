@@ -26,6 +26,9 @@ export class CreateCustomerCommandHandler implements ICreateCustomerCommandHandl
 
   public async executeAsync(userContext: UserContext, request: CustomerCreateRequestDto): Promise<CustomerResponseDto> {
     await using work = await this._unitOfWorkFactory.beginAsync();
+    // returning() makes this `INSERT … RETURNING *`: Postgres sends back the saved row, including what the database
+    // filled in (the uuidv7 id). Drizzle gives the rows as an array, and an array element may be undefined
+    // (noUncheckedIndexedAccess); exactly one row was inserted, so `created!` below is safe.
     const [created] = await work.db
       .insert(customers)
       .values({
