@@ -39,6 +39,11 @@ import {SetStockLevelCommandHandler} from './handlers/stock/set-level/set-stock-
 import {GetUserContextQueryHandler} from './handlers/system/get-user-context/get-user-context.query-handler';
 import {GetHealthQueryHandler} from './handlers/system/get-health/get-health.query-handler';
 
+import {EXPORT_JOBS} from '#business-logic-abstractions/exports/export-jobs.interface';
+import {START_CUSTOMER_EXPORT_COMMAND_HANDLER} from '#business-logic-abstractions/handlers/customers/export/start-customer-export.command-handler.interface';
+import {ExportJobRunner} from './exports/export-job-runner';
+import {StartCustomerExportCommandHandler} from './handlers/customers/export/start-customer-export.command-handler';
+
 /** Registers every business handler against its abstraction token. Add one line per new handler. */
 const HANDLERS = [
   {provide: GET_HEALTH_QUERY_HANDLER, useClass: GetHealthQueryHandler},
@@ -59,12 +64,19 @@ const HANDLERS = [
   {provide: UPDATE_CUSTOMER_COMMAND_HANDLER, useClass: UpdateCustomerCommandHandler},
   {provide: MARK_PART_PHOTO_READY_COMMAND_HANDLER, useClass: MarkPartPhotoReadyCommandHandler},
   {provide: MARK_PART_PHOTO_FAILED_COMMAND_HANDLER, useClass: MarkPartPhotoFailedCommandHandler},
+  {provide: START_CUSTOMER_EXPORT_COMMAND_HANDLER, useClass: StartCustomerExportCommandHandler},
 ];
 
 @Module({
   imports: [PersistenceModule],
   // The clock handlers use for the current time (tests pass a fixed one).
-  providers: [...HANDLERS, {provide: CLOCK, useClass: SystemClock}],
-  exports: [...HANDLERS.map((handler) => handler.provide), CLOCK],
+  // One export runner for the service: it holds the running and finished exports. Controllers reach it as EXPORT_JOBS.
+  providers: [
+    ...HANDLERS,
+    {provide: CLOCK, useClass: SystemClock},
+    ExportJobRunner,
+    {provide: EXPORT_JOBS, useExisting: ExportJobRunner},
+  ],
+  exports: [...HANDLERS.map((handler) => handler.provide), CLOCK, EXPORT_JOBS],
 })
 export class BusinessLogicModule {}

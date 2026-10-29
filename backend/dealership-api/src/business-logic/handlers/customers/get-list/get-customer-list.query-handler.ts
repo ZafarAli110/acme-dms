@@ -41,32 +41,43 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
   ): Promise<PageResponseDto<CustomerListItemDto>> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
-    const where = and(
-      eq(customers.locationId, requireLocation(userContext)),
-      notDeleted(customers),
-      query.search ? matching(`%${query.search}%`) : undefined,
-      listFilter(CUSTOMER_LIST_COLUMNS, query),
-    );
+    const where = customerListWhere(requireLocation(userContext), query);
 
     await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
     const items = await work.db
       .select()
       .from(customers)
       .where(where)
-      .orderBy(
-        ...listOrderBy(
-          CUSTOMER_LIST_COLUMNS,
-          query,
-          [asc(customers.surname), asc(customers.firstName)],
-          [asc(customers.id)],
-        ),
-      )
+      .orderBy(...customerListOrderBy(query))
       .limit(pageSize)
       .offset((page - 1) * pageSize);
     const [counted] = await work.db.select({total: count()}).from(customers).where(where);
     const total = counted?.total ?? 0;
     return {items: items.map(toCustomerListItemDto), total, page, pageSize};
   }
+}
+
+/**
+ * The customers a list query shows at `locationId`: the location's, not deleted, searched and filtered. Shared with the
+ * export, so the file holds exactly the rows the list shows.
+ */
+export function customerListWhere(locationId: string, query: ListQueryDto): SQL | undefined {
+  return and(
+    eq(customers.locationId, locationId),
+    notDeleted(customers),
+    query.search ? matching(`%${query.search}%`) : undefined,
+    listFilter(CUSTOMER_LIST_COLUMNS, query),
+  );
+}
+
+/** The list's order: the query's sort, else by name; always ending with the id, so equal values keep one order. */
+export function customerListOrderBy(query: ListQueryDto): SQL[] {
+  return listOrderBy(
+    CUSTOMER_LIST_COLUMNS,
+    query,
+    [asc(customers.surname), asc(customers.firstName)],
+    [asc(customers.id)],
+  );
 }
 
 function matching(pattern: string): SQL | undefined {

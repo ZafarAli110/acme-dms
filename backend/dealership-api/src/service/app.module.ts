@@ -11,6 +11,8 @@ import {BinCommandController} from './controllers/bins/bin-command.controller';
 import {BinController} from './controllers/bins/bin.controller';
 import {CustomerCommandController} from './controllers/customers/customer-command.controller';
 import {CustomerController} from './controllers/customers/customer.controller';
+import {CustomerExportCommandController} from './controllers/exports/customer-export-command.controller';
+import {ExportController} from './controllers/exports/export.controller';
 import {PartCommandController} from './controllers/parts/part-command.controller';
 import {PartController} from './controllers/parts/part.controller';
 import {StockCommandController} from './controllers/stock/stock-command.controller';
@@ -35,6 +37,8 @@ import {ProblemDetailsFilter} from './filters/problem-details.filter';
     BinCommandController,
     CustomerController,
     CustomerCommandController,
+    CustomerExportCommandController,
+    ExportController,
   ],
   providers: [
     AccessTokenVerifier,
