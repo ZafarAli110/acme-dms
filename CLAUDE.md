@@ -45,7 +45,8 @@ The system must already be running (`bun run dev`) for `api`, `errors` and `rese
 
 1. `bun run gate:fast` passes.
 2. The change works in the running system, shown with `bun run api` as the users it affects. Anything per location is
-   checked as two users at **different** locations (`sam --location northside` and `maria`, who is at Riverside).
+   checked as two users at **different** locations: `sam` at Northside and `rita` at Westgate (`--location westgate`),
+   a rooftop sam doesn't work at. `maria`, the manager, works at all three.
 3. `bun run errors` shows nothing new.
 
 Say what you ran and what it returned. "Should work" is not done.
