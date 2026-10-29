@@ -34,7 +34,7 @@ function wholeInput(input: string): string[] {
   return input.trim() ? [input] : [];
 }
 
-/** Every grid's toolbar: choose columns, filter, the list's own actions, and search. */
+/** Every grid's toolbar, as in the IDS DMS: the search first, then choosing columns, filtering, and the list's own buttons. */
 export function AppDataGridToolbar({actions, searchPlaceholder}: AppDataGridToolbarProps) {
   const {t} = useTranslation();
   const apiRef = useGridApiContext();
@@ -42,6 +42,29 @@ export function AppDataGridToolbar({actions, searchPlaceholder}: AppDataGridTool
 
   return (
     <Toolbar>
+      <QuickFilter parser={wholeInput} debounceMs={400} expanded style={{flex: 1, maxWidth: 560}}>
+        <QuickFilterControl
+          render={
+            <TextField
+              size="small"
+              fullWidth
+              placeholder={searchPlaceholder ?? t('grid.search')}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" sx={{color: 'text.secondary'}} />
+                    </InputAdornment>
+                  ),
+                  sx: {height: 38, borderRadius: 2},
+                },
+              }}
+              data-testid="grid-search"
+            />
+          }
+        />
+      </QuickFilter>
+      <Box sx={{flex: 1}} />
       <Tooltip title={t('grid.columns')}>
         <ColumnsPanelTrigger render={<ToolbarButton data-testid="grid-columns" />}>
           <ViewColumnIcon fontSize="small" />
@@ -54,29 +77,7 @@ export function AppDataGridToolbar({actions, searchPlaceholder}: AppDataGridTool
           </Badge>
         </FilterPanelTrigger>
       </Tooltip>
-      <Box sx={{flex: 1}} />
       {actions}
-      <QuickFilter parser={wholeInput} debounceMs={400} expanded>
-        <QuickFilterControl
-          render={
-            <TextField
-              size="small"
-              placeholder={searchPlaceholder ?? t('grid.search')}
-              sx={{width: {xs: 180, sm: 320}}}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-              data-testid="grid-search"
-            />
-          }
-        />
-      </QuickFilter>
     </Toolbar>
   );
 }

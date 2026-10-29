@@ -40,11 +40,11 @@ test.describe('parts', () => {
     const part = await createPartAsync(request);
     await page.goto(`/parts/${part.id}`);
 
-    await page.getByTestId('part-description').locator('input').fill('Throwaway part, edited');
+    await page.getByTestId('part-description').locator('input').fill('Oil filter, spin-on, long life');
     await page.getByTestId('save-part').click();
 
     await expect(page.getByTestId('save-success')).toBeVisible();
     await page.reload();
-    await expect(page.getByTestId('part-description').locator('input')).toHaveValue('Throwaway part, edited');
+    await expect(page.getByTestId('part-description').locator('input')).toHaveValue('Oil filter, spin-on, long life');
   });
 });

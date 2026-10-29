@@ -10,7 +10,7 @@ export function CustomerNameCell({customer}: {customer: CustomerListItem}) {
         {customer.surname[0]}
       </Avatar>
       <Box sx={{lineHeight: 1.2}}>
-        <Typography variant="body2" sx={{fontWeight: 600}}>
+        <Typography variant="body2" color="primary" sx={{fontWeight: 600}}>
           {customer.firstName} {customer.surname}
         </Typography>
         {customer.companyName && (

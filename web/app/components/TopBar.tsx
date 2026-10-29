@@ -68,20 +68,52 @@ export function TopBar({sidebarWidth}: {sidebarWidth: number}) {
         <Typography variant="subtitle1" sx={{fontWeight: 600}} noWrap>
           {user?.dealerName}
         </Typography>
-        {location && (
+        {/* A real dropdown when there is a choice (outlined, a chevron, a menu); just the name when there is not. */}
+        {location && locations.length > 1 && (
           <Button
             color="inherit"
-            startIcon={<PlaceIcon />}
-            endIcon={locations.length > 1 ? <ExpandMoreIcon /> : null}
-            disabled={locations.length < 2}
+            startIcon={<PlaceIcon fontSize="small" />}
+            endIcon={<ExpandMoreIcon />}
             onClick={(event) => setLocationAnchor(event.currentTarget)}
-            sx={{ml: 1, bgcolor: 'rgba(255,255,255,0.12)', '&.Mui-disabled': {color: 'inherit'}}}
+            aria-haspopup="menu"
+            aria-expanded={locationAnchor !== null}
+            sx={{
+              ml: 1.5,
+              px: 1.5,
+              height: 36,
+              minWidth: 160,
+              justifyContent: 'space-between',
+              border: '1px solid rgba(255, 255, 255, 0.45)',
+              borderRadius: 1.5,
+              fontWeight: 500,
+              '&:hover': {bgcolor: 'rgba(255, 255, 255, 0.12)', borderColor: 'rgba(255, 255, 255, 0.8)'},
+            }}
             data-testid="location-switcher"
           >
-            {location.name}
+            <Box component="span" sx={{flexGrow: 1, textAlign: 'left'}}>
+              {location.name}
+            </Box>
           </Button>
         )}
-        <Menu anchorEl={locationAnchor} open={locationAnchor !== null} onClose={() => setLocationAnchor(null)}>
+        {location && locations.length < 2 && (
+          <Box
+            sx={{display: 'flex', alignItems: 'center', gap: 0.75, ml: 1.5, opacity: 0.9}}
+            data-testid="location-switcher"
+          >
+            <PlaceIcon fontSize="small" />
+            <Typography variant="body2" sx={{fontWeight: 500}}>
+              {location.name}
+            </Typography>
+          </Box>
+        )}
+        <Menu
+          anchorEl={locationAnchor}
+          open={locationAnchor !== null}
+          onClose={() => setLocationAnchor(null)}
+          anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}
+          transformOrigin={{vertical: 'top', horizontal: 'left'}}
+          slotProps={{paper: {sx: {mt: 0.5, minWidth: 200}}}}
+        >
           {locations.map((candidate) => (
             <MenuItem
               key={candidate.id}

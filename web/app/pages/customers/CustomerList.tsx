@@ -47,9 +47,16 @@ export default function CustomerList() {
 
   return (
     <Fragment>
-      <PageHeader
-        title={t('title')}
-        subtitle={t('subtitle', {location: location?.name ?? ''})}
+      <PageHeader title={t('title')} subtitle={t('subtitle', {location: location?.name ?? ''})} />
+      <ErrorAlert error={error} />
+      <AppDataGrid<CustomerListItem>
+        columns={columns}
+        rows={data?.items ?? []}
+        loading={isLoading || isLoadingPage}
+        server={{params, rowCount: data?.total ?? 0, update}}
+        columnVisibilityModel={visibility.columnVisibilityModel}
+        onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}
+        onRowClick={openCustomer}
         actions={
           can('customers.write') && (
             <Button
@@ -63,16 +70,6 @@ export default function CustomerList() {
             </Button>
           )
         }
-      />
-      <ErrorAlert error={error} />
-      <AppDataGrid<CustomerListItem>
-        columns={columns}
-        rows={data?.items ?? []}
-        loading={isLoading || isLoadingPage}
-        server={{params, rowCount: data?.total ?? 0, update}}
-        columnVisibilityModel={visibility.columnVisibilityModel}
-        onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}
-        onRowClick={openCustomer}
         searchPlaceholder={t('search')}
         noRowsLabel={noRows}
         testId="customers-table"

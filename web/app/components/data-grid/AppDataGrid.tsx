@@ -1,4 +1,4 @@
-import {Paper} from '@mui/material';
+import {Box} from '@mui/material';
 import {
   DataGrid,
   type GridColDef,
@@ -13,6 +13,7 @@ import {frFR} from '@mui/x-data-grid/locales';
 import {type ReactNode, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {type ListParams, PAGE_SIZES} from '../../core/paging/listParams';
+import {INSET_SURFACE} from '../../theme';
 import {AppDataGridToolbar} from './AppDataGridToolbar';
 import {fromFilterModel, sameFilter, toFilterModel, toPaginationModel, toSortModel} from './listGridModels';
 
@@ -99,7 +100,18 @@ export function AppDataGrid<Row extends GridValidRowModel>({
   };
 
   return (
-    <Paper sx={{height: 'calc(100vh - 210px)', minHeight: 420}} data-testid={testId}>
+    <Box
+      sx={{
+        height: 'calc(100vh - 190px)',
+        minHeight: 420,
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 4,
+        overflow: 'hidden',
+      }}
+      data-testid={testId}
+    >
       <DataGrid<Row>
         columns={columns}
         rows={rows}
@@ -120,13 +132,9 @@ export function AppDataGrid<Row extends GridValidRowModel>({
         pageSizeOptions={PAGE_SIZES}
         onRowClick={onRowClick ? handleRowClick : undefined}
         disableRowSelectionOnClick
-        density="standard"
-        sx={{
-          border: 0,
-          '& .MuiDataGrid-row': {cursor: onRowClick ? 'pointer' : 'default'},
-          // A column of codes (part numbers, bins) sets cellClassName: 'monospace'.
-          '& .monospace': {fontFamily: 'monospace', fontWeight: 600},
-        }}
+        rowHeight={48}
+        columnHeaderHeight={44}
+        sx={[GRID_SX, !onRowClick && {'& .MuiDataGrid-row': {cursor: 'default'}}]}
         {...(server
           ? {
               paginationMode: 'server',
@@ -140,6 +148,37 @@ export function AppDataGrid<Row extends GridValidRowModel>({
             }
           : {initialState: {pagination: {paginationModel: {pageSize: 25}}}})}
       />
-    </Paper>
+    </Box>
   );
 }
+
+// The IDS DMS grid: no outer border (the card has it), a tinted header row with small bold headings, one line between
+// rows, no focus outline on a click (only for the keyboard).
+const GRID_SX = {
+  border: 0,
+  '& .MuiDataGrid-toolbar': {gap: 1, px: 2, py: 1.5, minHeight: 'auto', borderBottom: 1, borderColor: 'divider'},
+  '& .MuiDataGrid-columnHeader, & .MuiDataGrid-filler, & .MuiDataGrid-scrollbarFiller': {bgcolor: INSET_SURFACE},
+  '& .MuiDataGrid-columnHeaderTitle': {
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    color: 'text.secondary',
+    letterSpacing: '0.04em',
+  },
+  '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within': {outline: 'none'},
+  '& .MuiDataGrid-cell': {
+    display: 'flex',
+    alignItems: 'center',
+    '&:focus, &:focus-within': {outline: 'none'},
+    '&:focus-visible': {outline: '1px solid', outlineColor: 'primary.main', outlineOffset: '-1px'},
+  },
+  '& .MuiDataGrid-row': {cursor: 'pointer'},
+  // A list's first column, the record's name or number, reads as the link it is.
+  '& .primary-link': {color: 'primary.main', fontWeight: 600},
+  // A column of codes (part numbers, bins) sets cellClassName: 'monospace'.
+  '& .monospace': {fontFamily: 'monospace', fontWeight: 600},
+  '& .MuiDataGrid-footerContainer': {borderTop: 1, borderColor: 'divider'},
+  '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+    fontSize: '0.8rem',
+    color: 'text.secondary',
+  },
+} as const;

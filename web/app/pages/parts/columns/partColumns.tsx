@@ -29,7 +29,7 @@ export function partColumns(t: TFunction<'parts'>, language: string): GridColDef
       disableColumnMenu: true,
       renderCell: renderThumbnail,
     },
-    {field: 'partNumber', headerName: t('columns.partNumber'), width: 150, cellClassName: 'monospace'},
+    {field: 'partNumber', headerName: t('columns.partNumber'), width: 160, cellClassName: 'monospace primary-link'},
     {field: 'description', headerName: t('columns.description'), flex: 1, minWidth: 200},
     {
       field: 'bin',

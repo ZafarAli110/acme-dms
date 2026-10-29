@@ -52,9 +52,16 @@ export default function PartList() {
 
   return (
     <Fragment>
-      <PageHeader
-        title={t('title')}
-        subtitle={t('subtitle', {location: location?.name ?? ''})}
+      <PageHeader title={t('title')} subtitle={t('subtitle', {location: location?.name ?? ''})} />
+      <ErrorAlert error={error} />
+      <AppDataGrid<PartListItem>
+        columns={columns}
+        rows={data?.items ?? []}
+        loading={isLoading || isLoadingPage}
+        server={{params, rowCount: data?.total ?? 0, update}}
+        columnVisibilityModel={visibility.columnVisibilityModel}
+        onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}
+        onRowClick={openPart}
         actions={
           can('parts.write') && (
             <Button
@@ -67,16 +74,6 @@ export default function PartList() {
             </Button>
           )
         }
-      />
-      <ErrorAlert error={error} />
-      <AppDataGrid<PartListItem>
-        columns={columns}
-        rows={data?.items ?? []}
-        loading={isLoading || isLoadingPage}
-        server={{params, rowCount: data?.total ?? 0, update}}
-        columnVisibilityModel={visibility.columnVisibilityModel}
-        onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}
-        onRowClick={openPart}
         searchPlaceholder={t('search')}
         noRowsLabel={noRows}
         testId="parts-table"

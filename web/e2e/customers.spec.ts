@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {signInAsync, throwawayName} from './support/demo-users';
+import {signInAsync, throwawaySurname} from './support/demo-users';
 
 test.describe('customers', () => {
   test.beforeEach(async ({page}) => {
@@ -7,7 +7,7 @@ test.describe('customers', () => {
   });
 
   test('a new prospect is created and shown on its own page', async ({page}) => {
-    const surname = throwawayName('customer');
+    const surname = throwawaySurname();
     await page.goto('/customers/new');
     await page.getByTestId('customer-firstName').locator('input').fill('Pat');
     await page.getByTestId('customer-surname').locator('input').fill(surname);
@@ -38,7 +38,7 @@ test.describe('customers', () => {
   test('an edit is saved', async ({page}) => {
     await page.goto('/customers/new');
     await page.getByTestId('customer-firstName').locator('input').fill('Pat');
-    await page.getByTestId('customer-surname').locator('input').fill(throwawayName('edit'));
+    await page.getByTestId('customer-surname').locator('input').fill(throwawaySurname());
     await page.getByTestId('save-customer').click();
     await expect(page).toHaveURL(/\/customers\/[0-9a-f-]{36}$/);
 

@@ -5,9 +5,24 @@ export const SAM = 'sam@northwind.test';
 /** The manager: she works at both rooftops and may add parts. */
 export const MARIA = 'maria@northwind.test';
 
-/** A name no seeded record has, so a test only ever changes what it created. */
-export function throwawayName(what: string): string {
-  return `e2e-${what}-${Date.now().toString(36)}`;
+const SURNAMES = ['Ackroyd', 'Barraclough', 'Crowther', 'Fairclough', 'Greenwood', 'Hargreaves', 'Lockwood', 'Ormerod'];
+const PART_FAMILIES = ['FLT-OIL', 'BRK-PAD', 'WPR-BLD', 'BLT-AUX', 'LMP-H7', 'FLT-AIR'];
+
+function pick<T>(values: readonly T[]): T {
+  return values[Math.floor(Math.random() * values.length)]!;
+}
+
+/**
+ * A surname for a customer a test creates. It reads like a real one, because the records a test leaves behind show in
+ * the app afterwards; a test finds its record by the page it lands on, never by searching for the name.
+ */
+export function throwawaySurname(): string {
+  return `${pick(SURNAMES)}-${pick(SURNAMES)}`;
+}
+
+/** A part number in the catalogue's style, unique enough for the unique index (`BRK-PAD-482913`). */
+export function throwawayPartNumber(): string {
+  return `${pick(PART_FAMILIES)}-${String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')}`;
 }
 
 /** Signs in through the sign-in page, as a person would, and waits for Home. */
@@ -28,12 +43,12 @@ export async function createPartAsync(request: APIRequestContext): Promise<{id: 
   const me = (await (await request.get('/api/identity/v1/users/me', {headers})).json()) as {locations: {id: string}[]};
   const atLocation = {...headers, 'x-location-id': me.locations[0]!.id};
   const bins = (await (await request.get('/api/dealership/v1/bins', {headers: atLocation})).json()) as {id: string}[];
-  const partNumber = throwawayName('part').toUpperCase();
+  const partNumber = throwawayPartNumber();
   const created = await request.post('/api/dealership/v1/parts', {
     headers: atLocation,
     data: {
       partNumber,
-      description: 'Throwaway part',
+      description: 'Oil filter, spin-on',
       unitPrice: 1,
       binId: bins[0]!.id,
       quantityOnHand: 1,
