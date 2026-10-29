@@ -22,6 +22,7 @@
     "errors": "aspire otel traces --has-error true",
     "api": "bun scripts/api.ts",
     "seed": "bun scripts/seed.ts",
+    "seed:bulk": "bun scripts/seed-bulk.ts",
     "reset": "bun scripts/reset.ts",
     "format": "bun fmt .",
     "format:check": "bun fmt --check .",

@@ -197,15 +197,16 @@ The dashboard's **Traces** tab follows each request from the gateway through eve
 
 From a second terminal (repo root, while `bun run dev` is running):
 
-| Command                                            | What it shows                                  |
-| -------------------------------------------------- | ---------------------------------------------- |
-| `bun run status`                                   | every resource, its state and URL              |
-| `bun run logs dealership-api`                      | console output of one service                  |
-| `bun run traces dealership-api`                    | recent traces of one service                   |
-| `bun run errors`                                   | only failed (5xx) traces, across all services  |
-| `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)    |
-| `bun run seed`                                     | add the sample parts, stock, photos, customers |
-| `bun run reset`                                    | empty business data and queues, reset demo users' locations, then seed |
+| Command                                             | What it shows                                                          |
+| --------------------------------------------------- | ---------------------------------------------------------------------- |
+| `bun run status`                                    | every resource, its state and URL                                      |
+| `bun run logs dealership-api`                       | console output of one service                                          |
+| `bun run traces dealership-api`                     | recent traces of one service                                           |
+| `bun run errors`                                    | only failed (5xx) traces, across all services                          |
+| `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)                             |
+| `bun run seed`                                      | add the sample parts, stock, photos, customers                         |
+| `bun run seed:bulk`                                 | add 1.2M customers at Northside, 400,000 at Riverside (ACME-108)       |
+| `bun run reset`                                     | empty business data and queues, reset demo users' locations, then seed |
 
 `bun run api` signs in as a demo user, picks their first location (or the one given with `--location`), and calls the
 gateway exactly as the web app does:
