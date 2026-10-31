@@ -3,7 +3,7 @@ import {type AnyPgColumn, boolean, check, uuid} from 'drizzle-orm/pg-core';
 import {instant} from './temporal-columns';
 
 /**
- * The columns every business table has (docs/standards/database.md): who created and last changed the row and when,
+ * The columns every business table has: who created and last changed the row and when,
  * and a soft delete. A function, because a column definition belongs to one table.
  */
 export function auditColumns() {

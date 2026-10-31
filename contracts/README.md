@@ -17,7 +17,7 @@ Every message has the same envelope; `data` depends on `type`.
 }
 ```
 
-- `messageId` is unique per message. Consumers record it to ignore redeliveries (see `docs/standards/messaging.md`).
+- `messageId` is unique per message. Consumers record it to ignore redeliveries.
 - `type` is also the RabbitMQ routing key. A breaking change to `data` means a new version: `…v2`, never an edit to `v1`.
 - The W3C trace context travels in the AMQP headers, so a trace continues across the broker.
 

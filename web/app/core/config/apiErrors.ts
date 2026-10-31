@@ -1,6 +1,6 @@
 import {i18n} from '../../i18n';
 
-/** The error contract every Acme service returns (`application/problem+json`, docs/standards/api-errors.md). */
+/** The error contract every Acme service returns (`application/problem+json`). */
 export interface ProblemDetailsDto {
   type: string;
   title: string;

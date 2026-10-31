@@ -1,7 +1,7 @@
 namespace Acme.Documents.Persistence.Auditing;
 
 /// <summary>
-/// The columns every business table has (docs/standards/database.md): who created and last changed the row and when,
+/// The columns every business table has: who created and last changed the row and when,
 /// and a soft delete. <see cref="AuditingInterceptor"/> fills them in on every save; code never sets them itself.
 /// </summary>
 public abstract class AuditedEntity

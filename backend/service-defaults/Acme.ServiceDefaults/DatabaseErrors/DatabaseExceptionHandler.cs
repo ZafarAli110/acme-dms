@@ -34,7 +34,7 @@ internal sealed partial class DatabaseExceptionHandler : IExceptionHandler
             return false;
         }
 
-        // 4xx is the caller's problem (a warning); 5xx is ours (an error). docs/standards/api-errors.md.
+        // 4xx is the caller's problem (a warning); 5xx is ours (an error).
         var level = error.Status >= StatusCodes.Status500InternalServerError ? LogLevel.Error : LogLevel.Warning;
         if (_logger.IsEnabled(level))
         {

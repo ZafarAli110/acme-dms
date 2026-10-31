@@ -9,7 +9,7 @@ namespace Acme.Documents.BusinessLogic.Handlers.Documents.Delete;
 
 /// <summary>
 /// Deletes a document with its original and variants. A feature calls this to undo an upload when the record the file
-/// belongs to could not be saved (see docs/standards/file-uploads.md). A processing message still queued for the
+/// belongs to could not be saved. A processing message still queued for the
 /// document finds nothing and does nothing.
 /// </summary>
 internal sealed class DeleteDocumentCommandHandler : IDeleteDocumentCommandHandler

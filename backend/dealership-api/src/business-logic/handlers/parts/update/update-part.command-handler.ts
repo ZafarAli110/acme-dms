@@ -19,7 +19,7 @@ import {findPhotosAsync, findStockedPartAsync} from '../part.queries';
 import {MAX_PHOTOS_PER_PART, PART_PHOTO_OWNER_TYPE, PART_PHOTO_VARIANTS, validatePhotoFile} from '../part-photo.rules';
 
 /**
- * Saves a part and its photos as one unit (docs/standards/file-uploads.md, "Saving a record together with its files"):
+ * Saves a part and its photos as one unit:
  * everything is validated before anything is written; then the new photos go to document-api; then the part and the
  * photo changes are saved in one transaction. If anything fails after the first upload, the uploads are deleted again,
  * so the user never ends up with half a save. Photos removed by the save are deleted from document-api last.

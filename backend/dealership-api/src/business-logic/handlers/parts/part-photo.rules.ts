@@ -2,7 +2,7 @@ import {BadRequestException} from '@nestjs/common';
 import type {DocumentVariantSpec} from '#business-logic-abstractions/rest-clients/document-api.client.interface';
 import type {PartPhotoUploadRequestDto} from '#dto/parts/part-photo-upload-request.dto';
 
-// Feature rules for part photos (docs/standards/file-uploads.md). document-api only stores and processes.
+// Feature rules for part photos. document-api only stores and processes.
 export const PART_PHOTO_OWNER_TYPE = 'part';
 export const ALLOWED_PHOTO_TYPES = new Set([
   'image/jpeg',
