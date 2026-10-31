@@ -141,11 +141,14 @@ commands in the table. The tests use Docker too: dealership-api's tests run agai
 
 ## Run it
 
+**Start Docker Desktop first, and wait until it says it is running.** `bun run dev` starts Postgres, RabbitMQ and the
+other containers in Docker; without it they never start.
+
 ```bash
 git clone <repo-url> acme-dms
 cd acme-dms
 bun install          # TypeScript dependencies for every project
-bun run dev          # = aspire run
+bun run dev          # = aspire run (Docker Desktop must be running)
 ```
 
 The first run takes a few minutes: it builds the .NET projects and pulls the container images.
