@@ -7,5 +7,21 @@
     "typecheck": "dotnet build Acme.AppHost -c Debug",
     "lint": "dotnet build Acme.AppHost -c Debug -warnaserror",
     "format": "dotnet format Acme.AppHost/Acme.AppHost.csproj --verify-no-changes"
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "parallelism": false
+      },
+      "typecheck": {
+        "parallelism": false
+      },
+      "lint": {
+        "parallelism": false
+      },
+      "format": {
+        "parallelism": false
+      }
+    }
   }
 }
