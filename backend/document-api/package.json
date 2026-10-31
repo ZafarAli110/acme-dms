@@ -9,5 +9,24 @@
     "format": "dotnet format Acme.Documents.slnx --verify-no-changes",
     "test": "dotnet test --solution Acme.Documents.slnx",
     "dev": "dotnet run --project src/Acme.Documents.Service"
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "parallelism": false
+      },
+      "typecheck": {
+        "parallelism": false
+      },
+      "lint": {
+        "parallelism": false
+      },
+      "format": {
+        "parallelism": false
+      },
+      "test": {
+        "parallelism": false
+      }
+    }
   }
 }
