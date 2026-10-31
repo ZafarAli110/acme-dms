@@ -94,7 +94,50 @@ acme-dms/
 
 ## Setup
 
-One script installs everything Acme DMS needs, and skips anything you already have, so it is safe to run again:
+Once: open a terminal, get the code, run the setup script, check. The script installs everything Acme DMS needs and skips
+anything you already have, so it is safe to run again.
+
+### 1. Open a terminal
+
+- **Windows:** press the Windows key, type **PowerShell**, right-click **Windows PowerShell** and choose **Run as
+  administrator** (the setup installs Docker Desktop and WSL 2, which need it). Use this same window for steps 2 and 3.
+- **macOS:** press Cmd+Space, type **Terminal**, press Enter.
+
+### 2. Get the code
+
+If you do not have Git yet (`git --version` says it is not found), install it first:
+
+- **Windows:** `winget install --id Git.Git --exact`, then close the window and open a new administrator PowerShell
+- **macOS:** `xcode-select --install`, and accept the dialog
+
+Then clone the repository and go into it. This puts it in a folder called `acme-dms` in your home folder:
+
+```bash
+cd ~
+git clone https://github.com/ZafarAli110/acme-dms.git
+cd acme-dms
+```
+
+### 3. Run the setup
+
+In the same terminal, inside the `acme-dms` folder:
+
+- **Windows** (the administrator PowerShell):
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File .\setup.ps1
+  ```
+  It uses `winget` for fnm, the .NET SDK and Docker Desktop (installing WSL 2 first if it is missing), the official
+  installers for Bun and the Aspire CLI, adds each to your `PATH`, and switches fnm on in your PowerShell profile. If
+  it installed Docker Desktop or WSL 2, **restart Windows once**.
+- **macOS** (Terminal):
+  ```bash
+  ./setup.sh
+  ```
+  It uses Homebrew (installing it first if needed) for fnm, the .NET SDK and Docker Desktop, the official installers
+  for Bun and the Aspire CLI, and adds the `PATH` and fnm lines to `~/.zshrc` (or `~/.bash_profile` for bash). It may
+  ask for your password.
+
+What it installs:
 
 | Tool                                                  | Version | Check              |
 | ----------------------------------------------------- | ------- | ------------------ |
@@ -108,46 +151,20 @@ One script installs everything Acme DMS needs, and skips anything you already ha
 **Node.js comes through fnm, so a Node you already have is not touched.** Inside this folder fnm switches to Node 26
 on its own (it reads `.nvmrc`); everywhere else you keep the version you had. The script checks this at the end.
 
-### Windows
+### 4. Check
 
-Open **PowerShell as administrator** (right-click PowerShell > Run as administrator: Docker Desktop and WSL 2 need it),
-go to this folder, and run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\setup.ps1
-```
-
-It uses `winget` for Git, fnm, the .NET SDK and Docker Desktop (installing WSL 2 first if it is missing), the official
-installers for Bun and the Aspire CLI, adds each to your `PATH`, and switches fnm on in your PowerShell profile. If it
-installed Docker Desktop or WSL 2, **restart Windows once**, then start Docker Desktop.
-
-### macOS
-
-In a terminal, in this folder:
-
-```bash
-./setup.sh
-```
-
-It uses Homebrew (installing it first if needed) for Git, fnm, the .NET SDK and Docker Desktop, the official
-installers for Bun and the Aspire CLI, and adds the `PATH` and fnm lines to `~/.zshrc` (or `~/.bash_profile` for
-bash). It may ask for your password. Start Docker Desktop once afterwards: `open -a Docker`.
-
-### Then
-
-Open a **new** terminal (so it sees the new `PATH`), make sure Docker Desktop is running, and check each tool with the
-commands in the table. The tests use Docker too: dealership-api's tests run against a real Postgres that
-[Testcontainers](https://testcontainers.com) starts in Docker for each test run.
+Open a **new** terminal (so it sees the new `PATH`; on Windows an ordinary PowerShell is fine from now on), go to the
+folder with `cd ~/acme-dms`, and run the check commands from the table. The tests use Docker too: dealership-api's
+tests run against a real Postgres that [Testcontainers](https://testcontainers.com) starts in Docker for each run.
 
 ## Run it
 
-**Start Docker Desktop first, and wait until it says it is running.** `bun run dev` starts Postgres, RabbitMQ and the
-other containers in Docker; without it they never start.
+**Start Docker Desktop first, and wait until it says it is running** (Windows: from the Start menu; macOS:
+`open -a Docker`). `bun run dev` starts Postgres, RabbitMQ and the other containers in Docker; without it they never
+start. Then, in a terminal:
 
 ```bash
-git clone <repo-url> acme-dms
-cd acme-dms
-bun install          # TypeScript dependencies for every project
+cd ~/acme-dms
 bun run dev          # = aspire run (Docker Desktop must be running)
 ```
 
