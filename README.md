@@ -7,7 +7,7 @@ and real conventions.
 - [The business](#the-business)
 - [What it does](#what-it-does)
 - [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
+- [Setup](#setup)
 - [Run it](#run-it)
 - [Look around a running system](#look-around-a-running-system)
 - [Everyday commands](#everyday-commands)
@@ -92,64 +92,52 @@ acme-dms/
   scripts/                helper scripts (see "Look around a running system")
 ```
 
-## Prerequisites
+## Setup
 
-Install these once. Each has a check command; run it in a **new** terminal after installing.
+One script installs everything Acme DMS needs, and skips anything you already have, so it is safe to run again:
 
-| Tool                                           | Version | Check                          |
-| ---------------------------------------------- | ------- | ------------------------------ |
-| Git                                            | recent  | `git --version`                |
-| Node.js                                        | 26      | `node -v`                      |
-| Bun                                            | 1.4.4+  | `bun -v`                       |
-| .NET SDK (the SDK, not just the runtime)       | 10      | `dotnet --version`             |
-| Podman Desktop (recommended) or Docker Desktop | current | `podman info` or `docker info` |
-| Aspire CLI                                     | 13.6    | `aspire --version`             |
+| Tool                                                  | Version | Check              |
+| ----------------------------------------------------- | ------- | ------------------ |
+| Git                                                   | recent  | `git --version`    |
+| Node.js, through [fnm](https://github.com/Schniz/fnm) | 26      | `node -v`          |
+| Bun                                                   | 1.4.4+  | `bun -v`           |
+| .NET SDK (the SDK, not just the runtime)              | 10      | `dotnet --version` |
+| Docker Desktop                                        | current | `docker info`      |
+| Aspire CLI                                            | 13.6    | `aspire --version` |
 
-### Windows (PowerShell)
+**Node.js comes through fnm, so a Node you already have is not touched.** Inside this folder fnm switches to Node 26
+on its own (it reads `.nvmrc`); everywhere else you keep the version you had. The script checks this at the end.
 
-```powershell
-winget install --id Git.Git
-winget install --id OpenJS.NodeJS
-powershell -c "irm bun.sh/install.ps1 | iex"
-winget install --id Microsoft.DotNet.SDK.10
-winget install --id RedHat.Podman-Desktop
-irm https://aspire.dev/install.ps1 | iex
-```
+### Windows
 
-Then set up Podman and tell Aspire to use it (once), and open a new terminal:
+Open **PowerShell as administrator** (right-click PowerShell > Run as administrator: Docker Desktop and WSL 2 need it),
+go to this folder, and run:
 
 ```powershell
-podman machine init
-podman machine start
-[Environment]::SetEnvironmentVariable("ASPIRE_CONTAINER_RUNTIME", "podman", "User")
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-### macOS (zsh)
+It uses `winget` for Git, fnm, the .NET SDK and Docker Desktop (installing WSL 2 first if it is missing), the official
+installers for Bun and the Aspire CLI, adds each to your `PATH`, and switches fnm on in your PowerShell profile. If it
+installed Docker Desktop or WSL 2, **restart Windows once**, then start Docker Desktop.
+
+### macOS
+
+In a terminal, in this folder:
 
 ```bash
-brew install git node bun
-brew install --cask dotnet-sdk
-brew install podman
-curl -sSL https://aspire.dev/install.sh | bash
-podman machine init --cpus 4 --memory 8192
-podman machine start
-echo 'export ASPIRE_CONTAINER_RUNTIME=podman' >> ~/.zshrc && source ~/.zshrc
+./setup.sh
 ```
 
-> Using Docker Desktop instead? Skip the Podman steps, do not set `ASPIRE_CONTAINER_RUNTIME`, and make sure Docker
-> Desktop is running.
+It uses Homebrew (installing it first if needed) for Git, fnm, the .NET SDK and Docker Desktop, the official
+installers for Bun and the Aspire CLI, and adds the `PATH` and fnm lines to `~/.zshrc` (or `~/.bash_profile` for
+bash). It may ask for your password. Start Docker Desktop once afterwards: `open -a Docker`.
 
-**The tests use the same container runtime.** dealership-api's tests run against a real Postgres that
-[Testcontainers](https://testcontainers.com) starts for each test run. Docker Desktop works as it is. With Podman,
-point Testcontainers at Podman's socket and turn off its cleanup container (once, in your shell profile):
+### Then
 
-```bash
-export DOCKER_HOST="unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')"
-export TESTCONTAINERS_RYUK_DISABLED=true
-```
-
-On Windows (PowerShell), with Podman: `[Environment]::SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true", "User")`;
-Podman Desktop's Docker compatibility (Settings → Docker Compatibility) provides the socket.
+Open a **new** terminal (so it sees the new `PATH`), make sure Docker Desktop is running, and check each tool with the
+commands in the table. The tests use Docker too: dealership-api's tests run against a real Postgres that
+[Testcontainers](https://testcontainers.com) starts in Docker for each test run.
 
 ## Run it
 
@@ -171,9 +159,6 @@ The first run takes a few minutes: it builds the .NET projects and pulls the con
 4. Open the **web** URL and sign in (the form is pre-filled with `sam`). The gateway is always at
    `http://localhost:5200`.
 5. Press **Ctrl+C** in the first terminal to stop everything.
-
-**Ran Acme DMS before 29 October 2026?** dealership-api then used TypeORM, and its database must be recreated once: run
-`bun run reset`, then restart `dealership-api` in the dashboard (it says so in its log if you forget).
 
 `bun run reset` puts the data back to the seeded state at any time (parts, stock, photos, customers and queues; users
 are kept).
@@ -295,8 +280,8 @@ echoed in every response and attached to every log line.
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `aspire: command not found`                     | Open a new terminal. If you installed it with `dotnet tool install -g Aspire.Cli`, add `~/.dotnet/tools` (macOS) or `%USERPROFILE%\.dotnet\tools` (Windows) to `PATH`. The .NET build needs it too. |
 | `You must install .NET to run this application` | .NET is in a non-standard place (e.g. `brew install dotnet`). Set `DOTNET_ROOT`, e.g. `export DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec`, or use the official installer.                         |
-| Containers never start                          | Start Podman (`podman machine start`) or Docker Desktop. With Podman, check `ASPIRE_CONTAINER_RUNTIME=podman`.                                                                                      |
-| `password authentication failed` for Postgres   | An old data volume has a different password. Stop the app, remove the volume (`podman volume ls`, then `podman volume rm <name>`, or the same with `docker`), and start again.                      |
+| Containers never start                          | Start Docker Desktop and wait until it says it is running (`docker info` answers).                                                                                                                  |
+| `password authentication failed` for Postgres   | An old data volume has a different password. Stop the app, remove the volume (`docker volume ls`, then `docker volume rm <name>`), and start again.                                                 |
 | A .NET change does not show up                  | Restarting a resource does not rebuild it. Run `dotnet build` on that project, then restart it in the dashboard, or stop and run `bun run dev` again. TypeScript services rebuild on save.          |
 | `bun run seed` says it cannot find the gateway  | Start the system first (`bun run dev`) and wait until everything is Healthy.                                                                                                                        |
 | A photo stays `pending`                         | Check `bun run errors` and the RabbitMQ UI (the `rabbitmq` URL in the dashboard, user `acme`/`acme`): a message in a `*.dlq` queue tells you which consumer gave up and why.                        |
