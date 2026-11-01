@@ -1,15 +1,16 @@
 {
   "title": "Sign in",
-  "subtitle": "Dealer management for Northwind Motors",
+  "subtitle": "Dealer management system",
   "email": "Email",
   "password": "Password",
   "signIn": "Sign in",
   "signingIn": "Signing in…",
   "demoUsers": "Demo users · password {{password}}",
   "demoUser": {
-    "sam": "Sam · Service advisor, Northside and Riverside",
-    "rita": "Rita · Service advisor, Riverside and Westgate",
-    "maria": "Maria · Service manager, Northside, Riverside and Westgate"
+    "sam": "Sam · Northwind Motors · Service advisor, Northside and Riverside",
+    "rita": "Rita · Northwind Motors · Service advisor, Riverside and Westgate",
+    "maria": "Maria · Northwind Motors · Service manager, Northside, Riverside and Westgate",
+    "tom": "Tom · City Motors · Service manager, Central"
   },
   "invalidCredentials": "The email or password is not right."
 }
