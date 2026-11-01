@@ -49,10 +49,11 @@ say "Node.js 26 (through fnm)"
 existing_node=""
 if have node; then existing_node="$(node -v)"; fi
 if have fnm; then note "fnm already installed"; else brew install fnm; fi
-# fnm switches Node per folder: inside acme-dms it reads .nvmrc (26)
+# fnm switches Node per folder: inside acme-dms it reads .nvmrc (the exact version, e.g. 26.13.0)
 add_line "eval \"\$(fnm env --use-on-cd --shell $SHELL_NAME)\""
 eval "$(fnm env --shell bash)" # for the rest of this script (it runs in bash)
-if fnm list | grep -q "v26\."; then note "Node 26 already installed through fnm"; else fnm install 26; fi
+node_version="$(tr -d '[:space:]v' < .nvmrc)"
+if fnm list | grep -q "v$node_version"; then note "Node $node_version already installed through fnm"; else fnm install "$node_version"; fi
 if [ -n "$existing_node" ]; then
   # Keep your existing Node outside this folder: no fnm default. Then check it in a fresh shell.
   fnm unalias default >/dev/null 2>&1 || true
@@ -60,7 +61,7 @@ if [ -n "$existing_node" ]; then
   if [ "$outside" = "$existing_node" ]; then
     note "your Node $existing_node is unchanged outside acme-dms; inside it, fnm uses Node 26"
   else
-    fnm default 26
+    fnm default "$node_version"
     note "could not keep Node $existing_node as the default, so fnm's Node 26 is the default now ('fnm default <version>' to change it)"
   fi
 fi

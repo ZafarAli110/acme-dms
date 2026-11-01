@@ -63,7 +63,7 @@ $existingNode = $null
 if (Have "node") { $existingNode = (node -v) }
 if (Have "fnm") { Note "fnm already installed" } else { Install-WithWinget "Schniz.fnm" }
 
-# fnm switches Node per folder: inside acme-dms it reads .nvmrc (26). Turn it on in every PowerShell profile.
+# fnm switches Node per folder: inside acme-dms it reads .nvmrc (the exact version, e.g. 26.13.0). Turn it on in every PowerShell profile.
 $profileLine = "fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression"
 $documents = [Environment]::GetFolderPath("MyDocuments")
 foreach ($profileFile in @("$documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1", "$documents\PowerShell\Microsoft.PowerShell_profile.ps1")) {
@@ -75,7 +75,8 @@ foreach ($profileFile in @("$documents\WindowsPowerShell\Microsoft.PowerShell_pr
 }
 fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
 
-if ((fnm list) -match "v26\.") { Note "Node 26 already installed through fnm" } else { fnm install 26 }
+$nodeVersion = (Get-Content (Join-Path $PSScriptRoot ".nvmrc") -Raw).Trim().TrimStart("v")
+if ((fnm list) -match "v$([regex]::Escape($nodeVersion))") { Note "Node $nodeVersion already installed through fnm" } else { fnm install $nodeVersion }
 if ($existingNode) {
   # Keep your existing Node outside this folder: no fnm default. Then check it in a fresh PowerShell.
   fnm unalias default 2>$null
@@ -83,7 +84,7 @@ if ($existingNode) {
   if ($outside -eq $existingNode) {
     Note "your Node $existingNode is unchanged outside acme-dms; inside it, fnm uses Node 26"
   } else {
-    fnm default 26
+    fnm default $nodeVersion
     Note "could not keep Node $existingNode as the default, so fnm's Node 26 is the default now ('fnm default <version>' to change it)"
   }
 }
