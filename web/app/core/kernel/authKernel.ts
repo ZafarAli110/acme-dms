@@ -1,17 +1,17 @@
-import {i18n} from '../../i18n';
-import {type CurrentUser, identityQueries} from '../queries/identityQueries';
-import {queryClient} from '../queries/queryClient';
-import {session} from '../storage/sessionStore';
+import { i18n } from "../../i18n";
+import { type CurrentUser, identityQueries } from "../queries/identityQueries";
+import { queryClient } from "../queries/queryClient";
+import { session } from "../storage/sessionStore";
 
-export type AuthStatus = 'resolving' | 'signed-in' | 'signed-out';
+export type AuthStatus = "resolving" | "signed-in" | "signed-out";
 
 export interface AuthSnapshot {
   status: AuthStatus;
   user: CurrentUser | null;
 }
 
-const SIGNED_OUT: AuthSnapshot = {status: 'signed-out', user: null};
-const RESOLVING: AuthSnapshot = {status: 'resolving', user: null};
+const SIGNED_OUT: AuthSnapshot = { status: "signed-out", user: null };
+const RESOLVING: AuthSnapshot = { status: "resolving", user: null };
 
 /**
  * The single source of truth for who is signed in, outside React. The router middleware waits on it before any
@@ -34,7 +34,7 @@ export class AuthKernel {
 
   /** Resolves once a stored token has been checked against identity-api (at most once per sign-in). */
   public async waitForResolvedAuthAsync(): Promise<AuthSnapshot> {
-    if (this._snapshot.status === 'resolving') {
+    if (this._snapshot.status === "resolving") {
       this._resolving ??= this.resolveUserAsync();
       await this._resolving;
     }
@@ -43,7 +43,7 @@ export class AuthKernel {
 
   /** Throws the identity-api problem (for example 401) when the email or password is wrong. */
   public async signInAsync(email: string, password: string): Promise<void> {
-    const {accessToken} = await identityQueries.signInAsync(email, password);
+    const { accessToken } = await identityQueries.signInAsync(email, password);
     // Start from a clean session: a location left by an earlier user must never be sent with the new token.
     session.clear();
     queryClient.clear();
@@ -51,8 +51,8 @@ export class AuthKernel {
     this.commit(RESOLVING);
     this._resolving = this.resolveUserAsync();
     await this._resolving;
-    if (this._snapshot.status !== 'signed-in') {
-      throw new Error(i18n.t('errors.accountNotLoaded'));
+    if (this._snapshot.status !== "signed-in") {
+      throw new Error(i18n.t("errors.accountNotLoaded"));
     }
   }
 
@@ -66,7 +66,7 @@ export class AuthKernel {
   private async resolveUserAsync(): Promise<void> {
     try {
       const user = await identityQueries.getCurrentUserAsync();
-      this.commit({status: 'signed-in', user});
+      this.commit({ status: "signed-in", user });
     } catch {
       // An expired or unknown token: back to the sign-in page.
       session.clear();

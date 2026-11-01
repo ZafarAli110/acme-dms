@@ -1,26 +1,29 @@
-import {Inject, Injectable} from '@nestjs/common';
-import {and, asc, count, eq, ilike, or, sql, type SQL} from 'drizzle-orm';
-import type {IGetCustomerListQueryHandler} from '#business-logic-abstractions/handlers/customers/get-list/get-customer-list.query-handler.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {CustomerListItemDto} from '#dto/customers/customer-list-item.dto';
-import type {ListQueryDto} from '#dto/paging/list-query.dto';
-import type {PageResponseDto} from '#dto/paging/page-response.dto';
-import {customers, notDeleted} from '#persistence/schema/index';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {listFilter, listOrderBy, type ListColumns} from '../../../list-query/list-columns';
-import {requireLocation} from '../../../user-context/require-location';
-import {toCustomerListItemDto} from '../customer.mapper';
+import { Inject, Injectable } from "@nestjs/common";
+import { and, asc, count, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import type { IGetCustomerListQueryHandler } from "#business-logic-abstractions/handlers/customers/get-list/get-customer-list.query-handler.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
+import type { ListQueryDto } from "#dto/paging/list-query.dto";
+import type { PageResponseDto } from "#dto/paging/page-response.dto";
+import { customers, notDeleted } from "#persistence/schema/index";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { listFilter, listOrderBy, type ListColumns } from "../../../list-query/list-columns";
+import { requireLocation } from "../../../user-context/require-location";
+import { toCustomerListItemDto } from "../customer.mapper";
 
 /** What the customer list can be sorted and filtered by: the grid's field names. */
 export const CUSTOMER_LIST_COLUMNS: ListColumns = {
   // "Surname, First name": sorts by surname, and a filter on the name matches either.
-  name: {source: sql`${customers.surname} || ', ' || ${customers.firstName}`, type: 'text'},
-  companyName: {source: customers.companyName, type: 'text'},
-  email: {source: customers.email, type: 'text'},
-  phone: {source: customers.phone, type: 'text'},
-  city: {source: customers.city, type: 'text'},
-  status: {source: customers.status, type: 'choice'},
-  lastContactDate: {source: customers.lastContactDate, type: 'date'},
+  name: { source: sql`${customers.surname} || ', ' || ${customers.firstName}`, type: "text" },
+  companyName: { source: customers.companyName, type: "text" },
+  email: { source: customers.email, type: "text" },
+  phone: { source: customers.phone, type: "text" },
+  city: { source: customers.city, type: "text" },
+  status: { source: customers.status, type: "choice" },
+  lastContactDate: { source: customers.lastContactDate, type: "date" },
 };
 
 /**
@@ -49,7 +52,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
       listFilter(CUSTOMER_LIST_COLUMNS, query),
     );
 
-    await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const items = await work.db
       .select()
       .from(customers)
@@ -64,9 +67,9 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
       )
       .limit(pageSize)
       .offset((page - 1) * pageSize);
-    const [counted] = await work.db.select({total: count()}).from(customers).where(where);
+    const [counted] = await work.db.select({ total: count() }).from(customers).where(where);
     const total = counted?.total ?? 0;
-    return {items: items.map(toCustomerListItemDto), total, page, pageSize};
+    return { items: items.map(toCustomerListItemDto), total, page, pageSize };
   }
 }
 

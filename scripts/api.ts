@@ -6,45 +6,45 @@
 //
 // It signs in through identity-api, starts at the user's default location unless --location is given, and prints the
 // status, the correlation id and the JSON body.
-import {DEMO_USERS, callAsync, resourceUrl, signInAsync} from './running-system';
+import { DEMO_USERS, callAsync, resourceUrl, signInAsync } from "./running-system";
 
 function usage(message: string): never {
   console.error(
-    `${message}\n\nUsage: bun run api as <${Object.keys(DEMO_USERS).join('|')}> [--location <name|code>] <METHOD> <path> [json-body]`,
+    `${message}\n\nUsage: bun run api as <${Object.keys(DEMO_USERS).join("|")}> [--location <name|code>] <METHOD> <path> [json-body]`,
   );
   process.exit(1);
 }
 
 const args = process.argv.slice(2);
-if (args[0] !== 'as' || !args[1] || !DEMO_USERS[args[1]]) {
+if (args[0] !== "as" || !args[1] || !DEMO_USERS[args[1]]) {
   usage('Missing or unknown "as <user>".');
 }
 const user = args[1];
 let rest = args.slice(2);
 let locationFilter: string | undefined;
-if (rest[0] === '--location') {
+if (rest[0] === "--location") {
   locationFilter = rest[1]?.toLowerCase();
   rest = rest.slice(2);
 }
 const [method, path, body] = rest;
 if (!method || !path) {
-  usage('Missing <METHOD> <path>.');
+  usage("Missing <METHOD> <path>.");
 }
 
-const gateway = resourceUrl('gateway-api', 'http');
+const gateway = resourceUrl("gateway-api", "http");
 const session = await signInAsync(gateway, user);
 const location = locationFilter
   ? session.locations.find((l) => l.name.toLowerCase() === locationFilter || l.code.toLowerCase() === locationFilter)
   : (session.locations.find((l) => l.id === session.defaultLocationId) ?? session.locations[0]);
 if (!location) {
-  usage(`${user} does not work at "${locationFilter}". Locations: ${session.locations.map((l) => l.name).join(', ')}`);
+  usage(`${user} does not work at "${locationFilter}". Locations: ${session.locations.map((l) => l.name).join(", ")}`);
 }
 
 const response = await callAsync(gateway, session, location, method.toUpperCase(), path, body);
 const text = await response.text();
 console.log(`${method.toUpperCase()} ${path} as ${user} @ ${location.name} (${location.role})`);
 console.log(
-  `→ ${response.status} ${response.statusText}   correlation-id: ${response.headers.get('x-correlation-id') ?? '-'}`,
+  `→ ${response.status} ${response.statusText}   correlation-id: ${response.headers.get("x-correlation-id") ?? "-"}`,
 );
 try {
   console.log(JSON.stringify(JSON.parse(text), null, 2));

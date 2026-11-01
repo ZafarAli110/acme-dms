@@ -1,5 +1,5 @@
-import type {PartInventoryDto} from './part-inventory.dto';
-import type {PartPhotoResponseDto} from './part-photo-response.dto';
+import type { PartInventoryDto } from "./part-inventory.dto";
+import type { PartPhotoResponseDto } from "./part-photo-response.dto";
 
 export interface PartResponseDto {
   id: string;

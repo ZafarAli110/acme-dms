@@ -1,15 +1,18 @@
-import {BadRequestException, ConflictException, Inject, Injectable} from '@nestjs/common';
-import {and, eq} from 'drizzle-orm';
-import type {ICreatePartCommandHandler} from '#business-logic-abstractions/handlers/parts/create/create-part.command-handler.interface';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {PartCreateRequestDto} from '#dto/parts/part-create-request.dto';
-import type {PartResponseDto} from '#dto/parts/part-response.dto';
-import {bins, notDeleted, partInventories, parts} from '#persistence/schema/index';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {createdAudit} from '../../../audit/audit-fields';
-import {requireLocation} from '../../../user-context/require-location';
-import {toPartResponseDto} from '../part.mapper';
+import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
+import { and, eq } from "drizzle-orm";
+import type { ICreatePartCommandHandler } from "#business-logic-abstractions/handlers/parts/create/create-part.command-handler.interface";
+import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { PartCreateRequestDto } from "#dto/parts/part-create-request.dto";
+import type { PartResponseDto } from "#dto/parts/part-response.dto";
+import { bins, notDeleted, partInventories, parts } from "#persistence/schema/index";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { createdAudit } from "../../../audit/audit-fields";
+import { requireLocation } from "../../../user-context/require-location";
+import { toPartResponseDto } from "../part.mapper";
 
 /** Adds a part to the catalogue and stocks it at the selected location, in a bin of that location. */
 @Injectable()
@@ -43,7 +46,7 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
       throw new BadRequestException(`Bin ${request.binId} is not a bin of this location; pick one from GET /v1/bins.`);
     }
     const [taken] = await work.db
-      .select({id: parts.id})
+      .select({ id: parts.id })
       .from(parts)
       .where(
         and(eq(parts.dealerId, userContext.dealerId), eq(parts.partNumber, request.partNumber), notDeleted(parts)),

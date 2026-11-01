@@ -1,13 +1,16 @@
-import {Inject, Injectable} from '@nestjs/common';
-import {and, eq} from 'drizzle-orm';
-import type {IMarkPartPhotoReadyCommandHandler} from '#business-logic-abstractions/handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler.interface';
-import {UnhandledMessageError} from '#business-logic-abstractions/messaging/unhandled-message.error';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import {SYSTEM_USER_ID} from '#business-logic-abstractions/user-context/system-user';
-import type {DocumentProcessedMessageDto, MessageEnvelopeDto} from '#dto/messages/document-messages.dto';
-import {partPhotos, processedMessages} from '#persistence/schema/index';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {PART_PHOTO_OWNER_TYPE} from '../part-photo.rules';
+import { Inject, Injectable } from "@nestjs/common";
+import { and, eq } from "drizzle-orm";
+import type { IMarkPartPhotoReadyCommandHandler } from "#business-logic-abstractions/handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler.interface";
+import { UnhandledMessageError } from "#business-logic-abstractions/messaging/unhandled-message.error";
+import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import { SYSTEM_USER_ID } from "#business-logic-abstractions/user-context/system-user";
+import type { DocumentProcessedMessageDto, MessageEnvelopeDto } from "#dto/messages/document-messages.dto";
+import { partPhotos, processedMessages } from "#persistence/schema/index";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { PART_PHOTO_OWNER_TYPE } from "../part-photo.rules";
 
 /** document-api finished a document: if it is a part photo, mark the photo ready. Safe to receive twice. */
 @Injectable()
@@ -24,7 +27,7 @@ export class MarkPartPhotoReadyCommandHandler implements IMarkPartPhotoReadyComm
   }
 
   public async executeAsync(message: MessageEnvelopeDto<DocumentProcessedMessageDto>): Promise<void> {
-    const {data} = message;
+    const { data } = message;
     if (data.ownerType !== PART_PHOTO_OWNER_TYPE) {
       throw new UnhandledMessageError(`dealership-api does not handle documents owned by '${data.ownerType}'.`);
     }
@@ -33,7 +36,7 @@ export class MarkPartPhotoReadyCommandHandler implements IMarkPartPhotoReadyComm
     // The inbox row and the photo update commit together; a redelivered message hits the conflict and stops here.
     const [first] = await work.db
       .insert(processedMessages)
-      .values({messageId: message.messageId, processedAt: now})
+      .values({ messageId: message.messageId, processedAt: now })
       .onConflictDoNothing()
       .returning();
     if (!first) {
@@ -42,7 +45,7 @@ export class MarkPartPhotoReadyCommandHandler implements IMarkPartPhotoReadyComm
     await work.db
       .update(partPhotos)
       // Background work: no signed-in user, so the system is recorded as the one who changed the photo.
-      .set({status: 'ready', failureReason: null, updatedAt: now, updatedBy: SYSTEM_USER_ID})
+      .set({ status: "ready", failureReason: null, updatedAt: now, updatedBy: SYSTEM_USER_ID })
       .where(and(eq(partPhotos.dealerId, data.dealerId), eq(partPhotos.documentId, data.documentId)));
     await work.commitAsync();
   }
