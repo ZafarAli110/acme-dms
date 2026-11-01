@@ -101,6 +101,9 @@ export PATH="$HOME/.aspire/bin:$PATH"
 # ── 8. This repository's packages ───────────────────────────────────────────────────────────────────────────────────
 say "Packages (bun install)"
 bun install
+# The pre-commit check (.githooks). Set here, once, on purpose: nothing runs on `bun install`.
+git config core.hooksPath .githooks
+note "pre-commit check switched on (.githooks)"
 
 # ── Done ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 say "Installed"

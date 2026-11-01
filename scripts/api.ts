@@ -31,7 +31,7 @@ if (!method || !path) {
   usage('Missing <METHOD> <path>.');
 }
 
-const gateway = resourceUrl('gateway', 'http');
+const gateway = resourceUrl('gateway-api', 'http');
 const session = await signInAsync(gateway, user);
 const location = locationFilter
   ? session.locations.find((l) => l.name.toLowerCase() === locationFilter || l.code.toLowerCase() === locationFilter)

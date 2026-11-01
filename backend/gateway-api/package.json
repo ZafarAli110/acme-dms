@@ -1,5 +1,5 @@
 {
-  "name": "@acme/gateway",
+  "name": "@acme/gateway-api",
   "version": "26.11.0",
   "private": true,
   "scripts": {

@@ -63,7 +63,7 @@ for (const queue of queues) {
 console.log(`rabbitmq: purged ${queues.map((q) => q.name).join(', ') || 'no queues'}`);
 
 // identity-api's development-only endpoint: it has no database of ours to truncate, the demo users' rows are its own.
-const identityReset = await fetch(`${resourceUrl('gateway', 'http')}/api/identity/v1/dev/demo-users/reset`, {
+const identityReset = await fetch(`${resourceUrl('gateway-api', 'http')}/api/identity/v1/dev/demo-users/reset`, {
   method: 'POST',
 });
 if (!identityReset.ok) {
