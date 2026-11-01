@@ -20,5 +20,6 @@ public sealed class GetHealthQueryHandlerTests
 
         Assert.AreEqual("ok", response.Status);
         Assert.IsTrue(response.DatabaseReachable);
+        StringAssert.Matches(response.Version, new global::System.Text.RegularExpressions.Regex(@"^\d+\.\d+\.\d+$"));
     }
 }

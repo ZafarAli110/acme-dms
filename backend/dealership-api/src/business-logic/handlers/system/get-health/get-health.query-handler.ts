@@ -5,6 +5,6 @@ import type {HealthCheckResponseDto} from '#dto/system/health-check-response.dto
 @Injectable()
 export class GetHealthQueryHandler implements IGetHealthQueryHandler {
   public async executeAsync(): Promise<HealthCheckResponseDto> {
-    return {status: 'ok', uptimeSeconds: Math.round(process.uptime())};
+    return {status: 'ok', version: APP_VERSION, uptimeSeconds: Math.round(process.uptime())};
   }
 }

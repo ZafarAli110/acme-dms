@@ -144,14 +144,15 @@ What it installs:
 | Tool                                                  | Version | Check              |
 | ----------------------------------------------------- | ------- | ------------------ |
 | Git                                                   | recent  | `git --version`    |
-| Node.js, through [fnm](https://github.com/Schniz/fnm) | 26      | `node -v`          |
+| Node.js, through [fnm](https://github.com/Schniz/fnm) | 26.13.0 | `node -v`          |
 | Bun                                                   | 1.4.4+  | `bun -v`           |
 | .NET SDK (the SDK, not just the runtime)              | 10      | `dotnet --version` |
 | Docker Desktop                                        | current | `docker info`      |
 | Aspire CLI                                            | 13.6    | `aspire --version` |
 
-**Node.js comes through fnm, so a Node you already have is not touched.** Inside this folder fnm switches to Node 26
-on its own (it reads `.nvmrc`); everywhere else you keep the version you had. The script checks this at the end.
+**Node.js comes through fnm, so a Node you already have is not touched.** Inside this folder fnm switches to the Node in
+`.nvmrc` (26.13.0, the current LTS) on its own; everywhere else you keep the version you had. The script checks this at
+the end. `bun run dev` and `bun run gate:fast` refuse to start on any other Node and say how to install the right one.
 
 ### 4. Check
 
@@ -236,16 +237,23 @@ Every project, in either language, has the same targets, run through [Nx](https:
 | `bun run lint`                    | Lint every project (oxlint, .NET analyzers)                                                |
 | `bun run test`                    | Run every project's unit tests                                                             |
 | `bun run format`                  | Format TypeScript, JSON and Markdown                                                       |
-| `bun run gate:fast`               | Format check, lint, typecheck and tests for changed projects                               |
+| `bun run gate:fast`               | Format check, lint, typecheck and tests for the projects changed since your branch started |
 | `bun run gate:slow`               | End-to-end tests of the web app (Playwright, installed Chrome), against the running system |
 | `bunx nx test @acme/identity-api` | One target for one project                                                                 |
 
 | Target      | TypeScript        | .NET                                    |
 | ----------- | ----------------- | --------------------------------------- |
-| `format`    | `bun fmt --check` | `dotnet format --verify-no-changes`     |
+| `format`    | `bun fmt --check` | `dotnet format whitespace`              |
 | `lint`      | `oxlint`          | `dotnet build -warnaserror` (analyzers) |
 | `typecheck` | `tsc` (TS 7)      | `dotnet build`                          |
 | `test`      | Vitest            | MSTest + Moq                            |
+
+Every commit runs a quick check of the staged files first (`.githooks/pre-commit`, switched on by `bun install`):
+formatting, oxlint with each project's import rules, and C# whitespace. CI runs every check on `main`, every `lab/`
+branch and every pull request.
+
+Each service answers `GET /v1/system/health` with its status and the product version, `26.11.0`. The version is set
+once, in the root `package.json`: .NET reads it through `Directory.Build.props`, and dealership-api's build writes it in.
 
 ## Conventions
 
