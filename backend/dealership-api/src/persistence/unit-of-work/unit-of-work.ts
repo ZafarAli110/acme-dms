@@ -1,12 +1,12 @@
-import {drizzle, type NodePgDatabase} from 'drizzle-orm/node-postgres';
-import pg, {type PoolClient} from 'pg';
-import QueryStream from 'pg-query-stream';
-import * as schema from '../schema';
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import pg, { type PoolClient } from "pg";
+import QueryStream from "pg-query-stream";
+import * as schema from "../schema";
 
 // A streamed read hands dates and numerics over as the text Postgres sends ('2024-06-11', '30161.92'): nothing shifts
 // a day or rounds on the way to a file.
 const RAW_TEXT_TYPES = {
-  getTypeParser: (oid: number, format?: 'text' | 'binary'): ((value: string) => unknown) =>
+  getTypeParser: (oid: number, format?: "text" | "binary"): ((value: string) => unknown) =>
     oid === pg.types.builtins.DATE || oid === pg.types.builtins.NUMERIC
       ? (value: string): string => value
       : pg.types.getTypeParser(oid, format),
@@ -30,7 +30,7 @@ export class UnitOfWork implements AsyncDisposable {
 
   public constructor(client: PoolClient) {
     this._client = client;
-    this.db = drizzle(client, {schema});
+    this.db = drizzle(client, { schema });
   }
 
   /**
@@ -38,17 +38,17 @@ export class UnitOfWork implements AsyncDisposable {
    * row an array in the select's order. For results too big to hold (an export); build the query with Drizzle and pass
    * `.toSQL()`. Destroy the stream to stop early.
    */
-  public stream(query: {sql: string; params: unknown[]}, batchSize: number): QueryStream {
+  public stream(query: { sql: string; params: unknown[] }, batchSize: number): QueryStream {
     return this._client.query(
-      new QueryStream(query.sql, query.params, {batchSize, rowMode: 'array', types: RAW_TEXT_TYPES}),
+      new QueryStream(query.sql, query.params, { batchSize, rowMode: "array", types: RAW_TEXT_TYPES }),
     );
   }
 
   public async commitAsync(): Promise<void> {
     if (this._committed) {
-      throw new Error('The unit of work is already committed.');
+      throw new Error("The unit of work is already committed.");
     }
-    await this._client.query('COMMIT');
+    await this._client.query("COMMIT");
     this._committed = true;
   }
 
@@ -58,7 +58,7 @@ export class UnitOfWork implements AsyncDisposable {
       return;
     }
     try {
-      await this._client.query('ROLLBACK');
+      await this._client.query("ROLLBACK");
       this._client.release();
     } catch (error) {
       // A connection that can't roll back is not given back to the pool.

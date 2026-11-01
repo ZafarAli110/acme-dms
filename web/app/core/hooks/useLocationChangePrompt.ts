@@ -1,8 +1,8 @@
-import {useEffect} from 'react';
-import {useNavigate} from 'react-router';
-import {useLocationChangeGuard} from '../contexts/location/LocationChangeGuardContext';
-import {locationKernel} from '../kernel/locationKernel';
-import {BYPASS_UNSAVED_CHANGES_GUARD} from './useUnsavedChangesGuard';
+import { useEffect } from "react";
+import { useNavigate } from "react-router";
+import { useLocationChangeGuard } from "../contexts/location/LocationChangeGuardContext";
+import { locationKernel } from "../kernel/locationKernel";
+import { BYPASS_UNSAVED_CHANGES_GUARD } from "./useUnsavedChangesGuard";
 
 /**
  * While `isActive`, a location switch is held until the user confirms. On confirm the location changes and the user
@@ -10,7 +10,7 @@ import {BYPASS_UNSAVED_CHANGES_GUARD} from './useUnsavedChangesGuard';
  * `<FormGuards>`.
  */
 export function useLocationChangePrompt(isActive: boolean, redirectTo: string) {
-  const {registerGuard, pendingLocationId, confirmSwitch, cancelSwitch} = useLocationChangeGuard();
+  const { registerGuard, pendingLocationId, confirmSwitch, cancelSwitch } = useLocationChangeGuard();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,9 +24,9 @@ export function useLocationChangePrompt(isActive: boolean, redirectTo: string) {
     const locationId = confirmSwitch();
     if (locationId !== null) {
       locationKernel.switchLocation(locationId);
-      navigate(redirectTo, {state: BYPASS_UNSAVED_CHANGES_GUARD});
+      navigate(redirectTo, { state: BYPASS_UNSAVED_CHANGES_GUARD });
     }
   };
 
-  return {showDialog: pendingLocationId !== null, confirm, cancel: cancelSwitch};
+  return { showDialog: pendingLocationId !== null, confirm, cancel: cancelSwitch };
 }

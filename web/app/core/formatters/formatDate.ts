@@ -7,7 +7,7 @@
 export function formatInstant(
   iso: string,
   language: string,
-  options: Intl.DateTimeFormatOptions = {dateStyle: 'medium', timeStyle: 'short'},
+  options: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "short" },
 ): string {
   return Temporal.Instant.from(iso).toLocaleString(language, options);
 }
@@ -16,7 +16,7 @@ export function formatInstant(
 export function formatPlainDate(
   isoDate: string,
   language: string,
-  options: Intl.DateTimeFormatOptions = {dateStyle: 'medium'},
+  options: Intl.DateTimeFormatOptions = { dateStyle: "medium" },
 ): string {
   return Temporal.PlainDate.from(isoDate).toLocaleString(language, options);
 }
@@ -24,13 +24,13 @@ export function formatPlainDate(
 /** How long ago a calendar day was, in the user's language: "3 days ago", "last month", "il y a 3 jours". */
 export function formatDaysAgo(isoDate: string, language: string): string {
   const today = Temporal.Now.plainDateISO();
-  const days = Temporal.PlainDate.from(isoDate).until(today, {largestUnit: 'day'}).days;
-  const format = new Intl.RelativeTimeFormat(language, {numeric: 'auto'});
+  const days = Temporal.PlainDate.from(isoDate).until(today, { largestUnit: "day" }).days;
+  const format = new Intl.RelativeTimeFormat(language, { numeric: "auto" });
   if (days < 30) {
-    return format.format(-days, 'day');
+    return format.format(-days, "day");
   }
   if (days < 365) {
-    return format.format(-Math.round(days / 30), 'month');
+    return format.format(-Math.round(days / 30), "month");
   }
-  return format.format(-Math.round(days / 365), 'year');
+  return format.format(-Math.round(days / 365), "year");
 }

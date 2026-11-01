@@ -1,20 +1,28 @@
-import {BadRequestException, Inject, Injectable, NotFoundException} from '@nestjs/common';
-import {and, eq} from 'drizzle-orm';
-import type {IUploadPartPhotoCommandHandler} from '#business-logic-abstractions/handlers/parts/upload-photo/upload-part-photo.command-handler.interface';
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { and, eq } from "drizzle-orm";
+import type { IUploadPartPhotoCommandHandler } from "#business-logic-abstractions/handlers/parts/upload-photo/upload-part-photo.command-handler.interface";
 import {
   DOCUMENT_API_CLIENT,
   type IDocumentApiClient,
-} from '#business-logic-abstractions/rest-clients/document-api.client.interface';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {PartPhotoResponseDto} from '#dto/parts/part-photo-response.dto';
-import type {PartPhotoUploadRequestDto} from '#dto/parts/part-photo-upload-request.dto';
-import {notDeleted, partPhotos, parts} from '#persistence/schema/index';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {createdAudit} from '../../../audit/audit-fields';
-import {toPartPhotoResponseDto} from '../part.mapper';
-import {findPhotosAsync} from '../part.queries';
-import {MAX_PHOTOS_PER_PART, PART_PHOTO_OWNER_TYPE, PART_PHOTO_VARIANTS, validatePhotoFile} from '../part-photo.rules';
+} from "#business-logic-abstractions/rest-clients/document-api.client.interface";
+import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { PartPhotoResponseDto } from "#dto/parts/part-photo-response.dto";
+import type { PartPhotoUploadRequestDto } from "#dto/parts/part-photo-upload-request.dto";
+import { notDeleted, partPhotos, parts } from "#persistence/schema/index";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { createdAudit } from "../../../audit/audit-fields";
+import { toPartPhotoResponseDto } from "../part.mapper";
+import { findPhotosAsync } from "../part.queries";
+import {
+  MAX_PHOTOS_PER_PART,
+  PART_PHOTO_OWNER_TYPE,
+  PART_PHOTO_VARIANTS,
+  validatePhotoFile,
+} from "../part-photo.rules";
 
 /**
  * Validates the photo, hands it to document-api for storage and processing, and records the reference as pending.
@@ -65,7 +73,7 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
         partId,
         documentId: document.id,
         originalFileName: request.fileName,
-        status: 'pending',
+        status: "pending",
         failureReason: null,
         isDefault: existingCount === 0,
         ...createdAudit(userContext.userId, this._clock.now()),
@@ -77,9 +85,9 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
 
   /** How many photos the part has; a part that doesn't exist is not found. */
   private async countPhotosAsync(dealerId: string, partId: string): Promise<number> {
-    await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const [part] = await work.db
-      .select({id: parts.id})
+      .select({ id: parts.id })
       .from(parts)
       .where(and(eq(parts.dealerId, dealerId), eq(parts.id, partId), notDeleted(parts)));
     if (!part) {

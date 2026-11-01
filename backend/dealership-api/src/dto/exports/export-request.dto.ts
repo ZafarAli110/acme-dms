@@ -1,7 +1,7 @@
-import {ApiProperty} from '@nestjs/swagger';
-import {Type} from 'class-transformer';
-import {ArrayMaxSize, ArrayMinSize, IsString, MaxLength, MinLength, ValidateNested} from 'class-validator';
-import {ListQueryDto} from '../paging/list-query.dto';
+import { ApiProperty } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { ArrayMaxSize, ArrayMinSize, IsString, MaxLength, MinLength, ValidateNested } from "class-validator";
+import { ListQueryDto } from "../paging/list-query.dto";
 
 /** One column of the file: the list's field, under the heading the user sees it with (in their language). */
 export class ExportColumnDto {
@@ -22,8 +22,8 @@ export class ExportColumnDto {
  * columns, in their order. `page` and `pageSize` are ignored: the file holds every row.
  */
 export class ExportRequestDto extends ListQueryDto {
-  @ApiProperty({type: [ExportColumnDto]})
-  @ValidateNested({each: true})
+  @ApiProperty({ type: [ExportColumnDto] })
+  @ValidateNested({ each: true })
   @Type(() => ExportColumnDto)
   @ArrayMinSize(1)
   @ArrayMaxSize(30)

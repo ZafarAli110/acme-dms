@@ -34,7 +34,7 @@ the same things from its own failures.
 ## L4 Stop a stream without an error nobody listens for
 
 - What happened: a user closing the download crashed the whole process, twice: in Nest, `Emitted 'error' event on
-  PassThrough` (the writer destroyed its stream with an error); in Bun, `ReadableStream is locked` (cancelling a
+PassThrough` (the writer destroyed its stream with an error); in Bun, `ReadableStream is locked` (cancelling a
   stream that was being piped).
 - Why: an `'error'` event with no listener, or a throw in an abort handler, ends the process, not just the request.
 - What fixed it: destroy without an error; cancel through the pipe's signal; the export catches and cleans up.

@@ -1,7 +1,7 @@
-import {createWriteStream} from 'node:fs';
-import {mkdir, rm, stat} from 'node:fs/promises';
-import {join} from 'node:path';
-import {pipeline} from 'node:stream/promises';
+import { createWriteStream } from "node:fs";
+import { mkdir, rm, stat } from "node:fs/promises";
+import { join } from "node:path";
+import { pipeline } from "node:stream/promises";
 import {
   ConflictException,
   ForbiddenException,
@@ -13,20 +13,23 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
   UnprocessableEntityException,
-} from '@nestjs/common';
-import {sql} from 'drizzle-orm';
-import {interval, map, merge, type Observable, startWith, takeWhile} from 'rxjs';
-import type {ExportFile, IExportJobs} from '#business-logic-abstractions/exports/export-jobs.interface';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {ExportJobResponseDto} from '#dto/exports/export-job-response.dto';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {requireLocation} from '../user-context/require-location';
-import {isValidDownloadLink} from './download-link';
-import {ExportJob} from './export-job';
-import type {ExportSource} from './export-source';
-import {type XlsxRow, XlsxWorkbookWriter} from './xlsx-workbook-writer';
-import {SETTINGS, type Settings} from '#settings/settings';
+} from "@nestjs/common";
+import { sql } from "drizzle-orm";
+import { interval, map, merge, type Observable, startWith, takeWhile } from "rxjs";
+import type { ExportFile, IExportJobs } from "#business-logic-abstractions/exports/export-jobs.interface";
+import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { requireLocation } from "../user-context/require-location";
+import { isValidDownloadLink } from "./download-link";
+import { ExportJob } from "./export-job";
+import type { ExportSource } from "./export-source";
+import { type XlsxRow, XlsxWorkbookWriter } from "./xlsx-workbook-writer";
+import { SETTINGS, type Settings } from "#settings/settings";
 
 /**
  * From the settings (EXPORT_MAX_RUNNING, EXPORT_TTL_SECONDS, this._settings.exportDirectory, EXPORT_BATCH_SIZE): how many exports run at
@@ -71,8 +74,8 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
 
   /** Files left by a crash or a restart belong to jobs nobody can reach any more. */
   public async onModuleInit(): Promise<void> {
-    await rm(this._settings.exportDirectory, {recursive: true, force: true});
-    await mkdir(this._settings.exportDirectory, {recursive: true});
+    await rm(this._settings.exportDirectory, { recursive: true, force: true });
+    await mkdir(this._settings.exportDirectory, { recursive: true });
     this._sweeper = setInterval(() => void this.sweepAsync(), Math.min(30_000, this._settings.exportFileTtlMs / 2));
     this._sweeper.unref();
   }
@@ -82,7 +85,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
       clearInterval(this._sweeper);
     }
     for (const job of this._jobs.values()) {
-      job.abort.abort(new Error('The service is stopping.'));
+      job.abort.abort(new Error("The service is stopping."));
     }
   }
 
@@ -93,13 +96,13 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   public start(userContext: UserContext, source: ExportSource, idempotencyKey: string | null): ExportJobResponseDto {
     const locationId = requireLocation(userContext);
     if (idempotencyKey !== null && !IDEMPOTENCY_KEY.test(idempotencyKey)) {
-      throw new UnprocessableEntityException('The Idempotency-Key is 1 to 255 printable characters.');
+      throw new UnprocessableEntityException("The Idempotency-Key is 1 to 255 printable characters.");
     }
     const keyId = idempotencyKey === null ? null : `${userContext.userId}:${idempotencyKey}`;
     const existing = keyId === null ? null : (this._jobsByIdempotencyKey.get(keyId) ?? null);
     if (existing) {
       if (existing.source.fingerprint !== source.fingerprint || existing.locationId !== locationId) {
-        throw new UnprocessableEntityException('This Idempotency-Key was used for a different export.');
+        throw new UnprocessableEntityException("This Idempotency-Key was used for a different export.");
       }
       return existing.toDto();
     }
@@ -130,18 +133,18 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
 
   public async cancelAsync(userContext: UserContext, jobId: string): Promise<void> {
     const job = this.ownJob(userContext, jobId);
-    if (job.status === 'queued') {
+    if (job.status === "queued") {
       this._queue.splice(this._queue.indexOf(job), 1);
       this.updateQueuePositions();
-      job.fail('cancelled', 'Cancelled before it started.');
+      job.fail("cancelled", "Cancelled before it started.");
       return;
     }
     if (!job.isFinished) {
-      job.abort.abort(new Error('Cancelled by the user.'));
+      job.abort.abort(new Error("Cancelled by the user."));
       return;
     }
     await this.deleteFileAsync(job);
-    if (job.status === 'completed') {
+    if (job.status === "completed") {
       job.expire();
     }
   }
@@ -149,22 +152,22 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   public fileForLink(jobId: string, expires: string, signature: string): ExportFile {
     const job = this._jobs.get(jobId);
     if (!job || !isValidDownloadLink(jobId, expires, signature, this._clock.now().epochMilliseconds)) {
-      throw new ForbiddenException('This download link is not valid, or has run out. Export again.');
+      throw new ForbiddenException("This download link is not valid, or has run out. Export again.");
     }
-    if (job.status === 'expired') {
-      throw new GoneException('This export has expired. Export again.');
+    if (job.status === "expired") {
+      throw new GoneException("This export has expired. Export again.");
     }
-    if (job.status !== 'completed' || job.filePath === null) {
+    if (job.status !== "completed" || job.filePath === null) {
       throw new ConflictException(`The export is ${job.status}, not completed.`);
     }
-    return {path: job.filePath, bytes: job.fileBytes ?? 0, fileName: job.source.fileName};
+    return { path: job.filePath, bytes: job.fileBytes ?? 0, fileName: job.source.fileName };
   }
 
   /** Someone else's export is "not found", not "forbidden": its existence is not theirs to know. */
   private ownJob(userContext: UserContext, jobId: string): ExportJob {
     const job = this._jobs.get(jobId);
     if (!job || job.ownerId !== userContext.userId) {
-      throw new NotFoundException('No such export.');
+      throw new NotFoundException("No such export.");
     }
     return job;
   }
@@ -194,7 +197,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
     const writer = new XlsxWorkbookWriter(job.source.sheetName, job.source.columns);
     try {
       job.startCounting();
-      await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
+      await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
       // One snapshot for the count and the rows, so the total the user sees is the number of rows in the file.
       await work.db.execute(sql`set transaction isolation level repeatable read`);
       // A background export has no caller waiting and stops through job.abort, so the per-statement limit that guards
@@ -208,7 +211,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
       const stop = (): void => {
         rows.destroy(job.abort.signal.reason as Error);
       };
-      job.abort.signal.addEventListener('abort', stop, {once: true});
+      job.abort.signal.addEventListener("abort", stop, { once: true });
       const written = pipeline(writer.output, createWriteStream(path));
       // Awaited below once the rows are in; when the export stops early, the cleanup handles it instead.
       written.catch(() => {});
@@ -216,21 +219,21 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
         await writer.writeRowAsync(row);
         job.rowWritten();
       }
-      job.abort.signal.removeEventListener('abort', stop);
+      job.abort.signal.removeEventListener("abort", stop);
       await writer.finishAsync();
       await written;
       job.complete((await stat(path)).size, this._clock.now().epochMilliseconds + this._settings.exportFileTtlMs);
     } catch (error) {
       // Destroyed without an error on purpose: an 'error' event nobody listens for ends the whole process.
       writer.abort();
-      await rm(path, {force: true});
+      await rm(path, { force: true });
       job.filePath = null;
       const message = error instanceof Error ? error.message : String(error);
       if (job.abort.signal.aborted) {
-        job.fail('cancelled', message);
+        job.fail("cancelled", message);
       } else {
         this._logger.error(`Export ${job.id} failed: ${message}`);
-        job.fail('failed', 'The export failed. Try again.');
+        job.fail("failed", "The export failed. Try again.");
       }
     }
   }
@@ -238,7 +241,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   private async deleteFileAsync(job: ExportJob): Promise<void> {
     if (job.filePath !== null) {
       // A download already reading the file finishes: an open file outlives its name.
-      await rm(job.filePath, {force: true});
+      await rm(job.filePath, { force: true });
       job.filePath = null;
     }
   }
@@ -246,7 +249,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   private async sweepAsync(): Promise<void> {
     const now = this._clock.now().epochMilliseconds;
     for (const [id, job] of this._jobs) {
-      if (job.status === 'completed' && (job.expiresAt ?? now) <= now) {
+      if (job.status === "completed" && (job.expiresAt ?? now) <= now) {
         await this.deleteFileAsync(job);
         job.expire();
       }

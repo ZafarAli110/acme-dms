@@ -1,9 +1,9 @@
-import {useCallback, useEffect, useRef} from 'react';
-import {useBlocker} from 'react-router';
-import {useLocationChangeGuard} from '../contexts/location/LocationChangeGuardContext';
+import { useCallback, useEffect, useRef } from "react";
+import { useBlocker } from "react-router";
+import { useLocationChangeGuard } from "../contexts/location/LocationChangeGuardContext";
 
 /** Navigation state that lets one navigation through the guard, e.g. after a confirmed location switch. */
-export const BYPASS_UNSAVED_CHANGES_GUARD = {bypassUnsavedChangesGuard: true};
+export const BYPASS_UNSAVED_CHANGES_GUARD = { bypassUnsavedChangesGuard: true };
 
 /**
  * While `isDirty`, asks before leaving the page: in-app navigation and the back button (React Router's `useBlocker`),
@@ -11,7 +11,7 @@ export const BYPASS_UNSAVED_CHANGES_GUARD = {bypassUnsavedChangesGuard: true};
  * one question is asked. Use it through `<FormGuards>`.
  */
 export function useUnsavedChangesGuard(isDirty: boolean) {
-  const {pendingLocationId, registerBeforeUnloadBypass} = useLocationChangeGuard();
+  const { pendingLocationId, registerBeforeUnloadBypass } = useLocationChangeGuard();
   const isSwitchingLocation = pendingLocationId !== null;
   const bypassed = useRef(false);
 
@@ -27,10 +27,10 @@ export function useUnsavedChangesGuard(isDirty: boolean) {
       currentLocation,
       nextLocation,
     }: {
-      currentLocation: {pathname: string};
-      nextLocation: {pathname: string; state: unknown};
+      currentLocation: { pathname: string };
+      nextLocation: { pathname: string; state: unknown };
     }) => {
-      const state = nextLocation.state as {bypassUnsavedChangesGuard?: boolean} | null;
+      const state = nextLocation.state as { bypassUnsavedChangesGuard?: boolean } | null;
       return (
         isDirty &&
         !isSwitchingLocation &&
@@ -51,12 +51,12 @@ export function useUnsavedChangesGuard(isDirty: boolean) {
         event.preventDefault();
       }
     };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
   return {
-    showDialog: blocker.state === 'blocked',
+    showDialog: blocker.state === "blocked",
     confirm: () => blocker.proceed?.(),
     cancel: () => blocker.reset?.(),
   };

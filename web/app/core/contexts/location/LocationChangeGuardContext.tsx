@@ -1,4 +1,4 @@
-import {createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState} from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from "react";
 
 interface LocationChangeGuardValue {
   /** Registers a guard; returns the function that removes it. While one is registered, switches are held. */
@@ -21,7 +21,7 @@ const LocationChangeGuardContext = createContext<LocationChangeGuardValue | null
  * Lets a form with unsaved changes hold a location switch until the user confirms. Switching location under a form
  * would save its data at the wrong location (bins, customers and stock belong to one location).
  */
-export function LocationChangeGuardProvider({children}: {children: ReactNode}) {
+export function LocationChangeGuardProvider({ children }: { children: ReactNode }) {
   const guardCount = useRef(0);
   const bypasses = useRef(new Set<() => void>());
   const [pendingLocationId, setPendingLocationId] = useState<string | null>(null);
@@ -89,7 +89,7 @@ export function LocationChangeGuardProvider({children}: {children: ReactNode}) {
 export function useLocationChangeGuard(): LocationChangeGuardValue {
   const value = useContext(LocationChangeGuardContext);
   if (!value) {
-    throw new Error('useLocationChangeGuard must be used inside <LocationChangeGuardProvider>');
+    throw new Error("useLocationChangeGuard must be used inside <LocationChangeGuardProvider>");
   }
   return value;
 }

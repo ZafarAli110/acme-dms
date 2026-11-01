@@ -1,6 +1,6 @@
-import {SetMetadata} from '@nestjs/common';
+import { SetMetadata } from "@nestjs/common";
 
-export const REQUIRED_PERMISSION = 'acme:required-permission';
+export const REQUIRED_PERMISSION = "acme:required-permission";
 
 /**
  * The permission the user must hold at the location selected in `x-location-id`.

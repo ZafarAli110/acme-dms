@@ -1,4 +1,4 @@
-export type ExportJobStatus = 'queued' | 'counting' | 'writing' | 'completed' | 'failed' | 'cancelled' | 'expired';
+export type ExportJobStatus = "queued" | "counting" | "writing" | "completed" | "failed" | "cancelled" | "expired";
 
 /** An export as the client follows it: enough for a progress bar, a throughput, a timer and an estimate. */
 export interface ExportJobResponseDto {

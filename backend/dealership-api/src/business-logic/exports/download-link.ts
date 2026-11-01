@@ -1,11 +1,11 @@
-import {createHmac, randomBytes, timingSafeEqual} from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 // Signs with a key made when the service starts: a link outlives neither the file nor a restart. Several instances
 // behind one gateway would share the key from configuration instead.
 const KEY = randomBytes(32);
 
 function signature(jobId: string, expires: number): string {
-  return createHmac('sha256', KEY).update(`${jobId}.${expires}`).digest('base64url');
+  return createHmac("sha256", KEY).update(`${jobId}.${expires}`).digest("base64url");
 }
 
 /** The download path for a finished export, valid until `expires` (epoch milliseconds). */

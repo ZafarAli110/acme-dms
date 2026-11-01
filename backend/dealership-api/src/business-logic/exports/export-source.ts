@@ -1,5 +1,5 @@
-import type {Database} from '#persistence/unit-of-work/unit-of-work';
-import type {XlsxColumn} from './xlsx-workbook-writer';
+import type { Database } from "#persistence/unit-of-work/unit-of-work";
+import type { XlsxColumn } from "./xlsx-workbook-writer";
 
 /**
  * What one list's export reads, given to the runner by that list's start handler. The count and the rows run in the
@@ -12,7 +12,7 @@ export interface ExportSource {
   columns: XlsxColumn[];
   countAsync(db: Database): Promise<number>;
   /** The rows in the file's order, each an array in the columns' order: built with Drizzle, run as a stream. */
-  rowsQuery(db: Database): {sql: string; params: unknown[]};
+  rowsQuery(db: Database): { sql: string; params: unknown[] };
   /** The same request always has the same fingerprint: how an idempotency key spots a different request. */
   fingerprint: string;
 }

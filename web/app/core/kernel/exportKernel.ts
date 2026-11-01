@@ -1,6 +1,6 @@
-import {apiClient} from '../services/apiClient';
+import { apiClient } from "../services/apiClient";
 
-export type ExportStatus = 'queued' | 'counting' | 'writing' | 'completed' | 'failed' | 'cancelled' | 'expired';
+export type ExportStatus = "queued" | "counting" | "writing" | "completed" | "failed" | "cancelled" | "expired";
 
 /** An export as dealership-api reports it (ExportJobResponseDto). */
 export interface ExportJob {
@@ -31,7 +31,7 @@ export interface ExportEntry {
   problem: string | null;
 }
 
-const FINISHED: ReadonlySet<ExportStatus> = new Set(['completed', 'failed', 'cancelled', 'expired']);
+const FINISHED: ReadonlySet<ExportStatus> = new Set(["completed", "failed", "cancelled", "expired"]);
 
 /**
  * The exports this tab started, outside React, so one keeps running and reporting while the user works on other
@@ -58,9 +58,9 @@ export class ExportKernel {
    */
   public async startAsync(title: string, serviceUrl: string, path: string, body: unknown): Promise<void> {
     const job = await apiClient.postAsync<ExportJob>(`${serviceUrl}/${path}`, body, {
-      headers: {'idempotency-key': crypto.randomUUID()},
+      headers: { "idempotency-key": crypto.randomUUID() },
     });
-    this.put({title, serviceUrl, job, receivedAt: performance.now(), problem: null});
+    this.put({ title, serviceUrl, job, receivedAt: performance.now(), problem: null });
     void this.followAsync(job.id);
   }
 
@@ -92,12 +92,12 @@ export class ExportKernel {
     try {
       await apiClient.readEventsAsync<ExportJob>(
         `${entry.serviceUrl}/v1/exports/${jobId}/events`,
-        (job) => this.update(jobId, {job, receivedAt: performance.now(), problem: null}),
-        {signal: following.signal},
+        (job) => this.update(jobId, { job, receivedAt: performance.now(), problem: null }),
+        { signal: following.signal },
       );
     } catch (error) {
       if (!following.signal.aborted) {
-        this.update(jobId, {problem: error instanceof Error ? error.message : String(error)});
+        this.update(jobId, { problem: error instanceof Error ? error.message : String(error) });
       }
     } finally {
       this._following.delete(jobId);
@@ -113,7 +113,7 @@ export class ExportKernel {
   }
 
   private update(jobId: string, changes: Partial<ExportEntry>): void {
-    this.commit(this._snapshot.map((entry) => (entry.job.id === jobId ? {...entry, ...changes} : entry)));
+    this.commit(this._snapshot.map((entry) => (entry.job.id === jobId ? { ...entry, ...changes } : entry)));
   }
 
   private commit(snapshot: ExportEntry[]): void {

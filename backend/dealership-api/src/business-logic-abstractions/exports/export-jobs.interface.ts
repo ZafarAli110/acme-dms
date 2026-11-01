@@ -1,6 +1,6 @@
-import type {Observable} from 'rxjs';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {ExportJobResponseDto} from '#dto/exports/export-job-response.dto';
+import type { Observable } from "rxjs";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
 
 /** A finished export's file, for the download. */
 export interface ExportFile {
@@ -20,4 +20,4 @@ export interface IExportJobs {
   fileForLink(jobId: string, expires: string, signature: string): ExportFile;
 }
 
-export const EXPORT_JOBS = Symbol('IExportJobs');
+export const EXPORT_JOBS = Symbol("IExportJobs");

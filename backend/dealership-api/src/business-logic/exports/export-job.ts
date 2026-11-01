@@ -1,10 +1,10 @@
-import {randomUUID} from 'node:crypto';
-import {Subject} from 'rxjs';
-import type {ExportJobResponseDto, ExportJobStatus} from '#dto/exports/export-job-response.dto';
-import {signedDownloadPath} from './download-link';
-import type {ExportSource} from './export-source';
+import { randomUUID } from "node:crypto";
+import { Subject } from "rxjs";
+import type { ExportJobResponseDto, ExportJobStatus } from "#dto/exports/export-job-response.dto";
+import { signedDownloadPath } from "./download-link";
+import type { ExportSource } from "./export-source";
 
-const FINISHED: ReadonlySet<ExportJobStatus> = new Set(['completed', 'failed', 'cancelled', 'expired']);
+const FINISHED: ReadonlySet<ExportJobStatus> = new Set(["completed", "failed", "cancelled", "expired"]);
 /** Progress is reported at most this often: the user sees it move, not every row. */
 const PROGRESS_INTERVAL_MS = 250;
 
@@ -20,7 +20,7 @@ export class ExportJob {
   public filePath: string | null = null;
   public queuePosition: number | null = null;
   private readonly _createdAt = Date.now();
-  private _status: ExportJobStatus = 'queued';
+  private _status: ExportJobStatus = "queued";
   private _rows = 0;
   private _totalRows: number | null = null;
   private _firstRowAt: number | null = null;
@@ -57,12 +57,12 @@ export class ExportJob {
   }
 
   public startCounting(): void {
-    this.setStatus('counting');
+    this.setStatus("counting");
   }
 
   public startWriting(totalRows: number): void {
     this._totalRows = totalRows;
-    this.setStatus('writing');
+    this.setStatus("writing");
   }
 
   public rowWritten(): void {
@@ -78,16 +78,16 @@ export class ExportJob {
   public complete(fileBytes: number, expiresAt: number): void {
     this._fileBytes = fileBytes;
     this._expiresAt = expiresAt;
-    this.setStatus('completed');
+    this.setStatus("completed");
   }
 
-  public fail(status: 'failed' | 'cancelled', error: string): void {
+  public fail(status: "failed" | "cancelled", error: string): void {
     this._error = error;
     this.setStatus(status);
   }
 
   public expire(): void {
-    this.setStatus('expired');
+    this.setStatus("expired");
   }
 
   public toDto(): ExportJobResponseDto {
@@ -104,14 +104,14 @@ export class ExportJob {
       rowsPerSecond,
       elapsedMs: now - this._createdAt,
       etaMs:
-        this._status === 'writing' && remaining !== null && rowsPerSecond
+        this._status === "writing" && remaining !== null && rowsPerSecond
           ? Math.round((remaining / rowsPerSecond) * 1000)
           : null,
-      queuePosition: this._status === 'queued' ? this.queuePosition : null,
+      queuePosition: this._status === "queued" ? this.queuePosition : null,
       fileName: this.source.fileName,
       fileBytes: this._fileBytes,
       downloadPath:
-        this._status === 'completed' && this._expiresAt !== null ? signedDownloadPath(this.id, this._expiresAt) : null,
+        this._status === "completed" && this._expiresAt !== null ? signedDownloadPath(this.id, this._expiresAt) : null,
       expiresAt: this._expiresAt === null ? null : Temporal.Instant.fromEpochMilliseconds(this._expiresAt).toString(),
       error: this._error,
     };
@@ -123,7 +123,7 @@ export class ExportJob {
       this._finishedAt ??= Date.now();
     }
     this.changes.next();
-    if (FINISHED.has(status) && status !== 'expired') {
+    if (FINISHED.has(status) && status !== "expired") {
       this.changes.complete();
     }
   }

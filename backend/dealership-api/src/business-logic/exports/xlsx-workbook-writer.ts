@@ -1,6 +1,6 @@
-import {once} from 'node:events';
-import {PassThrough, type Readable} from 'node:stream';
-import yazl from 'yazl';
+import { once } from "node:events";
+import { PassThrough, type Readable } from "node:stream";
+import yazl from "yazl";
 
 // A forward-only xlsx writer, the Node counterpart of OpenXmlWriter (SAX). Rows go straight into the zip as
 // XML text; nothing about earlier rows is kept, so memory stays flat whatever the row count.
@@ -8,10 +8,10 @@ import yazl from 'yazl';
 /** Excel's limit is 1,048,576 rows a sheet; one is the header. */
 export const MAX_DATA_ROWS_PER_SHEET = 1_048_575;
 
-export type XlsxCellKind = 'text' | 'integer' | 'money' | 'date';
+export type XlsxCellKind = "text" | "integer" | "money" | "date";
 
 /** `width` is in Excel's units (characters of the default font). */
-export type XlsxColumn = {header: string; kind: XlsxCellKind; width: number};
+export type XlsxColumn = { header: string; kind: XlsxCellKind; width: number };
 
 /** A cell as text: dates as 'YYYY-MM-DD', numbers as their decimal text. */
 export type XlsxRow = readonly (string | number | null)[];
@@ -24,7 +24,7 @@ const DAY_MS = 86_400_000;
 const UNIX_EPOCH_SERIAL = 25_569;
 
 // cellXfs indexes in STYLES: 0 normal, 1 date, 2 money, 3 bold (headers).
-const STYLE_BY_KIND: Record<XlsxCellKind, string> = {text: '', integer: '', money: ' s="2"', date: ' s="1"'};
+const STYLE_BY_KIND: Record<XlsxCellKind, string> = { text: "", integer: "", money: ' s="2"', date: ' s="1"' };
 const STYLES =
   `${XML_DECLARATION}<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
   '<numFmts count="1"><numFmt numFmtId="164" formatCode="dd mmm yyyy"/></numFmts>' +
@@ -37,15 +37,15 @@ const STYLES =
   '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
   '<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
-  '</cellXfs>' +
+  "</cellXfs>" +
   '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
-  '</styleSheet>';
+  "</styleSheet>";
 
 function escapeXml(text: string): string {
-  return text.replace(/[&<>"]/g, (ch) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[ch] ?? ch);
+  return text.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch);
 }
 
-function textCell(text: string, style = ''): string {
+function textCell(text: string, style = ""): string {
   return `<c t="inlineStr"${style}><is><t>${escapeXml(text)}</t></is></c>`;
 }
 
@@ -64,7 +64,7 @@ export class XlsxWorkbookWriter {
   private _sheet: PassThrough | null = null;
   private _sheetCount = 0;
   private _rowsInSheet = 0;
-  private _chunk = '';
+  private _chunk = "";
 
   public constructor(sheetName: string, columns: readonly XlsxColumn[]) {
     this._sheetName = sheetName;
@@ -73,8 +73,8 @@ export class XlsxWorkbookWriter {
     // header is bold.
     const widths = columns
       .map((column, index) => `<col min="${index + 1}" max="${index + 1}" width="${column.width}" customWidth="1"/>`)
-      .join('');
-    const header = `<row>${columns.map((column) => textCell(column.header, ' s="3"')).join('')}</row>`;
+      .join("");
+    const header = `<row>${columns.map((column) => textCell(column.header, ' s="3"')).join("")}</row>`;
     this._sheetStartXml =
       `${XML_DECLARATION}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
       '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
@@ -94,9 +94,9 @@ export class XlsxWorkbookWriter {
     if (this._chunk.length > CHUNK_CHARS) {
       const sheet = this._sheet!;
       const chunk = this._chunk;
-      this._chunk = '';
+      this._chunk = "";
       if (!sheet.write(chunk)) {
-        await once(sheet, 'drain');
+        await once(sheet, "drain");
       }
     }
   }
@@ -106,9 +106,9 @@ export class XlsxWorkbookWriter {
       this.openSheet();
     }
     await this.closeSheetAsync();
-    const sheets = Array.from({length: this._sheetCount}, (_, index) => index + 1);
+    const sheets = Array.from({ length: this._sheetCount }, (_, index) => index + 1);
     this.addPart(
-      '[Content_Types].xml',
+      "[Content_Types].xml",
       `${XML_DECLARATION}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
         '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
         '<Default Extension="xml" ContentType="application/xml"/>' +
@@ -119,34 +119,34 @@ export class XlsxWorkbookWriter {
             (n) =>
               `<Override PartName="/xl/worksheets/sheet${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`,
           )
-          .join('') +
-        '</Types>',
+          .join("") +
+        "</Types>",
     );
     this.addPart(
-      '_rels/.rels',
+      "_rels/.rels",
       `${XML_DECLARATION}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
         '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
-        '</Relationships>',
+        "</Relationships>",
     );
     this.addPart(
-      'xl/workbook.xml',
+      "xl/workbook.xml",
       `${XML_DECLARATION}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>` +
-        sheets.map((n) => `<sheet name="${escapeXml(this.sheetTitle(n))}" sheetId="${n}" r:id="rId${n}"/>`).join('') +
-        '</sheets></workbook>',
+        sheets.map((n) => `<sheet name="${escapeXml(this.sheetTitle(n))}" sheetId="${n}" r:id="rId${n}"/>`).join("") +
+        "</sheets></workbook>",
     );
     this.addPart(
-      'xl/_rels/workbook.xml.rels',
+      "xl/_rels/workbook.xml.rels",
       `${XML_DECLARATION}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
         sheets
           .map(
             (n) =>
               `<Relationship Id="rId${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${n}.xml"/>`,
           )
-          .join('') +
+          .join("") +
         `<Relationship Id="rId${this._sheetCount + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
-        '</Relationships>',
+        "</Relationships>",
     );
-    this.addPart('xl/styles.xml', STYLES);
+    this.addPart("xl/styles.xml", STYLES);
     this._zip.end();
   }
 
@@ -174,8 +174,8 @@ export class XlsxWorkbookWriter {
     const sheet = this._sheet;
     this._sheet = null;
     sheet.end(`${this._chunk}</sheetData></worksheet>`);
-    this._chunk = '';
-    await once(sheet, 'end');
+    this._chunk = "";
+    await once(sheet, "end");
   }
 
   private sheetTitle(n: number): string {
@@ -183,15 +183,15 @@ export class XlsxWorkbookWriter {
   }
 
   private rowXml(row: XlsxRow): string {
-    let cells = '';
+    let cells = "";
     for (let index = 0; index < this._columns.length; index++) {
       const value = row[index] ?? null;
       const kind = this._columns[index]!.kind;
       if (value === null) {
-        cells += '<c/>';
-      } else if (kind === 'text') {
+        cells += "<c/>";
+      } else if (kind === "text") {
         cells += textCell(String(value));
-      } else if (kind === 'date') {
+      } else if (kind === "date") {
         cells += `<c${STYLE_BY_KIND.date}><v>${dateSerial(String(value))}</v></c>`;
       } else {
         cells += `<c${STYLE_BY_KIND[kind]}><v>${value}</v></c>`;

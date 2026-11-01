@@ -1,9 +1,9 @@
-import type {UserLocation} from '../queries/identityQueries';
-import {queryClient} from '../queries/queryClient';
-import {session} from '../storage/sessionStore';
-import {type AuthKernel, type AuthSnapshot, authKernel} from './authKernel';
+import type { UserLocation } from "../queries/identityQueries";
+import { queryClient } from "../queries/queryClient";
+import { session } from "../storage/sessionStore";
+import { type AuthKernel, type AuthSnapshot, authKernel } from "./authKernel";
 
-export type LocationStatus = 'pending' | 'ready' | 'signed-out';
+export type LocationStatus = "pending" | "ready" | "signed-out";
 
 export interface LocationSnapshot {
   status: LocationStatus;
@@ -13,8 +13,8 @@ export interface LocationSnapshot {
   current: UserLocation | null;
 }
 
-const PENDING: LocationSnapshot = {status: 'pending', locations: [], current: null};
-const SIGNED_OUT: LocationSnapshot = {status: 'signed-out', locations: [], current: null};
+const PENDING: LocationSnapshot = { status: "pending", locations: [], current: null };
+const SIGNED_OUT: LocationSnapshot = { status: "signed-out", locations: [], current: null };
 
 /**
  * The single source of truth for the selected location, outside React. It follows the auth kernel, keeps the
@@ -62,13 +62,13 @@ export class LocationKernel {
   }
 
   private select(auth: AuthSnapshot, wantedId: string | null): LocationSnapshot {
-    if (auth.status === 'resolving') {
+    if (auth.status === "resolving") {
       return PENDING;
     }
-    if (auth.status === 'signed-out' || auth.user === null) {
+    if (auth.status === "signed-out" || auth.user === null) {
       return SIGNED_OUT;
     }
-    const {locations, defaultLocationId} = auth.user;
+    const { locations, defaultLocationId } = auth.user;
     // The location chosen in this session, else the user's default (just after signing in), else the first.
     const current =
       locations.find((location) => location.id === wantedId) ??
@@ -76,12 +76,12 @@ export class LocationKernel {
       locations[0] ??
       null;
     if (current === null) {
-      return {status: 'signed-out', locations, current: null};
+      return { status: "signed-out", locations, current: null };
     }
     if (current.id !== session.getLocationId()) {
       session.setLocationId(current.id);
     }
-    return {status: 'ready', locations, current};
+    return { status: "ready", locations, current };
   }
 
   private commit(snapshot: LocationSnapshot): void {

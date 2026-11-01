@@ -7,7 +7,7 @@
   },
   "overrides": [
     {
-      "files": ["scripts/**"],
+      "files": ["scripts/**", "vitest.config.ts"],
       "rules": {
         "node/no-process-env": "off"
       }
