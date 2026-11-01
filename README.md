@@ -236,6 +236,7 @@ Every project, in either language, has the same targets, run through [Nx](https:
 | `bun run typecheck`               | Type-check every project (TypeScript and .NET)                                             |
 | `bun run lint`                    | Lint every project (oxlint, .NET analyzers)                                                |
 | `bun run test`                    | Run every project's unit tests                                                             |
+| `bun run coverage`                | Every project's tests with coverage: one table of lines run, reports in `coverage/`        |
 | `bun run format`                  | Format TypeScript, JSON and Markdown                                                       |
 | `bun run gate:fast`               | Format check, lint, typecheck and tests for the projects changed since your branch started |
 | `bun run gate:slow`               | End-to-end tests of the web app (Playwright, installed Chrome), against the running system |
@@ -247,6 +248,9 @@ Every project, in either language, has the same targets, run through [Nx](https:
 | `lint`      | `oxlint`          | `dotnet build -warnaserror` (analyzers) |
 | `typecheck` | `tsc` (TS 7)      | `dotnet build`                          |
 | `test`      | Vitest            | MSTest + Moq                            |
+
+**VS Code:** open the repository folder. It offers the extensions in `.vscode/extensions.json` (C# Dev Kit, oxlint, so
+lint errors show as you type, EditorConfig, Bun, Playwright) and opens `AcmeDms.slnx`, so every C# project loads.
 
 Every commit runs a quick check of the staged files first (`.githooks/pre-commit`, switched on by the setup script; `bun run hooks` if you set up before it existed):
 formatting, oxlint with each project's import rules, and C# whitespace. CI runs every check on `main`, every `lab/`
