@@ -9,8 +9,11 @@ import type {PageResponseDto} from '#dto/paging/page-response.dto';
 import type {StockListItemDto} from '#dto/stock/stock-list-item.dto';
 import {CurrentUser} from '../../authorization/current-user.decorator';
 import {RequirePermission} from '../../authorization/require-permission.decorator';
+import {Timeout} from '@nestjs/resilience';
+import {settings} from '#settings/settings';
 
 /** Reads of stock at the location selected in `x-location-id`. Writes are in StockCommandController. */
+@Timeout(settings.requestTimeoutMs)
 @Controller('v1/stock')
 export class StockController {
   private readonly _getStockListQueryHandler: IGetStockListQueryHandler;
