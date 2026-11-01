@@ -1,0 +1,3 @@
+#!/bin/sh
+# Checks the staged files before each commit (scripts/pre-commit.ts). Git runs this through sh on Windows too.
+exec bun scripts/pre-commit.ts
