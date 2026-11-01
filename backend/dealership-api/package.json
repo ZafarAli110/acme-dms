@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "bun scripts/build.ts",
-    "start": "node --enable-source-maps --import ./dist/observability/telemetry.js dist/main.js",
+    "start": "node --env-file-if-exists=.env --enable-source-maps --import ./dist/observability/telemetry.js dist/main.js",
     "dev": "bun scripts/dev.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p scripts/tsconfig.json",
     "lint": "oxlint -c .oxlintrc.json src && oxlint scripts",

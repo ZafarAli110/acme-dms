@@ -6,6 +6,7 @@ import {NodeAdapter, type NestNodeApplication} from '@nestjs/platform-node';
 import {Logger} from 'nestjs-pino';
 import {AppModule} from './app.module';
 import {setupSwagger} from './swagger/swagger.setup';
+import {settings} from '#settings/settings';
 
 // The HTTP adapter is chosen here and nowhere else.
 async function bootstrapAsync(): Promise<void> {
@@ -14,7 +15,7 @@ async function bootstrapAsync(): Promise<void> {
   app.enableShutdownHooks();
   setupSwagger(app);
 
-  const port = Number(process.env['PORT'] ?? 3000);
+  const port = settings.port;
   await app.listen(port);
   app.get(Logger).log(`dealership-api listening on http://localhost:${port} (Swagger at /swagger)`);
 }
