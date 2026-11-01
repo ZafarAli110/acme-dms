@@ -14,6 +14,23 @@ indent_size = 4
 # reserves. Nothing here is consumed from VB; CA1716 still checks types, members and parameters.
 dotnet_code_quality.CA1716.analyzed_symbol_kinds = NamedType, Method, Property, Event, Parameter
 
+# Private fields, static or not, are _camelCase (_unitOfWork, _jsonOptions): one look tells a field from a local.
+# Constants stay PascalCase. The build reports a wrong name (IDE1006) and lint fails on it.
+dotnet_diagnostic.IDE1006.severity = warning
+dotnet_naming_rule.constants_are_pascal_case.symbols = constants
+dotnet_naming_rule.constants_are_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_are_pascal_case.severity = warning
+dotnet_naming_rule.private_fields_are_underscore_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_are_underscore_camel_case.style = underscore_camel_case
+dotnet_naming_rule.private_fields_are_underscore_camel_case.severity = warning
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
 [*.md]
 trim_trailing_whitespace = false
 

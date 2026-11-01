@@ -5,7 +5,7 @@ namespace Acme.Identity.BusinessLogic.Authorization;
 /// <summary>The single place that decides what each role may do. Tokens carry the resulting permissions.</summary>
 public static class RolePermissions
 {
-    private static readonly Dictionary<string, string[]> PermissionsByRole = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, string[]> _permissionsByRole = new(StringComparer.Ordinal)
     {
         [Roles.DealerAdmin] = [PartsRead, PartsWrite, StockRead, StockAdjust, CustomersRead, CustomersWrite, DocumentsRead, DocumentsWrite, AppointmentsRead, AppointmentsManage, UsersManage],
         [Roles.ServiceManager] = [PartsRead, PartsWrite, StockRead, StockAdjust, CustomersRead, CustomersWrite, DocumentsRead, DocumentsWrite, AppointmentsRead, AppointmentsManage, UsersManage],
@@ -17,5 +17,5 @@ public static class RolePermissions
     };
 
     public static IReadOnlyList<string> For(string role) =>
-        PermissionsByRole.TryGetValue(role, out var permissions) ? permissions : [];
+        _permissionsByRole.TryGetValue(role, out var permissions) ? permissions : [];
 }
