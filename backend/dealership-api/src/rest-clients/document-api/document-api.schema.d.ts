@@ -198,6 +198,7 @@ export interface components {
     };
     HealthCheckResponseDto: {
       status: string;
+      version: string;
       databaseReachable: boolean;
     };
     /** Format: binary */
