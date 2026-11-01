@@ -1,5 +1,6 @@
 import type {Params} from 'nestjs-pino';
 import {resolveCorrelationId} from '../correlation/correlation-id';
+import {settings} from '#settings/settings';
 
 type Request = {headers: Record<string, string | string[] | undefined>; correlationId?: string};
 
@@ -9,7 +10,7 @@ type Request = {headers: Record<string, string | string[] | undefined>; correlat
  */
 export const loggerOptions: Params = {
   pinoHttp: {
-    level: process.env['LOG_LEVEL'] ?? 'info',
+    level: settings.logLevel,
     genReqId: (request) => resolveCorrelationId(request as unknown as Request),
     customAttributeKeys: {reqId: 'correlationId'},
     customProps: (request) => ({locationId: request.headers['x-location-id'] ?? null}),
