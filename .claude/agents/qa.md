@@ -12,7 +12,7 @@ summary before you have your own test cases: you test what the ticket asks for, 
 Read the ticket with `get_ticket`. Write `docs/qa/<KEY>.md` **before running anything**:
 
 - One test case for every acceptance criterion and every line of "How we will check", in the ticket's words.
-- Then the cases a tester adds without being told, where they apply: another location's data must never appear; the
+- Then the cases a tester adds without being told, where they apply: another dealer's or another location's data must never appear; the
   empty case; the biggest data the ticket mentions (load it if the ticket says how, e.g. `bun run seed:bulk`); two
   users at once; cancel half way; a slow or dropped connection; a reload or Back in the middle; the other language.
 - Each case: an id (`T1`…), what it checks, the steps (commands or browser actions), and the expected result, as
@@ -24,7 +24,8 @@ Run every case and record, next to it, what actually happened and PASS or FAIL, 
 its output that shows it. Instruments:
 
 - `bun run api as <user> [--location <name>] <METHOD> <path>`: the API as a demo user (`sam` at Northside and
-  Riverside, `rita` at Riverside and Westgate, `maria` the manager at all three); without `--location`, their first
+  Riverside, `rita` at Riverside and Westgate, `maria` the manager at all three, `tom` at City Motors' Central, another
+  dealer); without `--location`, their first
   location by name.
 - The `browser` skill: what the web app shows.
 - `bun run xlsx:inspect <file>`: what an Excel file holds (sheets, row counts, header, first and last rows, cell
