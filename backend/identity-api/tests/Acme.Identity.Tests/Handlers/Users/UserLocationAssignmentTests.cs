@@ -15,12 +15,12 @@ namespace Acme.Identity.Tests.Handlers.Users;
 [TestClass]
 public sealed class UserLocationAssignmentTests
 {
-    private static readonly Guid Maria = DemoData.Users.Single(u => u.Email == "maria@northwind.test").Id;
-    private static readonly Guid Sam = DemoData.Users.Single(u => u.Email == "sam@northwind.test").Id;
-    private static readonly Guid Rita = DemoData.Users.Single(u => u.Email == "rita@northwind.test").Id;
-    private static readonly UserContext AsMaria = new(Maria, DemoData.NorthwindMotors, DemoData.Northside);
-    private static readonly UserContext AsSam = new(Sam, DemoData.NorthwindMotors, DemoData.Northside);
-    private static readonly string[] EveryoneByName = ["Maria Service Manager", "Rita Service Advisor", "Sam Service Advisor"];
+    private static readonly Guid _maria = DemoData.Users.Single(u => u.Email == "maria@northwind.test").Id;
+    private static readonly Guid _sam = DemoData.Users.Single(u => u.Email == "sam@northwind.test").Id;
+    private static readonly Guid _rita = DemoData.Users.Single(u => u.Email == "rita@northwind.test").Id;
+    private static readonly UserContext _asMaria = new(_maria, DemoData.NorthwindMotors, DemoData.Northside);
+    private static readonly UserContext _asSam = new(_sam, DemoData.NorthwindMotors, DemoData.Northside);
+    private static readonly string[] _everyoneByName = ["Maria Service Manager", "Rita Service Advisor", "Sam Service Advisor"];
 
     public TestContext TestContext { get; set; } = null!;
 
@@ -29,10 +29,10 @@ public sealed class UserLocationAssignmentTests
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
 
-        var users = await new GetUsersQueryHandler(dbContext).ExecuteAsync(AsMaria, TestContext.CancellationToken);
+        var users = await new GetUsersQueryHandler(dbContext).ExecuteAsync(_asMaria, TestContext.CancellationToken);
 
-        CollectionAssert.AreEqual(EveryoneByName, users.Select(u => u.DisplayName).ToList());
-        var sam = users.Single(u => u.Id == Sam);
+        CollectionAssert.AreEqual(_everyoneByName, users.Select(u => u.DisplayName).ToList());
+        var sam = users.Single(u => u.Id == _sam);
         Assert.AreEqual(Roles.ServiceAdvisor, sam.Role);
         CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside }, sam.LocationIds.ToList());
     }
@@ -42,10 +42,10 @@ public sealed class UserLocationAssignmentTests
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
 
-        var sam = await Assign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Westgate, TestContext.CancellationToken);
+        var sam = await Assign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Westgate, TestContext.CancellationToken);
 
         CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside, DemoData.Westgate }, sam.LocationIds.ToList());
-        Assert.AreEqual(Roles.ServiceAdvisor, dbContext.UserLocationRoles.Single(r => r.UserId == Sam && r.LocationId == DemoData.Westgate).Role);
+        Assert.AreEqual(Roles.ServiceAdvisor, dbContext.UserLocationRoles.Single(r => r.UserId == _sam && r.LocationId == DemoData.Westgate).Role);
     }
 
     [TestMethod]
@@ -53,7 +53,7 @@ public sealed class UserLocationAssignmentTests
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
 
-        var sam = await Assign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Northside, TestContext.CancellationToken);
+        var sam = await Assign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Northside, TestContext.CancellationToken);
 
         CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside }, sam.LocationIds.ToList());
     }
@@ -62,8 +62,8 @@ public sealed class UserLocationAssignmentTests
     public async Task Unassign_TakesTheLocationAwayAndItCanBeAssignedAgain()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
-        var afterUnassign = await Unassign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Riverside, TestContext.CancellationToken);
-        var afterAssign = await Assign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Riverside, TestContext.CancellationToken);
+        var afterUnassign = await Unassign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Riverside, TestContext.CancellationToken);
+        var afterAssign = await Assign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Riverside, TestContext.CancellationToken);
 
         CollectionAssert.AreEqual(new[] { DemoData.Northside }, afterUnassign.LocationIds.ToList());
         CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside }, afterAssign.LocationIds.ToList());
@@ -73,13 +73,13 @@ public sealed class UserLocationAssignmentTests
     public async Task Unassign_RefusesTheUsersLastLocation()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
-        await Unassign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Riverside, TestContext.CancellationToken);
+        await Unassign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Riverside, TestContext.CancellationToken);
 
         var ex = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            Unassign(dbContext).ExecuteAsync(AsMaria, Sam, DemoData.Northside, TestContext.CancellationToken));
+            Unassign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Northside, TestContext.CancellationToken));
 
         Assert.AreEqual(ApiErrorCategory.Conflict, ex.Category);
-        Assert.AreEqual(1, dbContext.UserLocationRoles.Count(r => r.UserId == Sam));
+        Assert.AreEqual(1, dbContext.UserLocationRoles.Count(r => r.UserId == _sam));
     }
 
     [TestMethod]
@@ -88,7 +88,7 @@ public sealed class UserLocationAssignmentTests
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
 
         var ex = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            Assign(dbContext).ExecuteAsync(AsSam, Rita, DemoData.Northside, TestContext.CancellationToken));
+            Assign(dbContext).ExecuteAsync(_asSam, _rita, DemoData.Northside, TestContext.CancellationToken));
 
         Assert.AreEqual(ApiErrorCategory.Forbidden, ex.Category);
     }
@@ -99,7 +99,7 @@ public sealed class UserLocationAssignmentTests
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
 
         var ex = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            Unassign(dbContext).ExecuteAsync(AsMaria, Maria, DemoData.Riverside, TestContext.CancellationToken));
+            Unassign(dbContext).ExecuteAsync(_asMaria, _maria, DemoData.Riverside, TestContext.CancellationToken));
 
         Assert.AreEqual(ApiErrorCategory.Forbidden, ex.Category);
     }
@@ -110,7 +110,7 @@ public sealed class UserLocationAssignmentTests
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
 
         var ex = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            Assign(dbContext).ExecuteAsync(AsMaria, Sam, Guid.NewGuid(), TestContext.CancellationToken));
+            Assign(dbContext).ExecuteAsync(_asMaria, _sam, Guid.NewGuid(), TestContext.CancellationToken));
 
         Assert.AreEqual(ApiErrorCategory.NotFound, ex.Category);
     }
