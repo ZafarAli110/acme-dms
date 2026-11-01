@@ -1,7 +1,8 @@
 # Architecture
 
-Acme DMS is a dealership management system. Each deployment serves one client, a **dealer** (dealer group), with its
-**locations** (physical sites, "rooftops"); `standards/multi-tenancy.md` explains what that means for data. People hold a **role per location**; roles grant **permissions**.
+Acme DMS is a dealership management system. One deployment serves many clients, each a **dealer** (dealer group),
+with its **locations** (physical sites, "rooftops"). Every dealer's data shares the same databases, marked with
+`dealer_id`; `standards/multi-tenancy.md` explains what that means for data. People hold a **role per location**; roles grant **permissions**.
 
 ## Services
 

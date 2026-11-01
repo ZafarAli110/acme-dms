@@ -5,13 +5,14 @@ import {plainDate} from './columns/temporal-columns';
 
 export type CustomerStatus = 'active' | 'prospect' | 'inactive';
 
-/** A customer of one rooftop: each rooftop keeps its own customer book. */
+/** A customer of one rooftop of a dealer: each rooftop keeps its own customer book. */
 export const customers = pgTable(
   'customers',
   {
     id: uuid('id')
       .primaryKey()
       .default(sql`uuidv7()`),
+    dealerId: uuid('dealer_id').notNull(),
     locationId: uuid('location_id').notNull(),
     firstName: varchar('first_name', {length: 100}).notNull(),
     surname: varchar('surname', {length: 100}).notNull(),
