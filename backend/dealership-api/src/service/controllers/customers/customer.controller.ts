@@ -19,10 +19,9 @@ import type {PageResponseDto} from '#dto/paging/page-response.dto';
 import {CurrentUser} from '../../authorization/current-user.decorator';
 import {RequirePermission} from '../../authorization/require-permission.decorator';
 import {Timeout} from '@nestjs/resilience';
-import {settings} from '#settings/settings';
 
 /** Reads of the customers of the location selected in `x-location-id`. Writes are in CustomerCommandController. */
-@Timeout(settings.requestTimeoutMs)
+@Timeout()
 @Controller('v1/customers')
 export class CustomerController {
   private readonly _getCustomerListQueryHandler: IGetCustomerListQueryHandler;
