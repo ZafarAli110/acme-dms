@@ -1,5 +1,5 @@
-import type {NodePgDatabase} from 'drizzle-orm/node-postgres';
-import * as schema from '#persistence/schema/index';
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import * as schema from "#persistence/schema/index";
 import {
   bins,
   type Bin,
@@ -10,14 +10,14 @@ import {
   partInventories,
   partPhotos,
   type PartPhoto,
-} from '#persistence/schema/index';
+} from "#persistence/schema/index";
 
 /** The two dealers and the rooftops tests use, with the ids the identity seed gives them. */
-export const NORTHWIND = '10000000-0000-0000-0000-000000000001';
-export const CITY_MOTORS = '10000000-0000-0000-0000-000000000002';
-export const NORTHSIDE = '20000000-0000-0000-0000-000000000001';
-export const RIVERSIDE = '20000000-0000-0000-0000-000000000002';
-export const CENTRAL = '20000000-0000-0000-0000-000000000004';
+export const NORTHWIND = "10000000-0000-0000-0000-000000000001";
+export const CITY_MOTORS = "10000000-0000-0000-0000-000000000002";
+export const NORTHSIDE = "20000000-0000-0000-0000-000000000001";
+export const RIVERSIDE = "20000000-0000-0000-0000-000000000002";
+export const CENTRAL = "20000000-0000-0000-0000-000000000004";
 
 /** The dealer a rooftop belongs to, so a test only has to say where a row is. */
 export function dealerOf(locationId: string): string {
@@ -25,16 +25,16 @@ export function dealerOf(locationId: string): string {
 }
 
 /** Who and when, for every row a test seeds. */
-export const TEST_USER_ID = '30000000-0000-0000-0000-0000000000aa';
-export const SEEDED_AT = Temporal.Instant.from('2026-11-03T09:00:00Z');
+export const TEST_USER_ID = "30000000-0000-0000-0000-0000000000aa";
+export const SEEDED_AT = Temporal.Instant.from("2026-11-03T09:00:00Z");
 
-const SEEDED_AUDIT = {createdAt: SEEDED_AT, createdBy: TEST_USER_ID, updatedAt: SEEDED_AT, updatedBy: TEST_USER_ID};
-const DELETED_AUDIT = {isDeleted: true, deletedAt: SEEDED_AT, deletedBy: TEST_USER_ID};
+const SEEDED_AUDIT = { createdAt: SEEDED_AT, createdBy: TEST_USER_ID, updatedAt: SEEDED_AT, updatedBy: TEST_USER_ID };
+const DELETED_AUDIT = { isDeleted: true, deletedAt: SEEDED_AT, deletedBy: TEST_USER_ID };
 
 /** Adds the rows a test needs straight through the schema, with audit columns filled in. */
 export function seedKit(db: NodePgDatabase<typeof schema>) {
-  async function addBinAsync(bin: Pick<Bin, 'locationId' | 'code'> & {deleted?: boolean}): Promise<Bin> {
-    const {deleted, ...values} = bin;
+  async function addBinAsync(bin: Pick<Bin, "locationId" | "code"> & { deleted?: boolean }): Promise<Bin> {
+    const { deleted, ...values } = bin;
     const [row] = await db
       .insert(bins)
       .values({
@@ -49,19 +49,19 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
   }
 
   async function addCustomerAsync(
-    customer: Pick<Customer, 'locationId' | 'surname'> & Partial<Customer> & {deleted?: boolean},
+    customer: Pick<Customer, "locationId" | "surname"> & Partial<Customer> & { deleted?: boolean },
   ): Promise<Customer> {
-    const {deleted, ...values} = customer;
+    const { deleted, ...values } = customer;
     const [row] = await db
       .insert(customers)
       .values({
         dealerId: dealerOf(customer.locationId),
-        firstName: 'Test',
+        firstName: "Test",
         companyName: null,
         email: null,
         phone: null,
         city: null,
-        status: 'active',
+        status: "active",
         lastContactDate: null,
         ...values,
         ...SEEDED_AUDIT,
@@ -78,7 +78,7 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     quantityOnHand?: number;
     reorderLevel?: number;
     deleted?: boolean;
-  }): Promise<{part: Part; bin: Bin}> {
+  }): Promise<{ part: Part; bin: Bin }> {
     const [part] = await db
       .insert(parts)
       .values({
@@ -90,7 +90,7 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
         ...(stocked.deleted ? DELETED_AUDIT : {}),
       })
       .returning();
-    const bin = await addBinAsync({locationId: stocked.locationId, code: `B-${stocked.partNumber}`});
+    const bin = await addBinAsync({ locationId: stocked.locationId, code: `B-${stocked.partNumber}` });
     await db.insert(partInventories).values({
       dealerId: dealerOf(stocked.locationId),
       locationId: stocked.locationId,
@@ -100,21 +100,21 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
       reorderLevel: stocked.reorderLevel ?? 2,
       ...SEEDED_AUDIT,
     });
-    return {part: part!, bin};
+    return { part: part!, bin };
   }
 
   /** A photo of a part, Northwind's unless `dealerId` is given; its document id is made up unless given. */
   async function addPhotoAsync(
-    photo: Pick<PartPhoto, 'partId' | 'isDefault'> & Partial<PartPhoto> & {deleted?: boolean},
+    photo: Pick<PartPhoto, "partId" | "isDefault"> & Partial<PartPhoto> & { deleted?: boolean },
   ): Promise<PartPhoto> {
-    const {deleted, ...values} = photo;
+    const { deleted, ...values } = photo;
     const [row] = await db
       .insert(partPhotos)
       .values({
         dealerId: NORTHWIND,
         documentId: crypto.randomUUID(),
-        originalFileName: 'photo.jpg',
-        status: 'ready',
+        originalFileName: "photo.jpg",
+        status: "ready",
         failureReason: null,
         ...values,
         ...SEEDED_AUDIT,
@@ -124,5 +124,5 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     return row!;
   }
 
-  return {addBinAsync, addCustomerAsync, addStockedPartAsync, addPhotoAsync};
+  return { addBinAsync, addCustomerAsync, addStockedPartAsync, addPhotoAsync };
 }

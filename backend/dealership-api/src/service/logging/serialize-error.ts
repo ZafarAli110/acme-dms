@@ -1,4 +1,4 @@
-import type {PostgresDriverError} from '../problem-details/database-error';
+import type { PostgresDriverError } from "../problem-details/database-error";
 
 /**
  * How deep the `cause` chain of an error is followed in the log: the error and up to three causes. Deeper causes are
@@ -6,7 +6,7 @@ import type {PostgresDriverError} from '../problem-details/database-error';
  */
 export const MAX_ERROR_CAUSE_DEPTH = 3;
 
-export const CAUSE_DEPTH_REACHED = 'max_error_cause_depth_reached';
+export const CAUSE_DEPTH_REACHED = "max_error_cause_depth_reached";
 
 /**
  * An error, and the errors it was caused by (`new XError(message, {cause})`), as a plain object for a structured log

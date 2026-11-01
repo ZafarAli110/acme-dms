@@ -1,6 +1,6 @@
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {CustomerResponseDto} from '#dto/customers/customer-response.dto';
-import type {CustomerUpdateRequestDto} from '#dto/customers/customer-update-request.dto';
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
+import type { CustomerUpdateRequestDto } from "#dto/customers/customer-update-request.dto";
 
 export interface IUpdateCustomerCommandHandler {
   executeAsync(
@@ -10,4 +10,4 @@ export interface IUpdateCustomerCommandHandler {
   ): Promise<CustomerResponseDto>;
 }
 
-export const UPDATE_CUSTOMER_COMMAND_HANDLER = Symbol('IUpdateCustomerCommandHandler');
+export const UPDATE_CUSTOMER_COMMAND_HANDLER = Symbol("IUpdateCustomerCommandHandler");

@@ -1,8 +1,8 @@
-import type {Params} from 'nestjs-pino';
-import {resolveCorrelationId} from '../correlation/correlation-id';
-import {settings} from '#settings/settings';
+import type { Params } from "nestjs-pino";
+import { resolveCorrelationId } from "../correlation/correlation-id";
+import { settings } from "#settings/settings";
 
-type Request = {headers: Record<string, string | string[] | undefined>; correlationId?: string};
+type Request = { headers: Record<string, string | string[] | undefined>; correlationId?: string };
 
 /**
  * Structured JSON logs. Every line carries the correlation id; OpenTelemetry's pino instrumentation adds the
@@ -12,10 +12,10 @@ export const loggerOptions: Params = {
   pinoHttp: {
     level: settings.logLevel,
     genReqId: (request) => resolveCorrelationId(request as unknown as Request),
-    customAttributeKeys: {reqId: 'correlationId'},
-    customProps: (request) => ({locationId: request.headers['x-location-id'] ?? null}),
-    redact: ['req.headers.authorization', 'req.headers.cookie'],
+    customAttributeKeys: { reqId: "correlationId" },
+    customProps: (request) => ({ locationId: request.headers["x-location-id"] ?? null }),
+    redact: ["req.headers.authorization", "req.headers.cookie"],
     // Health probes run every few seconds; logging them would drown everything else.
-    autoLogging: {ignore: (request) => request.url?.endsWith('/health') ?? false},
+    autoLogging: { ignore: (request) => request.url?.endsWith("/health") ?? false },
   },
 };

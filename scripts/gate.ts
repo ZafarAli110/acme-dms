@@ -5,23 +5,23 @@
 //
 //   bun run gate:fast
 
-const check = Bun.spawnSync(['bun', 'scripts/check-node.ts'], {stdout: 'inherit', stderr: 'inherit'});
+const check = Bun.spawnSync(["bun", "scripts/check-node.ts"], { stdout: "inherit", stderr: "inherit" });
 if (check.exitCode !== 0) {
   process.exit(check.exitCode);
 }
 
 function git(...args: string[]): string | null {
-  const result = Bun.spawnSync(['git', ...args], {stderr: 'ignore'});
+  const result = Bun.spawnSync(["git", ...args], { stderr: "ignore" });
   return result.exitCode === 0 ? result.stdout.toString().trim() : null;
 }
 
-const upstream = git('rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}');
-const base = (upstream ? git('merge-base', 'HEAD', upstream) : null) ?? 'main';
-console.log(`gate:fast: checking what changed since ${upstream ?? 'main'} (${base.slice(0, 7)}), committed or not`);
+const upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}");
+const base = (upstream ? git("merge-base", "HEAD", upstream) : null) ?? "main";
+console.log(`gate:fast: checking what changed since ${upstream ?? "main"} (${base.slice(0, 7)}), committed or not`);
 
-const gate = Bun.spawnSync(['bunx', 'nx', 'affected', `--base=${base}`, '-t', 'format', 'lint', 'typecheck', 'test'], {
-  stdout: 'inherit',
-  stderr: 'inherit',
-  env: {...process.env, NX_TUI: 'false'},
+const gate = Bun.spawnSync(["bunx", "nx", "affected", `--base=${base}`, "-t", "format", "lint", "typecheck", "test"], {
+  stdout: "inherit",
+  stderr: "inherit",
+  env: { ...process.env, NX_TUI: "false" },
 });
 process.exit(gate.exitCode);

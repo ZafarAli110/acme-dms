@@ -1,24 +1,24 @@
-import {Body, Controller, Inject, Param, ParseUUIDPipe, Post, Put} from '@nestjs/common';
+import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, Put } from "@nestjs/common";
 import {
   CREATE_CUSTOMER_COMMAND_HANDLER,
   type ICreateCustomerCommandHandler,
-} from '#business-logic-abstractions/handlers/customers/create/create-customer.command-handler.interface';
+} from "#business-logic-abstractions/handlers/customers/create/create-customer.command-handler.interface";
 import {
   type IUpdateCustomerCommandHandler,
   UPDATE_CUSTOMER_COMMAND_HANDLER,
-} from '#business-logic-abstractions/handlers/customers/update/update-customer.command-handler.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import {CustomerCreateRequestDto} from '#dto/customers/customer-create-request.dto';
-import type {CustomerResponseDto} from '#dto/customers/customer-response.dto';
-import {CustomerUpdateRequestDto} from '#dto/customers/customer-update-request.dto';
-import {CurrentUser} from '../../authorization/current-user.decorator';
-import {RequirePermission} from '../../authorization/require-permission.decorator';
-import {Timeout} from '@nestjs/resilience';
-import {Created} from '../../interceptors/created.interceptor';
+} from "#business-logic-abstractions/handlers/customers/update/update-customer.command-handler.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import { CustomerCreateRequestDto } from "#dto/customers/customer-create-request.dto";
+import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
+import { CustomerUpdateRequestDto } from "#dto/customers/customer-update-request.dto";
+import { CurrentUser } from "../../authorization/current-user.decorator";
+import { RequirePermission } from "../../authorization/require-permission.decorator";
+import { Timeout } from "@nestjs/resilience";
+import { Created } from "../../interceptors/created.interceptor";
 
 /** Changes to the customers of the location selected in `x-location-id`. Reads are in CustomerController. */
 @Timeout()
-@Controller('v1/customers')
+@Controller("v1/customers")
 export class CustomerCommandController {
   private readonly _createCustomerCommandHandler: ICreateCustomerCommandHandler;
   private readonly _updateCustomerCommandHandler: IUpdateCustomerCommandHandler;
@@ -33,7 +33,7 @@ export class CustomerCommandController {
 
   @Post()
   @Created((customer: CustomerResponseDto) => `/v1/customers/${customer.id}`)
-  @RequirePermission('customers.write')
+  @RequirePermission("customers.write")
   public createAsync(
     @CurrentUser() userContext: UserContext,
     @Body() request: CustomerCreateRequestDto,
@@ -41,11 +41,11 @@ export class CustomerCommandController {
     return this._createCustomerCommandHandler.executeAsync(userContext, request);
   }
 
-  @Put(':customerId')
-  @RequirePermission('customers.write')
+  @Put(":customerId")
+  @RequirePermission("customers.write")
   public updateAsync(
     @CurrentUser() userContext: UserContext,
-    @Param('customerId', ParseUUIDPipe) customerId: string,
+    @Param("customerId", ParseUUIDPipe) customerId: string,
     @Body() request: CustomerUpdateRequestDto,
   ): Promise<CustomerResponseDto> {
     return this._updateCustomerCommandHandler.executeAsync(userContext, customerId, request);
