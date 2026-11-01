@@ -1,4 +1,4 @@
-// The git pre-commit hook (.githooks/pre-commit): checks only the files being committed, in a second or two, so a
+// The git pre-commit hook (.githooks/pre-commit, switched on by the setup script or `bun run hooks`): checks only the files being committed, in a second or two, so a
 // formatting slip or a broken architecture rule (a controller importing persistence) stops at the commit, not in CI.
 // The full checks still run in `bun run gate:fast` and in CI.
 
@@ -41,7 +41,7 @@ if (otherFiles.length > 0) {
 const DOTNET_PROJECTS = [
   'backend/identity-api/',
   'backend/document-api/',
-  'backend/gateway/',
+  'backend/gateway-api/',
   'backend/service-defaults/',
   'apphost/',
 ];

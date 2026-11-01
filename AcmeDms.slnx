@@ -15,8 +15,8 @@
   <Folder Name="/backend/document-api/tests/">
     <Project Path="backend/document-api/tests/Acme.Documents.Tests/Acme.Documents.Tests.csproj" />
   </Folder>
-  <Folder Name="/backend/gateway/">
-    <Project Path="backend/gateway/Acme.Gateway/Acme.Gateway.csproj" />
+  <Folder Name="/backend/gateway-api/">
+    <Project Path="backend/gateway-api/Acme.Gateway/Acme.Gateway.csproj" />
   </Folder>
   <Folder Name="/backend/identity-api/" />
   <Folder Name="/backend/identity-api/src/">
