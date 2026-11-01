@@ -1,7 +1,8 @@
+import {NotFoundException} from '@nestjs/common';
 import {describe, expect, it} from 'vitest';
 import {fixedClock} from '#test-setup/time/fixed-clock';
-import {AT_RIVERSIDE} from '#test-setup/users/test-users';
-import {NORTHSIDE, RIVERSIDE} from '#test-setup/postgres/seed-kit';
+import {AT_CENTRAL, AT_RIVERSIDE} from '#test-setup/users/test-users';
+import {CENTRAL, NORTHSIDE, RIVERSIDE} from '#test-setup/postgres/seed-kit';
 import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {SetStockLevelCommandHandler} from '../set-stock-level.command-handler';
 
@@ -25,5 +26,15 @@ describe('SetStockLevelCommandHandler', () => {
     });
 
     expect([first.quantityOnHand, second.quantityOnHand, second.reorderLevel]).toEqual([2, 7, 3]);
+  });
+
+  it("refuses another dealer's part: City Motors cannot stock Northwind's part by its id", async () => {
+    const {part} = await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'SET-002'});
+    const centralBin = await database.seed.addBinAsync({locationId: CENTRAL, code: 'C-01'});
+    const handler = new SetStockLevelCommandHandler(database.unitOfWorkFactory, fixedClock());
+
+    await expect(
+      handler.executeAsync(AT_CENTRAL, part.id, {binId: centralBin.id, quantityOnHand: 1, reorderLevel: 1}),
+    ).rejects.toThrow(NotFoundException);
   });
 });

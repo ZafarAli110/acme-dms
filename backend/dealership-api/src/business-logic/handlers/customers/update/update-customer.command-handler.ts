@@ -46,7 +46,14 @@ export class UpdateCustomerCommandHandler implements IUpdateCustomerCommandHandl
         lastContactDate: request.lastContactDate === null ? null : Temporal.PlainDate.from(request.lastContactDate),
         ...updatedAudit(userContext.userId, this._clock.now()),
       })
-      .where(and(eq(customers.id, customerId), eq(customers.locationId, locationId), notDeleted(customers)))
+      .where(
+        and(
+          eq(customers.id, customerId),
+          eq(customers.dealerId, userContext.dealerId),
+          eq(customers.locationId, locationId),
+          notDeleted(customers),
+        ),
+      )
       .returning();
     if (!updated) {
       throw new NotFoundException(`Customer ${customerId} was not found at this location.`);
