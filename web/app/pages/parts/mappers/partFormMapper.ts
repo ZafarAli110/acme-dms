@@ -1,4 +1,4 @@
-import type {Part, PartFormValues} from '../types/part';
+import type { Part, PartFormValues } from "../types/part";
 
 /** The form's starting values: the part as saved. */
 export function toFormValues(part: Part): PartFormValues {
@@ -27,17 +27,17 @@ export function toUpdateFormData(values: PartFormValues, saved: Part): FormData 
   const added = values.photos.filter((photo) => photo.file !== null);
 
   const payload = {
-    ...(description !== saved.description ? {description} : {}),
-    ...(unitPrice !== saved.unitPrice ? {unitPrice} : {}),
-    photos: existing.map((photo) => ({id: photo.photoId, isDefault: photo.isDefault})),
-    newPhotos: added.map((photo) => ({isDefault: photo.isDefault})),
+    ...(description !== saved.description ? { description } : {}),
+    ...(unitPrice !== saved.unitPrice ? { unitPrice } : {}),
+    photos: existing.map((photo) => ({ id: photo.photoId, isDefault: photo.isDefault })),
+    newPhotos: added.map((photo) => ({ isDefault: photo.isDefault })),
   };
 
   const form = new FormData();
-  form.append('payload', JSON.stringify(payload));
+  form.append("payload", JSON.stringify(payload));
   for (const photo of added) {
     if (photo.file) {
-      form.append('photos', photo.file, photo.fileName);
+      form.append("photos", photo.file, photo.fileName);
     }
   }
   return form;

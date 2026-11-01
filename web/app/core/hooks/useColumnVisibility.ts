@@ -1,12 +1,12 @@
-import type {GridColumnVisibilityModel} from '@mui/x-data-grid';
-import {useState} from 'react';
+import type { GridColumnVisibilityModel } from "@mui/x-data-grid";
+import { useState } from "react";
 
-const KEY_PREFIX = 'acme.grid.columns.';
+const KEY_PREFIX = "acme.grid.columns.";
 
 /** Null outside a browser, or where storage is blocked: the grid then simply starts with every column. */
 function storage(): Storage | null {
   try {
-    return typeof window === 'undefined' ? null : window.localStorage;
+    return typeof window === "undefined" ? null : window.localStorage;
   } catch {
     return null;
   }
@@ -37,5 +37,5 @@ export function useColumnVisibility(gridId: string) {
     }
   };
 
-  return {columnVisibilityModel: model, setColumnVisibilityModel: change};
+  return { columnVisibilityModel: model, setColumnVisibilityModel: change };
 }

@@ -7,12 +7,12 @@
     "sharedGlobals": ["{workspaceRoot}/tsconfig.base.json", "{workspaceRoot}/.oxlintrc.json"]
   },
   "targetDefaults": {
-    "build": {"dependsOn": ["^build"], "inputs": ["production", "^production"], "cache": true},
-    "typecheck": {"cache": true},
-    "lint": {"cache": true},
-    "format": {"cache": true},
-    "test": {"cache": true}
+    "build": { "dependsOn": ["^build"], "inputs": ["production", "^production"], "cache": true },
+    "typecheck": { "cache": true },
+    "lint": { "cache": true },
+    "format": { "cache": true },
+    "test": { "cache": true }
   },
   "analytics": false,
-  "tui": {"enabled": false}
+  "tui": { "enabled": false }
 }

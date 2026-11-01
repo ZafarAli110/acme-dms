@@ -1,8 +1,8 @@
-import type {PartInventoryDto} from '#dto/parts/part-inventory.dto';
-import type {PartPhotoResponseDto} from '#dto/parts/part-photo-response.dto';
-import type {PartResponseDto} from '#dto/parts/part-response.dto';
-import type {Bin, Part, PartInventory, PartPhoto} from '#persistence/schema/index';
-import {toIsoString} from '#business-logic-abstractions/time/to-iso-string';
+import type { PartInventoryDto } from "#dto/parts/part-inventory.dto";
+import type { PartPhotoResponseDto } from "#dto/parts/part-photo-response.dto";
+import type { PartResponseDto } from "#dto/parts/part-response.dto";
+import type { Bin, Part, PartInventory, PartPhoto } from "#persistence/schema/index";
+import { toIsoString } from "#business-logic-abstractions/time/to-iso-string";
 
 export function toPartInventoryDto(inventory: PartInventory, bin: Bin): PartInventoryDto {
   return {

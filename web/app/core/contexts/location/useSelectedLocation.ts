@@ -1,5 +1,5 @@
-import {useSyncExternalStore} from 'react';
-import {type LocationSnapshot, locationKernel} from '../../kernel/locationKernel';
+import { useSyncExternalStore } from "react";
+import { type LocationSnapshot, locationKernel } from "../../kernel/locationKernel";
 
 // Module-level, so useSyncExternalStore gets the same functions on every render and subscribes once.
 function subscribe(listener: () => void): () => void {

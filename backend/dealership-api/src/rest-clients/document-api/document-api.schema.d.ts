@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-  '/v1/system/health': {
+  "/v1/system/health": {
     parameters: {
       query?: never;
       header?: never;
@@ -26,9 +26,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'text/plain': components['schemas']['HealthCheckResponseDto'];
-            'application/json': components['schemas']['HealthCheckResponseDto'];
-            'text/json': components['schemas']['HealthCheckResponseDto'];
+            "text/plain": components["schemas"]["HealthCheckResponseDto"];
+            "application/json": components["schemas"]["HealthCheckResponseDto"];
+            "text/json": components["schemas"]["HealthCheckResponseDto"];
           };
         };
       };
@@ -41,7 +41,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/v1/documents': {
+  "/v1/documents": {
     parameters: {
       query?: never;
       header?: never;
@@ -59,8 +59,8 @@ export interface paths {
       };
       requestBody: {
         content: {
-          'multipart/form-data': {
-            file?: components['schemas']['IFormFile'];
+          "multipart/form-data": {
+            file?: components["schemas"]["IFormFile"];
           } & {
             ownerType?: string;
           } & {
@@ -78,9 +78,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'text/plain': components['schemas']['DocumentResponseDto'];
-            'application/json': components['schemas']['DocumentResponseDto'];
-            'text/json': components['schemas']['DocumentResponseDto'];
+            "text/plain": components["schemas"]["DocumentResponseDto"];
+            "application/json": components["schemas"]["DocumentResponseDto"];
+            "text/json": components["schemas"]["DocumentResponseDto"];
           };
         };
       };
@@ -91,7 +91,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/v1/documents/{documentId}': {
+  "/v1/documents/{documentId}": {
     parameters: {
       query?: never;
       header?: never;
@@ -115,9 +115,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'text/plain': components['schemas']['DocumentResponseDto'];
-            'application/json': components['schemas']['DocumentResponseDto'];
-            'text/json': components['schemas']['DocumentResponseDto'];
+            "text/plain": components["schemas"]["DocumentResponseDto"];
+            "application/json": components["schemas"]["DocumentResponseDto"];
+            "text/json": components["schemas"]["DocumentResponseDto"];
           };
         };
       };
@@ -130,7 +130,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/v1/documents/{documentId}/content/{name}': {
+  "/v1/documents/{documentId}/content/{name}": {
     parameters: {
       query?: never;
       header?: never;
@@ -182,7 +182,7 @@ export interface components {
       sizeBytes: number | string;
       status: string;
       failureReason: null | string;
-      variants: components['schemas']['DocumentVariantDto'][];
+      variants: components["schemas"]["DocumentVariantDto"][];
       /** Format: date-time */
       createdAt: string;
     };

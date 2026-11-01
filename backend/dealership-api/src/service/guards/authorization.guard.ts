@@ -4,13 +4,13 @@ import {
   type ExecutionContext,
   ForbiddenException,
   Injectable,
-} from '@nestjs/common';
-import {Reflector} from '@nestjs/core';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {AccessTokenClaims} from '../authentication/access-token-claims';
-import {REQUIRED_PERMISSION} from '../authorization/require-permission.decorator';
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { AccessTokenClaims } from "../authentication/access-token-claims";
+import { REQUIRED_PERMISSION } from "../authorization/require-permission.decorator";
 
-export const LOCATION_HEADER = 'x-location-id';
+export const LOCATION_HEADER = "x-location-id";
 
 type AuthorizedRequest = {
   headers: Record<string, string | string[] | undefined>;
@@ -39,7 +39,7 @@ export class AuthorizationGuard implements CanActivate {
     }
 
     const header = request.headers[LOCATION_HEADER];
-    const locationId = typeof header === 'string' && header.length > 0 ? header : null;
+    const locationId = typeof header === "string" && header.length > 0 ? header : null;
     const location = locationId ? token.locations.find((candidate) => candidate.id === locationId) : undefined;
     if (locationId && !location) {
       throw new ForbiddenException(`You do not work at location ${locationId}.`);
@@ -50,7 +50,7 @@ export class AuthorizationGuard implements CanActivate {
       dealerId: token.dealer_id,
       locationId,
       permissions: location?.permissions ?? [],
-      accessToken: request.rawAccessToken ?? '',
+      accessToken: request.rawAccessToken ?? "",
     };
     request.userContext = userContext;
 
