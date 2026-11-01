@@ -7,8 +7,11 @@ import type {UserContext} from '#business-logic-abstractions/user-context/user-c
 import type {BinResponseDto} from '#dto/bins/bin-response.dto';
 import {CurrentUser} from '../../authorization/current-user.decorator';
 import {RequirePermission} from '../../authorization/require-permission.decorator';
+import {Timeout} from '@nestjs/resilience';
+import {settings} from '#settings/settings';
 
 /** Reads of the bins of the location selected in `x-location-id`. Writes are in BinCommandController. */
+@Timeout(settings.requestTimeoutMs)
 @Controller('v1/bins')
 export class BinController {
   private readonly _getBinListQueryHandler: IGetBinListQueryHandler;
