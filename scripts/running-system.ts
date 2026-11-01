@@ -24,7 +24,7 @@ export interface Session {
 
 type Described = {resources?: {displayName: string; urls?: {name: string; url: string}[]}[]};
 
-/** The URL of a running resource, e.g. resourceUrl('gateway', 'http'). Exits with a hint when nothing is running. */
+/** The URL of a running resource, e.g. resourceUrl('gateway-api', 'http'). Exits with a hint when nothing is running. */
 export function resourceUrl(resource: string, endpoint: string): string {
   let output = '';
   try {
