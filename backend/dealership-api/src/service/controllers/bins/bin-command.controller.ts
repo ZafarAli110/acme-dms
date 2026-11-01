@@ -8,8 +8,11 @@ import {BinCreateRequestDto} from '#dto/bins/bin-create-request.dto';
 import type {BinResponseDto} from '#dto/bins/bin-response.dto';
 import {CurrentUser} from '../../authorization/current-user.decorator';
 import {RequirePermission} from '../../authorization/require-permission.decorator';
+import {Timeout} from '@nestjs/resilience';
+import {settings} from '#settings/settings';
 
 /** Changes to the bins of the location selected in `x-location-id`. Reads are in BinController. */
+@Timeout(settings.requestTimeoutMs)
 @Controller('v1/bins')
 export class BinCommandController {
   private readonly _createBinCommandHandler: ICreateBinCommandHandler;

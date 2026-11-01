@@ -14,8 +14,11 @@ import type {PartListItemDto} from '#dto/parts/part-list-item.dto';
 import type {PartResponseDto} from '#dto/parts/part-response.dto';
 import {CurrentUser} from '../../authorization/current-user.decorator';
 import {RequirePermission} from '../../authorization/require-permission.decorator';
+import {Timeout} from '@nestjs/resilience';
+import {settings} from '#settings/settings';
 
 /** Reads of the parts catalogue. Writes are in PartCommandController. */
+@Timeout(settings.requestTimeoutMs)
 @Controller('v1/parts')
 export class PartController {
   private readonly _getPartListQueryHandler: IGetPartListQueryHandler;
