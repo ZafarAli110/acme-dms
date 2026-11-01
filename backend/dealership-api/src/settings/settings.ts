@@ -24,6 +24,10 @@ export interface Environment {
   REQUEST_TIMEOUT?: string;
   /** A duration (`30s`): how long one SQL statement may run. */
   DATABASE_STATEMENT_TIMEOUT?: string;
+  /** How many connections this instance keeps to the dealership database (instances × this ≤ Postgres's max). */
+  DATABASE_MAX_CONNECTIONS?: string;
+  /** A duration (`10s`): how long a request waits for a free database connection before it fails. */
+  DATABASE_CONNECTION_TIMEOUT?: string;
   /** Aspire: the dealership database, as a .NET connection string. */
   ConnectionStrings__dealership?: string;
   /** Aspire: RabbitMQ's address. */
@@ -43,6 +47,10 @@ export interface Settings {
   requestTimeoutMs: number;
   /** How long one SQL statement may run before Postgres cancels it (Node cannot cancel a running query itself). */
   databaseStatementTimeoutMs: number;
+  /** Connections this instance keeps to the database; every running unit of work holds one. */
+  databaseMaxConnections: number;
+  /** How long a unit of work waits for a free connection before failing, instead of hanging. */
+  databaseConnectionTimeoutMs: number;
   /** What Aspire provides. Null outside Aspire (in a unit test); the module that needs one says so when it starts. */
   dealershipDatabase: string | null;
   rabbitmq: string | null;
@@ -60,6 +68,12 @@ export function readSettings(environment: Environment): Settings {
       'DATABASE_STATEMENT_TIMEOUT',
       environment.DATABASE_STATEMENT_TIMEOUT,
       '30s',
+    ),
+    databaseMaxConnections: readWholeNumber('DATABASE_MAX_CONNECTIONS', environment.DATABASE_MAX_CONNECTIONS, 10),
+    databaseConnectionTimeoutMs: readDuration(
+      'DATABASE_CONNECTION_TIMEOUT',
+      environment.DATABASE_CONNECTION_TIMEOUT,
+      '10s',
     ),
     dealershipDatabase: environment.ConnectionStrings__dealership ?? null,
     rabbitmq: environment.ConnectionStrings__rabbitmq ?? null,
