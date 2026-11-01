@@ -1,12 +1,12 @@
 // How the helper scripts reach the system started by `bun run dev`: resource URLs come from `aspire describe`,
 // and demo users sign in through the gateway exactly like the web app.
 
-export const DEMO_PASSWORD = 'Acme123!';
+export const DEMO_PASSWORD = "Acme123!";
 export const DEMO_USERS: Record<string, string> = {
-  sam: 'sam@northwind.test',
-  rita: 'rita@northwind.test',
-  maria: 'maria@northwind.test',
-  tom: 'tom@citymotors.test',
+  sam: "sam@northwind.test",
+  rita: "rita@northwind.test",
+  maria: "maria@northwind.test",
+  tom: "tom@citymotors.test",
 };
 
 export interface Location {
@@ -24,14 +24,14 @@ export interface Session {
   defaultLocationId: string | null;
 }
 
-type Described = {resources?: {displayName: string; urls?: {name: string; url: string}[]}[]};
+type Described = { resources?: { displayName: string; urls?: { name: string; url: string }[] }[] };
 
 /** The URL of a running resource, e.g. resourceUrl('gateway-api', 'http'). Exits with a hint when nothing is running. */
 export function resourceUrl(resource: string, endpoint: string): string {
-  let output = '';
+  let output = "";
   try {
-    output = Bun.spawnSync(['aspire', 'describe', resource, '--format', 'Json', '--nologo'], {
-      stderr: 'ignore',
+    output = Bun.spawnSync(["aspire", "describe", resource, "--format", "Json", "--nologo"], {
+      stderr: "ignore",
     }).stdout.toString();
   } catch {
     console.error(
@@ -58,21 +58,21 @@ export function resourceUrl(resource: string, endpoint: string): string {
 export async function signInAsync(gateway: string, user: string): Promise<Session> {
   const email = DEMO_USERS[user];
   if (!email) {
-    throw new Error(`Unknown demo user "${user}". Known: ${Object.keys(DEMO_USERS).join(', ')}`);
+    throw new Error(`Unknown demo user "${user}". Known: ${Object.keys(DEMO_USERS).join(", ")}`);
   }
   const tokenResponse = await fetch(`${gateway}/api/identity/v1/tokens`, {
-    method: 'POST',
-    headers: {'content-type': 'application/json'},
-    body: JSON.stringify({email, password: DEMO_PASSWORD}),
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, password: DEMO_PASSWORD }),
   });
   if (!tokenResponse.ok) {
     throw new Error(`Sign-in as ${user} failed: ${tokenResponse.status} ${await tokenResponse.text()}`);
   }
-  const {accessToken} = (await tokenResponse.json()) as {accessToken: string};
+  const { accessToken } = (await tokenResponse.json()) as { accessToken: string };
   const me = (await (
-    await fetch(`${gateway}/api/identity/v1/users/me`, {headers: {authorization: `Bearer ${accessToken}`}})
-  ).json()) as {locations: Location[]; defaultLocationId: string | null};
-  return {user, token: accessToken, locations: me.locations, defaultLocationId: me.defaultLocationId};
+    await fetch(`${gateway}/api/identity/v1/users/me`, { headers: { authorization: `Bearer ${accessToken}` } })
+  ).json()) as { locations: Location[]; defaultLocationId: string | null };
+  return { user, token: accessToken, locations: me.locations, defaultLocationId: me.defaultLocationId };
 }
 
 /** Calls the gateway as a signed-in user at one of their locations. */
@@ -89,8 +89,8 @@ export function callAsync(
     method,
     headers: {
       authorization: `Bearer ${session.token}`,
-      'x-location-id': location.id,
-      ...(json && body ? {'content-type': 'application/json'} : {}),
+      "x-location-id": location.id,
+      ...(json && body ? { "content-type": "application/json" } : {}),
     },
     body,
   });

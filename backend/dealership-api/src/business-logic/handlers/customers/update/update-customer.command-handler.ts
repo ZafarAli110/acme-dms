@@ -1,15 +1,18 @@
-import {Inject, Injectable, NotFoundException} from '@nestjs/common';
-import {and, eq} from 'drizzle-orm';
-import type {IUpdateCustomerCommandHandler} from '#business-logic-abstractions/handlers/customers/update/update-customer.command-handler.interface';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {CustomerResponseDto} from '#dto/customers/customer-response.dto';
-import type {CustomerUpdateRequestDto} from '#dto/customers/customer-update-request.dto';
-import {customers, notDeleted} from '#persistence/schema/index';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {updatedAudit} from '../../../audit/audit-fields';
-import {requireLocation} from '../../../user-context/require-location';
-import {toCustomerResponseDto} from '../customer.mapper';
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { and, eq } from "drizzle-orm";
+import type { IUpdateCustomerCommandHandler } from "#business-logic-abstractions/handlers/customers/update/update-customer.command-handler.interface";
+import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
+import type { CustomerUpdateRequestDto } from "#dto/customers/customer-update-request.dto";
+import { customers, notDeleted } from "#persistence/schema/index";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { updatedAudit } from "../../../audit/audit-fields";
+import { requireLocation } from "../../../user-context/require-location";
+import { toCustomerResponseDto } from "../customer.mapper";
 
 /** Replaces a customer's details (PUT: every field is sent); the customer must belong to the selected location. */
 @Injectable()

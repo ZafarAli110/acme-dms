@@ -1,4 +1,4 @@
-import type {PartInventoryDto} from './part-inventory.dto';
+import type { PartInventoryDto } from "./part-inventory.dto";
 
 export interface PartListItemDto {
   id: string;

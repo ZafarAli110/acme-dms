@@ -1,6 +1,6 @@
-import {API_CONFIG} from '../../../core/config/api';
-import {apiClient, type RequestOptions} from '../../../core/services/apiClient';
-import type {DealerLocation, DealerUser} from '../types/dealerUser';
+import { API_CONFIG } from "../../../core/config/api";
+import { apiClient, type RequestOptions } from "../../../core/services/apiClient";
+import type { DealerLocation, DealerUser } from "../types/dealerUser";
 
 const USERS_URL = `${API_CONFIG.identityUrl}/v1/users`;
 

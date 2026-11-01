@@ -14,7 +14,7 @@ document-api (`src/rest-clients/document-api/document-api.schema.d.ts`), rather 
 The same shape everywhere, with every field always present. Aspire polls it to show each resource as Healthy.
 
 ```json
-{"service": "identity-api", "status": "ok", "version": "26.11.0", "databaseReachable": true}
+{ "service": "identity-api", "status": "ok", "version": "26.11.0", "databaseReachable": true }
 ```
 
 | Field               | Meaning                                                                                |
@@ -69,7 +69,7 @@ Every message has the same envelope; `data` depends on `type`.
 A work item: produce the variants of one uploaded document.
 
 ```json
-{"documentId": "uuid", "dealerId": "uuid"}
+{ "documentId": "uuid", "dealerId": "uuid" }
 ```
 
 #### `document.processed.v1` (document-api → anyone)
@@ -80,7 +80,7 @@ A work item: produce the variants of one uploaded document.
   "dealerId": "uuid",
   "ownerType": "part",
   "ownerId": "uuid",
-  "variants": [{"name": "display", "contentType": "image/webp", "width": 1200, "height": 800, "sizeBytes": 2002}]
+  "variants": [{ "name": "display", "contentType": "image/webp", "width": 1200, "height": 800, "sizeBytes": 2002 }]
 }
 ```
 
