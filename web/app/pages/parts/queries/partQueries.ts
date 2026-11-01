@@ -1,8 +1,8 @@
-import {API_CONFIG} from '../../../core/config/api';
-import {apiClient, type RequestOptions} from '../../../core/services/apiClient';
-import {type ListParams, toListApiQuery} from '../../../core/paging/listParams';
-import type {Page} from '../../../core/types/page';
-import type {Bin, Part, PartInput, PartListItem} from '../types/part';
+import { API_CONFIG } from "../../../core/config/api";
+import { apiClient, type RequestOptions } from "../../../core/services/apiClient";
+import { type ListParams, toListApiQuery } from "../../../core/paging/listParams";
+import type { Page } from "../../../core/types/page";
+import type { Bin, Part, PartInput, PartListItem } from "../types/part";
 
 const PARTS_URL = `${API_CONFIG.dealershipUrl}/v1/parts`;
 

@@ -1,14 +1,17 @@
-import {Inject, Injectable} from '@nestjs/common';
-import type {ICreateCustomerCommandHandler} from '#business-logic-abstractions/handlers/customers/create/create-customer.command-handler.interface';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {CustomerCreateRequestDto} from '#dto/customers/customer-create-request.dto';
-import type {CustomerResponseDto} from '#dto/customers/customer-response.dto';
-import {customers} from '#persistence/schema/index';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {createdAudit} from '../../../audit/audit-fields';
-import {requireLocation} from '../../../user-context/require-location';
-import {toCustomerResponseDto} from '../customer.mapper';
+import { Inject, Injectable } from "@nestjs/common";
+import type { ICreateCustomerCommandHandler } from "#business-logic-abstractions/handlers/customers/create/create-customer.command-handler.interface";
+import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { CustomerCreateRequestDto } from "#dto/customers/customer-create-request.dto";
+import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
+import { customers } from "#persistence/schema/index";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { createdAudit } from "../../../audit/audit-fields";
+import { requireLocation } from "../../../user-context/require-location";
+import { toCustomerResponseDto } from "../customer.mapper";
 
 /** Adds a customer to the user's selected location: each location keeps its own customer book. */
 @Injectable()

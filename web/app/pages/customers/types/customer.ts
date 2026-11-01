@@ -1,4 +1,4 @@
-export type CustomerStatus = 'active' | 'prospect' | 'inactive';
+export type CustomerStatus = "active" | "prospect" | "inactive";
 
 /** Every field is always sent; a value the customer does not have is `null`. */
 export interface CustomerInput {
