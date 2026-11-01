@@ -1,6 +1,7 @@
-// Puts the running system back to the known starting state: deletes all business data (parts, bins, stock, photos, customers,
-// documents), empties every queue, puts every demo user back on their own locations (undoing the Locations page),
-// then runs the seed. Dealers, locations and users are kept.
+// Puts the running system back to the known starting state: rebuilds the dealership database from its migrations (so
+// a table or migration an agent added in an earlier run is gone too), deletes the documents, empties every queue, puts
+// every demo user back on their own locations (undoing the Locations page), then runs the seed. Dealers, locations and
+// users are kept.
 //
 //   bun run reset
 import {SQL} from 'bun';
@@ -16,17 +17,15 @@ async function truncateAsync(database: string, tables: string[]): Promise<void> 
   await sql.close();
   console.log(`${database}: emptied ${tables.join(', ')}`);
 }
-// dealership-api moved from TypeORM to Drizzle with a fresh baseline: a database still holding TypeORM's history is
-// recreated empty and migrated, then seeded like any other. (Its business data is test data the seed restores.)
-async function migrateDealershipAsync(): Promise<void> {
+// The dealership database is rebuilt, not emptied: its schema is dropped and the migrations of this branch run again.
+// Everything in it is sample data the seed restores, and only a rebuild also removes what an agent's run left behind
+// (a vehicles table, an applied migration this branch does not have), so the next run starts where attendees do.
+async function rebuildDealershipAsync(): Promise<void> {
   const url = `postgres://${DEV_USER}:${DEV_PASSWORD}@${postgres.hostname}:${postgres.port}/dealership`;
   const sql = new SQL(url);
-  const [history] = await sql`SELECT to_regclass('public.migrations') IS NOT NULL AS typeorm`;
-  if (history.typeorm) {
-    await sql.unsafe('DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA public CASCADE; CREATE SCHEMA public');
-    console.log('dealership: removed the old TypeORM schema');
-  }
+  await sql.unsafe('DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA public CASCADE; CREATE SCHEMA public');
   await sql.close();
+  console.log('dealership: dropped every table, rebuilding from the migrations');
   const migrate = Bun.spawnSync(['bun', 'run', 'db:migrate'], {
     cwd: 'backend/dealership-api',
     env: {...process.env, DATABASE_URL: url},
@@ -37,15 +36,7 @@ async function migrateDealershipAsync(): Promise<void> {
     process.exit(migrate.exitCode);
   }
 }
-await migrateDealershipAsync();
-await truncateAsync('dealership', [
-  'processed_messages',
-  'customers',
-  'part_photos',
-  'part_inventories',
-  'bins',
-  'parts',
-]);
+await rebuildDealershipAsync();
 await truncateAsync('documents', ['outbox_messages', 'document_contents', 'documents']);
 
 const rabbitmq = resourceUrl('rabbitmq', 'management');
