@@ -15,8 +15,8 @@
     "apphost"
   ],
   "scripts": {
-    "postinstall": "bun scripts/install-git-hooks.ts",
     "dev": "bun scripts/check-node.ts && aspire run",
+    "hooks": "git config core.hooksPath .githooks",
     "status": "aspire describe",
     "logs": "aspire logs",
     "traces": "aspire otel traces",

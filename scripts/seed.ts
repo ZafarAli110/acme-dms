@@ -457,7 +457,7 @@ function crc32(bytes: Buffer): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-const gateway = resourceUrl('gateway', 'http');
+const gateway = resourceUrl('gateway-api', 'http');
 // As the manager: she works at every rooftop and may add parts and set stock.
 await seedDealerAsync(gateway, 'maria', NORTHWIND_PARTS, 6);
 // As Tom, City Motors' manager: another dealer in the same database.
