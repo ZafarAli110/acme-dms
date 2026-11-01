@@ -17,7 +17,7 @@ namespace Acme.Documents.BusinessLogic.Handlers.Documents.Process;
 /// </summary>
 internal sealed class ProcessDocumentCommandHandler : IProcessDocumentCommandHandler
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly DocumentsDbContext _dbContext;
     private readonly IImageProcessor _imageProcessor;
@@ -56,7 +56,7 @@ internal sealed class ProcessDocumentCommandHandler : IProcessDocumentCommandHan
         }
 
         var original = document.Contents.Single(c => c.Name == DocumentContent.Original);
-        var variants = JsonSerializer.Deserialize<List<VariantSpecDto>>(document.RequestedVariants, JsonOptions) ?? [];
+        var variants = JsonSerializer.Deserialize<List<VariantSpecDto>>(document.RequestedVariants, _jsonOptions) ?? [];
         foreach (var variant in variants)
         {
             var image = _imageProcessor.Process(original.Data, variant);
