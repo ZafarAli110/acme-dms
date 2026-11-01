@@ -2,6 +2,8 @@ import {cp} from 'node:fs/promises';
 
 // Bundles our own code (including `#layer/...` subpath imports) and leaves npm packages as runtime imports for Node.
 const watch = process.argv.includes('--watch');
+/** The product version, from the root package.json: the one place it is set for every service. */
+const {version} = (await Bun.file(new URL('../../../package.json', import.meta.url)).json()) as {version: string};
 
 async function buildAsync(): Promise<boolean> {
   const result = await Bun.build({
@@ -10,6 +12,7 @@ async function buildAsync(): Promise<boolean> {
     target: 'node',
     format: 'esm',
     sourcemap: 'linked',
+    define: {APP_VERSION: JSON.stringify(version)},
     plugins: [
       {
         name: 'npm-packages-external',
