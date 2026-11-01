@@ -21,5 +21,7 @@
     "**/node_modules/**": true,
     "**/dist/**": true,
     "**/.nx/**": true
-  }
+  },
+  "typescript.preferences.quoteStyle": "single",
+  "javascript.preferences.quoteStyle": "single"
 }
