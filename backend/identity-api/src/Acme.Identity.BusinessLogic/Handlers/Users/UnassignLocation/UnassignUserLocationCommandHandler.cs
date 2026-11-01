@@ -10,7 +10,8 @@ namespace Acme.Identity.BusinessLogic.Handlers.Users.UnassignLocation;
 
 /// <summary>
 /// Takes a location away from a user. Their last location is refused: a user with none can't sign in to anything.
-/// Unassigning a location they don't have changes nothing.
+/// Unassigning a location they don't have changes nothing. When it was their default, another of their locations (the
+/// first by name) becomes the default, so the default is always one of their own.
 /// </summary>
 internal sealed class UnassignUserLocationCommandHandler : IUnassignUserLocationCommandHandler
 {
@@ -39,6 +40,15 @@ internal sealed class UnassignUserLocationCommandHandler : IUnassignUserLocation
         if (roles.Count == 1)
         {
             throw new ApiException(ApiErrorCategory.Conflict, $"{user.DisplayName} must keep at least one location.");
+        }
+
+        if (user.DefaultLocationId == location.Id)
+        {
+            user.DefaultLocationId = await _dbContext.UserLocationRoles
+                .Where(r => r.UserId == user.Id && r.LocationId != location.Id)
+                .OrderBy(r => r.Location!.Name)
+                .Select(r => (Guid?)r.LocationId)
+                .FirstAsync(cancellationToken);
         }
 
         // A soft delete (AuditingInterceptor): who unassigned it and when stays on the row.
