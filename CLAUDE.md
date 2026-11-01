@@ -67,6 +67,9 @@ After a ticket is done: `/qa <KEY>` has the **qa** subagent test it in the runni
 failure; when QA is clean, `/retro <KEY>` writes what went wrong as lessons with evidence (`docs/lessons/`), and
 `/learn` turns lessons that apply again into skills. A skill is the team's memory; a person approves each one.
 
+`/ticket-to-pr <KEY>` runs a ticket with agents from the plan to a reviewed pull request: an **architect** agent
+approves the plan, specialist reviewers check the pull request. It stops for any product question; a person merges.
+
 Work a ticket with `/ticket <KEY>`. Its plan, `docs/plans/<KEY>.md`, is the record of the work: if one exists, read it
 before doing anything else on that ticket.
 

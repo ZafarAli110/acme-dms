@@ -20,20 +20,25 @@
       "mcp__acme-tracker__get_ticket",
       "Bash(bunx playwright-cli *)",
       "mcp__acme-tracker__create_ticket",
-      "Bash(bun run xlsx:inspect *)"
+      "Bash(bun run xlsx:inspect *)",
+      "Bash(git switch -c ACME-*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push -u origin ACME-*)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr comment *)",
+      "Bash(gh pr view *)",
+      "mcp__acme-tracker__update_ticket_status",
+      "mcp__acme-tracker__add_comment"
     ],
     "ask": [
-      "mcp__acme-tracker__update_ticket_status",
-      "mcp__acme-tracker__add_comment",
       "Bash(bun run reset)",
       "Bash(bun run seed)",
       "Bash(bun add *)",
       "Bash(bun install *)",
       "Bash(dotnet add *)",
       "Bash(dotnet ef *)",
-      "Bash(git commit *)",
       "Bash(git checkout *)",
-      "Bash(git switch *)",
       "WebFetch",
       "WebSearch",
       "Write(.claude/skills/**)",
@@ -43,7 +48,11 @@
     "deny": [
       "Read(./**/.env)",
       "Read(./**/.env.*)",
-      "Bash(git push *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push origin main*)",
+      "Bash(git push origin lab/*)",
+      "Bash(gh pr merge *)",
       "Bash(git reset --hard *)",
       "Bash(git clean *)",
       "Bash(aspire *)",
@@ -62,6 +71,15 @@
           {
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-files.ts\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/ticket-branch.ts\""
           }
         ]
       }
