@@ -10,6 +10,8 @@ import {resourceUrl} from './running-system';
 
 const DEV_USER = 'acme';
 const DEV_PASSWORD = 'acme';
+/** Northwind Motors: every bulk customer belongs to it. */
+const NORTHWIND = '10000000-0000-0000-0000-000000000001';
 const NORTHSIDE = '20000000-0000-0000-0000-000000000001';
 const RIVERSIDE = '20000000-0000-0000-0000-000000000002';
 const WESTGATE = '20000000-0000-0000-0000-000000000003';
@@ -131,9 +133,9 @@ async function seedLocationAsync(locationId: string, name: string, first: number
   const started = performance.now();
   // hashint4 spreads the values so neighbouring rows differ; the same count always gives the same customers.
   await sql.unsafe(`
-    INSERT INTO customers (location_id, first_name, surname, company_name, email, phone, city, status, last_contact_date,
+    INSERT INTO customers (dealer_id, location_id, first_name, surname, company_name, email, phone, city, status, last_contact_date,
                            created_at, created_by, updated_at, updated_by)
-    SELECT '${locationId}', person.first_name, person.surname,
+    SELECT '${NORTHWIND}', '${locationId}', person.first_name, person.surname,
            CASE WHEN abs(hashint4(i * 5)) % 8 = 0 THEN (${textArray(COMPANIES)})[1 + abs(hashint4(i * 11)) % ${COMPANIES.length}] END,
            -- An email for most, built from the name; a mobile number for most.
            CASE WHEN abs(hashint4(i * 19)) % 6 <> 0 THEN

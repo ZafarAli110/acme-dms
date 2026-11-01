@@ -37,12 +37,14 @@ export const STOCKED_PART_COLUMNS: ListColumns = {
  */
 export async function findStockedPartsAsync(
   db: Database,
+  dealerId: string,
   locationId: string,
   query: ListQueryDto,
 ): Promise<{items: StockedPart[]; total: number}> {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 25;
   const where = and(
+    eq(partInventories.dealerId, dealerId),
     eq(partInventories.locationId, locationId),
     notDeleted(partInventories),
     query.search
@@ -67,34 +69,51 @@ export async function findStockedPartsAsync(
 /** The part as `locationId` stocks it, or null when it is not stocked there (or deleted). */
 export async function findStockedPartAsync(
   db: Database,
+  dealerId: string,
   locationId: string,
   partId: string,
 ): Promise<StockedPart | null> {
   const [stocked] = await stockedParts(
     db,
-    and(eq(partInventories.locationId, locationId), eq(partInventories.partId, partId), notDeleted(partInventories)),
+    and(
+      eq(partInventories.dealerId, dealerId),
+      eq(partInventories.locationId, locationId),
+      eq(partInventories.partId, partId),
+      notDeleted(partInventories),
+    ),
   );
   return stocked ?? null;
 }
 
 /** The part's photos, oldest first. */
-export function findPhotosAsync(db: Database, partId: string): Promise<PartPhoto[]> {
+export function findPhotosAsync(db: Database, dealerId: string, partId: string): Promise<PartPhoto[]> {
   return db
     .select()
     .from(partPhotos)
-    .where(and(eq(partPhotos.partId, partId), notDeleted(partPhotos)))
+    .where(and(eq(partPhotos.dealerId, dealerId), eq(partPhotos.partId, partId), notDeleted(partPhotos)))
     .orderBy(asc(partPhotos.createdAt));
 }
 
 /** Each part's thumbnail: its default photo when that is ready, otherwise its first ready photo. */
-export async function findThumbnailsAsync(db: Database, partIds: string[]): Promise<Map<string, PartPhoto>> {
+export async function findThumbnailsAsync(
+  db: Database,
+  dealerId: string,
+  partIds: string[],
+): Promise<Map<string, PartPhoto>> {
   if (partIds.length === 0) {
     return new Map();
   }
   const photos = await db
     .select()
     .from(partPhotos)
-    .where(and(inArray(partPhotos.partId, partIds), eq(partPhotos.status, 'ready'), notDeleted(partPhotos)))
+    .where(
+      and(
+        eq(partPhotos.dealerId, dealerId),
+        inArray(partPhotos.partId, partIds),
+        eq(partPhotos.status, 'ready'),
+        notDeleted(partPhotos),
+      ),
+    )
     .orderBy(desc(partPhotos.isDefault), asc(partPhotos.createdAt));
   const thumbnails = new Map<string, PartPhoto>();
   for (const photo of photos) {

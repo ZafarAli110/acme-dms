@@ -31,14 +31,23 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
     const [bin] = await work.db
       .select()
       .from(bins)
-      .where(and(eq(bins.id, request.binId), eq(bins.locationId, locationId), notDeleted(bins)));
+      .where(
+        and(
+          eq(bins.id, request.binId),
+          eq(bins.dealerId, userContext.dealerId),
+          eq(bins.locationId, locationId),
+          notDeleted(bins),
+        ),
+      );
     if (!bin) {
       throw new BadRequestException(`Bin ${request.binId} is not a bin of this location; pick one from GET /v1/bins.`);
     }
     const [taken] = await work.db
       .select({id: parts.id})
       .from(parts)
-      .where(and(eq(parts.partNumber, request.partNumber), notDeleted(parts)));
+      .where(
+        and(eq(parts.dealerId, userContext.dealerId), eq(parts.partNumber, request.partNumber), notDeleted(parts)),
+      );
     if (taken) {
       throw new ConflictException(`Part number ${request.partNumber} already exists in your catalogue.`);
     }
@@ -47,6 +56,7 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
     const [part] = await work.db
       .insert(parts)
       .values({
+        dealerId: userContext.dealerId,
         partNumber: request.partNumber,
         description: request.description,
         unitPrice: request.unitPrice,
@@ -56,6 +66,7 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
     const [inventory] = await work.db
       .insert(partInventories)
       .values({
+        dealerId: userContext.dealerId,
         locationId,
         partId: part!.id,
         binId: bin.id,
