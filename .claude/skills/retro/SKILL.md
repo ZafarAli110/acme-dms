@@ -1,6 +1,7 @@
 ---
 name: retro
 description: Writes what a finished ticket taught, as lessons with evidence, to docs/lessons/<KEY>.md. Use after a ticket's QA is clean, e.g. /retro ACME-108, or when asked what was learned.
+disable-model-invocation: true
 ---
 
 # Retro: what this ticket taught

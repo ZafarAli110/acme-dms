@@ -1,6 +1,7 @@
 ---
 name: qa
 description: Has the qa subagent test a finished ticket in the running system, write its test cases to docs/qa/<KEY>.md and file a bug for each failure. Use when asked to QA a ticket, e.g. /qa ACME-108, after it is implemented and verified.
+disable-model-invocation: true
 ---
 
 # QA a ticket
