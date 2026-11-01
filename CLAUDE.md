@@ -5,15 +5,16 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 
 ## Rules that apply to every change
 
-- **One client, three locations.** This deployment serves one client (Northwind Motors), so nothing filters by dealer. A
-  **location is filtered nowhere for you**: every query of location-scoped data (customers, cars, inventory, bins,
-  appointments) filters by `requireLocation(userContext)` in its own `where`. Read `docs/standards/multi-tenancy.md`
-  before touching any of that data.
+- **Many dealers, one database.** Northwind Motors and City Motors share every table. **Nothing filters for you**:
+  every query (reads, updates, deletes, and lookups by id) filters by `userContext.dealerId` in its own `where`, and
+  every query of location-scoped data (customers, cars, inventory, bins, appointments) also by
+  `requireLocation(userContext)`. Every insert sets `dealerId`. Read `docs/standards/multi-tenancy.md` before touching
+  any data.
 - **One use case, one handler.** controller → handler interface → handler → unit of work. Controllers stay thin.
   Handlers query with Drizzle through `await using work = await this._unitOfWorkFactory.beginAsync()`; no
   repositories. `docs/standards/business-handlers.md`.
 - **Tests run against a real Postgres** (Testcontainers, Docker or Podman): seed the rows that must come back and the
-  ones that must not (another location's, a deleted one).
+  ones that must not (another dealer's, another location's, a deleted one).
 - **Check permissions, never role names.**
 - **DTOs are contracts:** every field always present, `null` for no value. A `PUT` sends every field; a `PATCH` only
   what changed.
@@ -46,7 +47,8 @@ The system must already be running (`bun run dev`) for `api`, `errors` and `rese
 1. `bun run gate:fast` passes.
 2. The change works in the running system, shown with `bun run api` as the users it affects. Anything per location is
    checked as two users at **different** locations: `sam` at Northside and `rita` at Westgate (`--location westgate`),
-   a rooftop sam doesn't work at. `maria`, the manager, works at all three.
+   a rooftop sam doesn't work at. `maria`, the manager, works at all three. Anything stored is also checked as `tom`
+   (City Motors, another dealer): he must see none of it, and an id of Northwind's must be "not found" for him.
 3. `bun run errors` shows nothing new.
 
 Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, run the `verify` skill
