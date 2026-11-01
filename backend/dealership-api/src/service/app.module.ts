@@ -18,6 +18,7 @@ import {PartController} from './controllers/parts/part.controller';
 import {StockCommandController} from './controllers/stock/stock-command.controller';
 import {StockController} from './controllers/stock/stock.controller';
 import {SystemController} from './controllers/system/system.controller';
+import {CacheControlMiddleware} from './middleware/cache-control.middleware';
 import {CorrelationIdMiddleware} from './middleware/correlation-id.middleware';
 import {loggerOptions} from './logging/logger-options';
 import {TraceRouteInterceptor} from './interceptors/trace-route.interceptor';
@@ -54,6 +55,6 @@ import {ProblemDetailsFilter} from './filters/problem-details.filter';
 })
 export class AppModule implements NestModule {
   public configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+    consumer.apply(CorrelationIdMiddleware, CacheControlMiddleware).forRoutes('*');
   }
 }
