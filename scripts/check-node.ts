@@ -4,12 +4,12 @@
 //
 //   bun scripts/check-node.ts
 
-const required = (await Bun.file(new URL('../.nvmrc', import.meta.url)).text()).trim().replace(/^v/, '');
+const required = (await Bun.file(new URL("../.nvmrc", import.meta.url)).text()).trim().replace(/^v/, "");
 
 function parse(version: string): number[] {
   return version
-    .replace(/^v/, '')
-    .split('.')
+    .replace(/^v/, "")
+    .split(".")
     .map((part) => Number.parseInt(part, 10));
 }
 
@@ -26,24 +26,24 @@ function satisfies(actual: string, minimum: string): boolean {
   return patch >= wantPatch;
 }
 
-let actual = '';
+let actual = "";
 try {
-  actual = Bun.spawnSync(['node', '--version']).stdout.toString().trim();
+  actual = Bun.spawnSync(["node", "--version"]).stdout.toString().trim();
 } catch {
-  actual = '';
+  actual = "";
 }
 
 if (!actual || !satisfies(actual, required)) {
   console.error(
     [
-      '',
-      `Acme DMS needs Node ${required} or later; this terminal has ${actual || 'no node'}.`,
-      '',
-      'Install it and use it here, then run the command again:',
+      "",
+      `Acme DMS needs Node ${required} or later; this terminal has ${actual || "no node"}.`,
+      "",
+      "Install it and use it here, then run the command again:",
       `  fnm install ${required} && fnm use ${required}      (fnm, from ./setup.sh or .\\setup.ps1; macOS and Windows)`,
       `  nvm install ${required} && nvm use ${required}      (nvm)`,
-      '',
-    ].join('\n'),
+      "",
+    ].join("\n"),
   );
   process.exit(1);
 }

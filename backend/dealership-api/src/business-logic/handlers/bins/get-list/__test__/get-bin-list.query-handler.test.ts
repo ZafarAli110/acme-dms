@@ -1,19 +1,19 @@
-import {describe, expect, it} from 'vitest';
-import {AT_NORTHSIDE} from '#test-setup/users/test-users';
-import {NORTHSIDE, RIVERSIDE} from '#test-setup/postgres/seed-kit';
-import {useTestDatabase} from '#test-setup/postgres/use-test-database';
-import {GetBinListQueryHandler} from '../get-bin-list.query-handler';
+import { describe, expect, it } from "vitest";
+import { AT_NORTHSIDE } from "#test-setup/users/test-users";
+import { NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
+import { useTestDatabase } from "#test-setup/postgres/use-test-database";
+import { GetBinListQueryHandler } from "../get-bin-list.query-handler";
 
-describe('GetBinListQueryHandler', () => {
+describe("GetBinListQueryHandler", () => {
   const database = useTestDatabase();
 
   it("lists only the selected location's bins, without deleted ones", async () => {
-    await database.seed.addBinAsync({locationId: NORTHSIDE, code: 'A-01'});
-    await database.seed.addBinAsync({locationId: RIVERSIDE, code: 'A-02'});
-    await database.seed.addBinAsync({locationId: NORTHSIDE, code: 'A-03', deleted: true});
+    await database.seed.addBinAsync({ locationId: NORTHSIDE, code: "A-01" });
+    await database.seed.addBinAsync({ locationId: RIVERSIDE, code: "A-02" });
+    await database.seed.addBinAsync({ locationId: NORTHSIDE, code: "A-03", deleted: true });
 
     const bins = await new GetBinListQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE);
 
-    expect(bins.map((bin) => bin.code)).toEqual(['A-01']);
+    expect(bins.map((bin) => bin.code)).toEqual(["A-01"]);
   });
 });

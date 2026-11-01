@@ -1,16 +1,19 @@
-import {BadRequestException, Inject, Injectable, NotFoundException} from '@nestjs/common';
-import {and, eq} from 'drizzle-orm';
-import type {ISetStockLevelCommandHandler} from '#business-logic-abstractions/handlers/stock/set-level/set-stock-level.command-handler.interface';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {StockLevelSetRequestDto} from '#dto/stock/stock-level-set-request.dto';
-import type {StockListItemDto} from '#dto/stock/stock-list-item.dto';
-import {bins, notDeleted, partInventories, parts} from '#persistence/schema/index';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {createdAudit, updatedAudit} from '../../../audit/audit-fields';
-import {requireLocation} from '../../../user-context/require-location';
-import {findStockedPartAsync} from '../../parts/part.queries';
-import {toStockListItemDto} from '../stock.mapper';
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { and, eq } from "drizzle-orm";
+import type { ISetStockLevelCommandHandler } from "#business-logic-abstractions/handlers/stock/set-level/set-stock-level.command-handler.interface";
+import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { StockLevelSetRequestDto } from "#dto/stock/stock-level-set-request.dto";
+import type { StockListItemDto } from "#dto/stock/stock-list-item.dto";
+import { bins, notDeleted, partInventories, parts } from "#persistence/schema/index";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { createdAudit, updatedAudit } from "../../../audit/audit-fields";
+import { requireLocation } from "../../../user-context/require-location";
+import { findStockedPartAsync } from "../../parts/part.queries";
+import { toStockListItemDto } from "../stock.mapper";
 
 /**
  * Sets a part's bin and quantity at the user's selected location. A catalogue part the location does not stock yet
@@ -59,13 +62,13 @@ export class SetStockLevelCommandHandler implements ISetStockLevelCommandHandler
     }
 
     const now = this._clock.now();
-    const levels = {binId: bin.id, quantityOnHand: request.quantityOnHand, reorderLevel: request.reorderLevel};
+    const levels = { binId: bin.id, quantityOnHand: request.quantityOnHand, reorderLevel: request.reorderLevel };
     const existing = await findStockedPartAsync(work.db, userContext.dealerId, locationId, partId);
     // Stocking the part here for the first time creates its inventory at this location.
     const [inventory] = existing
       ? await work.db
           .update(partInventories)
-          .set({...levels, ...updatedAudit(userContext.userId, now)})
+          .set({ ...levels, ...updatedAudit(userContext.userId, now) })
           .where(eq(partInventories.id, existing.inventory.id))
           .returning()
       : await work.db

@@ -1,8 +1,11 @@
-import {Inject, Injectable} from '@nestjs/common';
-import {sql} from 'drizzle-orm';
-import type {IGetHealthQueryHandler} from '#business-logic-abstractions/handlers/system/get-health/get-health.query-handler.interface';
-import type {HealthCheckResponseDto} from '#dto/system/health-check-response.dto';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
+import { Inject, Injectable } from "@nestjs/common";
+import { sql } from "drizzle-orm";
+import type { IGetHealthQueryHandler } from "#business-logic-abstractions/handlers/system/get-health/get-health.query-handler.interface";
+import type { HealthCheckResponseDto } from "#dto/system/health-check-response.dto";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
 
 /** Up, which version, and whether the dealership database answers. Aspire polls it (GET /v1/system/health). */
 @Injectable()
@@ -16,8 +19,8 @@ export class GetHealthQueryHandler implements IGetHealthQueryHandler {
   public async executeAsync(): Promise<HealthCheckResponseDto> {
     const databaseReachable = await this.canReachDatabaseAsync();
     return {
-      service: 'dealership-api',
-      status: databaseReachable ? 'ok' : 'degraded',
+      service: "dealership-api",
+      status: databaseReachable ? "ok" : "degraded",
       version: APP_VERSION,
       databaseReachable,
     };
@@ -25,7 +28,7 @@ export class GetHealthQueryHandler implements IGetHealthQueryHandler {
 
   private async canReachDatabaseAsync(): Promise<boolean> {
     try {
-      await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
+      await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
       await work.db.execute(sql`select 1`);
       return true;
     } catch {

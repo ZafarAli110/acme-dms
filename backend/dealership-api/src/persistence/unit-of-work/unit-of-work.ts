@@ -1,6 +1,6 @@
-import {drizzle, type NodePgDatabase} from 'drizzle-orm/node-postgres';
-import type {PoolClient} from 'pg';
-import * as schema from '../schema';
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { PoolClient } from "pg";
+import * as schema from "../schema";
 
 /** Typed access to the dealership database: tables, columns, joins and results all come from the schema. */
 export type Database = NodePgDatabase<typeof schema>;
@@ -20,14 +20,14 @@ export class UnitOfWork implements AsyncDisposable {
 
   public constructor(client: PoolClient) {
     this._client = client;
-    this.db = drizzle(client, {schema});
+    this.db = drizzle(client, { schema });
   }
 
   public async commitAsync(): Promise<void> {
     if (this._committed) {
-      throw new Error('The unit of work is already committed.');
+      throw new Error("The unit of work is already committed.");
     }
-    await this._client.query('COMMIT');
+    await this._client.query("COMMIT");
     this._committed = true;
   }
 
@@ -37,7 +37,7 @@ export class UnitOfWork implements AsyncDisposable {
       return;
     }
     try {
-      await this._client.query('ROLLBACK');
+      await this._client.query("ROLLBACK");
       this._client.release();
     } catch (error) {
       // A connection that can't roll back is not given back to the pool.

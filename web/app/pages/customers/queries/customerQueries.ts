@@ -1,8 +1,8 @@
-import {API_CONFIG} from '../../../core/config/api';
-import {apiClient, type RequestOptions} from '../../../core/services/apiClient';
-import {type ListParams, toListApiQuery} from '../../../core/paging/listParams';
-import type {Page} from '../../../core/types/page';
-import type {Customer, CustomerInput, CustomerListItem} from '../types/customer';
+import { API_CONFIG } from "../../../core/config/api";
+import { apiClient, type RequestOptions } from "../../../core/services/apiClient";
+import { type ListParams, toListApiQuery } from "../../../core/paging/listParams";
+import type { Page } from "../../../core/types/page";
+import type { Customer, CustomerInput, CustomerListItem } from "../types/customer";
 
 const CUSTOMERS_URL = `${API_CONFIG.dealershipUrl}/v1/customers`;
 

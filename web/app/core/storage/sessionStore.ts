@@ -1,9 +1,9 @@
-const TOKEN_KEY = 'acme.accessToken';
-const LOCATION_KEY = 'acme.locationId';
+const TOKEN_KEY = "acme.accessToken";
+const LOCATION_KEY = "acme.locationId";
 
 /** Null outside a browser: React Router renders the app shell once at build time, where there is no sessionStorage. */
 function storage(): Storage | null {
-  return typeof window === 'undefined' ? null : window.sessionStorage;
+  return typeof window === "undefined" ? null : window.sessionStorage;
 }
 
 /**

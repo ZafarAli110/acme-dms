@@ -1,5 +1,5 @@
-import {API_CONFIG} from '../config/api';
-import {apiClient, type RequestOptions} from '../services/apiClient';
+import { API_CONFIG } from "../config/api";
+import { apiClient, type RequestOptions } from "../services/apiClient";
 
 /** Documents are shared by every feature that has files (part photos today). */
 export const documentQueries = {

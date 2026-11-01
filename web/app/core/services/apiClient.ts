@@ -1,12 +1,12 @@
-import {API_CONFIG} from '../config/api';
+import { API_CONFIG } from "../config/api";
 import {
   ApiError,
   PROBLEM_TYPE,
   type ProblemDetailsDto,
   RequestTimeoutError,
   ServerUnreachableError,
-} from '../config/apiErrors';
-import {session} from '../storage/sessionStore';
+} from "../config/apiErrors";
+import { session } from "../storage/sessionStore";
 
 export interface RequestOptions {
   /** Cancels the request, e.g. TanStack Query's `signal` when a query is no longer needed. */
@@ -20,38 +20,38 @@ export interface RequestOptions {
  */
 class ApiClient {
   public getAsync<T>(url: string, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, {method: 'GET'}, options);
+    return this.requestAsync<T>(url, { method: "GET" }, options);
   }
 
   public postAsync<T>(url: string, body: unknown, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, jsonInit('POST', body), options);
+    return this.requestAsync<T>(url, jsonInit("POST", body), options);
   }
 
   public putAsync<T>(url: string, body: unknown, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, jsonInit('PUT', body), options);
+    return this.requestAsync<T>(url, jsonInit("PUT", body), options);
   }
 
   public patchAsync<T>(url: string, body: unknown, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, jsonInit('PATCH', body), options);
+    return this.requestAsync<T>(url, jsonInit("PATCH", body), options);
   }
 
   public deleteAsync<T>(url: string, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, {method: 'DELETE'}, options);
+    return this.requestAsync<T>(url, { method: "DELETE" }, options);
   }
 
   /** Multipart: a record and its files in one request. */
   public postFormAsync<T>(url: string, formData: FormData, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, {method: 'POST', body: formData}, options);
+    return this.requestAsync<T>(url, { method: "POST", body: formData }, options);
   }
 
   /** Multipart: a record and its files in one request. */
   public patchFormAsync<T>(url: string, formData: FormData, options?: RequestOptions): Promise<T> {
-    return this.requestAsync<T>(url, {method: 'PATCH', body: formData}, options);
+    return this.requestAsync<T>(url, { method: "PATCH", body: formData }, options);
   }
 
   /** A binary resource (an image variant), with the same headers and error handling. */
   public async getBlobAsync(url: string, options?: RequestOptions): Promise<Blob> {
-    const response = await this.sendAsync(url, {method: 'GET'}, options);
+    const response = await this.sendAsync(url, { method: "GET" }, options);
     if (!response.ok) {
       return this.throwResponseErrorAsync(response);
     }
@@ -77,13 +77,13 @@ class ApiClient {
     // multipart content type, with the boundary, from fetch itself.
     const headers = new Headers(init.headers);
     if (token) {
-      headers.set('authorization', `Bearer ${token}`);
+      headers.set("authorization", `Bearer ${token}`);
     }
     if (locationId) {
-      headers.set('x-location-id', locationId);
+      headers.set("x-location-id", locationId);
     }
     try {
-      return await fetch(url, {...init, signal, headers});
+      return await fetch(url, { ...init, signal, headers });
     } catch (error) {
       if (timeout.aborted) {
         throw new RequestTimeoutError();
@@ -97,7 +97,7 @@ class ApiClient {
   }
 
   private async throwResponseErrorAsync(response: Response): Promise<never> {
-    if ((response.headers.get('content-type') ?? '').includes('application/problem+json')) {
+    if ((response.headers.get("content-type") ?? "").includes("application/problem+json")) {
       throw new ApiError((await response.json()) as ProblemDetailsDto);
     }
     // Not from a service (for example the gateway or the dev proxy): build the same shape so callers handle one type.
@@ -110,14 +110,14 @@ class ApiClient {
       location: null,
       userId: null,
       traceId: null,
-      timestamp: Temporal.Now.instant().toString({smallestUnit: 'millisecond'}),
+      timestamp: Temporal.Now.instant().toString({ smallestUnit: "millisecond" }),
     });
   }
 }
 
 /** A request with a JSON body: serialised here, and labelled as JSON where it is serialised. */
 function jsonInit(method: string, body: unknown): RequestInit {
-  return {method, body: JSON.stringify(body), headers: {'content-type': 'application/json'}};
+  return { method, body: JSON.stringify(body), headers: { "content-type": "application/json" } };
 }
 
 function problemTypeForStatus(status: number): string {
