@@ -67,7 +67,7 @@ describe('ProblemDetailsFilter', () => {
 
   it('answers a broken unique rule with 409 and the rule in words, never the SQL or the constraint name', () => {
     const {status, body} = captureProblem(
-      failedQuery({code: '23505', constraint: 'uq_parts_part_number', table: 'parts'}),
+      failedQuery({code: '23505', constraint: 'uq_parts_dealer_part_number', table: 'parts'}),
     );
 
     expect(status).toBe(409);

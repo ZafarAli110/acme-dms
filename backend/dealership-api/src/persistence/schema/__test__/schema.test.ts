@@ -1,11 +1,17 @@
 import {eq, sql} from 'drizzle-orm';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 import {createTestDatabaseAsync, type TestDatabase} from '#test-setup/postgres/test-database';
-import {NORTHSIDE, SEEDED_AT, seedKit, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
+import {CITY_MOTORS, NORTHSIDE, NORTHWIND, SEEDED_AT, seedKit, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
 import {customers, parts} from '..';
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const AUDIT = {createdAt: SEEDED_AT, createdBy: TEST_USER_ID, updatedAt: SEEDED_AT, updatedBy: TEST_USER_ID};
+const AUDIT = {
+  dealerId: NORTHWIND,
+  createdAt: SEEDED_AT,
+  createdBy: TEST_USER_ID,
+  updatedAt: SEEDED_AT,
+  updatedBy: TEST_USER_ID,
+};
 
 describe('the dealership schema', () => {
   let database: TestDatabase;
@@ -72,15 +78,30 @@ describe('the dealership schema', () => {
 
     await expect(
       database.db.insert(parts).values({partNumber: 'BRK-001', description: 'Pads', unitPrice: 45, ...AUDIT}),
-    ).rejects.toMatchObject({cause: {code: '23505', constraint: 'uq_parts_part_number'}});
+    ).rejects.toMatchObject({cause: {code: '23505', constraint: 'uq_parts_dealer_part_number'}});
   });
 
-  it('has no dealer column anywhere', async () => {
-    const result = await database.db.execute<{count: number}>(
-      sql`select count(*)::int as count from information_schema.columns
-          where table_schema = 'public' and column_name = 'dealer_id'`,
+  it('lets another dealer use the same part number', async () => {
+    await database.db.insert(parts).values({partNumber: 'SHARED-1', description: 'Pads', unitPrice: 45, ...AUDIT});
+
+    await expect(
+      database.db
+        .insert(parts)
+        .values({partNumber: 'SHARED-1', description: 'Pads', unitPrice: 45, ...AUDIT, dealerId: CITY_MOTORS}),
+    ).resolves.toBeDefined();
+  });
+
+  it('gives every business table a dealer column that cannot be empty', async () => {
+    const result = await database.db.execute<{table_name: string; is_nullable: string}>(
+      sql`select table_name, is_nullable from information_schema.columns
+          where table_schema = 'public' and column_name = 'dealer_id' order by table_name`,
     );
 
-    expect(result.rows[0]?.count).toBe(0);
+    expect(result.rows).toEqual(
+      ['bins', 'customers', 'part_inventories', 'part_photos', 'parts'].map((table_name) => ({
+        table_name,
+        is_nullable: 'NO',
+      })),
+    );
   });
 });

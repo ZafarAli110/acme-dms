@@ -47,7 +47,7 @@ export class StartCustomerExportCommandHandler implements IStartCustomerExportCo
       return {...definition, field: column.field, header: column.header};
     });
     // Built here, so a sort or filter the list doesn't have is refused now, not after the export has started.
-    const where = customerListWhere(locationId, request);
+    const where = customerListWhere(userContext.dealerId, locationId, request);
     const orderBy = customerListOrderBy(request);
 
     const source: ExportSource = {

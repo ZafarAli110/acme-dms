@@ -11,6 +11,7 @@ export const partInventories = pgTable(
     id: uuid('id')
       .primaryKey()
       .default(sql`uuidv7()`),
+    dealerId: uuid('dealer_id').notNull(),
     locationId: uuid('location_id').notNull(),
     partId: uuid('part_id')
       .notNull()
