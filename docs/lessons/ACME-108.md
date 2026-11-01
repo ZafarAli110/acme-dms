@@ -25,7 +25,7 @@ the same things from its own failures.
 
 ## L3 Split the file into sheets at 1,048,575 data rows
 
-- What happened: Northside's 1.2 million customers do not fit one sheet: Excel's limit is 1,048,576 rows.
+- What happened: Northside's 1.6 million customers do not fit one sheet: Excel's limit is 1,048,576 rows.
 - What fixed it: a new sheet, with the header, every 1,048,575 data rows.
 - Evidence: `bun run xlsx:inspect` on 1.6 million rows: sheet 1 has 1,048,576 rows (header + 1,048,575), sheet 2 has
   551,426; the order carries on across the boundary.
