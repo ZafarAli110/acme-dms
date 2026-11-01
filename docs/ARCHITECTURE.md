@@ -11,7 +11,7 @@ with its **locations** (physical sites, "rooftops"). Every dealer's data shares 
 | `identity-api`   | .NET 10, EF Core              | dealers, locations, users, roles; issues access tokens | `identity`   |
 | `dealership-api` | NestJS 12, Drizzle            | parts catalogue, stock, part photos (references)       | `dealership` |
 | `document-api`   | .NET 10, EF Core              | files and their processed variants                     | `documents`  |
-| `gateway`        | .NET 10, YARP                 | routing `/api/<service>/…` to the services             | —            |
+| `gateway-api`    | .NET 10, YARP                 | routing `/api/<service>/…` to the services             | —            |
 | `web`            | React 19, MUI, TanStack Query | the dealership UI                                      | —            |
 
 Rules:

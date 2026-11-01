@@ -131,6 +131,9 @@ if ((Have "aspire") -or (Test-Path "$aspireBin\aspire.exe")) {
 Say "Packages (bun install)"
 bun install
 if ($LASTEXITCODE -ne 0) { throw "bun install failed" }
+# The pre-commit check (.githooks). Set here, once, on purpose: nothing runs on `bun install`.
+git config core.hooksPath .githooks
+Note "pre-commit check switched on (.githooks)"
 
 # ── Done ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 Say "Installed"
