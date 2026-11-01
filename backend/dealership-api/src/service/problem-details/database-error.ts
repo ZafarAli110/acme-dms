@@ -79,7 +79,7 @@ const PROBLEM_BY_CODE: Readonly<Record<string, DatabaseProblem>> = {
  * handlers check these first for a friendlier message; this is the answer when two requests race past that check.
  */
 const UNIQUE_RULES: Readonly<Record<string, string>> = {
-  uq_parts_part_number: 'A part with this part number already exists in your catalogue.',
+  uq_parts_dealer_part_number: 'A part with this part number already exists in your catalogue.',
   uq_bins_location_code: 'A bin with this code already exists at this location.',
   uq_part_inventories_location_part: 'This part is already stocked at this location.',
 };

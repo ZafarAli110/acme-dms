@@ -12,9 +12,17 @@ import {
   type PartPhoto,
 } from '#persistence/schema/index';
 
-/** Two of Northwind's rooftops, with the ids the identity seed gives them. */
+/** The two dealers and the rooftops tests use, with the ids the identity seed gives them. */
+export const NORTHWIND = '10000000-0000-0000-0000-000000000001';
+export const CITY_MOTORS = '10000000-0000-0000-0000-000000000002';
 export const NORTHSIDE = '20000000-0000-0000-0000-000000000001';
 export const RIVERSIDE = '20000000-0000-0000-0000-000000000002';
+export const CENTRAL = '20000000-0000-0000-0000-000000000004';
+
+/** The dealer a rooftop belongs to, so a test only has to say where a row is. */
+export function dealerOf(locationId: string): string {
+  return locationId === CENTRAL ? CITY_MOTORS : NORTHWIND;
+}
 
 /** Who and when, for every row a test seeds. */
 export const TEST_USER_ID = '30000000-0000-0000-0000-0000000000aa';
@@ -29,7 +37,13 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     const {deleted, ...values} = bin;
     const [row] = await db
       .insert(bins)
-      .values({description: `Bin ${bin.code}`, ...values, ...SEEDED_AUDIT, ...(deleted ? DELETED_AUDIT : {})})
+      .values({
+        dealerId: dealerOf(bin.locationId),
+        description: `Bin ${bin.code}`,
+        ...values,
+        ...SEEDED_AUDIT,
+        ...(deleted ? DELETED_AUDIT : {}),
+      })
       .returning();
     return row!;
   }
@@ -41,6 +55,7 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     const [row] = await db
       .insert(customers)
       .values({
+        dealerId: dealerOf(customer.locationId),
         firstName: 'Test',
         companyName: null,
         email: null,
@@ -67,6 +82,7 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     const [part] = await db
       .insert(parts)
       .values({
+        dealerId: dealerOf(stocked.locationId),
         partNumber: stocked.partNumber,
         description: `Part ${stocked.partNumber}`,
         unitPrice: 10,
@@ -76,6 +92,7 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
       .returning();
     const bin = await addBinAsync({locationId: stocked.locationId, code: `B-${stocked.partNumber}`});
     await db.insert(partInventories).values({
+      dealerId: dealerOf(stocked.locationId),
       locationId: stocked.locationId,
       partId: part!.id,
       binId: bin.id,
@@ -86,7 +103,7 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     return {part: part!, bin};
   }
 
-  /** A photo of a part; its document id is made up unless given. */
+  /** A photo of a part, Northwind's unless `dealerId` is given; its document id is made up unless given. */
   async function addPhotoAsync(
     photo: Pick<PartPhoto, 'partId' | 'isDefault'> & Partial<PartPhoto> & {deleted?: boolean},
   ): Promise<PartPhoto> {
@@ -94,6 +111,7 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     const [row] = await db
       .insert(partPhotos)
       .values({
+        dealerId: NORTHWIND,
         documentId: crypto.randomUUID(),
         originalFileName: 'photo.jpg',
         status: 'ready',

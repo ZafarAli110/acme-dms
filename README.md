@@ -18,16 +18,17 @@ and real conventions.
 ## The business
 
 **Acme** sells this DMS to dealer groups. Each **dealer** is a client with one or more **locations**: physical
-dealership sites, often called "rooftops" in the motor trade. Each deployment of Acme DMS serves one client, with its
-own databases; this one is **Northwind Motors**. Within the client, some data is shared by all its locations (the part
-master records) and some belongs to one location (each part's inventory and bin, customers, vehicles, appointments,
-documents).
+dealership sites, often called "rooftops" in the motor trade. One deployment of Acme DMS serves every dealer from the
+same databases, and every row says which dealer it belongs to. Within a dealer, some data is shared by all its
+locations (the part master records) and some belongs to one location (each part's inventory and bin, customers,
+vehicles, appointments, documents).
 
 People hold a **role per location**, and roles grant **permissions** (`parts.write`, `stock.adjust`, ...).
 
 | Dealer           | Locations                      |
 | ---------------- | ------------------------------ |
 | Northwind Motors | Northside, Riverside, Westgate |
+| City Motors      | Central                        |
 
 Demo users, all with the password **`Acme123!`**:
 
@@ -36,6 +37,7 @@ Demo users, all with the password **`Acme123!`**:
 | `sam@northwind.test`   | Northwind Motors | Northside + Riverside: Service Advisor            |
 | `rita@northwind.test`  | Northwind Motors | Riverside + Westgate: Service Advisor             |
 | `maria@northwind.test` | Northwind Motors | Northside + Riverside + Westgate: Service Manager |
+| `tom@citymotors.test`  | City Motors      | Central: Service Manager                          |
 
 Maria assigns people to locations on the **Locations** page; a change shows after that person's next sign-in.
 `bun run reset` puts everyone back on the locations above.
