@@ -1,5 +1,4 @@
-import {Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post, Put, Res} from '@nestjs/common';
-import {type HeaderSetter, setCreatedLocation} from '../created-location';
+import {Body, Controller, Inject, Param, ParseUUIDPipe, Post, Put} from '@nestjs/common';
 import {
   CREATE_CUSTOMER_COMMAND_HANDLER,
   type ICreateCustomerCommandHandler,
@@ -14,8 +13,12 @@ import type {CustomerResponseDto} from '#dto/customers/customer-response.dto';
 import {CustomerUpdateRequestDto} from '#dto/customers/customer-update-request.dto';
 import {CurrentUser} from '../../authorization/current-user.decorator';
 import {RequirePermission} from '../../authorization/require-permission.decorator';
+import {Timeout} from '@nestjs/resilience';
+import {settings} from '#settings/settings';
+import {Created} from '../../interceptors/created.interceptor';
 
 /** Changes to the customers of the location selected in `x-location-id`. Reads are in CustomerController. */
+@Timeout(settings.requestTimeoutMs)
 @Controller('v1/customers')
 export class CustomerCommandController {
   private readonly _createCustomerCommandHandler: ICreateCustomerCommandHandler;
@@ -30,16 +33,13 @@ export class CustomerCommandController {
   }
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
+  @Created((customer: CustomerResponseDto) => `/v1/customers/${customer.id}`)
   @RequirePermission('customers.write')
-  public async createAsync(
+  public createAsync(
     @CurrentUser() userContext: UserContext,
     @Body() request: CustomerCreateRequestDto,
-    @Res({passthrough: true}) response: HeaderSetter,
   ): Promise<CustomerResponseDto> {
-    const created = await this._createCustomerCommandHandler.executeAsync(userContext, request);
-    setCreatedLocation(response, `/v1/customers/${created.id}`);
-    return created;
+    return this._createCustomerCommandHandler.executeAsync(userContext, request);
   }
 
   @Put(':customerId')

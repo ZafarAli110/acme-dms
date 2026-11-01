@@ -9,12 +9,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Res,
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import {type HeaderSetter, setCreatedLocation} from '../created-location';
 import {ApiBody, ApiConsumes} from '@nestjs/swagger';
 import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
 import {
@@ -42,12 +40,16 @@ import {
   uploadedFileName,
 } from '../../interceptors/file-upload.interceptor';
 import {JsonPayload} from '../../pipes/json-payload.pipe';
+import {Timeout} from '@nestjs/resilience';
+import {settings} from '#settings/settings';
+import {Created} from '../../interceptors/created.interceptor';
 
 /** Transport guardrails only; the photo rules (10 MB, image types, 10 per part) are enforced by the handlers. */
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 const MAX_UPLOAD_FILES = 12;
 
 /** Changes to the parts catalogue. Reads are in PartController. */
+@Timeout(settings.requestTimeoutMs)
 @Controller('v1/parts')
 export class PartCommandController {
   private readonly _createPartCommandHandler: ICreatePartCommandHandler;
@@ -65,16 +67,13 @@ export class PartCommandController {
   }
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
+  @Created((part: PartResponseDto) => `/v1/parts/${part.id}`)
   @RequirePermission('parts.write')
-  public async createAsync(
+  public createAsync(
     @CurrentUser() userContext: UserContext,
     @Body() request: PartCreateRequestDto,
-    @Res({passthrough: true}) response: HeaderSetter,
   ): Promise<PartResponseDto> {
-    const created = await this._createPartCommandHandler.executeAsync(userContext, request);
-    setCreatedLocation(response, `/v1/parts/${created.id}`);
-    return created;
+    return this._createPartCommandHandler.executeAsync(userContext, request);
   }
 
   /**
