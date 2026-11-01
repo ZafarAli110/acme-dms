@@ -1,15 +1,16 @@
 {
   "title": "Connexion",
-  "subtitle": "Gestion de concession pour Northwind Motors",
+  "subtitle": "Système de gestion de concession",
   "email": "E-mail",
   "password": "Mot de passe",
   "signIn": "Se connecter",
   "signingIn": "Connexion…",
   "demoUsers": "Utilisateurs de démonstration · mot de passe {{password}}",
   "demoUser": {
-    "sam": "Sam · Conseiller service, Northside et Riverside",
-    "rita": "Rita · Conseillère service, Riverside et Westgate",
-    "maria": "Maria · Responsable atelier, Northside, Riverside et Westgate"
+    "sam": "Sam · Northwind Motors · Conseiller service, Northside et Riverside",
+    "rita": "Rita · Northwind Motors · Conseillère service, Riverside et Westgate",
+    "maria": "Maria · Northwind Motors · Responsable atelier, Northside, Riverside et Westgate",
+    "tom": "Tom · City Motors · Responsable atelier, Central"
   },
   "invalidCredentials": "L'e-mail ou le mot de passe est incorrect."
 }
