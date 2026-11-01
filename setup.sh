@@ -49,7 +49,7 @@ say "Node.js 26 (through fnm)"
 existing_node=""
 if have node; then existing_node="$(node -v)"; fi
 if have fnm; then note "fnm already installed"; else brew install fnm; fi
-# fnm switches Node per folder: inside acme-dms it reads .nvmrc (the exact version, e.g. 26.13.0)
+# fnm switches Node per folder: inside acme-dms it reads .nvmrc (26: any Node 26, fnm installs the latest)
 add_line "eval \"\$(fnm env --use-on-cd --shell $SHELL_NAME)\""
 eval "$(fnm env --shell bash)" # for the rest of this script (it runs in bash)
 node_version="$(tr -d '[:space:]v' < .nvmrc)"
