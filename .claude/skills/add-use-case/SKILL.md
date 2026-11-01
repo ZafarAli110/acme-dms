@@ -18,9 +18,10 @@ use case of the same kind rather than starting from a blank file.
 
 ## Steps
 
-1. **Decide the scope of the data first.** The whole client's, or one location's? (`docs/standards/multi-tenancy.md`,
-   the table.) Location-scoped: every query filters `eq(<table>.locationId, requireLocation(userContext))` in its own
-   `where`. Nothing filters locations for you.
+1. **Decide the scope of the data first.** Every row is one dealer's: every query filters
+   `eq(<table>.dealerId, userContext.dealerId)` in its own `where`, and every insert sets `dealerId`. Then: the whole
+   dealer's, or one location's? (`docs/standards/multi-tenancy.md`, the table.) Location-scoped: every query also
+   filters `eq(<table>.locationId, requireLocation(userContext))`. Nothing filters dealers or locations for you.
 2. DTOs in `dto/<area>/`: responses are interfaces with every field present (`null`, never missing); requests are
    validated classes.
 3. Handler interface and DI token in `business-logic-abstractions/handlers/<area>/<use-case>/`.
@@ -34,7 +35,8 @@ this._unitOfWorkFactory.beginAsync()` (`{readOnly: true}` for a query), Drizzle 
    mapper (`parts/part.queries.ts`).
 6. The test in `__test__/` runs against a real Postgres: `useTestDatabase()`, `fixedClock()`, the users in
    `#test-setup/users/test-users` (shared test setup lives in `src/test-setup/`; `__test__/` holds only tests). It must fail if the rule the ticket is about were broken: seed
-   the rows that must come back **and the rows that must not** (another location's, a deleted one), as
+   the rows that must come back **and the rows that must not** (another dealer's, another location's, a deleted
+   one), as
    `bins/get-list/__test__` does.
 7. Register the handler in the module; add the action to `<Resource>Controller` (read) or `<Resource>CommandController`
    (write) with `@RequirePermission(...)`.
