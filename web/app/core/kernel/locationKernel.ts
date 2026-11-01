@@ -68,8 +68,13 @@ export class LocationKernel {
     if (auth.status === 'signed-out' || auth.user === null) {
       return SIGNED_OUT;
     }
-    const locations = auth.user.locations;
-    const current = locations.find((location) => location.id === wantedId) ?? locations[0] ?? null;
+    const {locations, defaultLocationId} = auth.user;
+    // The location chosen in this session, else the user's default (just after signing in), else the first.
+    const current =
+      locations.find((location) => location.id === wantedId) ??
+      locations.find((location) => location.id === defaultLocationId) ??
+      locations[0] ??
+      null;
     if (current === null) {
       return {status: 'signed-out', locations, current: null};
     }

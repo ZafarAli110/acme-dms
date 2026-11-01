@@ -30,6 +30,7 @@ internal sealed class GetCurrentUserQueryHandler : IGetCurrentUserQueryHandler
             user.DisplayName,
             user.DealerId,
             user.Dealer?.Name ?? string.Empty,
-            UserLocationMapper.ToUserLocationDtos(user));
+            UserLocationMapper.ToUserLocationDtos(user),
+            user.DefaultLocationId);
     }
 }

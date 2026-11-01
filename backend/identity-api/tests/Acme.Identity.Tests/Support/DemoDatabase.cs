@@ -26,7 +26,7 @@ internal static class DemoDatabase
 
         foreach (var demoUser in DemoData.Users)
         {
-            var user = new User { Id = demoUser.Id, DealerId = demoUser.DealerId, Email = demoUser.Email, DisplayName = demoUser.DisplayName };
+            var user = new User { Id = demoUser.Id, DealerId = demoUser.DealerId, Email = demoUser.Email, DisplayName = demoUser.DisplayName, DefaultLocationId = demoUser.DefaultLocationId };
             user.PasswordHash = hasher.HashPassword(user, DemoData.Password);
             foreach (var (locationId, role) in demoUser.Roles)
             {
