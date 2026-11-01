@@ -216,8 +216,8 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run seed:bulk`                                 | add 1.2M customers at Northside, 400k at Riverside, 250k at Westgate   |
 | `bun run reset`                                     | empty business data and queues, reset demo users' locations, then seed |
 
-`bun run api` signs in as a demo user, picks their first location (or the one given with `--location`), and calls the
-gateway exactly as the web app does:
+`bun run api` signs in as a demo user, starts at their default location (or the one given with `--location`), and
+calls the gateway exactly as the web app does:
 
 ```bash
 bun run api as maria --location riverside GET /api/dealership/v1/stock
