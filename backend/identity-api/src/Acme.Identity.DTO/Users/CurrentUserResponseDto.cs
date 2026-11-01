@@ -6,4 +6,5 @@ public sealed record CurrentUserResponseDto(
     string DisplayName,
     Guid DealerId,
     string DealerName,
-    IReadOnlyList<UserLocationDto> Locations);
+    IReadOnlyList<UserLocationDto> Locations,
+    Guid? DefaultLocationId);

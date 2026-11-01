@@ -27,6 +27,7 @@ public sealed class IdentitySeeder
         await _dbContext.Database.MigrateAsync(cancellationToken);
         await RemoveRetiredAsync(cancellationToken);
         await AddMissingAsync(cancellationToken);
+        await SetMissingDefaultLocationsAsync(cancellationToken);
     }
 
     /// <summary>Gives every demo user exactly the locations and roles <see cref="DemoData"/> lists.</summary>
@@ -43,9 +44,22 @@ public sealed class IdentitySeeder
             {
                 _dbContext.UserLocationRoles.Add(new UserLocationRole { UserId = demoUser.Id, LocationId = locationId, Role = role });
             }
+
+            await _dbContext.Users.Where(u => u.Id == demoUser.Id)
+                .ExecuteUpdateAsync(set => set.SetProperty(u => u.DefaultLocationId, demoUser.DefaultLocationId), cancellationToken);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>A demo user from before default locations existed gets the one the demo lists.</summary>
+    private async Task SetMissingDefaultLocationsAsync(CancellationToken cancellationToken)
+    {
+        foreach (var demoUser in DemoData.Users)
+        {
+            await _dbContext.Users.Where(u => u.Id == demoUser.Id && u.DefaultLocationId == null)
+                .ExecuteUpdateAsync(set => set.SetProperty(u => u.DefaultLocationId, demoUser.DefaultLocationId), cancellationToken);
+        }
     }
 
     /// <summary>Demo users, locations and dealers that have since been dropped (Alice, Tom, Bob, Contoso).</summary>
@@ -81,7 +95,14 @@ public sealed class IdentitySeeder
         var userIds = await _dbContext.Users.IgnoreQueryFilters().Select(u => u.Id).ToListAsync(cancellationToken);
         foreach (var demoUser in DemoData.Users.Where(u => !userIds.Contains(u.Id)))
         {
-            var user = new User { Id = demoUser.Id, DealerId = demoUser.DealerId, Email = demoUser.Email, DisplayName = demoUser.DisplayName };
+            var user = new User
+            {
+                Id = demoUser.Id,
+                DealerId = demoUser.DealerId,
+                Email = demoUser.Email,
+                DisplayName = demoUser.DisplayName,
+                DefaultLocationId = demoUser.DefaultLocationId,
+            };
             user.PasswordHash = _passwordHasher.HashPassword(user, DemoData.Password);
             foreach (var (locationId, role) in demoUser.Roles)
             {

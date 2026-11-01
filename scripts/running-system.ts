@@ -20,6 +20,8 @@ export interface Session {
   user: string;
   token: string;
   locations: Location[];
+  /** Where the user starts after signing in, as in the web app. */
+  defaultLocationId: string | null;
 }
 
 type Described = {resources?: {displayName: string; urls?: {name: string; url: string}[]}[]};
@@ -69,8 +71,8 @@ export async function signInAsync(gateway: string, user: string): Promise<Sessio
   const {accessToken} = (await tokenResponse.json()) as {accessToken: string};
   const me = (await (
     await fetch(`${gateway}/api/identity/v1/users/me`, {headers: {authorization: `Bearer ${accessToken}`}})
-  ).json()) as {locations: Location[]};
-  return {user, token: accessToken, locations: me.locations};
+  ).json()) as {locations: Location[]; defaultLocationId: string | null};
+  return {user, token: accessToken, locations: me.locations, defaultLocationId: me.defaultLocationId};
 }
 
 /** Calls the gateway as a signed-in user at one of their locations. */
