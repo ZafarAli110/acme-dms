@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "ms-dotnettools.csdevkit",
+    "oxc.oxc-vscode",
+    "EditorConfig.EditorConfig",
+    "oven.bun-vscode",
+    "ms-playwright.playwright"
+  ]
+}
