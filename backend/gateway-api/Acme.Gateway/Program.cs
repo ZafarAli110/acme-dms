@@ -1,5 +1,7 @@
 using System.Reflection;
+using Acme.Gateway;
 using Acme.ServiceDefaults;
+using Yarp.ReverseProxy.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,29 @@ builder.Services.AddServiceDiscovery();
 builder.Services
     .AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
+    .AddTransforms(context =>
+    {
+        // A 201's Location is relative to the service; give it back the prefix this route removed (LocationPrefix).
+        var prefix = context.Route.Transforms?
+            .Select(transform => transform.TryGetValue("PathRemovePrefix", out var value) ? value : null)
+            .FirstOrDefault(value => value is not null);
+        if (prefix is null)
+        {
+            return;
+        }
+
+        context.AddResponseTransform(transformContext =>
+        {
+            var headers = transformContext.HttpContext.Response.Headers;
+            var location = headers.Location.ToString();
+            if (location.Length > 0)
+            {
+                headers.Location = LocationPrefix.Apply(prefix, location);
+            }
+
+            return ValueTask.CompletedTask;
+        });
+    })
     .AddServiceDiscoveryDestinationResolver();
 
 var app = builder.Build();
