@@ -1,5 +1,5 @@
 import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import {NORTHSIDE, RIVERSIDE, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
+import {CENTRAL, dealerOf, NORTHSIDE, RIVERSIDE, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
 
 /**
  * The access token a handler forwards when it calls another service for the user (document-api). Tests never send it
@@ -8,12 +8,21 @@ import {NORTHSIDE, RIVERSIDE, TEST_USER_ID} from '#test-setup/postgres/seed-kit'
 export const TEST_ACCESS_TOKEN = 'test-access-token';
 
 /**
- * Someone signed in and working at `locationId`, as a handler receives them. No permissions: handlers don't check
+ * Someone signed in and working at `locationId`, for the dealer that owns it, as a handler receives them. No
+ * permissions: handlers don't check
  * them, the authorization guard does before a handler runs (authorization.guard.test.ts covers that).
  */
 export function userAt(locationId: string): UserContext {
-  return {userId: TEST_USER_ID, locationId, permissions: [], accessToken: TEST_ACCESS_TOKEN};
+  return {
+    userId: TEST_USER_ID,
+    dealerId: dealerOf(locationId),
+    locationId,
+    permissions: [],
+    accessToken: TEST_ACCESS_TOKEN,
+  };
 }
 
 export const AT_NORTHSIDE = userAt(NORTHSIDE);
 export const AT_RIVERSIDE = userAt(RIVERSIDE);
+/** At City Motors, another dealer: sees none of Northwind's data. */
+export const AT_CENTRAL = userAt(CENTRAL);

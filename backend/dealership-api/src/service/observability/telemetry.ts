@@ -6,6 +6,7 @@ import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-proto';
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
 import {AmqplibInstrumentation} from '@opentelemetry/instrumentation-amqplib';
 import {HttpInstrumentation} from '@opentelemetry/instrumentation-http';
+import {PgInstrumentation} from '@opentelemetry/instrumentation-pg';
 import {PinoInstrumentation} from '@opentelemetry/instrumentation-pino';
 import {BatchLogRecordProcessor} from '@opentelemetry/sdk-logs';
 import {PeriodicExportingMetricReader} from '@opentelemetry/sdk-metrics';
@@ -19,7 +20,13 @@ if (process.env['OTEL_EXPORTER_OTLP_ENDPOINT']) {
     traceExporter: new OTLPTraceExporter(),
     metricReaders: [new PeriodicExportingMetricReader({exporter: new OTLPMetricExporter()})],
     logRecordProcessors: [new BatchLogRecordProcessor({exporter: new OTLPLogExporter()})],
-    instrumentations: [new HttpInstrumentation(), new PinoInstrumentation(), new AmqplibInstrumentation()],
+    // Pg: every SQL statement is a span under its request, with the query text (placeholders, never the values).
+    instrumentations: [
+      new HttpInstrumentation(),
+      new PgInstrumentation(),
+      new PinoInstrumentation(),
+      new AmqplibInstrumentation(),
+    ],
   });
   sdk.start();
 }

@@ -23,9 +23,10 @@ export class GetPartListQueryHandler implements IGetPartListQueryHandler {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
-    const {items, total} = await findStockedPartsAsync(work.db, locationId, query);
+    const {items, total} = await findStockedPartsAsync(work.db, userContext.dealerId, locationId, query);
     const thumbnails = await findThumbnailsAsync(
       work.db,
+      userContext.dealerId,
       items.map(({part}) => part.id),
     );
 
