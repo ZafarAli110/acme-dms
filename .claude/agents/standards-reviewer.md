@@ -11,9 +11,10 @@ looks like.
 For every finding give the file and line, the rule broken (quote it, with the standard's file and heading), and the
 smallest fix. Look especially for:
 
-- location-scoped data read or written without the user's location (`multi-tenancy.md`);
+- any query without `eq(<table>.dealerId, userContext.dealerId)`, an insert without `dealerId`, or location-scoped
+  data read or written without the user's location (`multi-tenancy.md`);
 - a read of a business table, or a join, without `notDeleted(…)` (`database.md`, "Soft delete");
-- a handler test that can't fail: it seeds only rows that should come back, never another location's or a deleted one;
+- a handler test that can't fail: it seeds only rows that should come back, never another dealer's, another location's or a deleted one;
 - a new shape where an existing feature of the same kind already shows the pattern;
 - DTO fields left out instead of `null`, a `PUT` that does not send every field;
 - `new Date()` / `DateTime.Now` instead of the injected clock; anything asynchronous not ending in `Async`;
