@@ -1,7 +1,17 @@
 {
   "$schema": "../../node_modules/oxlint/configuration_schema.json",
   "extends": ["../../.oxlintrc.json"],
+  "plugins": ["typescript", "unicorn", "oxc", "node"],
+  "rules": {
+    "node/no-process-env": "error"
+  },
   "overrides": [
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "node/no-process-env": "off"
+      }
+    },
     {
       "files": ["src/settings/**"],
       "rules": {
