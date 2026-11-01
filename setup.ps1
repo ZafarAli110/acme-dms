@@ -63,7 +63,7 @@ $existingNode = $null
 if (Have "node") { $existingNode = (node -v) }
 if (Have "fnm") { Note "fnm already installed" } else { Install-WithWinget "Schniz.fnm" }
 
-# fnm switches Node per folder: inside acme-dms it reads .nvmrc (the exact version, e.g. 26.13.0). Turn it on in every PowerShell profile.
+# fnm switches Node per folder: inside acme-dms it reads .nvmrc (26: any Node 26, fnm installs the latest). Turn it on in every PowerShell profile.
 $profileLine = "fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression"
 $documents = [Environment]::GetFolderPath("MyDocuments")
 foreach ($profileFile in @("$documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1", "$documents\PowerShell\Microsoft.PowerShell_profile.ps1")) {

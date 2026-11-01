@@ -18,8 +18,8 @@ namespace Acme.Documents.Messaging.Publishing;
 /// </summary>
 public sealed partial class OutboxRelay : BackgroundService
 {
-    private static readonly ActivitySource ActivitySource = new("Acme.Documents.Messaging");
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
+    private static readonly ActivitySource _activitySource = new("Acme.Documents.Messaging");
+    private static readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(1);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly RabbitMqConnection _rabbitMq;
@@ -47,7 +47,7 @@ public sealed partial class OutboxRelay : BackgroundService
                 LogPublishFailed(_logger, ex);
             }
 
-            await Task.Delay(PollInterval, _timeProvider, stoppingToken);
+            await Task.Delay(_pollInterval, _timeProvider, stoppingToken);
         }
     }
 
@@ -71,7 +71,7 @@ public sealed partial class OutboxRelay : BackgroundService
         {
             // Continue the trace of the request that wrote the message, so the dashboard shows one trace end to end.
             ActivityContext.TryParse(message.TraceParent, null, out var parent);
-            using var activity = ActivitySource.StartActivity($"publish {message.Type}", ActivityKind.Producer, parent);
+            using var activity = _activitySource.StartActivity($"publish {message.Type}", ActivityKind.Producer, parent);
 
             var envelope = new JsonObject
             {

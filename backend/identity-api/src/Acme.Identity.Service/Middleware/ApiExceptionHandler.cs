@@ -11,7 +11,7 @@ namespace Acme.Identity.Service.Middleware;
 /// </summary>
 public sealed class ApiExceptionHandler : IExceptionHandler
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
@@ -24,7 +24,7 @@ public sealed class ApiExceptionHandler : IExceptionHandler
         var status = (int)apiException.Category;
         httpContext.Response.StatusCode = status;
         var problem = ProblemDetailsDtoFactory.Create(httpContext, status, apiException.Message);
-        await httpContext.Response.WriteAsJsonAsync(problem, JsonOptions, "application/problem+json", cancellationToken);
+        await httpContext.Response.WriteAsJsonAsync(problem, _jsonOptions, "application/problem+json", cancellationToken);
         return true;
     }
 }

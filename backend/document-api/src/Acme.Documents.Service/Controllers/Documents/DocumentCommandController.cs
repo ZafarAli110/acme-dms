@@ -10,7 +10,7 @@ namespace Acme.Documents.Service.Controllers.Documents;
 /// <summary>Changes to documents. Reads are in <see cref="DocumentController"/>.</summary>
 public sealed class DocumentCommandController : ApiControllerBase
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IUploadDocumentCommandHandler _uploadDocumentCommandHandler;
     private readonly IDeleteDocumentCommandHandler _deleteDocumentCommandHandler;
@@ -42,7 +42,7 @@ public sealed class DocumentCommandController : ApiControllerBase
 
         using var buffer = new MemoryStream();
         await file.CopyToAsync(buffer, cancellationToken);
-        var variantSpecs = string.IsNullOrWhiteSpace(variants) ? [] : JsonSerializer.Deserialize<List<VariantSpecDto>>(variants, JsonOptions) ?? [];
+        var variantSpecs = string.IsNullOrWhiteSpace(variants) ? [] : JsonSerializer.Deserialize<List<VariantSpecDto>>(variants, _jsonOptions) ?? [];
         var request = new DocumentUploadRequestDto(ownerType, ownerId, file.FileName, file.ContentType, buffer.ToArray(), variantSpecs);
 
         var response = await _uploadDocumentCommandHandler.ExecuteAsync(CurrentUser, request, cancellationToken);

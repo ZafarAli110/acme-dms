@@ -19,7 +19,7 @@ namespace Acme.Documents.BusinessLogic.Handlers.Documents.Upload;
 internal sealed class UploadDocumentCommandHandler : IUploadDocumentCommandHandler
 {
     internal const long MaxBytes = 20 * 1024 * 1024;
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly DocumentsDbContext _dbContext;
     private readonly IOutbox _outbox;
@@ -47,7 +47,7 @@ internal sealed class UploadDocumentCommandHandler : IUploadDocumentCommandHandl
             ContentType = request.ContentType,
             SizeBytes = request.Content.Length,
             Status = request.Variants.Count == 0 ? DocumentStatus.Ready : DocumentStatus.Pending,
-            RequestedVariants = JsonSerializer.Serialize(request.Variants, JsonOptions),
+            RequestedVariants = JsonSerializer.Serialize(request.Variants, _jsonOptions),
         };
         // The content's DocumentId is filled in from the document when it is saved.
         document.Contents.Add(new DocumentContent
