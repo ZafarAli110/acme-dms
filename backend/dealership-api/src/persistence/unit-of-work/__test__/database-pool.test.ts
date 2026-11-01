@@ -1,6 +1,6 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 import {createTestDatabaseAsync, type TestDatabase} from '#test-setup/postgres/test-database';
-import {createDatabasePool} from '../database-pool';
+import {createDatabasePool, DEFAULT_POOL_OPTIONS} from '../database-pool';
 
 describe('createDatabasePool', () => {
   let database: TestDatabase;
@@ -14,7 +14,7 @@ describe('createDatabasePool', () => {
   });
 
   it('has Postgres cancel a statement that runs longer than the statement timeout', async () => {
-    const pool = createDatabasePool(database.connectionString, 200);
+    const pool = createDatabasePool(database.connectionString, {...DEFAULT_POOL_OPTIONS, statementTimeoutMs: 200});
     try {
       // 57014 is query_canceled: Postgres stopped the statement itself.
       await expect(pool.query('SELECT pg_sleep(2)')).rejects.toMatchObject({code: '57014'});
