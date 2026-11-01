@@ -16,6 +16,7 @@ import {
   type DocumentProcessedMessageDto,
   type MessageEnvelopeDto,
 } from '#dto/messages/document-messages.dto';
+import {requireSetting, SETTINGS, type Settings} from '#settings/settings';
 
 const EXCHANGE = 'acme.documents';
 const DEAD_LETTER_EXCHANGE = 'acme.documents.dlx';
@@ -32,21 +33,21 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
   private readonly _logger = new Logger(DocumentEventsConsumer.name);
   private readonly _markPartPhotoReady: IMarkPartPhotoReadyCommandHandler;
   private readonly _markPartPhotoFailed: IMarkPartPhotoFailedCommandHandler;
+  private readonly _settings: Settings;
   private _connection: ChannelModel | null = null;
 
   public constructor(
     @Inject(MARK_PART_PHOTO_READY_COMMAND_HANDLER) markPartPhotoReady: IMarkPartPhotoReadyCommandHandler,
     @Inject(MARK_PART_PHOTO_FAILED_COMMAND_HANDLER) markPartPhotoFailed: IMarkPartPhotoFailedCommandHandler,
+    @Inject(SETTINGS) settings: Settings,
   ) {
     this._markPartPhotoReady = markPartPhotoReady;
     this._markPartPhotoFailed = markPartPhotoFailed;
+    this._settings = settings;
   }
 
   public async onApplicationBootstrap(): Promise<void> {
-    const url = process.env['ConnectionStrings__rabbitmq'];
-    if (!url) {
-      throw new Error('ConnectionStrings__rabbitmq is not set; dealership-api must run under Aspire.');
-    }
+    const url = requireSetting(this._settings.rabbitmq, 'ConnectionStrings__rabbitmq');
     this._connection = await connect(url, {clientProperties: {connection_name: 'dealership-api'}});
     const channel = await this._connection.createChannel();
     await this.declareTopologyAsync(channel);

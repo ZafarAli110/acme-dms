@@ -1,5 +1,6 @@
 // Loaded with `node --import` before the app, so instrumentation is in place before any module is required.
-// Exporters read OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_SERVICE_NAME, which Aspire sets for every resource.
+// Exporters read OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_SERVICE_NAME themselves (Aspire sets them for every resource);
+// settings only decides whether telemetry is on.
 import {register} from 'node:module';
 import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-proto';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-proto';
@@ -11,8 +12,9 @@ import {PinoInstrumentation} from '@opentelemetry/instrumentation-pino';
 import {BatchLogRecordProcessor} from '@opentelemetry/sdk-logs';
 import {PeriodicExportingMetricReader} from '@opentelemetry/sdk-metrics';
 import {NodeSDK} from '@opentelemetry/sdk-node';
+import {settings} from '#settings/settings';
 
-if (process.env['OTEL_EXPORTER_OTLP_ENDPOINT']) {
+if (settings.otlpEndpoint !== null) {
   // ESM modules (including node:http as imported by the Nest adapter) can only be patched through a loader hook.
   register('@opentelemetry/instrumentation/hook.mjs', import.meta.url);
 
