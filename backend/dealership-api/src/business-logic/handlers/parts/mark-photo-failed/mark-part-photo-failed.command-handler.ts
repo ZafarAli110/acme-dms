@@ -1,5 +1,5 @@
 import {Inject, Injectable} from '@nestjs/common';
-import {eq} from 'drizzle-orm';
+import {and, eq} from 'drizzle-orm';
 import type {IMarkPartPhotoFailedCommandHandler} from '#business-logic-abstractions/handlers/parts/mark-photo-failed/mark-part-photo-failed.command-handler.interface';
 import {UnhandledMessageError} from '#business-logic-abstractions/messaging/unhandled-message.error';
 import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
@@ -43,7 +43,7 @@ export class MarkPartPhotoFailedCommandHandler implements IMarkPartPhotoFailedCo
       .update(partPhotos)
       // Background work: no signed-in user, so the system is recorded as the one who changed the photo.
       .set({status: 'failed', failureReason: data.reason, updatedAt: now, updatedBy: SYSTEM_USER_ID})
-      .where(eq(partPhotos.documentId, data.documentId));
+      .where(and(eq(partPhotos.dealerId, data.dealerId), eq(partPhotos.documentId, data.documentId)));
     await work.commitAsync();
   }
 }

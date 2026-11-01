@@ -60,7 +60,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
 
     // 1. Validate everything before writing anything.
     const locationId = requireLocation(userContext);
-    const {existing} = await this.readPartAsync(locationId, partId);
+    const {existing} = await this.readPartAsync(userContext.dealerId, locationId, partId);
     if (newPhotos.length !== files.length) {
       throw new BadRequestException(
         `Send one newPhotos entry per photo file: ${newPhotos.length} entries, ${files.length} files.`,
@@ -101,6 +101,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
         });
         uploadedDocumentIds.push(document.id);
         addedPhotos.push({
+          dealerId: userContext.dealerId,
           partId,
           documentId: document.id,
           originalFileName: file.fileName,
@@ -120,7 +121,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
           ...(request.unitPrice === undefined ? {} : {unitPrice: request.unitPrice}),
           ...updatedAudit(userContext.userId, now),
         })
-        .where(eq(parts.id, partId));
+        .where(and(eq(parts.dealerId, userContext.dealerId), eq(parts.id, partId)));
       if (removed.length > 0) {
         // Soft delete: the row stays, marked deleted, so who removed which photo and when is never lost.
         await work.db
@@ -133,6 +134,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
           })
           .where(
             and(
+              eq(partPhotos.dealerId, userContext.dealerId),
               eq(partPhotos.partId, partId),
               inArray(
                 partPhotos.id,
@@ -145,7 +147,13 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
         await work.db
           .update(partPhotos)
           .set({isDefault: photo.isDefault, ...updatedAudit(userContext.userId, now)})
-          .where(and(eq(partPhotos.partId, partId), eq(partPhotos.id, photo.id)));
+          .where(
+            and(
+              eq(partPhotos.dealerId, userContext.dealerId),
+              eq(partPhotos.partId, partId),
+              eq(partPhotos.id, photo.id),
+            ),
+          );
       }
       if (addedPhotos.length > 0) {
         await work.db.insert(partPhotos).values(addedPhotos);
@@ -162,18 +170,18 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       removed.map((photo) => photo.documentId),
     );
 
-    const {stocked, existing: photos} = await this.readPartAsync(locationId, partId);
+    const {stocked, existing: photos} = await this.readPartAsync(userContext.dealerId, locationId, partId);
     return toPartResponseDto(stocked.part, stocked.inventory, stocked.bin, photos);
   }
 
   /** The part as this location stocks it, with its photos; a part the location doesn't stock is not found. */
-  private async readPartAsync(locationId: string, partId: string) {
+  private async readPartAsync(dealerId: string, locationId: string, partId: string) {
     await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
-    const stocked = await findStockedPartAsync(work.db, locationId, partId);
+    const stocked = await findStockedPartAsync(work.db, dealerId, locationId, partId);
     if (!stocked) {
       throw new NotFoundException(`Part ${partId} is not stocked at this location.`);
     }
-    return {stocked, existing: await findPhotosAsync(work.db, partId)};
+    return {stocked, existing: await findPhotosAsync(work.db, dealerId, partId)};
   }
 
   /** Best effort, all at once: a document left behind is logged, never turned into a failed save. */

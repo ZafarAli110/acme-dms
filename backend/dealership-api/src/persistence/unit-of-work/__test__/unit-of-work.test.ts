@@ -2,7 +2,7 @@ import {eq, sql} from 'drizzle-orm';
 import type {Pool} from 'pg';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 import {createTestDatabaseAsync, type TestDatabase} from '#test-setup/postgres/test-database';
-import {NORTHSIDE, SEEDED_AT, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
+import {NORTHSIDE, NORTHWIND, SEEDED_AT, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
 import {bins} from '../../schema';
 import {createDatabasePool} from '../database-pool';
 import {UnitOfWorkFactory} from '../unit-of-work.factory';
@@ -10,7 +10,7 @@ import {UnitOfWorkFactory} from '../unit-of-work.factory';
 const AUDIT = {createdAt: SEEDED_AT, createdBy: TEST_USER_ID, updatedAt: SEEDED_AT, updatedBy: TEST_USER_ID};
 
 function newBin(code: string) {
-  return {locationId: NORTHSIDE, code, description: `Bin ${code}`, ...AUDIT};
+  return {dealerId: NORTHWIND, locationId: NORTHSIDE, code, description: `Bin ${code}`, ...AUDIT};
 }
 
 describe('UnitOfWork', () => {
