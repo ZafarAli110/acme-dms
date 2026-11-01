@@ -9,7 +9,7 @@ namespace Acme.ServiceDefaults.ProblemDetails;
 /// </summary>
 internal sealed class AcmeProblemDetailsWriter : IProblemDetailsWriter
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     public bool CanWrite(ProblemDetailsContext context) => true;
 
@@ -22,6 +22,6 @@ internal sealed class AcmeProblemDetailsWriter : IProblemDetailsWriter
         var problem = ProblemDetailsDtoFactory.Create(httpContext, status, context.ProblemDetails.Detail);
 
         httpContext.Response.StatusCode = status;
-        return new ValueTask(httpContext.Response.WriteAsJsonAsync(problem, JsonOptions, "application/problem+json"));
+        return new ValueTask(httpContext.Response.WriteAsJsonAsync(problem, _jsonOptions, "application/problem+json"));
     }
 }

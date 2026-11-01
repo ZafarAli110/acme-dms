@@ -11,7 +11,7 @@ internal sealed class GetHealthQueryHandler : IGetHealthQueryHandler
     /// The product version this build carries, "26.11.0": the SDK sets it from &lt;Version&gt; in Directory.Build.props
     /// and adds "+&lt;git commit&gt;", which is cut off here.
     /// </summary>
-    private static readonly string Version =
+    private static readonly string _version =
         typeof(GetHealthQueryHandler).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
         ?? "unknown";
 
@@ -25,6 +25,6 @@ internal sealed class GetHealthQueryHandler : IGetHealthQueryHandler
     public async Task<HealthCheckResponseDto> ExecuteAsync(CancellationToken cancellationToken)
     {
         var databaseReachable = await _dbContext.Database.CanConnectAsync(cancellationToken);
-        return new HealthCheckResponseDto("identity-api", databaseReachable ? "ok" : "degraded", Version, databaseReachable);
+        return new HealthCheckResponseDto("identity-api", databaseReachable ? "ok" : "degraded", _version, databaseReachable);
     }
 }
