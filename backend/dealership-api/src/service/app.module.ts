@@ -2,7 +2,10 @@ import {type MiddlewareConsumer, Module, type NestModule, ValidationPipe} from '
 import {APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE} from '@nestjs/core';
 import {LoggerModule} from 'nestjs-pino';
 import {BusinessLogicModule} from '#business-logic/business-logic.module';
-import {RestClientsModule} from '#rest-clients/rest-clients.module';
+import {REST_CLIENT_RESILIENCE_PRESETS, RestClientsModule} from '#rest-clients/rest-clients.module';
+import {SETTINGS, type Settings} from '#settings/settings';
+import {SettingsModule} from '#settings/settings.module';
+import {ResilienceModule} from '@nestjs/resilience';
 import {AccessTokenVerifier} from './authentication/access-token.verifier';
 import {AuthenticationGuard} from './guards/authentication.guard';
 import {AuthorizationGuard} from './guards/authorization.guard';
@@ -27,7 +30,20 @@ import {ProblemDetailsFilter} from './filters/problem-details.filter';
 
 @Module({
   // The composition root: the only place that wires implementations (REST clients) to abstractions.
-  imports: [LoggerModule.forRoot(loggerOptions), RestClientsModule, BusinessLogicModule],
+  imports: [
+    SettingsModule,
+    LoggerModule.forRoot(loggerOptions),
+    // Every controller's @Timeout() takes defaults.timeout (REQUEST_TIMEOUT); the presets are the REST clients'.
+    ResilienceModule.forRootAsync({
+      inject: [SETTINGS],
+      useFactory: (settings: Settings) => ({
+        defaults: {timeout: settings.requestTimeoutMs},
+        presets: REST_CLIENT_RESILIENCE_PRESETS,
+      }),
+    }),
+    RestClientsModule,
+    BusinessLogicModule,
+  ],
   // Every controller is registered here: one per resource, reads and writes (XxxCommandController) apart.
   controllers: [
     SystemController,
