@@ -18,7 +18,7 @@ namespace Acme.Identity.Tests.Handlers.Tokens;
 [TestClass]
 public sealed class CreateTokenCommandHandlerTests
 {
-    private static readonly RsaSecurityKey SigningKey = new(RSA.Create(2048)) { KeyId = "test" };
+    private static readonly RsaSecurityKey _signingKey = new(RSA.Create(2048)) { KeyId = "test" };
 
     public TestContext TestContext { get; set; } = null!;
 
@@ -56,7 +56,7 @@ public sealed class CreateTokenCommandHandlerTests
     private static CreateTokenCommandHandler CreateHandler(IdentityDbContext dbContext)
     {
         var keyProvider = new Mock<ISigningKeyProvider>();
-        keyProvider.Setup(p => p.GetSigningKeyAsync(It.IsAny<CancellationToken>())).ReturnsAsync(SigningKey);
+        keyProvider.Setup(p => p.GetSigningKeyAsync(It.IsAny<CancellationToken>())).ReturnsAsync(_signingKey);
         return new CreateTokenCommandHandler(dbContext, keyProvider.Object, new PasswordHasher<User>(), TimeProvider.System);
     }
 }

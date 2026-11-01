@@ -17,7 +17,7 @@ namespace Acme.Identity.BusinessLogic.Handlers.Tokens.Create;
 internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
 {
     private const string InvalidCredentials = "Email or password is incorrect.";
-    private static readonly JsonSerializerOptions ClaimJsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _claimJsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IdentityDbContext _dbContext;
     private readonly ISigningKeyProvider _signingKeyProvider;
@@ -76,7 +76,7 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
             ]),
             Claims = new Dictionary<string, object>(StringComparer.Ordinal)
             {
-                ["locations"] = JsonSerializer.SerializeToElement(locations, ClaimJsonOptions),
+                ["locations"] = JsonSerializer.SerializeToElement(locations, _claimJsonOptions),
             },
         };
 
