@@ -1,4 +1,4 @@
-// A merged dealer group's customer book: 1.2 million customers at Northside, 400,000 at Riverside and 250,000 at
+// A merged dealer group's customer book: 1.6 million customers at Northside, 400,000 at Riverside and 250,000 at
 // Westgate (ACME-108).
 // Written straight into the dealership database with one INSERT … SELECT per location, so it takes seconds, not hours
 // of API calls. Run `bun run seed` first; `bun run reset` removes these customers with the rest of the business data.
@@ -119,7 +119,7 @@ const COMPANIES = [
 ];
 const EMAIL_DOMAINS = ["gmail.com", "outlook.com", "hotmail.co.uk", "yahoo.co.uk", "btinternet.com", "icloud.com"];
 
-const [northside = 1_200_000, riverside = 400_000, westgate = 250_000] = process.argv.slice(2).map(Number);
+const [northside = 1_600_000, riverside = 400_000, westgate = 250_000] = process.argv.slice(2).map(Number);
 
 function textArray(values: string[]): string {
   return `ARRAY[${values.map((value) => `'${value.replaceAll("'", "''")}'`).join(", ")}]`;
