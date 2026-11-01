@@ -22,7 +22,7 @@ Postgres and RabbitMQ run in Docker. Aspire runs everything locally.
 
 ## Getting started
 
-Prerequisites: Git, Node.js 26.13.0 (LTS; `bun run dev` checks it), Bun, .NET 10 SDK, Docker Desktop, Aspire CLI.
+Prerequisites: Git, Node.js 26 (`bun run dev` checks it), Bun, .NET 10 SDK, Docker Desktop, Aspire CLI.
 `./setup.sh` (macOS) or `.\setup.ps1` (Windows, as administrator) installs them.
 
 ```bash

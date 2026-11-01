@@ -13,7 +13,7 @@ namespace Acme.ServiceDefaults.DatabaseErrors;
 /// </summary>
 internal sealed partial class DatabaseExceptionHandler : IExceptionHandler
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly ILogger<DatabaseExceptionHandler> _logger;
     private readonly IReadOnlyDictionary<string, string> _constraintMessages;
@@ -45,7 +45,7 @@ internal sealed partial class DatabaseExceptionHandler : IExceptionHandler
         httpContext.Response.StatusCode = error.Status;
         // The detail is one of the mapper's fixed messages, so it is safe to show even on a 503.
         var problem = ProblemDetailsDtoFactory.CreateWithSafeDetail(httpContext, error.Status, error.Detail);
-        await httpContext.Response.WriteAsJsonAsync(problem, JsonOptions, "application/problem+json", cancellationToken);
+        await httpContext.Response.WriteAsJsonAsync(problem, _jsonOptions, "application/problem+json", cancellationToken);
         return true;
     }
 
