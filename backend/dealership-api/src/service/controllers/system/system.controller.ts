@@ -12,7 +12,10 @@ import type {UserContextResponseDto} from '#dto/system/user-context-response.dto
 import type {HealthCheckResponseDto} from '#dto/system/health-check-response.dto';
 import {Public} from '../../authentication/public.decorator';
 import {CurrentUser} from '../../authorization/current-user.decorator';
+import {Timeout} from '@nestjs/resilience';
+import {settings} from '#settings/settings';
 
+@Timeout(settings.requestTimeoutMs)
 @Controller('v1/system')
 export class SystemController {
   private readonly _getHealthQueryHandler: IGetHealthQueryHandler;

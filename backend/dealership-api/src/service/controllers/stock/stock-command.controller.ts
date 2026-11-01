@@ -8,8 +8,11 @@ import {StockLevelSetRequestDto} from '#dto/stock/stock-level-set-request.dto';
 import type {StockListItemDto} from '#dto/stock/stock-list-item.dto';
 import {CurrentUser} from '../../authorization/current-user.decorator';
 import {RequirePermission} from '../../authorization/require-permission.decorator';
+import {Timeout} from '@nestjs/resilience';
+import {settings} from '#settings/settings';
 
 /** Changes to stock at the location selected in `x-location-id`. Reads are in StockController. */
+@Timeout(settings.requestTimeoutMs)
 @Controller('v1/stock')
 export class StockCommandController {
   private readonly _setStockLevelCommandHandler: ISetStockLevelCommandHandler;
