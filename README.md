@@ -42,18 +42,19 @@ Demo users, all with the password `Acme123!`:
 
 ## Commands
 
-| Command             | What it does                    |
-| ------------------- | ------------------------------- |
-| `bun run dev`       | Start everything                |
-| `bun run reset`     | Back to the sample data         |
-| `bun run api`       | Call the API as a demo user     |
-| `bun run errors`    | Recent failed requests (traces) |
-| `bun run test`      | Unit tests                      |
-| `bun run lint`      | Lint                            |
-| `bun run typecheck` | Type-check                      |
-| `bun run format`    | Format                          |
-| `bun run gate:fast` | What CI checks, on changed code |
-| `bun run hooks`     | Turn on the pre-commit check    |
+| Command             | What it does                     |
+| ------------------- | -------------------------------- |
+| `bun run dev`       | Start everything                 |
+| `bun run reset`     | Back to the sample data          |
+| `bun run api`       | Call the API as a demo user      |
+| `bun run errors`    | Recent failed requests (traces)  |
+| `bun run test`      | Unit tests                       |
+| `bun run coverage`  | Tests with coverage, per project |
+| `bun run lint`      | Lint                             |
+| `bun run typecheck` | Type-check                       |
+| `bun run format`    | Format                           |
+| `bun run gate:fast` | What CI checks, on changed code  |
+| `bun run hooks`     | Turn on the pre-commit check     |
 
 ## Licence
 
