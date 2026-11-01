@@ -197,9 +197,10 @@ export interface components {
       sizeBytes: number | string;
     };
     HealthCheckResponseDto: {
+      service: string;
       status: string;
       version: string;
-      databaseReachable: boolean;
+      databaseReachable: boolean | null;
     };
     /** Format: binary */
     IFormFile: string;
