@@ -8,6 +8,8 @@ describe('readSettings', () => {
       logLevel: 'info',
       requestTimeoutMs: 30_000,
       databaseStatementTimeoutMs: 30_000,
+      databaseMaxConnections: 10,
+      databaseConnectionTimeoutMs: 10_000,
       dealershipDatabase: null,
       rabbitmq: null,
       identityApiUrl: null,
@@ -31,6 +33,7 @@ describe('readSettings', () => {
   it('refuses a value that is not a duration or a port, naming the variable', () => {
     expect(() => readSettings({REQUEST_TIMEOUT: 'thirty seconds'})).toThrow(/REQUEST_TIMEOUT/);
     expect(() => readSettings({PORT: 'eighty'})).toThrow(/PORT/);
+    expect(() => readSettings({DATABASE_MAX_CONNECTIONS: '0'})).toThrow(/DATABASE_MAX_CONNECTIONS/);
   });
 
   it('says which variable is missing, for development and for a deployment', () => {
