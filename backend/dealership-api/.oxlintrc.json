@@ -3,6 +3,42 @@
   "extends": ["../../.oxlintrc.json"],
   "overrides": [
     {
+      "files": ["src/settings/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "Settings read the environment and depend on nothing."
+              },
+              {
+                "group": ["#business-logic/**", "../**/business-logic/**"],
+                "message": "Settings read the environment and depend on nothing."
+              },
+              {
+                "group": ["#business-logic-abstractions/**", "../**/business-logic-abstractions/**"],
+                "message": "Settings read the environment and depend on nothing."
+              },
+              {
+                "group": ["#dto/**", "../**/dto/**"],
+                "message": "Settings read the environment and depend on nothing."
+              },
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "Settings read the environment and depend on nothing."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Settings read the environment and depend on nothing."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["src/dto/**"],
       "rules": {
         "no-restricted-imports": [
