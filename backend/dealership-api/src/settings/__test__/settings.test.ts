@@ -1,20 +1,38 @@
 import {describe, expect, it} from 'vitest';
-import {readSettings} from '../settings';
+import {readSettings, requireSetting} from '../settings';
 
 describe('readSettings', () => {
-  it('uses the defaults when nothing is set', () => {
-    expect(readSettings({})).toEqual({requestTimeoutMs: 30_000, databaseStatementTimeoutMs: 30_000});
+  it('uses the defaults when nothing is set, and null for what only Aspire or a deployment provides', () => {
+    expect(readSettings({})).toEqual({
+      port: 3000,
+      logLevel: 'info',
+      requestTimeoutMs: 30_000,
+      databaseStatementTimeoutMs: 30_000,
+      dealershipDatabase: null,
+      rabbitmq: null,
+      identityApiUrl: null,
+      documentApiUrl: null,
+      otlpEndpoint: null,
+    });
   });
 
   it('reads durations in ms, s, m or h', () => {
-    expect(readSettings({REQUEST_TIMEOUT: '45s', DATABASE_STATEMENT_TIMEOUT: '500ms'})).toEqual({
+    expect(readSettings({REQUEST_TIMEOUT: '45s', DATABASE_STATEMENT_TIMEOUT: '500ms'})).toMatchObject({
       requestTimeoutMs: 45_000,
       databaseStatementTimeoutMs: 500,
     });
     expect(readSettings({REQUEST_TIMEOUT: '2m'}).requestTimeoutMs).toBe(120_000);
   });
 
-  it('refuses a value that is not a duration, naming the setting', () => {
+  it('refuses a value that is not a duration or a port, naming the variable', () => {
     expect(() => readSettings({REQUEST_TIMEOUT: 'thirty seconds'})).toThrow(/REQUEST_TIMEOUT/);
+    expect(() => readSettings({PORT: 'eighty'})).toThrow(/PORT/);
+  });
+
+  it('says which variable is missing, for development and for a deployment', () => {
+    expect(() => requireSetting(null, 'ConnectionStrings__dealership')).toThrow(
+      /ConnectionStrings__dealership is not set: Aspire sets it .* a deployment sets it/,
+    );
+    expect(requireSetting('Host=db', 'ConnectionStrings__dealership')).toBe('Host=db');
   });
 });
