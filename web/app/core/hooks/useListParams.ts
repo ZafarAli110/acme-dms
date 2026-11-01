@@ -1,5 +1,5 @@
-import {useSearchParams} from 'react-router';
-import {type ListParams, readListParams, toListSearchParams} from '../paging/listParams';
+import { useSearchParams } from "react-router";
+import { type ListParams, readListParams, toListSearchParams } from "../paging/listParams";
 
 /**
  * A list page's search, page, sort and filter, read from and written to the URL. A change is a navigation, so the
@@ -10,8 +10,11 @@ export function useListParams() {
   const [searchParams, setSearchParams] = useSearchParams();
   const params = readListParams(searchParams);
 
-  const update = (changes: Partial<ListParams>, options: {replace: boolean}): void => {
-    setSearchParams(toListSearchParams({...params, ...changes}), {replace: options.replace, preventScrollReset: true});
+  const update = (changes: Partial<ListParams>, options: { replace: boolean }): void => {
+    setSearchParams(toListSearchParams({ ...params, ...changes }), {
+      replace: options.replace,
+      preventScrollReset: true,
+    });
   };
 
   return {

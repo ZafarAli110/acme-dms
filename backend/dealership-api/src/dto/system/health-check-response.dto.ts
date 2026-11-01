@@ -5,7 +5,7 @@
  */
 export interface HealthCheckResponseDto {
   service: string;
-  status: 'ok' | 'degraded';
+  status: "ok" | "degraded";
   version: string;
   databaseReachable: boolean | null;
 }

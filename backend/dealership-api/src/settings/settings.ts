@@ -12,7 +12,7 @@
  */
 
 /** Injection token for `Settings`: classes take them through their constructor, as .NET classes take IOptions<T>. */
-export const SETTINGS = Symbol('Settings');
+export const SETTINGS = Symbol("Settings");
 
 /** The environment variables dealership-api reads. Aspire sets the connection strings and service addresses. */
 export interface Environment {
@@ -33,9 +33,9 @@ export interface Environment {
   /** Aspire: RabbitMQ's address. */
   ConnectionStrings__rabbitmq?: string;
   /** Aspire: identity-api's address (its signing keys come from there). */
-  'services__identity-api__http__0'?: string;
+  "services__identity-api__http__0"?: string;
   /** Aspire: document-api's address. */
-  'services__document-api__http__0'?: string;
+  "services__document-api__http__0"?: string;
   /** Aspire: where traces, metrics and logs go. Unset: telemetry is off. */
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
 }
@@ -61,24 +61,24 @@ export interface Settings {
 
 export function readSettings(environment: Environment): Settings {
   return {
-    port: readWholeNumber('PORT', environment.PORT, 3000),
-    logLevel: environment.LOG_LEVEL ?? 'info',
-    requestTimeoutMs: readDuration('REQUEST_TIMEOUT', environment.REQUEST_TIMEOUT, '30s'),
+    port: readWholeNumber("PORT", environment.PORT, 3000),
+    logLevel: environment.LOG_LEVEL ?? "info",
+    requestTimeoutMs: readDuration("REQUEST_TIMEOUT", environment.REQUEST_TIMEOUT, "30s"),
     databaseStatementTimeoutMs: readDuration(
-      'DATABASE_STATEMENT_TIMEOUT',
+      "DATABASE_STATEMENT_TIMEOUT",
       environment.DATABASE_STATEMENT_TIMEOUT,
-      '30s',
+      "30s",
     ),
-    databaseMaxConnections: readWholeNumber('DATABASE_MAX_CONNECTIONS', environment.DATABASE_MAX_CONNECTIONS, 10),
+    databaseMaxConnections: readWholeNumber("DATABASE_MAX_CONNECTIONS", environment.DATABASE_MAX_CONNECTIONS, 10),
     databaseConnectionTimeoutMs: readDuration(
-      'DATABASE_CONNECTION_TIMEOUT',
+      "DATABASE_CONNECTION_TIMEOUT",
       environment.DATABASE_CONNECTION_TIMEOUT,
-      '10s',
+      "10s",
     ),
     dealershipDatabase: environment.ConnectionStrings__dealership ?? null,
     rabbitmq: environment.ConnectionStrings__rabbitmq ?? null,
-    identityApiUrl: environment['services__identity-api__http__0'] ?? null,
-    documentApiUrl: environment['services__document-api__http__0'] ?? null,
+    identityApiUrl: environment["services__identity-api__http__0"] ?? null,
+    documentApiUrl: environment["services__document-api__http__0"] ?? null,
     otlpEndpoint: environment.OTEL_EXPORTER_OTLP_ENDPOINT ?? null,
   };
 }
@@ -102,7 +102,7 @@ function readWholeNumber(variable: keyof Environment, value: string | undefined,
   return number;
 }
 
-const UNIT_MS = {ms: 1, s: 1000, m: 60_000, h: 3_600_000} as const;
+const UNIT_MS = { ms: 1, s: 1000, m: 60_000, h: 3_600_000 } as const;
 
 /** A duration such as `500ms`, `30s` or `2m` (a bare number is milliseconds), in milliseconds. */
 function readDuration(variable: keyof Environment, value: string | undefined, fallback: string): number {
@@ -111,7 +111,7 @@ function readDuration(variable: keyof Environment, value: string | undefined, fa
   if (!match) {
     throw new Error(`${variable} must be a duration such as 500ms, 30s or 2m; it is "${text}".`);
   }
-  const unit = (match[2] ?? 'ms') as keyof typeof UNIT_MS;
+  const unit = (match[2] ?? "ms") as keyof typeof UNIT_MS;
   return Number(match[1]) * UNIT_MS[unit];
 }
 

@@ -22,6 +22,5 @@
     "**/dist/**": true,
     "**/.nx/**": true
   },
-  "typescript.preferences.quoteStyle": "single",
-  "javascript.preferences.quoteStyle": "single"
+  "js/ts.preferences.quoteStyle": "double"
 }

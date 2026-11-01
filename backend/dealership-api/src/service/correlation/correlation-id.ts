@@ -1,9 +1,9 @@
-import {trace} from '@opentelemetry/api';
+import { trace } from "@opentelemetry/api";
 
-export const CORRELATION_ID_HEADER = 'x-correlation-id';
+export const CORRELATION_ID_HEADER = "x-correlation-id";
 const MAX_LENGTH = 128;
 
-type CorrelatedRequest = {headers: Record<string, string | string[] | undefined>; correlationId?: string};
+type CorrelatedRequest = { headers: Record<string, string | string[] | undefined>; correlationId?: string };
 
 /**
  * The caller's `x-correlation-id` if it sent a usable one, otherwise the current trace id.

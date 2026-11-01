@@ -1,5 +1,5 @@
-import {API_CONFIG} from '../config/api';
-import {apiClient} from '../services/apiClient';
+import { API_CONFIG } from "../config/api";
+import { apiClient } from "../services/apiClient";
 
 export interface UserLocation {
   id: string;
@@ -23,9 +23,9 @@ export interface CurrentUser {
 /** Sign-in and the signed-in user. Used by the auth kernel, outside React. */
 export const identityQueries = {
   signInAsync: (email: string, password: string) =>
-    apiClient.postAsync<{accessToken: string; tokenType: string; expiresIn: number}>(
+    apiClient.postAsync<{ accessToken: string; tokenType: string; expiresIn: number }>(
       `${API_CONFIG.identityUrl}/v1/tokens`,
-      {email, password},
+      { email, password },
     ),
   getCurrentUserAsync: () => apiClient.getAsync<CurrentUser>(`${API_CONFIG.identityUrl}/v1/users/me`),
 };

@@ -259,7 +259,7 @@ branch and every pull request.
 Every service, the gateway included, answers `GET /v1/system/health` in the same shape, which Aspire polls:
 
 ```json
-{"service": "dealership-api", "status": "ok", "version": "26.11.0", "databaseReachable": true}
+{ "service": "dealership-api", "status": "ok", "version": "26.11.0", "databaseReachable": true }
 ```
 
 `status` is `degraded` when the service cannot reach its database; the gateway has none, so its `databaseReachable` is

@@ -31,5 +31,5 @@ export interface DocumentFailedMessageDto {
   reason: string;
 }
 
-export const DOCUMENT_PROCESSED = 'document.processed.v1';
-export const DOCUMENT_FAILED = 'document.failed.v1';
+export const DOCUMENT_PROCESSED = "document.processed.v1";
+export const DOCUMENT_FAILED = "document.failed.v1";
