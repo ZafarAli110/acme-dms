@@ -181,6 +181,10 @@ namespace Acme.Identity.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("dealer_id");
 
+                    b.Property<Guid?>("DefaultLocationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_location_id");
+
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -223,6 +227,9 @@ namespace Acme.Identity.Persistence.Migrations
 
                     b.HasIndex("DealerId")
                         .HasDatabaseName("ix_users_dealer_id");
+
+                    b.HasIndex("DefaultLocationId")
+                        .HasDatabaseName("ix_users_default_location_id");
 
                     b.HasIndex("Email")
                         .IsUnique()
@@ -311,6 +318,12 @@ namespace Acme.Identity.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_users_dealers_dealer_id");
+
+                    b.HasOne("Acme.Identity.Persistence.Entities.Location", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultLocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_users_locations_default_location_id");
 
                     b.Navigation("Dealer");
                 });

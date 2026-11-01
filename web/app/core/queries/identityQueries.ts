@@ -16,6 +16,8 @@ export interface CurrentUser {
   dealerId: string;
   dealerName: string;
   locations: UserLocation[];
+  /** Where the user starts after signing in: one of their locations. */
+  defaultLocationId: string | null;
 }
 
 /** Sign-in and the signed-in user. Used by the auth kernel, outside React. */
