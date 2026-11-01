@@ -1,5 +1,5 @@
-import {Logger} from '@nestjs/common';
-import {Pool} from 'pg';
+import { Logger } from "@nestjs/common";
+import { Pool } from "pg";
 
 /** How the pool behaves: from the settings (DATABASE_*), or a test's own values. */
 export interface DatabasePoolOptions {
@@ -18,7 +18,7 @@ export const DEFAULT_POOL_OPTIONS: DatabasePoolOptions = {
   statementTimeoutMs: null,
 };
 
-const logger = new Logger('DatabasePool');
+const logger = new Logger("DatabasePool");
 
 /**
  * The service's connections to the dealership database. Only units of work take connections from it. Each connection
@@ -33,11 +33,11 @@ export function createDatabasePool(
     connectionString,
     max: options.maxConnections,
     connectionTimeoutMillis: options.connectionTimeoutMs,
-    ...(options.statementTimeoutMs === null ? {} : {statement_timeout: options.statementTimeoutMs}),
+    ...(options.statementTimeoutMs === null ? {} : { statement_timeout: options.statementTimeoutMs }),
   });
   // An idle connection the server ends (a restart, a network reset) is reported here. Without a listener Node treats
   // it as unhandled and the service exits; the pool already drops that connection and opens a new one when needed.
-  pool.on('error', (error) => {
+  pool.on("error", (error) => {
     logger.warn(`An idle database connection was closed and is replaced: ${error.message}`);
   });
   return pool;

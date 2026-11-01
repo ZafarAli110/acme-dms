@@ -1,10 +1,10 @@
-import type {ListParams} from '../../../core/paging/listParams';
+import type { ListParams } from "../../../core/paging/listParams";
 
 /** Query keys for customers. Customers belong to a location, so every key starts with the location id. */
 export const CUSTOMER_QUERY_KEYS = {
-  all: (locationId: string) => ['customers', locationId] as const,
-  list: (locationId: string, params: ListParams) => ['customers', locationId, 'list', params] as const,
-  count: (locationId: string) => ['customers', locationId, 'count'] as const,
-  recent: (locationId: string) => ['customers', locationId, 'recent'] as const,
-  detail: (locationId: string, customerId: string) => ['customers', locationId, 'detail', customerId] as const,
+  all: (locationId: string) => ["customers", locationId] as const,
+  list: (locationId: string, params: ListParams) => ["customers", locationId, "list", params] as const,
+  count: (locationId: string) => ["customers", locationId, "count"] as const,
+  recent: (locationId: string) => ["customers", locationId, "recent"] as const,
+  detail: (locationId: string, customerId: string) => ["customers", locationId, "detail", customerId] as const,
 } as const;

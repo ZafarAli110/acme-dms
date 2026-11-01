@@ -1,4 +1,4 @@
-import type {CustomerStatus} from './customer-response.dto';
+import type { CustomerStatus } from "./customer-response.dto";
 
 export interface CustomerListItemDto {
   id: string;

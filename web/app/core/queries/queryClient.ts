@@ -1,5 +1,5 @@
-import {QueryClient} from '@tanstack/react-query';
-import {ApiError, isTransientError} from '../config/apiErrors';
+import { QueryClient } from "@tanstack/react-query";
+import { ApiError, isTransientError } from "../config/apiErrors";
 
 /**
  * The one TanStack Query cache. A module rather than React state, so route loaders and actions (which run outside
