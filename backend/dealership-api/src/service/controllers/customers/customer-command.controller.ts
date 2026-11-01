@@ -1,4 +1,5 @@
-import {Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post, Put} from '@nestjs/common';
+import {Body, Controller, HttpCode, HttpStatus, Inject, Param, ParseUUIDPipe, Post, Put, Res} from '@nestjs/common';
+import {type HeaderSetter, setCreatedLocation} from '../created-location';
 import {
   CREATE_CUSTOMER_COMMAND_HANDLER,
   type ICreateCustomerCommandHandler,
@@ -31,11 +32,14 @@ export class CustomerCommandController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequirePermission('customers.write')
-  public createAsync(
+  public async createAsync(
     @CurrentUser() userContext: UserContext,
     @Body() request: CustomerCreateRequestDto,
+    @Res({passthrough: true}) response: HeaderSetter,
   ): Promise<CustomerResponseDto> {
-    return this._createCustomerCommandHandler.executeAsync(userContext, request);
+    const created = await this._createCustomerCommandHandler.executeAsync(userContext, request);
+    setCreatedLocation(response, `/v1/customers/${created.id}`);
+    return created;
   }
 
   @Put(':customerId')
