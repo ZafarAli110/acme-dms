@@ -62,11 +62,11 @@ cannot be processed is retried three times, then marked failed and dead-lettered
 ## Architecture
 
 ```
-                         ┌─► identity-api (.NET)     ── Postgres: identity
-web (React) ──► gateway ─┼─► dealership-api (NestJS) ── Postgres: dealership
-                (YARP)   └─► document-api (.NET)     ── Postgres: documents
-                                   │     ▲
-                                   └HTTP─┘   events via RabbitMQ
+                             ┌─► identity-api (.NET)     ── Postgres: identity
+web (React) ──► gateway-api ─┼─► dealership-api (NestJS) ── Postgres: dealership
+                (YARP)       └─► document-api (.NET)     ── Postgres: documents
+                                       │     ▲
+                                       └HTTP─┘   events via RabbitMQ
 ```
 
 | Service          | Language            | Owns                                                            |
@@ -74,7 +74,7 @@ web (React) ──► gateway ─┼─► dealership-api (NestJS) ── Postgr
 | `identity-api`   | C# (.NET 10)        | dealers, locations, users, roles; issues access tokens (JWT)    |
 | `dealership-api` | TypeScript (NestJS) | parts catalogue, stock and other dealership data                |
 | `document-api`   | C# (.NET 10)        | photos and files, image processing                              |
-| `gateway`        | C# (YARP)           | the only entry point: `/api/<service>/...` goes to that service |
+| `gateway-api`    | C# (YARP)           | the only entry point: `/api/<service>/...` goes to that service |
 | `web`            | TypeScript (React)  | the dealership UI; talks only to the gateway                    |
 
 Each service owns its database, and no service reads another's. Services validate tokens with identity-api's public
@@ -88,7 +88,7 @@ acme-dms/
     identity-api/         .NET: Acme.Identity.{Service, BusinessLogic.Abstractions, BusinessLogic, DTO, Persistence}
     document-api/         .NET: Acme.Documents.{same layers}
     dealership-api/src/   NestJS, same layers: service/, business-logic-abstractions/, business-logic/, dto/, persistence/
-    gateway/              .NET: Acme.Gateway, a YARP reverse proxy (routes in appsettings.json)
+    gateway-api/          .NET: Acme.Gateway, a YARP reverse proxy (routes in appsettings.json)
     service-defaults/     .NET platform code every .NET service uses (telemetry, auth, problem details, correlation)
   web/                    React single-page app (Vite)
   scripts/                helper scripts (see "Look around a running system")
@@ -248,7 +248,7 @@ Every project, in either language, has the same targets, run through [Nx](https:
 | `typecheck` | `tsc` (TS 7)      | `dotnet build`                          |
 | `test`      | Vitest            | MSTest + Moq                            |
 
-Every commit runs a quick check of the staged files first (`.githooks/pre-commit`, switched on by `bun install`):
+Every commit runs a quick check of the staged files first (`.githooks/pre-commit`, switched on by the setup script; `bun run hooks` if you set up before it existed):
 formatting, oxlint with each project's import rules, and C# whitespace. CI runs every check on `main`, every `lab/`
 branch and every pull request.
 
