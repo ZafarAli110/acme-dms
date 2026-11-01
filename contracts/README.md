@@ -1,9 +1,37 @@
-# Message contracts
+# Contracts between services
+
+What the services promise each other, over HTTP and over RabbitMQ. A contract is a JSON shape, not shared code: the
+TypeScript and .NET services each own their types and keep them to the shape written here, and their tests check it.
+
+## HTTP
+
+Each service publishes its API as an OpenAPI document (`/openapi/v1.json` for .NET, `/swagger/json` for
+dealership-api). A service that calls another generates its types from that document, as dealership-api does for
+document-api (`src/rest-clients/document-api/document-api.schema.d.ts`), rather than sharing code.
+
+### `GET /v1/system/health` (every service and the gateway)
+
+The same shape everywhere, with every field always present. Aspire polls it to show each resource as Healthy.
+
+```json
+{"service": "identity-api", "status": "ok", "version": "26.11.0", "databaseReachable": true}
+```
+
+| Field               | Meaning                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `service`           | `gateway-api`, `identity-api`, `document-api` or `dealership-api`                      |
+| `status`            | `ok`, or `degraded` when the service cannot reach its database                         |
+| `version`           | the product version, from the root `package.json`; the same for every service          |
+| `databaseReachable` | whether the service's database answers; `null` for a service without one (the gateway) |
+
+Anonymous: no token, no location. Each service's tests check the shape.
+
+## Messages
 
 Services talk asynchronously through RabbitMQ. Messages are plain JSON so the TypeScript and .NET services read each
 other's messages without sharing code.
 
-## Envelope
+### Envelope
 
 Every message has the same envelope; `data` depends on `type`.
 
@@ -21,7 +49,7 @@ Every message has the same envelope; `data` depends on `type`.
 - `type` is also the RabbitMQ routing key. A breaking change to `data` means a new version: `…v2`, never an edit to `v1`.
 - The W3C trace context travels in the AMQP headers, so a trace continues across the broker.
 
-## Exchanges and queues
+### Exchanges and queues
 
 | Exchange             | Kind  | Purpose                                            |
 | -------------------- | ----- | -------------------------------------------------- |
@@ -34,9 +62,9 @@ Every message has the same envelope; `data` depends on `type`.
 | `dealership-api.document-events` | dealership-api | `document.processed.v1`, `document.failed.v1` |
 | `*.dlq`                          | (people)       | the dead letters of the queue with that name  |
 
-## Messages
+### Message types
 
-### `document.process.v1` (document-api → itself)
+#### `document.process.v1` (document-api → itself)
 
 A work item: produce the variants of one uploaded document.
 
@@ -44,7 +72,7 @@ A work item: produce the variants of one uploaded document.
 {"documentId": "uuid", "dealerId": "uuid"}
 ```
 
-### `document.processed.v1` (document-api → anyone)
+#### `document.processed.v1` (document-api → anyone)
 
 ```json
 {
@@ -56,7 +84,7 @@ A work item: produce the variants of one uploaded document.
 }
 ```
 
-### `document.failed.v1` (document-api → anyone)
+#### `document.failed.v1` (document-api → anyone)
 
 Published once processing has failed three times.
 
