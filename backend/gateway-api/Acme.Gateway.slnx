@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Acme.Gateway/Acme.Gateway.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/Acme.Gateway.Tests/Acme.Gateway.Tests.csproj" />
+  </Folder>
+  <Project Path="../service-defaults/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
+</Solution>
