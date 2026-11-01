@@ -10,6 +10,7 @@ import {AT_NORTHSIDE, AT_RIVERSIDE, userAt} from '#test-setup/users/test-users';
 import {readXlsxAsync} from '#test-setup/xlsx/read-xlsx';
 import {ExportJobRunner} from '../../../../exports/export-job-runner';
 import {StartCustomerExportCommandHandler} from '../start-customer-export.command-handler';
+import {readSettings} from '#settings/settings';
 
 const date = (iso: string) => Temporal.PlainDate.from(iso);
 
@@ -30,7 +31,7 @@ describe('StartCustomerExportCommandHandler', () => {
   let handler: StartCustomerExportCommandHandler;
 
   beforeAll(async () => {
-    runner = new ExportJobRunner(database.unitOfWorkFactory, fixedClock());
+    runner = new ExportJobRunner(database.unitOfWorkFactory, fixedClock(), readSettings({}));
     await runner.onModuleInit();
     handler = new StartCustomerExportCommandHandler(runner, fixedClock());
   });

@@ -1,6 +1,5 @@
 import {createWriteStream} from 'node:fs';
 import {mkdir, rm, stat} from 'node:fs/promises';
-import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pipeline} from 'node:stream/promises';
 import {
@@ -27,21 +26,19 @@ import {isValidDownloadLink} from './download-link';
 import {ExportJob} from './export-job';
 import type {ExportSource} from './export-source';
 import {type XlsxRow, XlsxWorkbookWriter} from './xlsx-workbook-writer';
+import {SETTINGS, type Settings} from '#settings/settings';
 
-/** Exports running at once in this instance; the rest wait in line. Each running export holds a database connection. */
-const MAX_RUNNING = Number(process.env['EXPORT_MAX_RUNNING'] ?? 2);
-/** How long a finished file can be downloaded, and downloaded again after a dropped connection. */
-const FILE_TTL_MS = Number(process.env['EXPORT_TTL_SECONDS'] ?? 900) * 1000;
-/** A job's record outlives its file, so a late retry with the same idempotency key still finds it. */
-const RECORD_TTL_MS = FILE_TTL_MS * 4;
-const EXPORT_DIR = process.env['EXPORT_DIR'] ?? join(tmpdir(), 'acme-dealership-exports');
+/**
+ * From the settings (EXPORT_MAX_RUNNING, EXPORT_TTL_SECONDS, this._settings.exportDirectory, EXPORT_BATCH_SIZE): how many exports run at
+ * once in this instance (the rest wait in line; each running export holds a database connection), how long a finished
+ * file can be downloaded (and downloaded again after a dropped connection), where files go, and rows per round trip.
+ * A job's record outlives its file (RECORD_TTL_FACTOR), so a late retry with the same idempotency key still finds it.
+ */
+const RECORD_TTL_FACTOR = 4;
 /** While a job runs, the client gets a snapshot at least this often (elapsed time, estimate), even with no rows. */
 const HEARTBEAT_MS = 1000;
-/**
- * Rows per round trip to the database. Measured with 40 ms between the service and Postgres, 1.6 million rows: 5,000
- * a fetch took 20.1 s (334 round trips), 50,000 took 7.8 s, at about 170 MB more memory.
- */
-const BATCH_SIZE = Number(process.env['EXPORT_BATCH_SIZE'] ?? 20_000);
+// EXPORT_BATCH_SIZE (default 20,000): rows per round trip. Measured with 40 ms between the service and Postgres,
+// 1.6 million rows: 5,000 a fetch took 20.1 s (334 round trips), 50,000 took 7.8 s, at about 170 MB more memory.
 const IDEMPOTENCY_KEY = /^[\x21-\x7e]{1,255}$/;
 
 /**
@@ -54,6 +51,7 @@ const IDEMPOTENCY_KEY = /^[\x21-\x7e]{1,255}$/;
 export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestroy {
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
   private readonly _clock: IClock;
+  private readonly _settings: Settings;
   private readonly _logger = new Logger(ExportJobRunner.name);
   private readonly _jobs = new Map<string, ExportJob>();
   private readonly _jobsByIdempotencyKey = new Map<string, ExportJob>();
@@ -64,16 +62,18 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   public constructor(
     @Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory,
     @Inject(CLOCK) clock: IClock,
+    @Inject(SETTINGS) settings: Settings,
   ) {
     this._unitOfWorkFactory = unitOfWorkFactory;
     this._clock = clock;
+    this._settings = settings;
   }
 
   /** Files left by a crash or a restart belong to jobs nobody can reach any more. */
   public async onModuleInit(): Promise<void> {
-    await rm(EXPORT_DIR, {recursive: true, force: true});
-    await mkdir(EXPORT_DIR, {recursive: true});
-    this._sweeper = setInterval(() => void this.sweepAsync(), Math.min(30_000, FILE_TTL_MS / 2));
+    await rm(this._settings.exportDirectory, {recursive: true, force: true});
+    await mkdir(this._settings.exportDirectory, {recursive: true});
+    this._sweeper = setInterval(() => void this.sweepAsync(), Math.min(30_000, this._settings.exportFileTtlMs / 2));
     this._sweeper.unref();
   }
 
@@ -170,7 +170,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   }
 
   private startNext(): void {
-    while (this._running < MAX_RUNNING && this._queue.length > 0) {
+    while (this._running < this._settings.exportMaxRunning && this._queue.length > 0) {
       const job = this._queue.shift()!;
       this._running++;
       this.updateQueuePositions();
@@ -189,7 +189,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   }
 
   private async runAsync(job: ExportJob): Promise<void> {
-    const path = join(EXPORT_DIR, `${job.id}.xlsx`);
+    const path = join(this._settings.exportDirectory, `${job.id}.xlsx`);
     job.filePath = path;
     const writer = new XlsxWorkbookWriter(job.source.sheetName, job.source.columns);
     try {
@@ -198,13 +198,13 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
       // One snapshot for the count and the rows, so the total the user sees is the number of rows in the file.
       await work.db.execute(sql`set transaction isolation level repeatable read`);
       // A background export has no caller waiting and stops through job.abort, so the per-statement limit that guards
-      // requests (DATABASE_STATEMENT_TIMEOUT) does not apply: 1.2 million rows through one cursor may take longer.
+      // requests (DATABASE_STATEMENT_TIMEOUT) does not apply: a big customer book through one cursor may take longer.
       await work.db.execute(sql`set local statement_timeout = 0`);
       const total = await job.source.countAsync(work.db);
       job.abort.signal.throwIfAborted();
       job.startWriting(total);
 
-      const rows = work.stream(job.source.rowsQuery(work.db), BATCH_SIZE);
+      const rows = work.stream(job.source.rowsQuery(work.db), this._settings.exportBatchSize);
       const stop = (): void => {
         rows.destroy(job.abort.signal.reason as Error);
       };
@@ -219,7 +219,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
       job.abort.signal.removeEventListener('abort', stop);
       await writer.finishAsync();
       await written;
-      job.complete((await stat(path)).size, this._clock.now().epochMilliseconds + FILE_TTL_MS);
+      job.complete((await stat(path)).size, this._clock.now().epochMilliseconds + this._settings.exportFileTtlMs);
     } catch (error) {
       // Destroyed without an error on purpose: an 'error' event nobody listens for ends the whole process.
       writer.abort();
@@ -250,7 +250,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
         await this.deleteFileAsync(job);
         job.expire();
       }
-      if (job.isFinished && now - (job.finishedAt ?? now) > RECORD_TTL_MS) {
+      if (job.isFinished && now - (job.finishedAt ?? now) > this._settings.exportFileTtlMs * RECORD_TTL_FACTOR) {
         this._jobs.delete(id);
         for (const [key, keyed] of this._jobsByIdempotencyKey) {
           if (keyed === job) {

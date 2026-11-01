@@ -13,6 +13,10 @@ describe('readSettings', () => {
       identityApiUrl: null,
       documentApiUrl: null,
       otlpEndpoint: null,
+      exportMaxRunning: 2,
+      exportFileTtlMs: 900_000,
+      exportDirectory: expect.stringContaining('acme-dealership-exports'),
+      exportBatchSize: 20_000,
     });
   });
 
