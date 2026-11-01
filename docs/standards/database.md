@@ -12,8 +12,8 @@ rules apply to every table in all three.
   ``uuid('id').primaryKey().default(sql`uuidv7()`)`` and `insert(…).returning()`; .NET: `UuidV7Keys`, applied in
   `OnModelCreating`. When something must carry the new id in the same transaction (an outbox message), save, then
   write it, then commit (`IUnitOfWork.ExecuteInTransactionAsync`).
-- Location-owned rows have `location_id` (`standards/multi-tenancy.md`). The dealership database has no `dealer_id`: it
-  holds one client's data.
+- Every business row has `dealer_id`, and location-owned rows also have `location_id` (`standards/multi-tenancy.md`).
+  Many dealers share the dealership database.
 - A moment is `timestamptz` (UTC); a calendar day with no time is `date` (`standards/coding-standards.md`, "Time").
 - Money is `numeric(12,2)`, never a float.
 

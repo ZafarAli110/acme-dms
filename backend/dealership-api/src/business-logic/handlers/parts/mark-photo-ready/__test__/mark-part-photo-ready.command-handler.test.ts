@@ -1,7 +1,7 @@
 import {eq} from 'drizzle-orm';
 import {describe, expect, it} from 'vitest';
 import {fixedClock} from '#test-setup/time/fixed-clock';
-import {NORTHSIDE} from '#test-setup/postgres/seed-kit';
+import {NORTHSIDE, NORTHWIND} from '#test-setup/postgres/seed-kit';
 import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {partPhotos} from '#persistence/schema/index';
 import {MarkPartPhotoReadyCommandHandler} from '../mark-part-photo-ready.command-handler';
@@ -18,7 +18,7 @@ describe('MarkPartPhotoReadyCommandHandler', () => {
       type: 'document.processed.v1',
       occurredAt: '2026-11-03T09:00:00Z',
       correlationId: null,
-      data: {documentId: photo.documentId, dealerId: 'northwind', ownerType: 'part', ownerId: part.id, variants: []},
+      data: {documentId: photo.documentId, dealerId: NORTHWIND, ownerType: 'part', ownerId: part.id, variants: []},
     };
 
     await handler.executeAsync(message);

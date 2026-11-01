@@ -10,6 +10,17 @@ import {callAsync, type Location, resourceUrl, type Session, signInAsync} from '
 
 type PartSeed = [partNumber: string, description: string, unitPrice: number];
 
+/**
+ * City Motors, another dealer with one rooftop. Some part numbers are the same as Northwind's, at other prices: a part
+ * number is unique within a dealer, not across dealers.
+ */
+const CITY_MOTORS_PARTS: PartSeed[] = [
+  ['BRK-PAD-001', 'Front brake pads, ceramic', 52.5],
+  ['OIL-FLT-001', 'Oil filter, spin-on', 9.5],
+  ['AIR-FLT-001', 'Engine air filter', 15.0],
+  ['WIP-BLD-600', 'Wiper blade, 600 mm', 17.99],
+];
+
 const NORTHWIND_PARTS: PartSeed[] = [
   ['BRK-PAD-001', 'Front brake pads, ceramic', 49.99],
   ['BRK-PAD-002', 'Rear brake pads, semi-metallic', 39.5],
@@ -94,6 +105,13 @@ const BINS: Record<string, BinSeed[]> = {
     {code: 'W-01', description: 'Service bay rack', holds: ['brakes', 'filters', 'fluids']},
     {code: 'W-02', description: 'Mezzanine', holds: ['electrical', 'engine', 'chassis']},
   ],
+  Central: [
+    {
+      code: 'A-01',
+      description: 'Parts counter',
+      holds: ['brakes', 'filters', 'electrical', 'engine', 'fluids', 'chassis'],
+    },
+  ],
 };
 
 function binCodeFor(locationName: string, partNumber: string): string {
@@ -115,6 +133,7 @@ const STOCK_PROFILES: Record<string, (index: number) => {quantityOnHand: number;
   Northside: (index) => ({quantityOnHand: 12 + ((index * 7) % 28), reorderLevel: 6}),
   Riverside: (index) => (index % 3 === 0 ? null : {quantityOnHand: (index * 5) % 9, reorderLevel: 4}),
   Westgate: (index) => (index % 2 === 1 ? null : {quantityOnHand: 4 + ((index * 3) % 14), reorderLevel: 5}),
+  Central: (index) => ({quantityOnHand: 3 + index, reorderLevel: 2}),
 };
 
 interface CustomerSeed {
@@ -177,6 +196,12 @@ const CUSTOMERS: Record<string, CustomerSeed[]> = {
     customerSeed('Victor', 'Mensah', null, 'Westgate', 'active', '2026-06-08', null),
     customerSeed('Wren', 'Ashworth', 'Ashworth Joinery', 'Thornbury', 'active', '2026-10-09', '+44 7700 900305'),
     customerSeed('Yusuf', 'Demir', null, 'Westgate', 'inactive', '2025-10-30', '+44 7700 900306'),
+  ],
+  // City Motors, another dealer: none of these is ever visible to Northwind's staff.
+  Central: [
+    customerSeed('Zara', 'Ahmed', null, 'Central', 'active', '2026-10-22', '+44 7700 900401'),
+    customerSeed('Omar', 'Farooq', 'Farooq Deliveries', 'Central', 'active', '2026-10-28', '+44 7700 900402'),
+    customerSeed('Hannah', 'Price', null, 'Central', 'prospect', null, '+44 7700 900403'),
   ],
 };
 
@@ -435,4 +460,6 @@ function crc32(bytes: Buffer): number {
 const gateway = resourceUrl('gateway', 'http');
 // As the manager: she works at every rooftop and may add parts and set stock.
 await seedDealerAsync(gateway, 'maria', NORTHWIND_PARTS, 6);
+// As Tom, City Motors' manager: another dealer in the same database.
+await seedDealerAsync(gateway, 'tom', CITY_MOTORS_PARTS, 1);
 console.log('Seeded. Photos finish processing in the background within a few seconds.');

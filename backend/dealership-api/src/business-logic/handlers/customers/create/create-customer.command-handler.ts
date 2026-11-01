@@ -32,6 +32,7 @@ export class CreateCustomerCommandHandler implements ICreateCustomerCommandHandl
     const [created] = await work.db
       .insert(customers)
       .values({
+        dealerId: userContext.dealerId,
         locationId: requireLocation(userContext),
         firstName: request.firstName,
         surname: request.surname,

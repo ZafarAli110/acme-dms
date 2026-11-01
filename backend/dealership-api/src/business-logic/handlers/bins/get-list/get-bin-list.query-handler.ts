@@ -23,7 +23,7 @@ export class GetBinListQueryHandler implements IGetBinListQueryHandler {
     const rows = await work.db
       .select()
       .from(bins)
-      .where(and(eq(bins.locationId, locationId), notDeleted(bins)))
+      .where(and(eq(bins.dealerId, userContext.dealerId), eq(bins.locationId, locationId), notDeleted(bins)))
       .orderBy(asc(bins.code));
     return rows.map(toBinResponseDto);
   }

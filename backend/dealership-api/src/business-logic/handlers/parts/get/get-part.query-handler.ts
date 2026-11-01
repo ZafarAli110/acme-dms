@@ -19,11 +19,11 @@ export class GetPartQueryHandler implements IGetPartQueryHandler {
   public async executeAsync(userContext: UserContext, partId: string): Promise<PartResponseDto> {
     const locationId = requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
-    const stocked = await findStockedPartAsync(work.db, locationId, partId);
+    const stocked = await findStockedPartAsync(work.db, userContext.dealerId, locationId, partId);
     if (!stocked) {
       throw new NotFoundException(`Part ${partId} is not stocked at this location.`);
     }
-    const photos = await findPhotosAsync(work.db, partId);
+    const photos = await findPhotosAsync(work.db, userContext.dealerId, partId);
     return toPartResponseDto(stocked.part, stocked.inventory, stocked.bin, photos);
   }
 }
