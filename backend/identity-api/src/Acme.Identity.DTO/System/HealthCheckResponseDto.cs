@@ -1,4 +1,8 @@
 namespace Acme.Identity.DTO.System;
 
-/// <summary>Whether the service is up, which version is running ("26.11.0") and whether it reaches its database.</summary>
-public sealed record HealthCheckResponseDto(string Status, string Version, bool DatabaseReachable);
+/// <summary>
+/// The same shape from every service (the gateway, identity-api, document-api and dealership-api): which service, whether
+/// it is fine ("degraded" when it cannot reach its database), the product version ("26.11.0"), and whether the database
+/// answers (null for a service without one).
+/// </summary>
+public sealed record HealthCheckResponseDto(string Service, string Status, string Version, bool? DatabaseReachable);
