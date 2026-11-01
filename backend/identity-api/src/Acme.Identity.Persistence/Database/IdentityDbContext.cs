@@ -50,6 +50,7 @@ public sealed class IdentityDbContext : DbContext
             user.ToTable(table => table.HasCheckConstraint("ck_users_deleted", "is_deleted = (deleted_at IS NOT NULL) AND is_deleted = (deleted_by IS NOT NULL)"));
             user.HasQueryFilter(u => !u.IsDeleted);
             user.HasOne(u => u.Dealer).WithMany().HasForeignKey(u => u.DealerId);
+            user.HasOne<Location>().WithMany().HasForeignKey(u => u.DefaultLocationId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<UserLocationRole>(role =>
