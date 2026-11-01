@@ -15,7 +15,7 @@ dealers from the same databases; each dealer has one or more locations ("rooftop
 | `identity-api`   | .NET 10 |
 | `dealership-api` | NestJS  |
 | `document-api`   | .NET 10 |
-| `gateway`        | YARP    |
+| `gateway-api`    | YARP    |
 | `web`            | React   |
 
 Postgres and RabbitMQ run in Docker. Aspire runs everything locally.
@@ -53,6 +53,7 @@ Demo users, all with the password `Acme123!`:
 | `bun run typecheck` | Type-check                      |
 | `bun run format`    | Format                          |
 | `bun run gate:fast` | What CI checks, on changed code |
+| `bun run hooks`     | Turn on the pre-commit check    |
 
 ## Licence
 
