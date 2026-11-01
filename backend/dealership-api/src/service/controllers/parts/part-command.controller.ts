@@ -9,10 +9,12 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Res,
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
+import {type HeaderSetter, setCreatedLocation} from '../created-location';
 import {ApiBody, ApiConsumes} from '@nestjs/swagger';
 import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
 import {
@@ -65,11 +67,14 @@ export class PartCommandController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequirePermission('parts.write')
-  public createAsync(
+  public async createAsync(
     @CurrentUser() userContext: UserContext,
     @Body() request: PartCreateRequestDto,
+    @Res({passthrough: true}) response: HeaderSetter,
   ): Promise<PartResponseDto> {
-    return this._createPartCommandHandler.executeAsync(userContext, request);
+    const created = await this._createPartCommandHandler.executeAsync(userContext, request);
+    setCreatedLocation(response, `/v1/parts/${created.id}`);
+    return created;
   }
 
   /**
