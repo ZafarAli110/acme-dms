@@ -252,8 +252,15 @@ Every commit runs a quick check of the staged files first (`.githooks/pre-commit
 formatting, oxlint with each project's import rules, and C# whitespace. CI runs every check on `main`, every `lab/`
 branch and every pull request.
 
-Each service answers `GET /v1/system/health` with its status and the product version, `26.11.0`. The version is set
-once, in the root `package.json`: .NET reads it through `Directory.Build.props`, and dealership-api's build writes it in.
+Every service, the gateway included, answers `GET /v1/system/health` in the same shape, which Aspire polls:
+
+```json
+{"service": "dealership-api", "status": "ok", "version": "26.11.0", "databaseReachable": true}
+```
+
+`status` is `degraded` when the service cannot reach its database; the gateway has none, so its `databaseReachable` is
+`null`. The version is set once, in the root `package.json`: .NET reads it through `Directory.Build.props`, and
+dealership-api's build writes it in.
 
 ## Conventions
 
