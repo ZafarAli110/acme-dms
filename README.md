@@ -25,7 +25,8 @@ bun run dev      # Docker Desktop must be running; open the dashboard link it pr
 bun run seed     # sample data, once
 ```
 
-Sign in to the web app as `sam@northwind.test` / `Acme123!`.
+Sign in to the web app as `sam@northwind.test` / `Acme123!` (Northwind Motors). `tom@citymotors.test`, same password,
+works for another dealer, City Motors.
 
 ## Commands
 

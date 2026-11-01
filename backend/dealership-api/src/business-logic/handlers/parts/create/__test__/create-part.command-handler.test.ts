@@ -1,8 +1,8 @@
 import {BadRequestException, ConflictException} from '@nestjs/common';
 import {describe, expect, it} from 'vitest';
 import {fixedClock} from '#test-setup/time/fixed-clock';
-import {AT_NORTHSIDE} from '#test-setup/users/test-users';
-import {NORTHSIDE, RIVERSIDE} from '#test-setup/postgres/seed-kit';
+import {AT_CENTRAL, AT_NORTHSIDE} from '#test-setup/users/test-users';
+import {CENTRAL, NORTHSIDE, RIVERSIDE} from '#test-setup/postgres/seed-kit';
 import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {CreatePartCommandHandler} from '../create-part.command-handler';
 
@@ -55,6 +55,15 @@ describe('CreatePartCommandHandler', () => {
 
     await expect(handler().executeAsync(AT_NORTHSIDE, request('BRK-004', bin.id))).resolves.toMatchObject({
       partNumber: 'BRK-004',
+    });
+  });
+
+  it("lets another dealer use a part number that is already in Northwind's catalogue", async () => {
+    await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'BRK-005'});
+    const centralBin = await database.seed.addBinAsync({locationId: CENTRAL, code: 'C-01'});
+
+    await expect(handler().executeAsync(AT_CENTRAL, request('BRK-005', centralBin.id))).resolves.toMatchObject({
+      partNumber: 'BRK-005',
     });
   });
 });

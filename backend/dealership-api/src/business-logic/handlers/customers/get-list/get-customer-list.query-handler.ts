@@ -42,6 +42,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     const where = and(
+      eq(customers.dealerId, userContext.dealerId),
       eq(customers.locationId, requireLocation(userContext)),
       notDeleted(customers),
       query.search ? matching(`%${query.search}%`) : undefined,
