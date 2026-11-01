@@ -3,10 +3,11 @@
   "version": "26.11.0",
   "private": true,
   "scripts": {
-    "build": "dotnet build Acme.Gateway -c Release",
-    "typecheck": "dotnet build Acme.Gateway -c Debug",
-    "lint": "dotnet build Acme.Gateway -c Debug -warnaserror",
+    "build": "dotnet build Acme.Gateway.slnx -c Release",
+    "typecheck": "dotnet build Acme.Gateway.slnx -c Debug",
+    "lint": "dotnet build Acme.Gateway.slnx -c Debug -warnaserror",
     "format": "dotnet format whitespace . --folder --verify-no-changes",
+    "test": "dotnet test --solution Acme.Gateway.slnx",
     "dev": "dotnet run --project Acme.Gateway"
   },
   "nx": {
@@ -21,6 +22,9 @@
         "parallelism": false
       },
       "format": {
+        "parallelism": false
+      },
+      "test": {
         "parallelism": false
       }
     }
