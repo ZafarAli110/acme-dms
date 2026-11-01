@@ -15,12 +15,12 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq", username, password).WithManagemen
 
 // Services
 var identityApi = builder.AddProject<Projects.Acme_Identity_Service>("identity-api")
-    .WithHttpHealthCheck("/health")
+    .WithHttpHealthCheck("/v1/system/health")
     .WithReference(identityDb)
     .WaitFor(identityDb);
 
 var documentApi = builder.AddProject<Projects.Acme_Documents_Service>("document-api")
-    .WithHttpHealthCheck("/health")
+    .WithHttpHealthCheck("/v1/system/health")
     .WithReference(documentsDb)
     .WithReference(rabbitmq)
     .WithReference(identityApi)
@@ -44,7 +44,7 @@ var dealershipApi = builder.AddExecutable("dealership-api", "bun", "../../backen
 
 // The single entry point for the web app: /api/<service>/... is routed to that service with the prefix removed.
 var gateway = builder.AddProject<Projects.Acme_Gateway>("gateway")
-    .WithHttpHealthCheck("/health")
+    .WithHttpHealthCheck("/v1/system/health")
     .WithReference(identityApi)
     .WithReference(dealershipApi.GetEndpoint("http"))
     .WithReference(documentApi)

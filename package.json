@@ -1,12 +1,12 @@
 {
   "name": "acme-dms",
-  "version": "0.1.0",
+  "version": "26.11.0",
   "private": true,
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.4.4",
   "engines": {
-    "node": ">=26.0.0",
+    "node": ">=26.13.0",
     "bun": ">=1.4.4"
   },
   "workspaces": [
@@ -15,7 +15,8 @@
     "apphost"
   ],
   "scripts": {
-    "dev": "aspire run",
+    "postinstall": "bun scripts/install-git-hooks.ts",
+    "dev": "bun scripts/check-node.ts && aspire run",
     "status": "aspire describe",
     "logs": "aspire logs",
     "traces": "aspire otel traces",
@@ -29,7 +30,7 @@
     "lint": "nx run-many -t lint && oxlint scripts",
     "typecheck": "nx run-many -t typecheck && tsc --noEmit -p scripts/tsconfig.json",
     "test": "nx run-many -t test",
-    "gate:fast": "nx affected -t format lint typecheck test",
+    "gate:fast": "bun scripts/gate.ts",
     "gate:slow": "nx run @acme/web:e2e"
   },
   "devDependencies": {
