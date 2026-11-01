@@ -41,7 +41,6 @@ import {
 } from '../../interceptors/file-upload.interceptor';
 import {JsonPayload} from '../../pipes/json-payload.pipe';
 import {Timeout} from '@nestjs/resilience';
-import {settings} from '#settings/settings';
 import {Created} from '../../interceptors/created.interceptor';
 
 /** Transport guardrails only; the photo rules (10 MB, image types, 10 per part) are enforced by the handlers. */
@@ -49,7 +48,7 @@ const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 const MAX_UPLOAD_FILES = 12;
 
 /** Changes to the parts catalogue. Reads are in PartController. */
-@Timeout(settings.requestTimeoutMs)
+@Timeout()
 @Controller('v1/parts')
 export class PartCommandController {
   private readonly _createPartCommandHandler: ICreatePartCommandHandler;

@@ -1,23 +1,20 @@
-import {Injectable} from '@nestjs/common';
+import {Inject, Injectable} from '@nestjs/common';
 import {createRemoteJWKSet, type JWTVerifyGetKey, jwtVerify} from 'jose';
 import type {AccessTokenClaims} from './access-token-claims';
+import {requireSetting, SETTINGS, type Settings} from '#settings/settings';
 import {TOKEN_AUDIENCE, TOKEN_ISSUER} from './token-settings';
 
 /**
  * Verifies identity-api tokens against the keys published in its OpenID discovery document.
- * The address comes from Aspire (`services__identity-api__http__0`).
+ * identity-api's address comes from the settings (`services__identity-api__http__0`).
  */
 @Injectable()
 export class AccessTokenVerifier {
   private readonly _identityApiUrl: string;
   private _keys: Promise<JWTVerifyGetKey> | null = null;
 
-  public constructor() {
-    const identityApiUrl = process.env['services__identity-api__http__0'];
-    if (!identityApiUrl) {
-      throw new Error('services__identity-api__http__0 is not set; dealership-api must run under Aspire.');
-    }
-    this._identityApiUrl = identityApiUrl;
+  public constructor(@Inject(SETTINGS) settings: Settings) {
+    this._identityApiUrl = requireSetting(settings.identityApiUrl, 'services__identity-api__http__0');
   }
 
   public async verifyAsync(token: string): Promise<AccessTokenClaims> {

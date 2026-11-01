@@ -14,11 +14,10 @@ import {CustomerUpdateRequestDto} from '#dto/customers/customer-update-request.d
 import {CurrentUser} from '../../authorization/current-user.decorator';
 import {RequirePermission} from '../../authorization/require-permission.decorator';
 import {Timeout} from '@nestjs/resilience';
-import {settings} from '#settings/settings';
 import {Created} from '../../interceptors/created.interceptor';
 
 /** Changes to the customers of the location selected in `x-location-id`. Reads are in CustomerController. */
-@Timeout(settings.requestTimeoutMs)
+@Timeout()
 @Controller('v1/customers')
 export class CustomerCommandController {
   private readonly _createCustomerCommandHandler: ICreateCustomerCommandHandler;

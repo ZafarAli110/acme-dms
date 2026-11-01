@@ -8,7 +8,16 @@ if (firstBuild.exitCode !== 0) {
 
 const build = Bun.spawn(['bun', 'run', 'build', '--watch'], {stdout: 'inherit', stderr: 'inherit'});
 const run = Bun.spawn(
-  ['node', '--enable-source-maps', '--import', './dist/observability/telemetry.js', '--watch', 'dist/main.js'],
+  // --env-file-if-exists: Node reads .env itself (no dotenv); a variable already set, by Aspire or your shell, wins.
+  [
+    'node',
+    '--env-file-if-exists=.env',
+    '--enable-source-maps',
+    '--import',
+    './dist/observability/telemetry.js',
+    '--watch',
+    'dist/main.js',
+  ],
   {
     stdout: 'inherit',
     stderr: 'inherit',

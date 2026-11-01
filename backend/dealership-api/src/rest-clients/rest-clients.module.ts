@@ -1,8 +1,9 @@
 import {Global, Module} from '@nestjs/common';
 import {HttpClientModule} from '@nestjs/http-client';
-import {ResilienceModule} from '@nestjs/resilience';
+import type {ResiliencePreset} from '@nestjs/resilience';
 import {DOCUMENT_API_CLIENT} from '#business-logic-abstractions/rest-clients/document-api.client.interface';
 import {DOCUMENT_API, DocumentApiClient} from './document-api/document-api.client';
+import {requireSetting, SETTINGS, type Settings} from '#settings/settings';
 
 /**
  * Typed clients for other Acme services, registered against their abstraction tokens. Global and imported once by
@@ -20,14 +21,11 @@ const CLIENTS = [{provide: DOCUMENT_API_CLIENT, useClass: DocumentApiClient}];
   imports: [
     HttpClientModule.registerAsync({
       name: DOCUMENT_API,
-      useFactory: () => ({baseUrl: requiredEnvironmentVariable('services__document-api__http__0'), timeout: '15s'}),
-    }),
-    ResilienceModule.forRoot({
-      presets: {
-        [DOCUMENT_API]: {
-          circuitBreaker: {failureRateThreshold: 50, minimumCalls: 5, openDuration: '30s'},
-        },
-      },
+      inject: [SETTINGS],
+      useFactory: (settings: Settings) => ({
+        baseUrl: requireSetting(settings.documentApiUrl, 'services__document-api__http__0'),
+        timeout: '15s',
+      }),
     }),
   ],
   providers: CLIENTS,
@@ -35,10 +33,7 @@ const CLIENTS = [{provide: DOCUMENT_API_CLIENT, useClass: DocumentApiClient}];
 })
 export class RestClientsModule {}
 
-function requiredEnvironmentVariable(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} is not set; dealership-api must run under Aspire.`);
-  }
-  return value;
-}
+/** The resilience presets of the services these clients call; app.module.ts registers them with ResilienceModule. */
+export const REST_CLIENT_RESILIENCE_PRESETS: Record<string, ResiliencePreset> = {
+  [DOCUMENT_API]: {circuitBreaker: {failureRateThreshold: 50, minimumCalls: 5, openDuration: '30s'}},
+};
