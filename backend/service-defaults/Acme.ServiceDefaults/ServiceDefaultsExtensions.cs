@@ -14,7 +14,6 @@ public static class ServiceDefaultsExtensions
 
         builder.AddTelemetry();
         builder.Services.AddAcmeProblemDetails();
-        builder.Services.AddHealthChecks();
         builder.Services.AddOpenApi();
         return builder;
     }
@@ -41,12 +40,14 @@ public static class ServiceDefaultsExtensions
         return app;
     }
 
-    /// <summary>Endpoints every service exposes: liveness for Aspire, the OpenAPI document and Swagger UI.</summary>
+    /// <summary>
+    /// Endpoints every service exposes: the OpenAPI document and Swagger UI. Each service answers its own
+    /// `GET /v1/system/health` (status and version), which Aspire polls.
+    /// </summary>
     public static WebApplication MapServiceDefaults(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        app.MapHealthChecks("/health").AllowAnonymous();
         app.MapOpenApi().AllowAnonymous();
         app.UseSwaggerUI(options =>
         {

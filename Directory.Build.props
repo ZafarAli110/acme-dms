@@ -8,5 +8,8 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- The product version, the same for every service: read from the root package.json, the one place it is set.
+         The SDK turns it into AssemblyVersion, FileVersion and InformationalVersion ("26.11.0+<git commit>"). -->
+    <Version>$([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)package.json')), '(?s)^.*?"version":\s*"([^"]+)".*$', '$1'))</Version>
   </PropertyGroup>
 </Project>
