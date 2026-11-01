@@ -1,0 +1,25 @@
+{
+  "dotnet.defaultSolution": "AcmeDms.slnx",
+  "oxc.enable": true,
+  "editor.rulers": [120],
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/.nx": true,
+    "**/TestResults": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/.react-router": true,
+    "bun.lock": true
+  },
+  "files.watcherExclude": {
+    "**/bin/**": true,
+    "**/obj/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.nx/**": true
+  }
+}
