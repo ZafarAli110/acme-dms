@@ -1,16 +1,16 @@
-import type {CustomerFormValues, CustomerInput} from '../types/customer';
+import type { CustomerFormValues, CustomerInput } from "../types/customer";
 
 /** The form's starting values: the customer as saved, or an empty new customer. */
 export function toFormValues(customer: CustomerInput | null): CustomerFormValues {
   return {
-    firstName: customer?.firstName ?? '',
-    surname: customer?.surname ?? '',
-    companyName: customer?.companyName ?? '',
-    email: customer?.email ?? '',
-    phone: customer?.phone ?? '',
-    city: customer?.city ?? '',
-    status: customer?.status ?? 'prospect',
-    lastContactDate: customer?.lastContactDate ?? '',
+    firstName: customer?.firstName ?? "",
+    surname: customer?.surname ?? "",
+    companyName: customer?.companyName ?? "",
+    email: customer?.email ?? "",
+    phone: customer?.phone ?? "",
+    city: customer?.city ?? "",
+    status: customer?.status ?? "prospect",
+    lastContactDate: customer?.lastContactDate ?? "",
   };
 }
 
@@ -30,5 +30,5 @@ export function toCustomerInput(values: CustomerFormValues): CustomerInput {
 
 function emptyToNull(value: string): string | null {
   const trimmed = value.trim();
-  return trimmed === '' ? null : trimmed;
+  return trimmed === "" ? null : trimmed;
 }

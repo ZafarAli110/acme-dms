@@ -1,7 +1,7 @@
-import {Injectable, type NestMiddleware} from '@nestjs/common';
-import {ResilienceContext} from '@nestjs/resilience';
+import { Injectable, type NestMiddleware } from "@nestjs/common";
+import { ResilienceContext } from "@nestjs/resilience";
 
-type Response = {once(event: 'close', listener: () => void): unknown; readonly writableFinished: boolean};
+type Response = { once(event: "close", listener: () => void): unknown; readonly writableFinished: boolean };
 
 /**
  * Node's answer to .NET's request CancellationToken. When the caller goes away before the answer is sent (a closed
@@ -20,11 +20,11 @@ export class RequestCancellationMiddleware implements NestMiddleware {
 
   public use(_request: unknown, response: Response, next: () => void): void {
     const cancellation = new AbortController();
-    response.once('close', () => {
+    response.once("close", () => {
       if (!response.writableFinished) {
-        cancellation.abort(new Error('The caller went away before the answer was sent.'));
+        cancellation.abort(new Error("The caller went away before the answer was sent."));
       }
     });
-    this._resilienceContext.run({signal: cancellation.signal}, next);
+    this._resilienceContext.run({ signal: cancellation.signal }, next);
   }
 }

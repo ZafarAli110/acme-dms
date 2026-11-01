@@ -1,4 +1,4 @@
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 
 export interface DocumentVariantSpec {
   name: string;
@@ -27,4 +27,4 @@ export interface IDocumentApiClient {
   deleteDocumentAsync(userContext: UserContext, documentId: string): Promise<void>;
 }
 
-export const DOCUMENT_API_CLIENT = Symbol('IDocumentApiClient');
+export const DOCUMENT_API_CLIENT = Symbol("IDocumentApiClient");

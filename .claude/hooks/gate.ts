@@ -8,16 +8,16 @@ interface HookInput {
 }
 
 const LINES_PER_TASK = 30;
-const PROJECT = process.env['CLAUDE_PROJECT_DIR'] ?? process.cwd();
+const PROJECT = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
 
 const input = JSON.parse(await Bun.stdin.text()) as HookInput;
 
 if (await hasCodeChangesAsync()) {
-  const gate = Bun.spawn(['bun', 'run', 'gate:fast', '--output-style=static'], {
+  const gate = Bun.spawn(["bun", "run", "gate:fast", "--output-style=static"], {
     cwd: PROJECT,
-    env: {...process.env, NO_COLOR: '1', FORCE_COLOR: '0'},
-    stdout: 'pipe',
-    stderr: 'pipe',
+    env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+    stdout: "pipe",
+    stderr: "pipe",
   });
   const [stdout, stderr, exitCode] = await Promise.all([
     new Response(gate.stdout).text(),
@@ -26,7 +26,7 @@ if (await hasCodeChangesAsync()) {
   ]);
   if (exitCode !== 0) {
     if (input.stop_hook_active) {
-      console.log(JSON.stringify({systemMessage: 'bun run gate:fast still fails. The change is not done.'}));
+      console.log(JSON.stringify({ systemMessage: "bun run gate:fast still fails. The change is not done." }));
       process.exit(0);
     }
     console.error(
@@ -37,11 +37,11 @@ if (await hasCodeChangesAsync()) {
 }
 
 async function hasCodeChangesAsync(): Promise<boolean> {
-  const git = Bun.spawn(['git', 'status', '--porcelain'], {cwd: PROJECT, stdout: 'pipe'});
+  const git = Bun.spawn(["git", "status", "--porcelain"], { cwd: PROJECT, stdout: "pipe" });
   const changed = (await new Response(git.stdout).text())
-    .split('\n')
+    .split("\n")
     .map((line) => line.slice(3))
-    .filter((path) => path !== '' && !path.startsWith('docs/') && !path.startsWith('.claude/'));
+    .filter((path) => path !== "" && !path.startsWith("docs/") && !path.startsWith(".claude/"));
   return changed.length > 0;
 }
 
@@ -52,8 +52,8 @@ function failedTasks(output: string): string {
   const sections = output.split(/^> nx run /m);
   const shown = failed.map((task) => {
     const section =
-      (sections.find((candidate) => candidate.startsWith(task ?? '')) ?? '').split(/^\s*Run duration:/m)[0] ?? '';
-    return `> ${task}\n${section.trim().split('\n').slice(-LINES_PER_TASK).join('\n')}`;
+      (sections.find((candidate) => candidate.startsWith(task ?? "")) ?? "").split(/^\s*Run duration:/m)[0] ?? "";
+    return `> ${task}\n${section.trim().split("\n").slice(-LINES_PER_TASK).join("\n")}`;
   });
-  return shown.length > 0 ? shown.join('\n\n') : output.trim().split('\n').slice(-LINES_PER_TASK).join('\n');
+  return shown.length > 0 ? shown.join("\n\n") : output.trim().split("\n").slice(-LINES_PER_TASK).join("\n");
 }

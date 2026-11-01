@@ -3,7 +3,7 @@ name: ci
 on:
   pull_request:
   push:
-    branches: [main, 'lab/**']
+    branches: [main, "lab/**"]
 
 jobs:
   checks:
@@ -27,4 +27,4 @@ jobs:
       - name: Format, lint, typecheck and test every project
         run: bunx nx run-many -t format lint typecheck test
         env:
-          NX_TUI: 'false'
+          NX_TUI: "false"

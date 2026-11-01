@@ -7,4 +7,4 @@ export interface IClock {
   now(): Temporal.Instant;
 }
 
-export const CLOCK = Symbol('IClock');
+export const CLOCK = Symbol("IClock");

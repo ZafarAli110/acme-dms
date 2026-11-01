@@ -3,18 +3,18 @@
     "PreToolUse": [
       {
         "matcher": "Edit|MultiEdit|Write",
-        "hooks": [{"type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-files.ts\""}]
+        "hooks": [{ "type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-files.ts\"" }]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit|MultiEdit|Write",
-        "hooks": [{"type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-file.ts\""}]
+        "hooks": [{ "type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-file.ts\"" }]
       }
     ],
     "Stop": [
       {
-        "hooks": [{"type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/gate.ts\"", "timeout": 600}]
+        "hooks": [{ "type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/gate.ts\"", "timeout": 600 }]
       }
     ]
   }

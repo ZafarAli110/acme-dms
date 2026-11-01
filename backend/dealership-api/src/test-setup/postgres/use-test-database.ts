@@ -1,12 +1,12 @@
-import {afterAll, beforeAll} from 'vitest';
-import type {IUnitOfWorkFactory} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {seedKit} from './seed-kit';
-import {createTestDatabaseAsync, type TestDatabase} from './test-database';
-import {createTestUnitOfWork, type TestUnitOfWork} from './test-unit-of-work';
+import { afterAll, beforeAll } from "vitest";
+import type { IUnitOfWorkFactory } from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { seedKit } from "./seed-kit";
+import { createTestDatabaseAsync, type TestDatabase } from "./test-database";
+import { createTestUnitOfWork, type TestUnitOfWork } from "./test-unit-of-work";
 
 export interface TestDatabaseContext {
   /** Drizzle straight on the test database, for checking what a handler wrote. */
-  readonly db: TestDatabase['db'];
+  readonly db: TestDatabase["db"];
   /** The service's unit of work factory on the test database: what handlers are constructed with. */
   readonly unitOfWorkFactory: IUnitOfWorkFactory;
   readonly seed: ReturnType<typeof seedKit>;
@@ -30,11 +30,11 @@ export function useTestDatabase(): TestDatabaseContext {
     await database?.[Symbol.asyncDispose]();
   });
 
-  function ready(): {database: TestDatabase; unitOfWork: TestUnitOfWork} {
+  function ready(): { database: TestDatabase; unitOfWork: TestUnitOfWork } {
     if (!database || !unitOfWork) {
-      throw new Error('The test database is created in beforeAll: use it inside a test.');
+      throw new Error("The test database is created in beforeAll: use it inside a test.");
     }
-    return {database, unitOfWork};
+    return { database, unitOfWork };
   }
 
   return {

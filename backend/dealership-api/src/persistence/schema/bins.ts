@@ -1,26 +1,26 @@
-import {sql} from 'drizzle-orm';
-import {index, pgTable, uniqueIndex, uuid, varchar} from 'drizzle-orm/pg-core';
-import {auditColumns, softDeleteCheck} from './columns/audit-columns';
+import { sql } from "drizzle-orm";
+import { index, pgTable, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 
 /** A shelf or bin at one rooftop of a dealer, where that rooftop keeps parts. */
 export const bins = pgTable(
-  'bins',
+  "bins",
   {
-    id: uuid('id')
+    id: uuid("id")
       .primaryKey()
       .default(sql`uuidv7()`),
-    dealerId: uuid('dealer_id').notNull(),
-    locationId: uuid('location_id').notNull(),
-    code: varchar('code', {length: 20}).notNull(),
-    description: varchar('description', {length: 100}).notNull(),
+    dealerId: uuid("dealer_id").notNull(),
+    locationId: uuid("location_id").notNull(),
+    code: varchar("code", { length: 20 }).notNull(),
+    description: varchar("description", { length: 100 }).notNull(),
     ...auditColumns(),
   },
   (table) => [
-    index('ix_bins_location').on(table.locationId),
-    uniqueIndex('uq_bins_location_code')
+    index("ix_bins_location").on(table.locationId),
+    uniqueIndex("uq_bins_location_code")
       .on(table.locationId, table.code)
       .where(sql`NOT ${table.isDeleted}`),
-    softDeleteCheck('bins', table),
+    softDeleteCheck("bins", table),
   ],
 );
 
