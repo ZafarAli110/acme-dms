@@ -10,6 +10,7 @@
     "#dto/*": "./src/dto/*.ts",
     "#persistence/*": "./src/persistence/*.ts",
     "#rest-clients/*": "./src/rest-clients/*.ts",
+    "#settings/*": "./src/settings/*.ts",
     "#test-setup/*": "./src/test-setup/*.ts"
   },
   "scripts": {

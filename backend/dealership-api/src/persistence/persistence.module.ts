@@ -6,6 +6,7 @@ import {toPostgresUrl} from './unit-of-work/connection-string';
 import {createDatabasePool} from './unit-of-work/database-pool';
 import {UNIT_OF_WORK_FACTORY} from './unit-of-work/unit-of-work.factory.interface';
 import {UnitOfWorkFactory} from './unit-of-work/unit-of-work.factory';
+import {settings} from '#settings/settings';
 
 const DATABASE_POOL = Symbol('DatabasePool');
 
@@ -20,7 +21,7 @@ async function createDatabasePoolAsync(): Promise<Pool> {
   }
   const url = toPostgresUrl(connectionString);
   await migrateDatabaseAsync(url, MIGRATIONS_FOLDER);
-  return createDatabasePool(url);
+  return createDatabasePool(url, settings.databaseStatementTimeoutMs);
 }
 
 /** The dealership database: the pool, and the unit of work factory every handler reads and writes through. */
