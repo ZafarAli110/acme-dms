@@ -14,11 +14,11 @@
     },
     "apphost": {
       "name": "@acme/apphost",
-      "version": "0.1.0",
+      "version": "26.11.0",
     },
     "backend/dealership-api": {
       "name": "@acme/dealership-api",
-      "version": "0.1.0",
+      "version": "26.11.0",
       "dependencies": {
         "@nestjs/common": "12.3.2",
         "@nestjs/core": "12.3.2",
@@ -62,19 +62,19 @@
     },
     "backend/document-api": {
       "name": "@acme/document-api",
-      "version": "0.1.0",
+      "version": "26.11.0",
     },
     "backend/gateway": {
       "name": "@acme/gateway",
-      "version": "0.1.0",
+      "version": "26.11.0",
     },
     "backend/identity-api": {
       "name": "@acme/identity-api",
-      "version": "0.1.0",
+      "version": "26.11.0",
     },
     "web": {
       "name": "@acme/web",
-      "version": "0.1.0",
+      "version": "26.11.0",
       "dependencies": {
         "@emotion/react": "11.14.0",
         "@emotion/styled": "11.14.1",

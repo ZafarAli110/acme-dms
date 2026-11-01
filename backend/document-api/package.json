@@ -1,12 +1,12 @@
 {
   "name": "@acme/document-api",
-  "version": "0.1.0",
+  "version": "26.11.0",
   "private": true,
   "scripts": {
     "build": "dotnet build Acme.Documents.slnx -c Release",
     "typecheck": "dotnet build Acme.Documents.slnx -c Debug",
     "lint": "dotnet build Acme.Documents.slnx -c Debug -warnaserror",
-    "format": "dotnet format Acme.Documents.slnx --verify-no-changes",
+    "format": "dotnet format whitespace . --folder --verify-no-changes",
     "test": "dotnet test --solution Acme.Documents.slnx",
     "dev": "dotnet run --project src/Acme.Documents.Service"
   },
