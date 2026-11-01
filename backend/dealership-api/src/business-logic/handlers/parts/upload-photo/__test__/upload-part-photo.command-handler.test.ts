@@ -1,6 +1,7 @@
+import {NotFoundException} from '@nestjs/common';
 import {describe, expect, it} from 'vitest';
 import {fixedClock} from '#test-setup/time/fixed-clock';
-import {AT_NORTHSIDE} from '#test-setup/users/test-users';
+import {AT_CENTRAL, AT_NORTHSIDE} from '#test-setup/users/test-users';
 import {NORTHSIDE} from '#test-setup/postgres/seed-kit';
 import {useTestDatabase} from '#test-setup/postgres/use-test-database';
 import {fakeDocumentApi, jpeg} from '#test-setup/document-api/fake-document-api';
@@ -19,5 +20,14 @@ describe('UploadPartPhotoCommandHandler', () => {
 
     expect([first.isDefault, second.isDefault]).toEqual([true, false]);
     expect(first.status).toBe('pending');
+  });
+
+  it("refuses a photo for another dealer's part, before anything is uploaded", async () => {
+    const {part} = await database.seed.addStockedPartAsync({locationId: NORTHSIDE, partNumber: 'UPL-002'});
+    const documents = fakeDocumentApi();
+    const handler = new UploadPartPhotoCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock());
+
+    await expect(handler.executeAsync(AT_CENTRAL, part.id, jpeg('one.jpg'))).rejects.toThrow(NotFoundException);
+    expect(documents.uploadDocumentAsync).not.toHaveBeenCalled();
   });
 });
