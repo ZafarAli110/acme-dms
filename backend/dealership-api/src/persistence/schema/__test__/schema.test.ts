@@ -1,8 +1,8 @@
-import {eq, sql} from 'drizzle-orm';
-import {afterAll, beforeAll, describe, expect, it} from 'vitest';
-import {createTestDatabaseAsync, type TestDatabase} from '#test-setup/postgres/test-database';
-import {CITY_MOTORS, NORTHSIDE, NORTHWIND, SEEDED_AT, seedKit, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
-import {customers, parts} from '..';
+import { eq, sql } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createTestDatabaseAsync, type TestDatabase } from "#test-setup/postgres/test-database";
+import { CITY_MOTORS, NORTHSIDE, NORTHWIND, SEEDED_AT, seedKit, TEST_USER_ID } from "#test-setup/postgres/seed-kit";
+import { customers, parts } from "..";
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const AUDIT = {
@@ -13,7 +13,7 @@ const AUDIT = {
   updatedBy: TEST_USER_ID,
 };
 
-describe('the dealership schema', () => {
+describe("the dealership schema", () => {
   let database: TestDatabase;
 
   beforeAll(async () => {
@@ -24,83 +24,83 @@ describe('the dealership schema', () => {
     await database[Symbol.asyncDispose]();
   });
 
-  it('round-trips a plain date without shifting it', async () => {
+  it("round-trips a plain date without shifting it", async () => {
     const saved = await seedKit(database.db).addCustomerAsync({
       locationId: NORTHSIDE,
-      surname: 'Gallagher',
-      lastContactDate: Temporal.PlainDate.from('2026-03-14'),
+      surname: "Gallagher",
+      lastContactDate: Temporal.PlainDate.from("2026-03-14"),
     });
 
     const [read] = await database.db.select().from(customers).where(eq(customers.id, saved.id));
 
-    expect(read?.lastContactDate?.toString()).toBe('2026-03-14');
+    expect(read?.lastContactDate?.toString()).toBe("2026-03-14");
   });
 
-  it('round-trips money exactly', async () => {
+  it("round-trips money exactly", async () => {
     const rows = await database.db
       .insert(parts)
       .values([
-        {partNumber: 'MONEY-1', description: 'Pads', unitPrice: 49.99, ...AUDIT},
-        {partNumber: 'MONEY-2', description: 'Washer', unitPrice: 0.1, ...AUDIT},
+        { partNumber: "MONEY-1", description: "Pads", unitPrice: 49.99, ...AUDIT },
+        { partNumber: "MONEY-2", description: "Washer", unitPrice: 0.1, ...AUDIT },
       ])
-      .returning({id: parts.id});
+      .returning({ id: parts.id });
 
     const read = await database.db
-      .select({unitPrice: parts.unitPrice})
+      .select({ unitPrice: parts.unitPrice })
       .from(parts)
       .where(sql`${parts.id} in (${rows[0]!.id}, ${rows[1]!.id})`)
       .orderBy(parts.partNumber);
 
     expect(read.map((row) => row.unitPrice)).toEqual([49.99, 0.1]);
-    expect(typeof read[0]?.unitPrice).toBe('number');
+    expect(typeof read[0]?.unitPrice).toBe("number");
   });
 
-  it('generates uuidv7 ids', async () => {
+  it("generates uuidv7 ids", async () => {
     const [row] = await database.db
       .insert(parts)
-      .values({partNumber: 'ID-1', description: 'Filter', unitPrice: 5, ...AUDIT})
-      .returning({id: parts.id});
+      .values({ partNumber: "ID-1", description: "Filter", unitPrice: 5, ...AUDIT })
+      .returning({ id: parts.id });
 
     expect(row?.id).toMatch(UUID_V7);
   });
 
-  it('lets a soft-deleted part number be used again, and refuses a live duplicate', async () => {
+  it("lets a soft-deleted part number be used again, and refuses a live duplicate", async () => {
     const [first] = await database.db
       .insert(parts)
-      .values({partNumber: 'BRK-001', description: 'Pads', unitPrice: 45, ...AUDIT})
-      .returning({id: parts.id});
+      .values({ partNumber: "BRK-001", description: "Pads", unitPrice: 45, ...AUDIT })
+      .returning({ id: parts.id });
     await database.db
       .update(parts)
-      .set({isDeleted: true, deletedAt: SEEDED_AT, deletedBy: TEST_USER_ID})
+      .set({ isDeleted: true, deletedAt: SEEDED_AT, deletedBy: TEST_USER_ID })
       .where(eq(parts.id, first!.id));
 
-    await database.db.insert(parts).values({partNumber: 'BRK-001', description: 'Pads', unitPrice: 45, ...AUDIT});
+    await database.db.insert(parts).values({ partNumber: "BRK-001", description: "Pads", unitPrice: 45, ...AUDIT });
 
     await expect(
-      database.db.insert(parts).values({partNumber: 'BRK-001', description: 'Pads', unitPrice: 45, ...AUDIT}),
-    ).rejects.toMatchObject({cause: {code: '23505', constraint: 'uq_parts_dealer_part_number'}});
+      database.db.insert(parts).values({ partNumber: "BRK-001", description: "Pads", unitPrice: 45, ...AUDIT }),
+    ).rejects.toMatchObject({ cause: { code: "23505", constraint: "uq_parts_dealer_part_number" } });
   });
 
-  it('lets another dealer use the same part number', async () => {
-    await database.db.insert(parts).values({partNumber: 'SHARED-1', description: 'Pads', unitPrice: 45, ...AUDIT});
+  it("lets another dealer use the same part number", async () => {
+    await database.db.insert(parts).values({ partNumber: "SHARED-1", description: "Pads", unitPrice: 45, ...AUDIT });
 
     await expect(
       database.db
         .insert(parts)
-        .values({partNumber: 'SHARED-1', description: 'Pads', unitPrice: 45, ...AUDIT, dealerId: CITY_MOTORS}),
+        .values({ partNumber: "SHARED-1", description: "Pads", unitPrice: 45, ...AUDIT, dealerId: CITY_MOTORS }),
     ).resolves.toBeDefined();
   });
 
-  it('gives every business table a dealer column that cannot be empty', async () => {
-    const result = await database.db.execute<{table_name: string; is_nullable: string}>(
+  it("gives every business table a dealer column that cannot be empty", async () => {
+    const result = await database.db.execute<{ table_name: string; is_nullable: string }>(
       sql`select table_name, is_nullable from information_schema.columns
           where table_schema = 'public' and column_name = 'dealer_id' order by table_name`,
     );
 
     expect(result.rows).toEqual(
-      ['bins', 'customers', 'part_inventories', 'part_photos', 'parts'].map((table_name) => ({
+      ["bins", "customers", "part_inventories", "part_photos", "parts"].map((table_name) => ({
         table_name,
-        is_nullable: 'NO',
+        is_nullable: "NO",
       })),
     );
   });

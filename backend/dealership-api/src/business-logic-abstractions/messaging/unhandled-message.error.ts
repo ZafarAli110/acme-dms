@@ -2,6 +2,6 @@
 export class UnhandledMessageError extends Error {
   public constructor(message: string) {
     super(message);
-    this.name = 'UnhandledMessageError';
+    this.name = "UnhandledMessageError";
   }
 }

@@ -1,6 +1,6 @@
-import type {Pool} from 'pg';
-import {UnitOfWork} from './unit-of-work';
-import type {IUnitOfWorkFactory} from './unit-of-work.factory.interface';
+import type { Pool } from "pg";
+import { UnitOfWork } from "./unit-of-work";
+import type { IUnitOfWorkFactory } from "./unit-of-work.factory.interface";
 
 export class UnitOfWorkFactory implements IUnitOfWorkFactory {
   private readonly _pool: Pool;
@@ -9,10 +9,10 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
     this._pool = pool;
   }
 
-  public async beginAsync(options: {readOnly: boolean} = {readOnly: false}): Promise<UnitOfWork> {
+  public async beginAsync(options: { readOnly: boolean } = { readOnly: false }): Promise<UnitOfWork> {
     const client = await this._pool.connect();
     try {
-      await client.query(options.readOnly ? 'BEGIN READ ONLY' : 'BEGIN');
+      await client.query(options.readOnly ? "BEGIN READ ONLY" : "BEGIN");
     } catch (error) {
       client.release(error instanceof Error ? error : true);
       throw error;

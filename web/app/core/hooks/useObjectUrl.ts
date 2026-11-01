@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import { useEffect, useState } from "react";
 
 /**
  * A URL for showing a Blob or File in an <img>, released when it is no longer shown. It is made inside the effect:

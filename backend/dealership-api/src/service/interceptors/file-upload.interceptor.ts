@@ -1,5 +1,5 @@
-import {type NestInterceptor, type Type} from '@nestjs/common';
-import {FileInterceptor, FilesInterceptor} from '@nestjs/platform-node';
+import { type NestInterceptor, type Type } from "@nestjs/common";
+import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-node";
 
 /** The file as the HTTP adapter's multipart parser hands it over (kept in memory, never written to disk). */
 export interface UploadedFileLike {
@@ -15,12 +15,12 @@ export interface UploadedFileLike {
  * feature rules (types, size, count) live in the business handler.
  */
 export function SingleFileUpload(field: string, maxBytes: number): Type<NestInterceptor> {
-  return FileInterceptor(field, {limits: {fileSize: maxBytes, files: 1, fields: 5}});
+  return FileInterceptor(field, { limits: { fileSize: maxBytes, files: 1, fields: 5 } });
 }
 
 /** Parses up to `maxFiles` files from one multipart field, plus the form's text fields (such as a JSON `payload`). */
 export function MultipleFilesUpload(field: string, maxFiles: number, maxBytes: number): Type<NestInterceptor> {
-  return FilesInterceptor(field, maxFiles, {limits: {fileSize: maxBytes, files: maxFiles, fields: 5}});
+  return FilesInterceptor(field, maxFiles, { limits: { fileSize: maxBytes, files: maxFiles, fields: 5 } });
 }
 
 /**
@@ -28,7 +28,7 @@ export function MultipleFilesUpload(field: string, maxFiles: number, maxBytes: n
  * or the narrow space in a macOS screenshot's name) arrives garbled; this turns it back into UTF-8.
  */
 export function uploadedFileName(file: UploadedFileLike): string {
-  const decoded = Buffer.from(file.originalname, 'latin1').toString('utf8');
+  const decoded = Buffer.from(file.originalname, "latin1").toString("utf8");
   // A name that was not UTF-8 to begin with would not survive the round trip; keep it as it came.
-  return decoded.includes('\uFFFD') ? file.originalname : decoded;
+  return decoded.includes("\uFFFD") ? file.originalname : decoded;
 }
