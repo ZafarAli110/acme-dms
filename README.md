@@ -283,7 +283,9 @@ controller ──► handler interface (abstractions) ──► handler (busines
 travels in the `x-location-id` header, and services refuse locations the token does not grant. Handlers receive the
 user context (user, dealer, location, permissions) explicitly. Code checks **permissions, never role names**.
 
-**Routes.** Services use `/v1/<resource>`. The gateway adds the service prefix: `/api/dealership/v1/...`.
+**Routes.** Services use `/v1/<resource>`. The gateway adds the service prefix: `/api/dealership/v1/...`. A `201 Created`
+carries `Location` relative to the service (`/v1/customers/{id}`), and the gateway adds its prefix back on the way
+out. Every answer is `Cache-Control: no-store`: it is one dealer's data for one signed-in user.
 
 **Errors.** Every error from every service is RFC 9457 problem details (`application/problem+json`) with the same
 fields: `type` (`urn:acme:error:…`), `title`, `status`, `detail`, `instance`, `location`, `userId`, `traceId`,
