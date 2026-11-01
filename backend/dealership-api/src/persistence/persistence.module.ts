@@ -17,7 +17,11 @@ const MIGRATIONS_FOLDER = resolve(import.meta.dirname, 'migrations');
 async function createDatabasePoolAsync(settings: Settings): Promise<Pool> {
   const url = toPostgresUrl(requireSetting(settings.dealershipDatabase, 'ConnectionStrings__dealership'));
   await migrateDatabaseAsync(url, MIGRATIONS_FOLDER);
-  return createDatabasePool(url, settings.databaseStatementTimeoutMs);
+  return createDatabasePool(url, {
+    maxConnections: settings.databaseMaxConnections,
+    connectionTimeoutMs: settings.databaseConnectionTimeoutMs,
+    statementTimeoutMs: settings.databaseStatementTimeoutMs,
+  });
 }
 
 /** The dealership database: the pool, and the unit of work factory every handler reads and writes through. */
