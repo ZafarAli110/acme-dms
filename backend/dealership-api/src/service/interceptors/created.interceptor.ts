@@ -8,14 +8,14 @@ import {
   type NestInterceptor,
   SetMetadata,
   UseInterceptors,
-} from '@nestjs/common';
-import {Reflector} from '@nestjs/core';
-import {map, type Observable} from 'rxjs';
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { map, type Observable } from "rxjs";
 
-const CREATED_LOCATION = Symbol('created-location');
+const CREATED_LOCATION = Symbol("created-location");
 
 type LocationOf = (created: unknown) => string;
-type HeaderSetter = {setHeader(name: string, value: string): void};
+type HeaderSetter = { setHeader(name: string, value: string): void };
 
 /**
  * A create endpoint: it answers 201 Created with `Location`, where the new record can be read, relative to this
@@ -46,7 +46,7 @@ export class CreatedInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map((created: unknown) => {
         if (locationOf) {
-          response.setHeader('location', locationOf(created));
+          response.setHeader("location", locationOf(created));
         }
         return created;
       }),

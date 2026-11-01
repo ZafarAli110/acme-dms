@@ -4,9 +4,9 @@ import {
   type ExecutionContext,
   type PipeTransform,
   type Type,
-} from '@nestjs/common';
-import {plainToInstance} from 'class-transformer';
-import {validate} from 'class-validator';
+} from "@nestjs/common";
+import { plainToInstance } from "class-transformer";
+import { validate } from "class-validator";
 
 /**
  * A multipart request carries its JSON body as a text field (`payload`) next to the files. This parses that field and
@@ -20,7 +20,7 @@ export class JsonPayloadPipe<T extends object> implements PipeTransform<unknown,
   }
 
   public async transform(value: unknown): Promise<T> {
-    if (typeof value !== 'string') {
+    if (typeof value !== "string") {
       throw new BadRequestException('Send the changes as the JSON multipart field "payload".');
     }
     let parsed: unknown;
@@ -30,7 +30,7 @@ export class JsonPayloadPipe<T extends object> implements PipeTransform<unknown,
       throw new BadRequestException('The "payload" field is not valid JSON.');
     }
     const dto = plainToInstance(this._dtoType, parsed);
-    const errors = await validate(dto, {whitelist: true, forbidNonWhitelisted: true});
+    const errors = await validate(dto, { whitelist: true, forbidNonWhitelisted: true });
     if (errors.length > 0) {
       throw new BadRequestException(errors.flatMap((error) => flattenMessages(error)));
     }
@@ -45,13 +45,13 @@ function flattenMessages(error: {
 }): string[] {
   const own = Object.values(error.constraints ?? {});
   const nested = (error.children ?? []).flatMap((child) =>
-    flattenMessages(child as {property: string; constraints?: Record<string, string>; children?: unknown[]}),
+    flattenMessages(child as { property: string; constraints?: Record<string, string>; children?: unknown[] }),
   );
   return [...own, ...nested];
 }
 
 const multipartField = createParamDecorator((field: string, context: ExecutionContext): unknown => {
-  const request = context.switchToHttp().getRequest<{body?: Record<string, unknown>}>();
+  const request = context.switchToHttp().getRequest<{ body?: Record<string, unknown> }>();
   return request.body?.[field];
 });
 
@@ -60,5 +60,5 @@ const multipartField = createParamDecorator((field: string, context: ExecutionCo
  * because the global ValidationPipe would otherwise try to validate the raw string as the DTO before this pipe runs.
  */
 export function JsonPayload<T extends object>(dtoType: Type<T>): ParameterDecorator {
-  return multipartField('payload', new JsonPayloadPipe(dtoType));
+  return multipartField("payload", new JsonPayloadPipe(dtoType));
 }

@@ -11,71 +11,71 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
-import {useState} from 'react';
-import {useTranslation} from 'react-i18next';
-import {type ClientActionFunctionArgs, Form, redirect, useActionData, useNavigation} from 'react-router';
-import {AcmeLogo} from '../components/AcmeLogo';
-import {ApiError, problemErrorMessage} from '../core/config/apiErrors';
-import {authKernel} from '../core/kernel/authKernel';
-import {i18n} from '../i18n';
+} from "@mui/material";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { type ClientActionFunctionArgs, Form, redirect, useActionData, useNavigation } from "react-router";
+import { AcmeLogo } from "../components/AcmeLogo";
+import { ApiError, problemErrorMessage } from "../core/config/apiErrors";
+import { authKernel } from "../core/kernel/authKernel";
+import { i18n } from "../i18n";
 
-const DEMO_PASSWORD = 'Acme123!';
+const DEMO_PASSWORD = "Acme123!";
 // Sam first: the form starts filled in with him, the user most of the workshop's tickets are written for.
 const DEMO_USERS = [
-  {email: 'sam@northwind.test', key: 'sam'},
-  {email: 'rita@northwind.test', key: 'rita'},
-  {email: 'maria@northwind.test', key: 'maria'},
-  {email: 'tom@citymotors.test', key: 'tom'},
+  { email: "sam@northwind.test", key: "sam" },
+  { email: "rita@northwind.test", key: "rita" },
+  { email: "maria@northwind.test", key: "maria" },
+  { email: "tom@citymotors.test", key: "tom" },
 ] as const;
 
 /** Someone already signed in goes straight to Home. */
 export async function clientLoader() {
   const auth = await authKernel.waitForResolvedAuthAsync();
-  if (auth.status === 'signed-in') {
-    throw redirect('/');
+  if (auth.status === "signed-in") {
+    throw redirect("/");
   }
   return null;
 }
 
 /** Signs in with the submitted email and password, then goes to Home; a failure comes back as `{error}`. */
-export async function clientAction({request}: ClientActionFunctionArgs) {
+export async function clientAction({ request }: ClientActionFunctionArgs) {
   const form = await request.formData();
   try {
-    await authKernel.signInAsync(String(form.get('email') ?? ''), String(form.get('password') ?? ''));
+    await authKernel.signInAsync(String(form.get("email") ?? ""), String(form.get("password") ?? ""));
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
-      return {error: i18n.t('sign-in:invalidCredentials')};
+      return { error: i18n.t("sign-in:invalidCredentials") };
     }
-    return {error: problemErrorMessage(error, i18n.t('errors.unexpected'))};
+    return { error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
   }
-  return redirect('/');
+  return redirect("/");
 }
 
 export default function SignIn() {
-  const {t} = useTranslation('sign-in');
+  const { t } = useTranslation("sign-in");
   const actionData = useActionData<typeof clientAction>();
-  const isSubmitting = useNavigation().state === 'submitting';
+  const isSubmitting = useNavigation().state === "submitting";
   // The fields are controlled only so that picking a demo user fills them in; the Form submits their values.
   const [email, setEmail] = useState<string>(DEMO_USERS[0].email);
   const [password, setPassword] = useState(DEMO_PASSWORD);
 
   return (
-    <Box sx={{display: 'grid', placeItems: 'center', minHeight: '100vh', bgcolor: 'background.default', p: 2}}>
-      <Card variant="outlined" sx={{width: '100%', maxWidth: 420}}>
-        <CardContent sx={{p: 4}}>
+    <Box sx={{ display: "grid", placeItems: "center", minHeight: "100vh", bgcolor: "background.default", p: 2 }}>
+      <Card variant="outlined" sx={{ width: "100%", maxWidth: 420 }}>
+        <CardContent sx={{ p: 4 }}>
           <AcmeLogo />
-          <Typography variant="h5" sx={{mt: 3}}>
-            {t('title')}
+          <Typography variant="h5" sx={{ mt: 3 }}>
+            {t("title")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t('subtitle')}
+            {t("subtitle")}
           </Typography>
           <Form method="post">
-            <Stack spacing={2} sx={{mt: 3}}>
+            <Stack spacing={2} sx={{ mt: 3 }}>
               <TextField
                 name="email"
-                label={t('email')}
+                label={t("email")}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoFocus
@@ -83,25 +83,25 @@ export default function SignIn() {
               />
               <TextField
                 name="password"
-                label={t('password')}
+                label={t("password")}
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 data-testid="password"
               />
               <Button type="submit" variant="contained" size="large" disabled={isSubmitting} data-testid="sign-in">
-                {isSubmitting ? t('signingIn') : t('signIn')}
+                {isSubmitting ? t("signingIn") : t("signIn")}
               </Button>
             </Stack>
           </Form>
           {actionData?.error && (
-            <Alert severity="error" sx={{my: 2}} data-testid="sign-in-error">
+            <Alert severity="error" sx={{ my: 2 }} data-testid="sign-in-error">
               {actionData.error}
             </Alert>
           )}
-          <Divider sx={{my: 3}}>
+          <Divider sx={{ my: 3 }}>
             <Typography variant="caption" color="text.secondary">
-              {t('demoUsers', {password: DEMO_PASSWORD})}
+              {t("demoUsers", { password: DEMO_PASSWORD })}
             </Typography>
           </Divider>
           <List dense disablePadding>
@@ -113,7 +113,7 @@ export default function SignIn() {
                   setEmail(demo.email);
                   setPassword(DEMO_PASSWORD);
                 }}
-                sx={{borderRadius: 1}}
+                sx={{ borderRadius: 1 }}
               >
                 <ListItemText primary={demo.email} secondary={t(`demoUser.${demo.key}`)} />
               </ListItemButton>

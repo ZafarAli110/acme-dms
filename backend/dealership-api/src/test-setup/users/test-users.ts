@@ -1,11 +1,11 @@
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import {CENTRAL, dealerOf, NORTHSIDE, RIVERSIDE, TEST_USER_ID} from '#test-setup/postgres/seed-kit';
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import { CENTRAL, dealerOf, NORTHSIDE, RIVERSIDE, TEST_USER_ID } from "#test-setup/postgres/seed-kit";
 
 /**
  * The access token a handler forwards when it calls another service for the user (document-api). Tests never send it
  * anywhere real; FakeDocumentApi takes it as it is.
  */
-export const TEST_ACCESS_TOKEN = 'test-access-token';
+export const TEST_ACCESS_TOKEN = "test-access-token";
 
 /**
  * Someone signed in and working at `locationId`, for the dealer that owns it, as a handler receives them. No

@@ -1,8 +1,8 @@
 // Regenerates the typed document-api client from document-api's OpenAPI document.
 // Run while `bun run dev` is up:  bun run generate:clients
 // Commit both files: the JSON is the contract dealership-api was built against.
-const source = process.env['DOCUMENT_API_URL'] ?? 'http://localhost:5280';
-const target = 'src/rest-clients/document-api';
+const source = process.env["DOCUMENT_API_URL"] ?? "http://localhost:5280";
+const target = "src/rest-clients/document-api";
 
 const response = await fetch(`${source}/openapi/v1.json`);
 if (!response.ok) {
@@ -15,16 +15,16 @@ await Bun.write(`${target}/document-api.openapi.json`, `${JSON.stringify(await r
 // not a dependency: bunx runs it from Bun's global cache with its own TypeScript 5, so the repo stays on TypeScript 7.
 const steps = [
   [
-    'bunx',
-    'openapi-typescript@7.13.0',
+    "bunx",
+    "openapi-typescript@7.13.0",
     `${target}/document-api.openapi.json`,
-    '-o',
+    "-o",
     `${target}/document-api.schema.d.ts`,
   ],
-  ['bun', 'fmt', `${target}/document-api.schema.d.ts`],
+  ["bun", "fmt", `${target}/document-api.schema.d.ts`],
 ];
 for (const step of steps) {
-  const result = Bun.spawnSync(step, {stdout: 'inherit', stderr: 'inherit'});
+  const result = Bun.spawnSync(step, { stdout: "inherit", stderr: "inherit" });
   if (result.exitCode !== 0) {
     process.exit(result.exitCode);
   }

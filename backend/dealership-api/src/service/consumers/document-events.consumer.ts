@@ -1,27 +1,27 @@
-import {Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown} from '@nestjs/common';
-import {type Channel, type ChannelModel, type ConsumeMessage, connect} from 'amqplib';
+import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common";
+import { type Channel, type ChannelModel, type ConsumeMessage, connect } from "amqplib";
 import {
   MARK_PART_PHOTO_FAILED_COMMAND_HANDLER,
   type IMarkPartPhotoFailedCommandHandler,
-} from '#business-logic-abstractions/handlers/parts/mark-photo-failed/mark-part-photo-failed.command-handler.interface';
+} from "#business-logic-abstractions/handlers/parts/mark-photo-failed/mark-part-photo-failed.command-handler.interface";
 import {
   MARK_PART_PHOTO_READY_COMMAND_HANDLER,
   type IMarkPartPhotoReadyCommandHandler,
-} from '#business-logic-abstractions/handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler.interface';
-import {UnhandledMessageError} from '#business-logic-abstractions/messaging/unhandled-message.error';
+} from "#business-logic-abstractions/handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler.interface";
+import { UnhandledMessageError } from "#business-logic-abstractions/messaging/unhandled-message.error";
 import {
   DOCUMENT_FAILED,
   DOCUMENT_PROCESSED,
   type DocumentFailedMessageDto,
   type DocumentProcessedMessageDto,
   type MessageEnvelopeDto,
-} from '#dto/messages/document-messages.dto';
-import {requireSetting, SETTINGS, type Settings} from '#settings/settings';
+} from "#dto/messages/document-messages.dto";
+import { requireSetting, SETTINGS, type Settings } from "#settings/settings";
 
-const EXCHANGE = 'acme.documents';
-const DEAD_LETTER_EXCHANGE = 'acme.documents.dlx';
-const QUEUE = 'dealership-api.document-events';
-const DEAD_LETTER_QUEUE = 'dealership-api.document-events.dlq';
+const EXCHANGE = "acme.documents";
+const DEAD_LETTER_EXCHANGE = "acme.documents.dlx";
+const QUEUE = "dealership-api.document-events";
+const DEAD_LETTER_QUEUE = "dealership-api.document-events.dlq";
 
 /**
  * Consumes document-api's events: an inbound adapter, like a controller, that hands each message to a business
@@ -47,8 +47,8 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
   }
 
   public async onApplicationBootstrap(): Promise<void> {
-    const url = requireSetting(this._settings.rabbitmq, 'ConnectionStrings__rabbitmq');
-    this._connection = await connect(url, {clientProperties: {connection_name: 'dealership-api'}});
+    const url = requireSetting(this._settings.rabbitmq, "ConnectionStrings__rabbitmq");
+    this._connection = await connect(url, { clientProperties: { connection_name: "dealership-api" } });
     const channel = await this._connection.createChannel();
     await this.declareTopologyAsync(channel);
     await channel.prefetch(10);
@@ -61,12 +61,12 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
   }
 
   private async declareTopologyAsync(channel: Channel): Promise<void> {
-    await channel.assertExchange(EXCHANGE, 'topic', {durable: true});
-    await channel.assertExchange(DEAD_LETTER_EXCHANGE, 'topic', {durable: true});
-    await channel.assertQueue(DEAD_LETTER_QUEUE, {durable: true});
+    await channel.assertExchange(EXCHANGE, "topic", { durable: true });
+    await channel.assertExchange(DEAD_LETTER_EXCHANGE, "topic", { durable: true });
+    await channel.assertQueue(DEAD_LETTER_QUEUE, { durable: true });
     await channel.bindQueue(DEAD_LETTER_QUEUE, DEAD_LETTER_EXCHANGE, DOCUMENT_PROCESSED);
     await channel.bindQueue(DEAD_LETTER_QUEUE, DEAD_LETTER_EXCHANGE, DOCUMENT_FAILED);
-    await channel.assertQueue(QUEUE, {durable: true, deadLetterExchange: DEAD_LETTER_EXCHANGE});
+    await channel.assertQueue(QUEUE, { durable: true, deadLetterExchange: DEAD_LETTER_EXCHANGE });
     await channel.bindQueue(QUEUE, EXCHANGE, DOCUMENT_PROCESSED);
     await channel.bindQueue(QUEUE, EXCHANGE, DOCUMENT_FAILED);
   }
@@ -76,7 +76,7 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
       return;
     }
     try {
-      const envelope = JSON.parse(message.content.toString('utf8')) as MessageEnvelopeDto<unknown>;
+      const envelope = JSON.parse(message.content.toString("utf8")) as MessageEnvelopeDto<unknown>;
       switch (envelope.type) {
         case DOCUMENT_PROCESSED:
           await this._markPartPhotoReady.executeAsync(envelope as MessageEnvelopeDto<DocumentProcessedMessageDto>);
@@ -90,8 +90,8 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
       channel.ack(message);
     } catch (error) {
       this._logger.error(
-        {err: error, routingKey: message.fields.routingKey},
-        'Dead-lettering a document event that could not be handled',
+        { err: error, routingKey: message.fields.routingKey },
+        "Dead-lettering a document event that could not be handled",
       );
       channel.nack(message, false, false);
     }

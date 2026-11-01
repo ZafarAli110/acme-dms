@@ -15,7 +15,7 @@ export interface DealerLocation {
 }
 
 /** What one assignment switch asks for. */
-export type AssignmentIntent = 'assign' | 'unassign';
+export type AssignmentIntent = "assign" | "unassign";
 
 /** What the route's clientAction answers a switch: the API's message when it refused. */
 export interface AssignmentResult {

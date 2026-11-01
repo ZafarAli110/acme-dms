@@ -1,22 +1,30 @@
-import {BadRequestException, Inject, Injectable, Logger, NotFoundException} from '@nestjs/common';
-import {and, eq, inArray} from 'drizzle-orm';
-import type {IUpdatePartCommandHandler} from '#business-logic-abstractions/handlers/parts/update/update-part.command-handler.interface';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { and, eq, inArray } from "drizzle-orm";
+import type { IUpdatePartCommandHandler } from "#business-logic-abstractions/handlers/parts/update/update-part.command-handler.interface";
 import {
   DOCUMENT_API_CLIENT,
   type IDocumentApiClient,
-} from '#business-logic-abstractions/rest-clients/document-api.client.interface';
-import {CLOCK, type IClock} from '#business-logic-abstractions/time/clock.interface';
-import type {UserContext} from '#business-logic-abstractions/user-context/user-context';
-import type {PartPhotoUploadRequestDto} from '#dto/parts/part-photo-upload-request.dto';
-import type {PartResponseDto} from '#dto/parts/part-response.dto';
-import type {PartUpdateRequestDto} from '#dto/parts/part-update-request.dto';
-import {type NewPartPhoto, partPhotos, parts} from '#persistence/schema/index';
-import {type IUnitOfWorkFactory, UNIT_OF_WORK_FACTORY} from '#persistence/unit-of-work/unit-of-work.factory.interface';
-import {createdAudit, updatedAudit} from '../../../audit/audit-fields';
-import {requireLocation} from '../../../user-context/require-location';
-import {toPartResponseDto} from '../part.mapper';
-import {findPhotosAsync, findStockedPartAsync} from '../part.queries';
-import {MAX_PHOTOS_PER_PART, PART_PHOTO_OWNER_TYPE, PART_PHOTO_VARIANTS, validatePhotoFile} from '../part-photo.rules';
+} from "#business-logic-abstractions/rest-clients/document-api.client.interface";
+import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { PartPhotoUploadRequestDto } from "#dto/parts/part-photo-upload-request.dto";
+import type { PartResponseDto } from "#dto/parts/part-response.dto";
+import type { PartUpdateRequestDto } from "#dto/parts/part-update-request.dto";
+import { type NewPartPhoto, partPhotos, parts } from "#persistence/schema/index";
+import {
+  type IUnitOfWorkFactory,
+  UNIT_OF_WORK_FACTORY,
+} from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { createdAudit, updatedAudit } from "../../../audit/audit-fields";
+import { requireLocation } from "../../../user-context/require-location";
+import { toPartResponseDto } from "../part.mapper";
+import { findPhotosAsync, findStockedPartAsync } from "../part.queries";
+import {
+  MAX_PHOTOS_PER_PART,
+  PART_PHOTO_OWNER_TYPE,
+  PART_PHOTO_VARIANTS,
+  validatePhotoFile,
+} from "../part-photo.rules";
 
 /**
  * Saves a part and its photos as one unit:
@@ -55,12 +63,12 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       request.photos === undefined &&
       newPhotos.length === 0
     ) {
-      throw new BadRequestException('Send at least one change: description, unitPrice, photos or new photos.');
+      throw new BadRequestException("Send at least one change: description, unitPrice, photos or new photos.");
     }
 
     // 1. Validate everything before writing anything.
     const locationId = requireLocation(userContext);
-    const {existing} = await this.readPartAsync(userContext.dealerId, locationId, partId);
+    const { existing } = await this.readPartAsync(userContext.dealerId, locationId, partId);
     if (newPhotos.length !== files.length) {
       throw new BadRequestException(
         `Send one newPhotos entry per photo file: ${newPhotos.length} entries, ${files.length} files.`,
@@ -68,7 +76,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     }
     files.forEach(validatePhotoFile);
 
-    const kept = request.photos ?? existing.map((photo) => ({id: photo.id, isDefault: photo.isDefault}));
+    const kept = request.photos ?? existing.map((photo) => ({ id: photo.id, isDefault: photo.isDefault }));
     const unknown = kept.find((photo) => !existing.some((candidate) => candidate.id === photo.id));
     if (unknown) {
       throw new BadRequestException(`Photo ${unknown.id} is not a photo of this part.`);
@@ -105,7 +113,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
           partId,
           documentId: document.id,
           originalFileName: file.fileName,
-          status: 'pending',
+          status: "pending",
           failureReason: null,
           isDefault: newPhotos[index]?.isDefault ?? false,
           ...createdAudit(userContext.userId, now),
@@ -117,8 +125,8 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       await work.db
         .update(parts)
         .set({
-          ...(request.description === undefined ? {} : {description: request.description}),
-          ...(request.unitPrice === undefined ? {} : {unitPrice: request.unitPrice}),
+          ...(request.description === undefined ? {} : { description: request.description }),
+          ...(request.unitPrice === undefined ? {} : { unitPrice: request.unitPrice }),
           ...updatedAudit(userContext.userId, now),
         })
         .where(and(eq(parts.dealerId, userContext.dealerId), eq(parts.id, partId)));
@@ -146,7 +154,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       for (const photo of kept) {
         await work.db
           .update(partPhotos)
-          .set({isDefault: photo.isDefault, ...updatedAudit(userContext.userId, now)})
+          .set({ isDefault: photo.isDefault, ...updatedAudit(userContext.userId, now) })
           .where(
             and(
               eq(partPhotos.dealerId, userContext.dealerId),
@@ -170,18 +178,18 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       removed.map((photo) => photo.documentId),
     );
 
-    const {stocked, existing: photos} = await this.readPartAsync(userContext.dealerId, locationId, partId);
+    const { stocked, existing: photos } = await this.readPartAsync(userContext.dealerId, locationId, partId);
     return toPartResponseDto(stocked.part, stocked.inventory, stocked.bin, photos);
   }
 
   /** The part as this location stocks it, with its photos; a part the location doesn't stock is not found. */
   private async readPartAsync(dealerId: string, locationId: string, partId: string) {
-    await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const stocked = await findStockedPartAsync(work.db, dealerId, locationId, partId);
     if (!stocked) {
       throw new NotFoundException(`Part ${partId} is not stocked at this location.`);
     }
-    return {stocked, existing: await findPhotosAsync(work.db, dealerId, partId)};
+    return { stocked, existing: await findPhotosAsync(work.db, dealerId, partId) };
   }
 
   /** Best effort, all at once: a document left behind is logged, never turned into a failed save. */
@@ -190,7 +198,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       documentIds.map((documentId) => this._documentApiClient.deleteDocumentAsync(userContext, documentId)),
     );
     for (const [index, result] of results.entries()) {
-      if (result.status === 'rejected') {
+      if (result.status === "rejected") {
         this._logger.warn(
           `Document ${documentIds[index]} could not be deleted and is left without an owner: ${String(result.reason)}`,
         );
