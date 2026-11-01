@@ -2,6 +2,7 @@ using Acme.ServiceDefaults.Authorization;
 using Acme.ServiceDefaults.Middleware;
 using Acme.ServiceDefaults.Observability;
 using Acme.ServiceDefaults.ProblemDetails;
+using Microsoft.Net.Http.Headers;
 
 namespace Acme.ServiceDefaults;
 
@@ -23,6 +24,21 @@ public static class ServiceDefaultsExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
 
+        // Every answer is one dealer's data for one signed-in user: no browser, proxy or CDN may keep a copy. An endpoint
+        // that can be cached sets its own Cache-Control, and this leaves it alone.
+        app.Use((context, next) =>
+        {
+            context.Response.OnStarting(() =>
+            {
+                if (!context.Response.Headers.ContainsKey(HeaderNames.CacheControl))
+                {
+                    context.Response.Headers.CacheControl = "no-store";
+                }
+
+                return Task.CompletedTask;
+            });
+            return next(context);
+        });
         app.UseExceptionHandler();
         app.UseStatusCodePages();
         app.UseMiddleware<CorrelationIdMiddleware>();
