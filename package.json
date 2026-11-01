@@ -35,8 +35,8 @@
   "devDependencies": {
     "@playwright/cli": "0.1.22",
     "@types/bun": "1.4.4",
-    "@types/node": "26.6.5",
-    "nx": "24.0.2",
+    "@types/node": "26.6.6",
+    "nx": "24.0.3",
     "oxlint": "1.90.0",
     "typescript": "7.0.2"
   }
