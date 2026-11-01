@@ -1,10 +1,12 @@
 /**
- * Who is calling, and at which location. Built by the service layer from the validated access token and passed
- * explicitly to every handler that reads or writes dealership data. There is no dealer: each client (dealer group) has
- * its own database, so the database is the dealer.
+ * Who is calling, for which dealer, and at which location. Built by the service layer from the validated access token
+ * and passed explicitly to every handler that reads or writes dealership data. Every dealer shares one database, so
+ * every query filters by `dealerId` itself (docs/standards/multi-tenancy.md).
  */
 export interface UserContext {
   userId: string;
+  /** The dealer (dealer group) the user belongs to, from the token's `dealer_id`. Never from the request. */
+  dealerId: string;
   /** The location selected in the `x-location-id` header, validated against the token; null when none was sent. */
   locationId: string | null;
   /** Permissions the user holds at `locationId`; empty when no location was selected. */

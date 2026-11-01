@@ -23,7 +23,14 @@ export class GetCustomerQueryHandler implements IGetCustomerQueryHandler {
     const [customer] = await work.db
       .select()
       .from(customers)
-      .where(and(eq(customers.id, customerId), eq(customers.locationId, locationId), notDeleted(customers)));
+      .where(
+        and(
+          eq(customers.id, customerId),
+          eq(customers.dealerId, userContext.dealerId),
+          eq(customers.locationId, locationId),
+          notDeleted(customers),
+        ),
+      );
     if (!customer) {
       throw new NotFoundException(`Customer ${customerId} was not found at this location.`);
     }

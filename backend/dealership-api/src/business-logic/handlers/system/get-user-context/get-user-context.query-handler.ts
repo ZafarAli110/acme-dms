@@ -9,6 +9,7 @@ export class GetUserContextQueryHandler implements IGetUserContextQueryHandler {
   public async executeAsync(userContext: UserContext): Promise<UserContextResponseDto> {
     return {
       userId: userContext.userId,
+      dealerId: userContext.dealerId,
       locationId: userContext.locationId,
       permissions: userContext.permissions,
     };
