@@ -1,6 +1,7 @@
 ---
 name: learn
 description: Turns proven lessons in docs/lessons/ into a skill, so the next ticket of the same kind gets them right the first time. Use when asked to learn from finished tickets, e.g. /learn, after /retro.
+disable-model-invocation: true
 ---
 
 # Learn: from lessons to a skill
