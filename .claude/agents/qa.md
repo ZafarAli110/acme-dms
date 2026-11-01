@@ -25,8 +25,8 @@ its output that shows it. Instruments:
 
 - `bun run api as <user> [--location <name>] <METHOD> <path>`: the API as a demo user (`sam` at Northside and
   Riverside, `rita` at Riverside and Westgate, `maria` the manager at all three, `tom` at City Motors' Central, another
-  dealer); without `--location`, their first
-  location by name.
+  dealer); without `--location`, their default
+  location.
 - The `browser` skill: what the web app shows.
 - `bun run xlsx:inspect <file>`: what an Excel file holds (sheets, row counts, header, first and last rows, cell
   types) without opening Excel.
