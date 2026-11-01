@@ -29,4 +29,15 @@ public sealed class HealthEndpointTests
         StringAssert.Matches(body.GetProperty("version").GetString(), new System.Text.RegularExpressions.Regex(@"^\d+\.\d+\.\d+$"));
         Assert.AreEqual(JsonValueKind.Null, body.GetProperty("databaseReachable").ValueKind);
     }
+
+    [TestMethod]
+    public async Task EveryResponse_ForbidsCaching()
+    {
+        await using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(new Uri("/v1/system/health", UriKind.Relative), TestContext.CancellationToken);
+
+        Assert.IsTrue(response.Headers.CacheControl?.NoStore);
+    }
 }
