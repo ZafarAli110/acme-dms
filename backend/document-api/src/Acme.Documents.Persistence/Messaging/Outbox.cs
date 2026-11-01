@@ -7,7 +7,7 @@ namespace Acme.Documents.Persistence.Messaging;
 
 internal sealed class Outbox : IOutbox
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly DocumentsDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
@@ -22,7 +22,7 @@ internal sealed class Outbox : IOutbox
         _dbContext.OutboxMessages.Add(new OutboxMessage
         {
             Type = type,
-            Payload = JsonSerializer.Serialize(data, JsonOptions),
+            Payload = JsonSerializer.Serialize(data, _jsonOptions),
             TraceParent = Activity.Current?.Id,
             OccurredAt = _timeProvider.GetUtcNow(),
         });

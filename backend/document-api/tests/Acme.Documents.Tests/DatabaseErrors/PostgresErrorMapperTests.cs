@@ -8,7 +8,7 @@ namespace Acme.Documents.Tests.DatabaseErrors;
 [TestClass]
 public sealed class PostgresErrorMapperTests
 {
-    private static readonly Dictionary<string, string> NoConstraintMessages = [];
+    private static readonly Dictionary<string, string> _noConstraintMessages = [];
 
     [TestMethod]
     [DataRow(PostgresErrorCodes.UniqueViolation, 409, PostgresErrorMapper.DuplicateValue)]
@@ -27,7 +27,7 @@ public sealed class PostgresErrorMapperTests
     [DataRow(PostgresErrorCodes.ConnectionFailure, 503, PostgresErrorMapper.DatabaseUnavailable)]
     public void Map_TurnsTheSqlStateIntoAStatusAndASafeMessage(string sqlState, int status, string detail)
     {
-        var error = PostgresErrorMapper.Map(Saving(Postgres(sqlState)), NoConstraintMessages);
+        var error = PostgresErrorMapper.Map(Saving(Postgres(sqlState)), _noConstraintMessages);
 
         Assert.IsNotNull(error);
         Assert.AreEqual(status, error.Status);
@@ -50,7 +50,7 @@ public sealed class PostgresErrorMapperTests
     [TestMethod]
     public void Map_NeverPutsTheTableOrConstraintInTheMessage()
     {
-        var error = PostgresErrorMapper.Map(Saving(Postgres(PostgresErrorCodes.UniqueViolation, "users", "ix_users_email")), NoConstraintMessages);
+        var error = PostgresErrorMapper.Map(Saving(Postgres(PostgresErrorCodes.UniqueViolation, "users", "ix_users_email")), _noConstraintMessages);
 
         Assert.IsNotNull(error);
         Assert.DoesNotContain("users", error.Detail);
@@ -60,7 +60,7 @@ public sealed class PostgresErrorMapperTests
     [TestMethod]
     public void Map_TreatsAConnectionThatNeverAnsweredAsUnavailable()
     {
-        var error = PostgresErrorMapper.Map(new NpgsqlException("Failed to connect", new SocketException()), NoConstraintMessages);
+        var error = PostgresErrorMapper.Map(new NpgsqlException("Failed to connect", new SocketException()), _noConstraintMessages);
 
         Assert.AreEqual(503, error?.Status);
     }
@@ -68,8 +68,8 @@ public sealed class PostgresErrorMapperTests
     [TestMethod]
     public void Map_LeavesAnUnknownSqlStateAndANonDatabaseErrorAlone()
     {
-        Assert.IsNull(PostgresErrorMapper.Map(Saving(Postgres(PostgresErrorCodes.DivisionByZero)), NoConstraintMessages));
-        Assert.IsNull(PostgresErrorMapper.Map(new InvalidOperationException("not a database error"), NoConstraintMessages));
+        Assert.IsNull(PostgresErrorMapper.Map(Saving(Postgres(PostgresErrorCodes.DivisionByZero)), _noConstraintMessages));
+        Assert.IsNull(PostgresErrorMapper.Map(new InvalidOperationException("not a database error"), _noConstraintMessages));
     }
 
     // EF Core reports a failed save as a DbUpdateException whose inner exception is Npgsql's PostgresException.

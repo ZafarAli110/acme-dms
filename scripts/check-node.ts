@@ -1,6 +1,6 @@
 // Stops `bun run dev` and the gates before they start on the wrong Node. The services run on the `node` your terminal
-// finds, so an older one (Node 24, or an earlier 26) would start, then fail in ways that are hard to trace.
-// The version is .nvmrc's: the one place it is set (CI reads it too).
+// finds, so another major version (Node 24, say) would start, then fail in ways that are hard to trace. Any Node 26
+// will do. The version is .nvmrc's: the one place it is set (CI reads it too).
 //
 //   bun scripts/check-node.ts
 
@@ -13,7 +13,7 @@ function parse(version: string): number[] {
     .map((part) => Number.parseInt(part, 10));
 }
 
-/** True when `actual` has the same major version and is the same or newer. */
+/** True when `actual` has the same major version and is the same or newer (`26` means any Node 26). */
 function satisfies(actual: string, minimum: string): boolean {
   const [major = 0, minor = 0, patch = 0] = parse(actual);
   const [wantMajor = 0, wantMinor = 0, wantPatch = 0] = parse(minimum);
@@ -37,7 +37,7 @@ if (!actual || !satisfies(actual, required)) {
   console.error(
     [
       '',
-      `Acme DMS needs Node ${required} (Node ${parse(required)[0]}, ${required} or later); this terminal has ${actual || 'no node'}.`,
+      `Acme DMS needs Node ${required}; this terminal has ${actual || 'no node'}.`,
       '',
       'Install it and use it here, then run the command again:',
       `  fnm install ${required} && fnm use ${required}      (fnm, from ./setup.sh or .\\setup.ps1; macOS and Windows)`,
