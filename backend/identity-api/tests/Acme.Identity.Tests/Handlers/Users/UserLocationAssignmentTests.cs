@@ -2,12 +2,14 @@ using Acme.Identity.BusinessLogic.Abstractions.Authorization;
 using Acme.Identity.BusinessLogic.Abstractions.Exceptions;
 using Acme.Identity.BusinessLogic.Authorization;
 using Acme.Identity.BusinessLogic.Handlers.Users.AssignLocation;
+using Acme.Identity.BusinessLogic.Handlers.Users.GetCurrent;
 using Acme.Identity.BusinessLogic.Handlers.Users.GetList;
 using Acme.Identity.BusinessLogic.Handlers.Users.UnassignLocation;
 using Acme.Identity.BusinessLogic.Seeding;
 using Acme.Identity.Persistence.Database;
 using Acme.Identity.Persistence.Transactions;
 using Acme.Identity.Tests.Support;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace Acme.Identity.Tests.Handlers.Users;
@@ -56,6 +58,36 @@ public sealed class UserLocationAssignmentTests
         var sam = await Assign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Northside, TestContext.CancellationToken);
 
         CollectionAssert.AreEquivalent(new[] { DemoData.Northside, DemoData.Riverside }, sam.LocationIds.ToList());
+    }
+
+    [TestMethod]
+    public async Task Unassign_TheirDefaultLocation_MakesAnotherOfTheirLocationsTheDefault()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+
+        await Unassign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Northside, TestContext.CancellationToken);
+
+        Assert.AreEqual(DemoData.Riverside, dbContext.Users.AsNoTracking().Single(u => u.Id == _sam).DefaultLocationId);
+    }
+
+    [TestMethod]
+    public async Task Unassign_AnotherLocation_KeepsTheirDefault()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+
+        await Unassign(dbContext).ExecuteAsync(_asMaria, _sam, DemoData.Riverside, TestContext.CancellationToken);
+
+        Assert.AreEqual(DemoData.Northside, dbContext.Users.AsNoTracking().Single(u => u.Id == _sam).DefaultLocationId);
+    }
+
+    [TestMethod]
+    public async Task GetCurrentUser_SaysWhereTheyStart()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+
+        var sam = await new GetCurrentUserQueryHandler(dbContext).ExecuteAsync(_sam, TestContext.CancellationToken);
+
+        Assert.AreEqual(DemoData.Northside, sam.DefaultLocationId);
     }
 
     [TestMethod]

@@ -4,7 +4,7 @@
 //   bun run api as maria --location riverside GET /api/dealership/v1/stock
 //   bun run api as maria POST /api/dealership/v1/parts '{"partNumber":"BP-100","description":"Brake pads","unitPrice":49}'
 //
-// It signs in through identity-api, picks the user's first location unless --location is given, and prints the
+// It signs in through identity-api, starts at the user's default location unless --location is given, and prints the
 // status, the correlation id and the JSON body.
 import {DEMO_USERS, callAsync, resourceUrl, signInAsync} from './running-system';
 
@@ -35,7 +35,7 @@ const gateway = resourceUrl('gateway-api', 'http');
 const session = await signInAsync(gateway, user);
 const location = locationFilter
   ? session.locations.find((l) => l.name.toLowerCase() === locationFilter || l.code.toLowerCase() === locationFilter)
-  : session.locations[0];
+  : (session.locations.find((l) => l.id === session.defaultLocationId) ?? session.locations[0]);
 if (!location) {
   usage(`${user} does not work at "${locationFilter}". Locations: ${session.locations.map((l) => l.name).join(', ')}`);
 }

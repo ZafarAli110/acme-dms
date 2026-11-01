@@ -51,5 +51,9 @@ public static class DemoData
             [(Central, Roles.ServiceManager)]),
     ];
 
-    public sealed record DemoUser(Guid Id, Guid DealerId, string Email, string DisplayName, IReadOnlyList<(Guid LocationId, string Role)> Roles);
+    /// <summary>A demo user. The first location in <paramref name="Roles"/> is their default, where they start after signing in.</summary>
+    public sealed record DemoUser(Guid Id, Guid DealerId, string Email, string DisplayName, IReadOnlyList<(Guid LocationId, string Role)> Roles)
+    {
+        public Guid DefaultLocationId => Roles[0].LocationId;
+    }
 }
