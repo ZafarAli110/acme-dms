@@ -197,6 +197,9 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
       await using work = await this._unitOfWorkFactory.beginAsync({readOnly: true});
       // One snapshot for the count and the rows, so the total the user sees is the number of rows in the file.
       await work.db.execute(sql`set transaction isolation level repeatable read`);
+      // A background export has no caller waiting and stops through job.abort, so the per-statement limit that guards
+      // requests (DATABASE_STATEMENT_TIMEOUT) does not apply: 1.2 million rows through one cursor may take longer.
+      await work.db.execute(sql`set local statement_timeout = 0`);
       const total = await job.source.countAsync(work.db);
       job.abort.signal.throwIfAborted();
       job.startWriting(total);
