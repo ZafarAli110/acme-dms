@@ -18,8 +18,9 @@ public sealed class GetHealthQueryHandlerTests
 
         var response = await handler.ExecuteAsync(TestContext.CancellationToken);
 
+        Assert.AreEqual("document-api", response.Service);
         Assert.AreEqual("ok", response.Status);
-        Assert.IsTrue(response.DatabaseReachable);
+        Assert.IsTrue(response.DatabaseReachable == true);
         StringAssert.Matches(response.Version, new global::System.Text.RegularExpressions.Regex(@"^\d+\.\d+\.\d+$"));
     }
 }
