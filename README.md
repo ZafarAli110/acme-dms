@@ -144,14 +144,14 @@ What it installs:
 | Tool                                                  | Version | Check              |
 | ----------------------------------------------------- | ------- | ------------------ |
 | Git                                                   | recent  | `git --version`    |
-| Node.js, through [fnm](https://github.com/Schniz/fnm) | 26.13.0 | `node -v`          |
+| Node.js, through [fnm](https://github.com/Schniz/fnm) | 26      | `node -v`          |
 | Bun                                                   | 1.4.4+  | `bun -v`           |
 | .NET SDK (the SDK, not just the runtime)              | 10      | `dotnet --version` |
 | Docker Desktop                                        | current | `docker info`      |
 | Aspire CLI                                            | 13.6    | `aspire --version` |
 
 **Node.js comes through fnm, so a Node you already have is not touched.** Inside this folder fnm switches to the Node in
-`.nvmrc` (26.13.0, the current LTS) on its own; everywhere else you keep the version you had. The script checks this at
+`.nvmrc` (26, the current LTS) on its own; everywhere else you keep the version you had. The script checks this at
 the end. `bun run dev` and `bun run gate:fast` refuse to start on any other Node and say how to install the right one.
 
 ### 4. Check

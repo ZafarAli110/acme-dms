@@ -21,7 +21,7 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
 {
     public const int MaxAttempts = 3;
     private const string AttemptHeader = "x-attempt";
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly RabbitMqConnection _rabbitMq;
@@ -55,7 +55,7 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
 
     private async Task HandleAsync(IChannel channel, BasicDeliverEventArgs delivery, CancellationToken cancellationToken)
     {
-        var envelope = JsonSerializer.Deserialize<MessageEnvelope<ProcessDocumentMessageDto>>(delivery.Body.Span, JsonOptions);
+        var envelope = JsonSerializer.Deserialize<MessageEnvelope<ProcessDocumentMessageDto>>(delivery.Body.Span, _jsonOptions);
         if (envelope is null)
         {
             await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);

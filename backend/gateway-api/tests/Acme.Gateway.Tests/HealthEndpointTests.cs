@@ -8,7 +8,7 @@ namespace Acme.Gateway.Tests;
 [TestClass]
 public sealed class HealthEndpointTests
 {
-    private static readonly string[] SharedShape = ["service", "status", "version", "databaseReachable"];
+    private static readonly string[] _sharedShape = ["service", "status", "version", "databaseReachable"];
 
     public TestContext TestContext { get; set; } = null!;
 
@@ -23,7 +23,7 @@ public sealed class HealthEndpointTests
         var body = json.RootElement;
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        CollectionAssert.AreEqual(SharedShape, body.EnumerateObject().Select(property => property.Name).ToArray());
+        CollectionAssert.AreEqual(_sharedShape, body.EnumerateObject().Select(property => property.Name).ToArray());
         Assert.AreEqual("gateway-api", body.GetProperty("service").GetString());
         Assert.AreEqual("ok", body.GetProperty("status").GetString());
         StringAssert.Matches(body.GetProperty("version").GetString(), new System.Text.RegularExpressions.Regex(@"^\d+\.\d+\.\d+$"));
