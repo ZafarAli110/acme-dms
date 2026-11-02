@@ -30,6 +30,17 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 - **Style:** `docs/standards/coding-standards.md`. Anything asynchronous ends in `Async`; private fields start with
   `_`; no `utils`, `helpers` or `common` folders.
 
+## How to work
+
+- **Don't assume.** A fact has an answer in the code, the docs, the ticket or the running system: find it. A decision
+  nobody has made yet: ask, saying what you checked and what you recommend. Never decide it silently.
+- **Surface the trade-off.** Two reasonable ways: name both and say which you would pick.
+- **What the ticket asks, done completely.** No feature, option or abstraction it did not ask for, and nothing less
+  either: the standards, the tests and the translations are part of the change. If doing it well needs a wider
+  change (a refactor, a shared component), propose it with the trade-off; don't do it silently, and don't skip it.
+- **Plan before code.** Show the open questions first, then the steps, each with the check that proves it
+  (`1. … → verify: …`), and wait for a go-ahead. Done is every check passing, not the code written.
+
 ## Commands
 
 | Command                                 | Use                                                       |
