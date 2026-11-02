@@ -32,8 +32,8 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 
 ## How to work
 
-- **Don't assume.** A fact has an answer in the code, the docs, the ticket or the running system: find it. A decision
-  nobody has made yet: ask, saying what you checked and what you recommend. Never decide it silently.
+- **Verify, don't assume.** A fact has an answer in the code, the docs, the ticket or the running system: find it.
+  A decision nobody has made yet: ask, saying what you checked and what you recommend. Never decide it silently.
 - **Surface the trade-off.** Two reasonable ways: name both and say which you would pick.
 - **What the ticket asks, done completely.** No feature, option or abstraction it did not ask for, and nothing less
   either: the standards, the tests and the translations are part of the change. If doing it well needs a wider
