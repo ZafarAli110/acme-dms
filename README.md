@@ -208,6 +208,8 @@ From a second terminal (repo root, while `bun run dev` is running):
 | Command                                             | What it shows                                                          |
 | --------------------------------------------------- | ---------------------------------------------------------------------- |
 | `bun run status`                                    | every resource, its state and URL                                      |
+| `bun run start` / `bun run stop`                    | start the whole system in the background / stop it                     |
+| `bun run rebuild identity-api`                      | rebuild one .NET service after a change (the rest reload themselves)   |
 | `bun run logs dealership-api`                       | console output of one service                                          |
 | `bun run traces dealership-api`                     | recent traces of one service                                           |
 | `bun run errors`                                    | only failed (5xx) traces, across all services                          |
