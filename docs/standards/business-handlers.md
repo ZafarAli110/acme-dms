@@ -56,6 +56,14 @@ await work.commitAsync();
 | NestJS | `NotFoundException`, `ConflictException`, …    | problem details (`standards/api-errors.md`) |
 | .NET   | `ApiException(ApiErrorCategory.NotFound, "…")` | problem details via `ApiExceptionHandler`   |
 
+## What business-logic-abstractions holds
+
+In dealership-api, `business-logic-abstractions/` holds the contracts between the layers: interfaces, their injection
+tokens, and the plain types and constants they use. Every interface has an implementation: a handler in
+`business-logic/handlers/`, the clock in `business-logic/time/`, a REST client in `rest-clients/`. A test fails when a
+handler interface has no handler. A type two layers share (an error, a constant) may live here too; its comment says
+what it means, never behaviour that another layer is supposed to have.
+
 ## Adding a use case
 
 1. Request/response DTOs in `dto/` (responses are interfaces/records; requests are validated classes).
