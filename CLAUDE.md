@@ -38,8 +38,9 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 - **What the ticket asks, done completely.** No feature, option or abstraction it did not ask for, and nothing less
   either: the standards, the tests and the translations are part of the change. If doing it well needs a wider
   change (a refactor, a shared component), propose it with the trade-off; don't do it silently, and don't skip it.
-- **Plan before code.** Show the open questions first, then the steps, each with the check that proves it
-  (`1. … → verify: …`), and wait for a go-ahead. Done is every check passing, not the code written.
+- **Plan before code.** Turn the ticket into checks first: a bug gets a test that reproduces it, a rule gets a
+  test for the case it forbids. Then show the open questions and the plan, one check per step
+  (`1. [step] → verify: [check]`), and wait for a go-ahead. Done is every check passing, not the code written.
 
 ## Commands
 
