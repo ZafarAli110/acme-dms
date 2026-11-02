@@ -45,6 +45,9 @@ Demo users, all with the password `Acme123!`:
 | Command             | What it does                     |
 | ------------------- | -------------------------------- |
 | `bun run dev`       | Start everything                 |
+| `bun run start`     | Start everything, in background  |
+| `bun run stop`      | Stop it                          |
+| `bun run rebuild`   | Rebuild one .NET service         |
 | `bun run reset`     | Back to the sample data          |
 | `bun run api`       | Call the API as a demo user      |
 | `bun run errors`    | Recent failed requests (traces)  |
