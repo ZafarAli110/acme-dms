@@ -51,8 +51,11 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 | `bun run api as <user> <METHOD> <path>` | call the running system as a demo user (`--location <x>`) |
 | `bun run errors`                        | failed requests across all services                       |
 | `bun run reset`                         | back to the seeded data                                   |
+| `bun run start` / `bun run stop`        | start the whole system in the background / stop it        |
+| `bun run rebuild <service>`             | rebuild one .NET service from source and restart it       |
 
-The system must already be running (`bun run dev`) for `api`, `errors` and `reset`. Do not start or stop it yourself.
+`api`, `errors` and `reset` need the system running: check with `bun run status`, and `bun run start` it if it is not.
+dealership-api and web reload themselves; after changing identity-api, document-api or gateway-api, rebuild it.
 
 ## Done means
 
