@@ -16,6 +16,9 @@
   ],
   "scripts": {
     "dev": "bun scripts/check-node.ts && aspire run",
+    "start": "bun scripts/check-node.ts && aspire start",
+    "stop": "aspire stop",
+    "rebuild": "bun scripts/rebuild.ts",
     "hooks": "git config core.hooksPath .githooks",
     "status": "aspire describe",
     "logs": "aspire logs",
