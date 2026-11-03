@@ -73,8 +73,8 @@ Say what you ran and what it returned. "Should work" is not done. Before calling
 `docs/ARCHITECTURE.md` (services and layers), `docs/standards/` (the team's rules), `contracts/README.md` (messages),
 `README.md` "Where to find what". Follow an existing feature of the same kind before inventing a new shape.
 
-The skills in `.claude/skills/` hold the procedures for the common kinds of change: an API use case, a record saved
-with its files, a web form page.
+The skills in `.claude/skills/` hold the procedures for the common kinds of change: an API use case, file uploads,
+a web form page.
 
 Work a ticket with `/ticket <KEY>`. Its plan, `docs/plans/<KEY>.md`, is the record of the work: if one exists, read it
 before doing anything else on that ticket.
