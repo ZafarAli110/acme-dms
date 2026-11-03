@@ -19,23 +19,99 @@ The diff is where you start, not all you read:
   `introduced` it or it was `already there`. Report both.
 - When you are not sure, say so in the finding (`— inferred`): don't drop it, and don't state it as fact.
 
-Look especially for:
+If the repository has skills (`.claude/skills/`), load the one for the kind of file the diff touches (a form page, an
+upload, an endpoint) and check the change against it too: a skill is the team's procedure for that kind of change.
 
-- any query without `eq(<table>.dealerId, userContext.dealerId)`, an insert without `dealerId`, or location-scoped
-  data read or written without the user's location (`multi-tenancy.md`);
-- a read of a business table, or a join, without `notDeleted(…)` (`database.md`, "Soft delete");
-- a handler test that can't fail: it seeds only rows that should come back, never another dealer's, another location's or a deleted one;
-- a new shape where an existing feature of the same kind already shows the pattern;
-- DTO fields left out instead of `null`, a `PUT` that does not send every field;
-- `new Date()` / `DateTime.Now` instead of the injected clock; anything asynchronous not ending in `Async`;
-- a migration edited instead of added; a business table without audit columns or soft delete;
-- text the user sees that is not translated (en and fr);
-- a test that would still pass if the bug came back;
-- a name that says something other than what the code does;
-- logic that already exists in a helper or a neighbouring feature, written again;
-- dead code, a leftover debug line, or a commented-out block;
-- an error caught and dropped, or a promise whose failure nobody handles;
-- a screen with no loading or error state for the data it waits on.
+**Check before you flag.** Read the rule in `docs/standards/` rather than quoting it from memory; read a parent class
+or a helper before saying what it contains; look at a neighbouring feature before calling a shape wrong.
+
+## The rules that cost the most when broken
+
+```ts
+// ❌ no dealer in the where: another company's customer is one id away
+await work.db
+  .select()
+  .from(customers)
+  .where(and(eq(customers.id, id), notDeleted(customers)));
+
+// ✅ the dealer, the location for location-scoped data, and not deleted, in the query's own where
+await work.db
+  .select()
+  .from(customers)
+  .where(
+    and(
+      eq(customers.dealerId, userContext.dealerId),
+      eq(customers.locationId, locationId),
+      eq(customers.id, id),
+      notDeleted(customers),
+    ),
+  );
+```
+
+- Every query of business data filters by `userContext.dealerId`; location-scoped data by the location too; every read
+  and join adds `notDeleted(…)` (`multi-tenancy.md`, `database.md`).
+- A migration is added, never edited once committed; a new business table has audit columns and soft delete.
+
+## DTOs and PATCH
+
+```ts
+// ❌ an optional field left out of a response: the key is missing, and clients break on old rows
+return { id: customer.id, email: customer.email };
+
+// ✅ every field present, null for none
+return { id: customer.id, email: customer.email ?? null };
+```
+
+- A `PUT` sends every field; a `PATCH` keeps three states apart: left out keeps, `null` clears, a value sets
+  (`coding-standards.md`). A truthy check (`if (request.price)`) loses a `0` and a clear.
+- A new row or DTO is a typed object literal, so the compiler requires every field.
+
+## TypeScript and React
+
+- Time from the injected clock (`this._clock.now()`), never `new Date()` or `Temporal.Now`; `DateTime.Now` in .NET.
+- Anything asynchronous is named `…Async`; constructor injection assigns `_` backing fields; methods are `public` or
+  `private` explicitly.
+- Braces on every `if`, `for` and `while` body, even one line. Named exports; components are `function` declarations;
+  `<Fragment>`, never `<>`.
+- No `useEffect` that copies server data into state or into a form: `defaultValues`, and a `key` to start again.
+- Text the user sees is `t("…")`, with the key in both `en` and `fr`.
+
+```tsx
+// ❌ the form is filled by an effect: it flashes empty, then overwrites what the user typed on a refetch
+useEffect(() => {
+  methods.reset(toFormValues(part));
+}, [part]);
+
+// ✅ the form starts from the record, and the page remounts it when the saved record changes
+<PartForm key={part.updatedAt} part={part} />;
+```
+
+## Edge cases nobody writes down
+
+Walk this list on every change; what code doesn't say slips past a line-by-line read:
+
+- **The absent case:** an optional param or field, `params.id` from the router: handled, or hidden behind a default
+  (`?? ""`) that turns a bug into an empty result?
+- **The failure path:** what happens when the awaited call rejects? `catch {}` or `.catch(() => null)` with no comment
+  is a dropped error.
+- **Loading and error states:** every screen that waits for data shows something meaningful while it loads and when it
+  fails.
+- **Paging:** the API's pages start at 1, the grid's at 0; every `page - 1` crosses that boundary on purpose.
+- **Dates:** a moment is UTC (`Temporal.Instant`), a calendar day is a `PlainDate`; a day sent as a moment can move to
+  the day before.
+- **Money:** prices are decimals sent as numbers; no float arithmetic that the user then sees rounded wrong.
+- **Two at once:** two requests, two tabs or two consumers doing the same thing; is the second one harmless?
+- **Stale values:** a callback in an effect or a memo that reads a value missing from its dependencies.
+
+## Clean code
+
+- A new shape where an existing feature of the same kind already shows the pattern.
+- A test that would still pass if the bug came back: it seeds only the rows that should come back, never another
+  dealer's, another location's or a deleted one.
+- A name that says something other than what the code does.
+- Logic that already exists in a helper or a neighbouring feature, written again.
+- Dead code, a leftover debug line, a commented-out block.
+- A function that does several jobs, where a reader has to hold all of them at once.
 
 Report, and nothing else. It is posted on the pull request as it is, so each finding is a box to tick:
 
