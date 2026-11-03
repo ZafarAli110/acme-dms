@@ -29,7 +29,7 @@ For lab 10's pull requests, once: `gh auth login`.
 ```bash
 bun install
 bun run dev      # Docker Desktop must be running; open the dashboard link it prints
-bun run seed     # sample data, once
+                 # the seed resource loads the sample data on every start
 ```
 
 Demo users, all with the password `Acme123!`:
