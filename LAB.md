@@ -5,8 +5,8 @@
 ## What this branch adds
 
 - The `ticket` skill (`/ticket <KEY>`): takes a ticket from To Do to a verified change, keeping a plan in
-  `docs/plans/<KEY>.md`: open questions, requirements as a checklist, decisions, the shape of the change, steps with
-  their checks, a log.
+  `docs/plans/<date>_<KEY>_<name>.md`: its status first, then the requirement, the acceptance criteria as the goal,
+  the shape with high-level code, the steps with their checks; questions, decisions and the log last.
 - A design gate in `/ticket`: a screen the ticket shows is built from that design; one that follows an existing
   screen copies it; an open one gets two or three static prototypes in `docs/prototypes/<KEY>/` and a pick before any
   UI code.
@@ -19,7 +19,7 @@
 
 1. Open `docs/plans/README.md` (the template) and `.claude/skills/ticket/SKILL.md`.
 2. With the tracker running, start `claude` and type `/ticket ACME-105`. Stop when it has written
-   `docs/plans/ACME-105.md` and asked its questions; read the plan.
+   its plan in `docs/plans/` and asked its questions; read the plan.
 3. Quit, start `claude` again: the hook lists the plan, and the work can carry on from the file.
 4. Two tickets at once, each in its own folder (the same in PowerShell):
 
