@@ -24,7 +24,7 @@ Postgres and RabbitMQ run in Docker. Aspire runs everything locally.
 
 Prerequisites: Git, the GitHub CLI, Node.js 26 (`bun run dev` checks it), Bun, .NET 10 SDK, Docker Desktop, Aspire CLI.
 `./setup.sh` (macOS) or `.\setup.ps1` (Windows, as administrator) installs them.
-For lab 10's pull requests, once: `gh auth login`, `gh repo fork --remote`, `gh repo set-default` (your fork).
+For lab 10's pull requests, once: `gh auth login`.
 
 ```bash
 bun install
