@@ -7,6 +7,9 @@
 - The `ticket` skill (`/ticket <KEY>`): takes a ticket from To Do to a verified change, keeping a plan in
   `docs/plans/<KEY>.md`: open questions, requirements as a checklist, decisions, the shape of the change, steps with
   their checks, a log.
+- A design gate in `/ticket`: a screen the ticket shows is built from that design; one that follows an existing
+  screen copies it; an open one gets two or three static prototypes in `docs/prototypes/<KEY>/` and a pick before any
+  UI code.
 - A session-start hook (`.claude/hooks/open-plans.ts`) lists the plans that still have unchecked steps, and says when
   a handoff note is waiting.
 - `/handoff` and `/resume-handoff`: a short note of where your session stopped (`.claude/handoff.md`, not committed),
