@@ -1,0 +1,3 @@
+#!/bin/sh
+# Checks the commit message before it is saved (scripts/commit-msg.ts). Git runs this through sh on Windows too.
+exec bun scripts/commit-msg.ts "$1"
