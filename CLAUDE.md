@@ -67,7 +67,7 @@ dealership-api and web reload themselves; after changing identity-api, document-
 3. `bun run errors` shows nothing new.
 
 Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, run the `verify` skill
-(`/verify <KEY>`): it runs the gate, the **verifier** and **standards-reviewer** subagents, and writes
+(`/verify <KEY>`): it runs the gate, the **verifier** and **coding-standards-reviewer** subagents, and writes
 `docs/evidence/<KEY>.md`.
 
 ## Where to find what
