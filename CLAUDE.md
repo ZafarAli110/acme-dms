@@ -36,6 +36,8 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 - **What was asked, done completely.** No feature, option or abstraction nobody asked for, and nothing less
   either: the standards, the tests and the translations are part of the change. If doing it well needs a wider
   change (a refactor, a shared component), propose it with the trade-off; don't do it silently, and don't skip it.
+- **Read only what you need.** Find with `grep` first, then read the lines you need, not whole files or several at
+  once: everything read stays in the conversation and is paid for again on every turn.
 - **Plan before code.** Turn the task into checks first: a bug gets a test that reproduces it, a rule gets a
   test for the case it forbids. Then show the open questions and the plan, one check per step
   (`1. [step] → verify: [check]`), and wait for a go-ahead. Done is every check passing, not the code written.
