@@ -5,24 +5,19 @@ description: Proves a ticket's change is done, with evidence anyone can re-run, 
 
 # Verify a ticket
 
-Done is decided by evidence, not by the person (or agent) who made the change. Three layers, in this order; stop at
-the first that fails and go back to the code.
+Done is decided by evidence, not by the person (or agent) who made the change. Two layers, in this order; stop at the
+first that fails and go back to the code. This is evidence, not review: the reviewers read the diff once, when the
+pull request is opened, not here.
 
 ## 1. The shared gate (deterministic)
 
 `bun run gate:fast`. The same targets run in CI (`.github/workflows/ci.yml`), so a pass here is a pass there.
 
-## 2. Two independent reviews (in parallel)
+## 2. The verifier, in its own context
 
-Dispatch both subagents at once, each with the ticket key:
-
-- **verifier**: checks every requirement of the ticket in the running system and returns a table of commands, expected
-  and actual results.
-- **clean-code-reviewer**: reviews the diff against `docs/standards/`.
-
-Fix every `blocking` and `should-fix` finding this change `introduced`, and run them again; list the ones
-`already there` in the evidence file for a person to decide. A `REJECT` stops the work: tell the person. A requirement
-the verifier could not check is a failure, not a pass.
+Dispatch the **verifier** subagent with the ticket key. It checks every requirement of the ticket in the running system
+and returns a table of commands, expected and actual results. A requirement it could not check is a failure, not a
+pass: fix the code, then dispatch it again for that requirement only.
 
 ## 3. The evidence file
 
@@ -36,7 +31,7 @@ Verified <date> on <branch> at <commit>.
 | Requirement | Command | Expected | Got |
 | ----------- | ------- | -------- | --- |
 
-Gate: `bun run gate:fast` passed. Review: <findings fixed, or "no findings">.
+Gate: `bun run gate:fast` passed.
 
 ## What these checks don't prove
 
