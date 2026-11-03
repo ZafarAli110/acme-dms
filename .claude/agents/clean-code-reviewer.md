@@ -110,6 +110,8 @@ Walk this list on every change; what code doesn't say slips past a line-by-line 
   dealer's, another location's or a deleted one.
 - A name that says something other than what the code does.
 - Logic that already exists in a helper or a neighbouring feature, written again.
+- A REST client method (`rest-clients/`) that sends more than one request, branches on our data, or names our
+  business words: that logic belongs in the handler (`business-handlers.md`, "Calling another service").
 - Dead code, a leftover debug line, a commented-out block.
 - A function that does several jobs, where a reader has to hold all of them at once.
 
