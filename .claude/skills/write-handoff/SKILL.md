@@ -1,6 +1,6 @@
 ---
-name: handoff
-description: Writes a short note of where this session stopped, so a fresh session (yours tomorrow, after /clear, or at 60-70% context) picks up without a summary of the conversation. Started by a person, e.g. /handoff, before ending a session.
+name: write-handoff
+description: Writes a short note of where this session stopped, so a fresh session (yours tomorrow, after /clear, or at 60-70% context) picks up without a summary of the conversation. Started by a person, e.g. /write-handoff, before ending a session.
 disable-model-invocation: true
 ---
 

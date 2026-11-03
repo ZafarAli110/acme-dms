@@ -55,8 +55,8 @@ In `docs/lessons/reviewers.md` (its format is at the top of the file):
 - each **real** bug a person's comment found that no reviewer flagged, under "Missed": the bug, and what the reviewer
   did not have in front of it (a rule nobody wrote down, a file it did not read, a check that does not exist).
 
-This file is how the reviewers learn: they read it before every review, and `/learn` turns what repeats into their
-instructions.
+This file is how the reviewers learn: they read it before every review, and `/learn-from-lessons` turns what repeats
+into their instructions.
 
 ## 4. Prove it, commit, push
 

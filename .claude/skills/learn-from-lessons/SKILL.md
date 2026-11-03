@@ -1,6 +1,6 @@
 ---
-name: learn
-description: Turns proven lessons in docs/lessons/ into a skill, and the reviewers' mistakes in docs/lessons/reviewers.md into their instructions, so the next ticket of the same kind gets them right the first time. Use when asked to learn from finished tickets, e.g. /learn, after /retro.
+name: learn-from-lessons
+description: Turns proven lessons in docs/lessons/ into a skill, and the reviewers' mistakes in docs/lessons/reviewers.md into their instructions, so the next ticket of the same kind gets them right the first time. Use when asked to learn from finished tickets, e.g. /learn-from-lessons, after /write-retro.
 disable-model-invocation: true
 ---
 
@@ -23,4 +23,4 @@ disable-model-invocation: true
      standard, a lint rule or a test), and mark it **Learned**.
    - Show the change first, like a skill: a person decides what the reviewers learn.
 7. Then prove it. A skill is believed only once a fresh session, given a similar ticket and nothing else, gets those
-   steps right first time and passes `/qa`. Suggest which ticket.
+   steps right first time and passes `/qa-ticket`. Suggest which ticket.

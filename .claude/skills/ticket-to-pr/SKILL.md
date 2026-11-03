@@ -22,9 +22,9 @@ The ticket's plan (`.ai-plans/*_$ARGUMENTS_*.md`) is the run's memory: write eve
 
 1. Note the branch you are on (the base for the pull request), then `git switch -c $ARGUMENTS`. Commits, pushes and
    pull requests run only on a branch named after a ticket; a hook refuses them anywhere else.
-2. Read `.claude/skills/ticket/SKILL.md` and follow its "Start, or resume" section to write the plan: questions first,
-   then requirements, decisions, shape, and steps each with its check. If the plan file already exists, read it and
-   continue from where its log stops.
+2. Read `.claude/skills/implement-ticket/SKILL.md` and follow its "Start, or resume" section to write the plan:
+   questions first, then requirements, decisions, shape, and steps each with its check. If the plan file already exists,
+   read it and continue from where its log stops.
 3. **The questions gate.** If the Questions section is not "None", post the questions on the ticket with
    `add_comment` ("Questions before we build: …") and stop. A product owner answers on the ticket; the next
    `/ticket-to-pr $ARGUMENTS` reads the answers first. Never answer a product question yourself, and never move one
@@ -37,17 +37,17 @@ The ticket's plan (`.ai-plans/*_$ARGUMENTS_*.md`) is the run's memory: write eve
 ## 2. Architect review
 
 Start the **architect** subagent with the ticket key and the plan's path, and nothing else. It returns `APPROVED` or
-`CHANGES` with findings. Fix the plan and send it again. An approved plan is the go-ahead the ticket skill would
-otherwise ask a person for.
+`CHANGES` with findings. Fix the plan and send it again. An approved plan is the go-ahead the `implement-ticket` skill
+would otherwise ask a person for.
 
 ## 3. Build
 
-Follow the ticket skill's "Work" section: one step at a time, run its check, tick it, log it. After each step that
-passes, have the **git** subagent commit it (`$ARGUMENTS: <what the step did>`).
+Follow the `implement-ticket` skill's "Work" section: one step at a time, run its check, tick it, log it. After each
+step that passes, have the **git** subagent commit it (`$ARGUMENTS: <what the step did>`).
 
 ## 4. Verify and open the pull request
 
-1. Run the `verify` skill. It runs the gate, the verifier and the clean-code-reviewer, writes
+1. Run the `verify-ticket` skill. It runs the gate, the verifier and the clean-code-reviewer, writes
    `docs/evidence/$ARGUMENTS.md`, comments on the ticket and moves it to `in-review`.
 2. Have the **git** subagent push the branch (`git push -u origin $ARGUMENTS`) and open the pull request into the base
    branch from step 1: `gh pr create --base <base> --title "$ARGUMENTS: <title>" --body-file <file>`, the body being
@@ -62,7 +62,7 @@ Start, in parallel, each reviewer whose area the diff touches, each with the tic
 - **performance-reviewer**: a query, a list or an export, or anything done per row.
 - **test-reviewer**: always.
 
-The clean-code-reviewer already ran in `verify`; run it again only if the code changed since.
+The clean-code-reviewer already ran in `verify-ticket`; run it again only if the code changed since.
 
 **Check before you post.** For each `blocking` finding, open the file and line it cites and read what the code does.
 A finding the code plainly contradicts is not posted: record it in `docs/lessons/reviewers.md` under "Wrong", with
@@ -89,5 +89,5 @@ Stop. Report, so a person can judge the work rather than trust it:
 - each reviewer's verdict, anything left open, and every finding you did not post or answered as wrong, with the code
   that shows why.
 
-**A person checks that it works and merges**; the hook refuses `gh pr merge`. After the merge, `/qa $ARGUMENTS` tests
-the merged build and files a bug for each failure.
+**A person checks that it works and merges**; the hook refuses `gh pr merge`. After the merge, `/qa-ticket $ARGUMENTS`
+tests the merged build and files a bug for each failure.
