@@ -124,7 +124,9 @@ cd acme-dms
 
 In the same terminal, inside the `acme-dms` folder:
 
-- **Windows** (the administrator PowerShell):
+- **Windows** (the administrator PowerShell). It opens in `C:\Windows\System32`, so first check you are in the
+  `acme-dms` folder: `pwd` should end in `\acme-dms`. If the code is somewhere else, go there first, for example
+  `cd D:\Work\acme-dms`. Then:
   ```powershell
   powershell -ExecutionPolicy Bypass -File .\setup.ps1
   ```
