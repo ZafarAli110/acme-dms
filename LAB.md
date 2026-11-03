@@ -6,7 +6,7 @@
 
 - The steps for building a form page left `CLAUDE.md` (107 lines → 78) for a skill,
   `.claude/skills/web-form-page/SKILL.md`. Until a task needs it, only its description loads.
-- Two more skills: `add-use-case` (a backend change) and `file-uploads` (a record with its files).
+- Two more skills: `api-endpoint` (a backend change) and `file-uploads` (a record with its files).
 - `.claude/rules/web.md`: the web rules, loaded only when Claude works on a file under `web/`.
 
 ## Try it
