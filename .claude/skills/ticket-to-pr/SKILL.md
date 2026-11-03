@@ -8,7 +8,7 @@ argument-hint: <ticket key>
 # Ticket to pull request: $ARGUMENTS
 
 You run the whole loop for $ARGUMENTS with no person in between, except where this file says stop. The plan file
-`docs/plans/$ARGUMENTS.md` is the run's memory: write every verdict and every step to its log.
+The ticket's plan (`docs/plans/*_$ARGUMENTS_*.md`) is the run's memory: write every verdict and every step to its log.
 
 **Stop and report** (what was done, where it stopped, what is needed) when:
 

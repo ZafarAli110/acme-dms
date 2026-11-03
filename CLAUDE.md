@@ -73,8 +73,8 @@ Say what you ran and what it returned. "Should work" is not done. Before calling
 `docs/ARCHITECTURE.md` (services and layers), `docs/standards/` (the team's rules), `contracts/README.md` (messages),
 `README.md` "Where to find what". Follow an existing feature of the same kind before inventing a new shape.
 
-The skills in `.claude/skills/` hold the procedures for the common kinds of change: an API endpoint, file uploads, a call to another
-service, a web form page.
+The skills in `.claude/skills/` hold the procedures for the common kinds of change: an API endpoint, file uploads, a
+call to another service, a web form page.
 
 After a ticket is done: `/qa <KEY>` has the **qa** subagent test it in the running system and file a bug for each
 failure; when QA is clean, `/retro <KEY>` writes what went wrong as lessons with evidence (`docs/lessons/`), and
@@ -84,8 +84,8 @@ failure; when QA is clean, `/retro <KEY>` writes what went wrong as lessons with
 approves the plan, specialist reviewers check the pull request. It stops for any product question; a person merges.
 `/resolve-pr-comments <number>` fixes a pull request's open review comments and answers them in one comment.
 
-Work a ticket with `/ticket <KEY>`. Its plan, `docs/plans/<KEY>.md`, is the record of the work: if one exists, read it
-before doing anything else on that ticket.
+Work a ticket with `/ticket <KEY>`. Its plan, `docs/plans/<date>_<KEY>_<name>.md`, is the record of the work: if one
+exists, read it before doing anything else on that ticket.
 
 The backlog is the **acme-tracker** MCP server (`.mcp.json`): read a ticket with `get_ticket` rather than asking for it
 to be pasted. Moving a ticket or commenting on it is visible to the whole team.

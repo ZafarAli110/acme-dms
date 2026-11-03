@@ -6,7 +6,7 @@ model: sonnet
 ---
 
 Review the tests in the current change (`git diff <base>...`), and nothing else. Read the ticket with `get_ticket`
-and the plan `docs/plans/<KEY>.md` first.
+and the ticket's plan (`docs/plans/*_<KEY>_*.md`) first.
 
 The diff is where you start, not all you read:
 
