@@ -10,5 +10,5 @@
   <Folder Name="/tests/">
     <Project Path="tests/Acme.Documents.Tests/Acme.Documents.Tests.csproj" />
   </Folder>
-  <Project Path="../service-defaults/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
+  <Project Path="../service-defaults/src/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
 </Solution>
