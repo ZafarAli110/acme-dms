@@ -60,8 +60,8 @@ instructions.
 
 ## 4. Prove it, commit, push
 
-`bun run gate:fast` passes. Then have the **git** subagent commit, with the fixes and `docs/lessons/reviewers.md` (`<KEY>: address review comments on #<number>`)
-and push (`git push -u origin <KEY>`).
+`bun run gate:fast` passes. Then have the **git** subagent commit the fixes and `docs/lessons/reviewers.md`
+(`<KEY>: address review comments on #<number>`) and push (`git push -u origin <KEY>`).
 
 ## 5. Answer, in one comment
 
