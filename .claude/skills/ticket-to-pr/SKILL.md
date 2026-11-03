@@ -44,7 +44,7 @@ passes, have the **git** subagent commit it (`$ARGUMENTS: <what the step did>`).
 
 ## 4. Verify and open the pull request
 
-1. Run the `verify` skill. It runs the gate, the verifier and the standards-reviewer, writes
+1. Run the `verify` skill. It runs the gate, the verifier and the coding-standards-reviewer, writes
    `docs/evidence/$ARGUMENTS.md`, comments on the ticket and moves it to `in-review`.
 2. Have the **git** subagent push the branch (`git push -u origin $ARGUMENTS`) and open the pull request into the base
    branch from step 1: `gh pr create --base <base> --title "$ARGUMENTS: <title>" --body-file <file>`, the body being
@@ -58,9 +58,10 @@ Start, in parallel, each reviewer whose area the diff touches, each with the tic
 - **performance-reviewer**: a query, a list or an export, or anything done per row.
 - **test-reviewer**: always.
 
-The standards-reviewer already ran in `verify`; run it again only if the code changed since. Fix what they find,
-commit, push, and run again only the reviewer that found it. Post each reviewer's summary on the pull request with
-`gh pr comment`.
+The coding-standards-reviewer already ran in `verify`; run it again only if the code changed since. Post each
+reviewer's report on the pull request as it is (`gh pr comment --body-file`). Fix every `blocking` and `should-fix`
+finding this change `introduced` (the ones `already there` stay open for a person), commit, push, and run again only
+the reviewer that found it. A `REJECT` stops the run: hand it to a person.
 
 ## 6. Hand over
 

@@ -18,9 +18,11 @@ Dispatch both subagents at once, each with the ticket key:
 
 - **verifier**: checks every requirement of the ticket in the running system and returns a table of commands, expected
   and actual results.
-- **standards-reviewer**: reviews the diff against `docs/standards/`.
+- **coding-standards-reviewer**: reviews the diff against `docs/standards/`.
 
-Fix what they find and run them again. A requirement the verifier could not check is a failure, not a pass.
+Fix every `blocking` and `should-fix` finding this change `introduced`, and run them again; list the ones
+`already there` in the evidence file for a person to decide. A `REJECT` stops the work: tell the person. A requirement
+the verifier could not check is a failure, not a pass.
 
 ## 3. The evidence file
 
