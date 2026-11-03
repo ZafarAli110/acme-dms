@@ -13,7 +13,7 @@ use case of the same kind rather than starting from a blank file.
 | read a list for the user's location | `business-logic/handlers/customers/get-list/`                                                 |
 | read one record                     | `business-logic/handlers/customers/get/`                                                      |
 | create a record                     | `business-logic/handlers/customers/create/` (with `__test__/`)                                |
-| update a record with its files      | `business-logic/handlers/parts/update/`, and the `save-record-with-files` skill               |
+| update a record with its files      | `business-logic/handlers/parts/update/`, and the `file-uploads` skill                         |
 | .NET (document-api, identity-api)   | `Acme.Documents.BusinessLogic/Handlers/Documents/` and `tests/Acme.Documents.Tests/Handlers/` |
 
 ## Steps
