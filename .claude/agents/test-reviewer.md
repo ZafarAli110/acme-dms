@@ -11,6 +11,7 @@ and the ticket's plan (`.ai-plans/*_<KEY>_*.md`) first.
 The diff is where you start, not all you read:
 
 - Read each changed file in full, not only the changed lines.
+- Everything else (callers, neighbours, standards): `grep` first, then read only the lines you need.
 - When a finding depends on code outside the diff (the caller, the interface it implements, a consumer of a changed
   DTO or event, the existing feature it should follow), open that code before you report it. Never guess what one
   more read would tell you.
