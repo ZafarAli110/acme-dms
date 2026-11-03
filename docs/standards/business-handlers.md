@@ -85,3 +85,28 @@ each field's SQL (a column, or an expression such as "surname, first name") and 
 `choice`), which decides the operators. `listOrderBy()` and `listFilter()` (`business-logic/list-query/`) turn the query
 into SQL; any other field or operator is a 400, so a sort or filter never reaches SQL as text. The sort always ends with
 the id, so rows with equal values keep one order from page to page. Count with the same joins as the page.
+
+## Work that outlives the request: exports
+
+An export of a long list can't finish inside one request, so it runs as a background **job**: the request that starts
+it returns at once with the job's id, and the work happens after it. The job waits in line (only a few run at once,
+each holding a database connection), reports progress, can be cancelled, and its file expires. The user only ever sees
+"an export"; "job" is the run.
+
+The use case follows the shape above: `IStartCustomerExportCommandHandler` in
+`business-logic-abstractions/handlers/customers/export/`, and its handler in `business-logic/handlers/customers/export/`.
+What every export shares lives beside the handlers, in `business-logic/exports/`:
+
+| File                           | What it is                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| `export-job-runner.ts`         | the queue: starts, follows, cancels and expires jobs; one per service        |
+| `export-job.ts`                | one job's state: status, rows written, when it started and finished          |
+| `export-job.mapper.ts`         | a job as the client sees it (`ExportJobResponseDto`)                         |
+| `export-source.ts`             | what a start handler gives the runner: file name, columns, count, rows query |
+| `download-link.ts`             | the signed link the browser downloads the file with                          |
+| `xlsx/xlsx-workbook-writer.ts` | writes the rows into an .xlsx as they come, so memory stays flat             |
+| `xlsx/xlsx-cells.ts`           | the small pieces of SpreadsheetML each cell is built from                    |
+
+Controllers reach the runner through `EXPORT_JOBS` (`business-logic-abstractions/exports/`). A start handler takes the
+runner class itself, and `ExportSource` stays in `business-logic`: it hands the runner database queries, which the
+abstractions may not depend on. A new export (parts, say) adds only its start handler and its columns.

@@ -1,14 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { Subject } from "rxjs";
-import type { ExportJobResponseDto, ExportJobStatus } from "#dto/exports/export-job-response.dto";
-import { signedDownloadPath } from "./download-link";
+import type { ExportJobStatus } from "#dto/exports/export-job-response.dto";
 import type { ExportSource } from "./export-source";
 
 const FINISHED: ReadonlySet<ExportJobStatus> = new Set(["completed", "failed", "cancelled", "expired"]);
 /** Progress is reported at most this often: the user sees it move, not every row. */
 const PROGRESS_INTERVAL_MS = 250;
 
-/** One export: who asked, what it reads, how far it has got. Lives in the runner while its file is kept. */
+/**
+ * One export, as a background job: the request that starts it returns at once with the job's id, and the work runs
+ * after it, in ExportJobRunner (it waits in line, a few run at once, it can be cancelled, its file expires). "Job" is
+ * that run; the user only ever sees "an export". This class holds the run's state; export-job.mapper.ts turns it into
+ * the response the client polls and streams.
+ */
 export class ExportJob {
   public readonly id = randomUUID();
   public readonly ownerId: string;
@@ -56,6 +60,27 @@ export class ExportJob {
     return this._fileBytes;
   }
 
+  public get createdAt(): number {
+    return this._createdAt;
+  }
+
+  public get rows(): number {
+    return this._rows;
+  }
+
+  public get totalRows(): number | null {
+    return this._totalRows;
+  }
+
+  /** When the first row was written: throughput counts from here, not from the wait for the sort. */
+  public get firstRowAt(): number | null {
+    return this._firstRowAt;
+  }
+
+  public get error(): string | null {
+    return this._error;
+  }
+
   public startCounting(): void {
     this.setStatus("counting");
   }
@@ -88,33 +113,6 @@ export class ExportJob {
 
   public expire(): void {
     this.setStatus("expired");
-  }
-
-  public toDto(): ExportJobResponseDto {
-    const now = Date.now();
-    // Throughput counts from the first row: the wait for the sort (seconds on an unindexed column) is not writing.
-    const writingMs = this._firstRowAt === null ? 0 : now - this._firstRowAt;
-    const rowsPerSecond = writingMs > 500 ? Math.round((this._rows / writingMs) * 1000) : null;
-    const remaining = this._totalRows === null ? null : this._totalRows - this._rows;
-    return {
-      id: this.id,
-      status: this._status,
-      rows: this._rows,
-      totalRows: this._totalRows,
-      rowsPerSecond,
-      elapsedMs: now - this._createdAt,
-      etaMs:
-        this._status === "writing" && remaining !== null && rowsPerSecond
-          ? Math.round((remaining / rowsPerSecond) * 1000)
-          : null,
-      queuePosition: this._status === "queued" ? this.queuePosition : null,
-      fileName: this.source.fileName,
-      fileBytes: this._fileBytes,
-      downloadPath:
-        this._status === "completed" && this._expiresAt !== null ? signedDownloadPath(this.id, this._expiresAt) : null,
-      expiresAt: this._expiresAt === null ? null : Temporal.Instant.fromEpochMilliseconds(this._expiresAt).toString(),
-      error: this._error,
-    };
   }
 
   private setStatus(status: ExportJobStatus): void {
