@@ -7,7 +7,10 @@
 - The `ticket` skill (`/ticket <KEY>`): takes a ticket from To Do to a verified change, keeping a plan in
   `docs/plans/<KEY>.md`: open questions, requirements as a checklist, decisions, the shape of the change, steps with
   their checks, a log.
-- A session-start hook (`.claude/hooks/open-plans.ts`) lists the plans that still have unchecked steps.
+- A session-start hook (`.claude/hooks/open-plans.ts`) lists the plans that still have unchecked steps, and says when
+  a handoff note is waiting.
+- `/handoff` and `/resume-handoff`: a short note of where your session stopped (`.claude/handoff.md`, not committed),
+  and a fresh session that reads it, checks it against the repository and waits for your go-ahead.
 
 ## Try it
 
@@ -26,11 +29,16 @@
 
    Then `/ticket ACME-103` there and `/ticket ACME-104` in this folder.
 
+5. Before you stop: `/handoff`, then quit. Start `claude` again: the hook says a note is waiting; type
+   `/resume-handoff` and compare its summary with what you remember.
+
 ## What to notice
 
 - The plan survives `/compact`, a restart, another model or another person. It is committed, so it travels with the
   branch and the reviewer reads it next to the diff.
 - About 150 lines at most: a plan is for a person to read.
+- Two notes, two jobs: the plan is the ticket's record, committed and shared; the handoff is your session's, local
+  and short. A note you wrote survives a new session; a summary the model wrote is its guess at what mattered.
 
 ## Cost
 
