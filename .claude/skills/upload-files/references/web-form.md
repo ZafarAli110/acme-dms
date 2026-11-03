@@ -3,7 +3,7 @@
 The files are fields of the form like any other: picked, previewed, removed and checked in the form, and sent with
 everything else when the user presses Save. Nothing is uploaded on its own as a file is picked. The example is the part
 page: `web/app/pages/parts/` (`PartForm.tsx`, `components/PartPhotosSection.tsx`, `mappers/partFormMapper.ts`,
-`constants/partPhotoRules.ts`). Build the rest of the page with the `web-form-page` skill.
+`constants/partPhotoRules.ts`). Build the rest of the page with the `build-form-page` skill.
 
 ## The values
 
@@ -44,9 +44,9 @@ A rule about the whole list (the count, exactly one default) goes on the array w
 
 - `<input type="file" multiple accept={RULES.types.join(",")}>`, so the file dialog offers only allowed types.
 - Show what is allowed next to it ("JPEG, PNG … up to 10 MB"), from the same constants.
-- A new file is previewed from the `File` itself with `useObjectUrl(file)`, which revokes the URL when the tile goes;
-  a saved one with `DocumentImage` (`components/DocumentImage.tsx`), which fetches the content with the user's token. Never a plain
-  `<img src>` to document-api: it would be sent without the token.
+- A new file is previewed from the `File` itself with `useObjectUrl(file)`, which revokes the URL when the tile goes; a
+  saved one with `DocumentImage` (`components/DocumentImage.tsx`), which fetches the content with the user's token.
+  Never a plain `<img src>` to document-api: it would be sent without the token.
 - Change the default with `setValue("photos", …, { shouldDirty: true })`, so the page knows there is something to
   save.
 

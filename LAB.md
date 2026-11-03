@@ -6,17 +6,17 @@
 
 The steps after a ticket is built, each started by you:
 
-| Command        | Does                                                                                                   |
-| -------------- | ------------------------------------------------------------------------------------------------------ |
-| `/qa <KEY>`    | the `qa` subagent tests the ticket in the running system and files a bug for each failure (`docs/qa/`) |
-| `/retro <KEY>` | writes what the ticket taught, as lessons with evidence (`docs/lessons/`)                              |
-| `/learn`       | turns proven lessons into a skill, so the next ticket of the kind starts right                         |
+| Command               | Does                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `/qa-ticket <KEY>`    | the `qa` subagent tests the ticket in the running system and files a bug for each failure (`docs/qa/`) |
+| `/write-retro <KEY>`  | writes what the ticket taught, as lessons with evidence (`docs/lessons/`)                              |
+| `/learn-from-lessons` | turns proven lessons into a skill, so the next ticket of the kind starts right                         |
 
 ## Try it (at home)
 
-1. With the tracker running, `/ticket ACME-108`: read the ticket's plan and answer its questions.
-2. Build it, then `/verify ACME-108`.
-3. `/qa ACME-108`, then `/retro ACME-108` once QA is clean, then `/learn`.
+1. With the tracker running, `/implement-ticket ACME-108`: read the ticket's plan and answer its questions.
+2. Build it, then `/verify-ticket ACME-108`.
+3. `/qa-ticket ACME-108`, then `/write-retro ACME-108` once QA is clean, then `/learn-from-lessons`.
 4. Compare with the branch where it was done: `git diff lab/09-export-before lab/09-export-after --stat`.
 
 ## What to notice

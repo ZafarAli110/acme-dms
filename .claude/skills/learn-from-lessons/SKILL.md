@@ -1,6 +1,6 @@
 ---
-name: learn
-description: Turns proven lessons in docs/lessons/ into a skill, so the next ticket of the same kind gets them right the first time. Use when asked to learn from finished tickets, e.g. /learn, after /retro.
+name: learn-from-lessons
+description: Turns proven lessons in docs/lessons/ into a skill, so the next ticket of the same kind gets them right the first time. Use when asked to learn from finished tickets, e.g. /learn-from-lessons, after /write-retro.
 disable-model-invocation: true
 ---
 
@@ -17,4 +17,4 @@ disable-model-invocation: true
    - **How to check**: the commands from the lessons' evidence, with the result that means it is right.
 5. Writing to `.claude/skills/` asks the person first (a permission rule): they decide what the team's agents learn.
 6. Then prove it. A skill is believed only once a fresh session, given a similar ticket and nothing else, gets those
-   steps right first time and passes `/qa`. Suggest which ticket.
+   steps right first time and passes `/qa-ticket`. Suggest which ticket.
