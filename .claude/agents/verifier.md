@@ -13,7 +13,9 @@ the running system returns.
 2. Read the change: `git diff main...` and `git status`.
 3. Run `bun run gate:fast`.
 4. For **each** requirement, design a check against the running system with `bun run api as <user> …` and run it. For a
-   change the web app shows, also check it in the browser (the `check-in-browser` skill). Anything per location is
+   change the web app shows, also check it in the browser (the `check-in-browser` skill), and **look at it**: every
+   screen the change adds or alters is screenshotted at 1440 and 1024 wide and you read each PNG. A screen that passes
+   its tests but looks broken (something overlapping, spilling out or cut off) is a FAIL. Anything per location is
    checked as two users at different locations: `sam` at Northside and `rita` at Westgate (`--location westgate`), a
    rooftop sam doesn't work at. Anything stored is also checked as `tom` (City Motors, another dealer): he must see none
    of it, and Northwind's ids must be "not found" for him. Try the edge the ticket names, not only the happy path.
@@ -26,6 +28,7 @@ Report, and nothing else:
 VERDICT: PASS | FAIL
 gate: pass | fail (the failing task)
 | requirement | check (the exact command) | expected | got | ok |
+| screen: <name> | screenshots at 1440 and 1024 (paths) | nothing overlaps, spills or is cut off; matches the design | what you saw | ok |
 missing: requirements with no check, and why
 ```
 

@@ -28,8 +28,9 @@ Write `docs/evidence/<KEY>.md` from the verifier's report:
 
 Verified <date> on <branch> at <commit>.
 
-| Requirement | Command | Expected | Got |
-| ----------- | ------- | -------- | --- |
+| Requirement    | Command                           | Expected                                           | Got             |
+| -------------- | --------------------------------- | -------------------------------------------------- | --------------- |
+| Screen: <name> | screenshots at 1440 and 1024 wide | nothing overlaps or is cut off; matches the design | <what was seen> |
 
 Gate: `bun run gate:fast` passed.
 

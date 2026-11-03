@@ -14,9 +14,15 @@ are in `bunx playwright-cli --help`; read that first.
    the element references to `click` and `fill`.
 3. Check what the ticket asks, as the user it is for. Anything per location: switch location in the top bar and
    check again.
-4. **Change only what you created.** Name new records `e2e-…`; never edit seeded customers, parts or stock, which
+4. **Look at every screen the change adds or alters**, as a person would: tests check behaviour, not how it looks.
+   `resize 1440 900`, `screenshot`; then `resize 1024 768` (the advisors' tablets), `screenshot` again; for a list or
+   a form with many fields, scroll and screenshot the rest. Open each PNG with `Read` and say what you see. Look for
+   anything overlapping or spilling out of its box (icons, chips, buttons), text cut off, a control out of reach,
+   columns out of line, an empty state that says nothing. If the ticket gives a design, or a prototype was picked,
+   open it beside the screenshot and name every difference. A layout problem is a failure, not a note.
+5. **Change only what you created.** Name new records `e2e-…`; never edit seeded customers, parts or stock, which
    the checks and the other tickets rely on.
-5. Close the browser when you are done (`bunx playwright-cli close`).
+6. Close the browser when you are done (`bunx playwright-cli close`).
 
 Report what you saw with the command that showed it, as the `verify-ticket` skill asks. A behaviour worth keeping
 becomes a Playwright test in `web/e2e/` (`bun run gate:slow`).
