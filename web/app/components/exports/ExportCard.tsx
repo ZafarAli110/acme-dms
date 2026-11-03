@@ -14,8 +14,8 @@ function clock(ms: number): string {
 }
 
 /**
- * One export on the panel: what it is doing, how far it has got, its speed, how long it has taken and roughly how long
- * is left; then the download. The timer runs on between the server's updates.
+ * One export in the exports panel: what it is doing, how far it has got, its speed, how long it has taken and roughly
+ * how long is left; then the download. The timer runs on between the server's updates.
  */
 export function ExportCard({ entry }: { entry: ExportEntry }) {
   const { t, i18n } = useTranslation();
@@ -41,14 +41,14 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
       job.rows === 0
         ? t("exports.sorting", { total: number(job.totalRows ?? 0) })
         : t("exports.writing", { rows: number(job.rows), total: number(job.totalRows ?? 0) }),
-    completed: t("exports.completed", { rows: number(job.rows) }),
+    completed: t("exports.completed", { rows: number(job.rows), time: clock(job.elapsedMs) }),
     failed: job.error ?? t("exports.failed"),
     cancelled: t("exports.cancelled"),
     expired: t("exports.expired"),
   }[job.status];
 
   return (
-    <Card elevation={6} sx={{ width: 360 }} data-testid="export-card">
+    <Card variant="outlined" sx={{ width: 360 }} data-testid="export-card">
       <CardContent sx={{ pb: "12px !important" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Typography variant="subtitle2" sx={{ flex: 1 }} noWrap>

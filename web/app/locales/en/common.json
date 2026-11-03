@@ -64,7 +64,7 @@
     "counting": "Counting the rows…",
     "sorting": "Sorting {{total}} rows…",
     "writing": "{{rows}} of {{total}} rows",
-    "completed": "{{rows}} rows, ready to download",
+    "completed": "{{rows}} rows in {{time}}, ready to download",
     "failed": "The export failed. Try again.",
     "cancelled": "Cancelled.",
     "expired": "This file has expired. Export again.",
@@ -74,8 +74,9 @@
     "cancel": "Cancel",
     "download": "Download ({{size}} MB)",
     "close": "Close",
-    "customersTitle": "Customers of {{location}}",
+    "customersTitle": "Customers at the {{location}} location",
     "confirmTitle": "Export to Excel?",
-    "confirmMessage": "{{total}} customers at {{location}}, with the search, sort, filter and columns shown now. A large export takes a few minutes; it runs in the background while you keep working."
+    "confirmMessage": "{{total}} customers at {{location}}, with the search, sort, filter and columns shown now. A large export takes a few minutes; it runs in the background while you keep working.",
+    "panel": "Exports"
   }
 }

@@ -2,7 +2,6 @@ import { Box } from "@mui/material";
 import { useState } from "react";
 import { Outlet } from "react-router";
 import { ComingSoonDialog } from "./ComingSoonDialog";
-import { ExportDock } from "./exports/ExportDock";
 import { APPBAR_HEIGHT, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_EXPANDED_WIDTH, Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -42,7 +41,6 @@ export default function Layout() {
         </Box>
       </Box>
       <ComingSoonDialog feature={comingSoon} onClose={() => setComingSoon(null)} />
-      <ExportDock />
     </Box>
   );
 }

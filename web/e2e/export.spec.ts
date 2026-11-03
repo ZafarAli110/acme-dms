@@ -31,6 +31,6 @@ test.describe("exporting the customer list", () => {
     await page.getByTestId("export-confirm").click();
     await page.getByTestId("export-cancel").click();
 
-    await expect(page.getByTestId("export-status")).toHaveText(/Cancelled|rows, ready to download/);
+    await expect(page.getByTestId("export-status")).toHaveText(/Cancelled|ready to download/);
   });
 });

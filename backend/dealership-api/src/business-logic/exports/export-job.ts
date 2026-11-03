@@ -102,7 +102,8 @@ export class ExportJob {
       rows: this._rows,
       totalRows: this._totalRows,
       rowsPerSecond,
-      elapsedMs: now - this._createdAt,
+      // Stops when the export finishes, so a finished one reports how long it took, however late it is asked.
+      elapsedMs: (this._finishedAt ?? now) - this._createdAt,
       etaMs:
         this._status === "writing" && remaining !== null && rowsPerSecond
           ? Math.round((remaining / rowsPerSecond) * 1000)

@@ -64,7 +64,7 @@
     "counting": "Comptage des lignes…",
     "sorting": "Tri de {{total}} lignes…",
     "writing": "{{rows}} sur {{total}} lignes",
-    "completed": "{{rows}} lignes, prêt à télécharger",
+    "completed": "{{rows}} lignes en {{time}}, prêt à télécharger",
     "failed": "L'export a échoué. Réessayez.",
     "cancelled": "Annulé.",
     "expired": "Ce fichier a expiré. Exportez à nouveau.",
@@ -74,8 +74,9 @@
     "cancel": "Annuler",
     "download": "Télécharger ({{size}} Mo)",
     "close": "Fermer",
-    "customersTitle": "Clients de {{location}}",
+    "customersTitle": "Clients du site {{location}}",
     "confirmTitle": "Exporter vers Excel ?",
-    "confirmMessage": "{{total}} clients de {{location}}, avec la recherche, le tri, le filtre et les colonnes affichés. Un gros export prend quelques minutes ; il tourne en arrière-plan pendant que vous continuez."
+    "confirmMessage": "{{total}} clients de {{location}}, avec la recherche, le tri, le filtre et les colonnes affichés. Un gros export prend quelques minutes ; il tourne en arrière-plan pendant que vous continuez.",
+    "panel": "Exports"
   }
 }

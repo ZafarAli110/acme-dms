@@ -36,7 +36,7 @@ const FINISHED: ReadonlySet<ExportStatus> = new Set(["completed", "failed", "can
 /**
  * The exports this tab started, outside React, so one keeps running and reporting while the user works on other
  * pages. Each is followed through its server-sent events until it finishes. React reads it through `useExports()`;
- * the export panel in the layout shows it.
+ * the exports button in the top bar shows it.
  */
 export class ExportKernel {
   private _snapshot: ExportEntry[] = [];

@@ -9,6 +9,7 @@ export interface ExportJobResponseDto {
   /** How many rows the file will hold, once counted; null before. */
   totalRows: number | null;
   rowsPerSecond: number | null;
+  /** Since the export was asked for; it stops when the export finishes, so a finished one says how long it took. */
   elapsedMs: number;
   /** Time left at the current rate, while writing; null otherwise. */
   etaMs: number | null;
