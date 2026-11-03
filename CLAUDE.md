@@ -67,7 +67,7 @@ dealership-api and web reload themselves; after changing identity-api, document-
 3. `bun run errors` shows nothing new.
 
 Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, have the **verifier**
-subagent check it, and the **coding-standards-reviewer** subagent review the diff.
+subagent check it, and the **clean-code-reviewer** subagent review the diff.
 
 ## Where to find what
 
