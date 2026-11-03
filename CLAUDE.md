@@ -30,13 +30,13 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 
 ## How to work
 
-- **Verify, don't assume.** A fact has an answer in the code, the docs, the ticket or the running system: find it.
+- **Verify, don't assume.** A fact has an answer in the code, the docs, the task or the running system: find it.
   A decision nobody has made yet: ask, saying what you checked and what you recommend. Never decide it silently.
 - **Surface the trade-off.** Two reasonable ways: name both and say which you would pick.
-- **What the ticket asks, done completely.** No feature, option or abstraction it did not ask for, and nothing less
+- **What was asked, done completely.** No feature, option or abstraction nobody asked for, and nothing less
   either: the standards, the tests and the translations are part of the change. If doing it well needs a wider
   change (a refactor, a shared component), propose it with the trade-off; don't do it silently, and don't skip it.
-- **Plan before code.** Turn the ticket into checks first: a bug gets a test that reproduces it, a rule gets a
+- **Plan before code.** Turn the task into checks first: a bug gets a test that reproduces it, a rule gets a
   test for the case it forbids. Then show the open questions and the plan, one check per step
   (`1. [step] → verify: [check]`), and wait for a go-ahead. Done is every check passing, not the code written.
 
