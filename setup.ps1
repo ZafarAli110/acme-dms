@@ -30,11 +30,22 @@ function Add-ToPath($Folder) {
   Update-Path
 }
 
+# winget's codes for "it is already here": 0x8A15002B (no newer version to upgrade to) and 0x8A150061 (already
+# installed). Both mean the tool is there, so neither is a failure.
+$WingetAlreadyInstalled = @(-1978335189, -1978335135)
+
 function Install-WithWinget($Id) {
   winget install --id $Id --exact --source winget --silent --accept-package-agreements --accept-source-agreements
-  if ($LASTEXITCODE -ne 0) { throw "winget could not install $Id (exit code $LASTEXITCODE)" }
+  if ($LASTEXITCODE -in $WingetAlreadyInstalled) {
+    Note "$Id is already installed"
+  } elseif ($LASTEXITCODE -ne 0) {
+    throw "winget could not install $Id (exit code $LASTEXITCODE)"
+  }
   Update-Path
 }
+
+# A tool an earlier run installed may not be on this window's PATH yet (it was opened before): read it again first.
+Update-Path
 
 # ── Administrator, winget, and profiles that are allowed to run ─────────────────────────────────────────────────────
 $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
@@ -80,10 +91,21 @@ if (Have "node") { $existingNode = (node -v) }
 if (Have "fnm") { Note "fnm already installed" } else { Install-WithWinget "Schniz.fnm" }
 
 # fnm switches Node per folder: inside acme-dms it reads .nvmrc (26: any Node 26, fnm installs the latest). Turn it on in every PowerShell profile.
-$profileLine = "fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression"
+# Guarded, so a new window never errors when fnm is not on its PATH (an older run of this script wrote it without).
+$oldProfileLine = "fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression"
+$profileLine = "if (Get-Command fnm -ErrorAction SilentlyContinue) { $oldProfileLine }"
 $documents = [Environment]::GetFolderPath("MyDocuments")
 foreach ($profileFile in @("$documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1", "$documents\PowerShell\Microsoft.PowerShell_profile.ps1")) {
-  if (-not ((Test-Path $profileFile) -and (Select-String -Path $profileFile -SimpleMatch $profileLine -Quiet))) {
+  $content = if (Test-Path $profileFile) { Get-Content -Path $profileFile -Raw } else { "" }
+  if ($null -eq $content) { $content = "" }
+  if ($content.Contains($profileLine)) {
+    continue
+  }
+  if ($content.Contains($oldProfileLine)) {
+    # The unguarded line an older run wrote: replace it, so the error it prints in a new window goes away.
+    Set-Content -Path $profileFile -Value $content.Replace($oldProfileLine, $profileLine) -NoNewline
+    Note "fnm line in $profileFile now checks that fnm is there first"
+  } else {
     New-Item -ItemType File -Force -Path $profileFile | Out-Null
     Add-Content -Path $profileFile -Value "`n# added by Acme DMS setup: Node versions per folder`n$profileLine"
     Note "fnm switched on in $profileFile"
