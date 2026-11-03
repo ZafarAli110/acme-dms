@@ -9,7 +9,7 @@ disable-model-invocation: true
 ## Read only what the next step needs
 
 - `CLAUDE.md` is already loaded: do not read it again.
-- Read `.claude/handoff.md`. If there is none, say so and use the open plans (`docs/plans/`) and
+- Read `.claude/handoff.md`. If there is none, say so and use the open plans (`.ai-plans/`) and
   `git log --oneline -10` instead.
 - If the note names a plan, read that plan; it is the ticket's record and wins over the note.
 - Then only the files the first "Next" step touches.
