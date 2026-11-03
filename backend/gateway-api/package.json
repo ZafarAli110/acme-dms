@@ -8,7 +8,7 @@
     "lint": "dotnet build Acme.Gateway.slnx -c Debug -warnaserror",
     "format": "dotnet format whitespace . --folder --verify-no-changes",
     "test": "dotnet test --solution Acme.Gateway.slnx",
-    "dev": "dotnet run --project Acme.Gateway"
+    "dev": "dotnet run --project src/Acme.Gateway"
   },
   "nx": {
     "targets": {
