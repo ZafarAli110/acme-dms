@@ -8,9 +8,29 @@ import type { ExportEntry } from "../../core/kernel/exportKernel";
 
 const TICK_MS = 500;
 
-function clock(ms: number): string {
+/**
+ * A duration as people say it, in the page's language: "42 seconds", "1 minute, 5 seconds" (fr: "1 minute et 5
+ * secondes"). `rough` rounds to whole minutes past the first one, for an estimate ("about 3 minutes left").
+ */
+function duration(ms: number, language: string, rough = false): string {
   const seconds = Math.max(0, Math.round(ms / 1000));
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  const unit = (value: number, name: "hour" | "minute" | "second"): string =>
+    new Intl.NumberFormat(language, { style: "unit", unit: name, unitDisplay: "long" }).format(value);
+  if (seconds < 60) {
+    return unit(seconds, "second");
+  }
+  if (rough) {
+    return unit(Math.round(seconds / 60), "minute");
+  }
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const rest = seconds % 60;
+  const parts = [
+    hours > 0 ? unit(hours, "hour") : null,
+    minutes > 0 ? unit(minutes, "minute") : null,
+    rest > 0 ? unit(rest, "second") : null,
+  ].filter((part): part is string => part !== null);
+  return new Intl.ListFormat(language, { type: "unit", style: "long" }).format(parts);
 }
 
 /**
@@ -41,7 +61,7 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
       job.rows === 0
         ? t("exports.sorting", { total: number(job.totalRows ?? 0) })
         : t("exports.writing", { rows: number(job.rows), total: number(job.totalRows ?? 0) }),
-    completed: t("exports.completed", { rows: number(job.rows), time: clock(job.elapsedMs) }),
+    completed: t("exports.completed", { rows: number(job.rows), time: duration(job.elapsedMs, i18n.language) }),
     failed: job.error ?? t("exports.failed"),
     cancelled: t("exports.cancelled"),
     expired: t("exports.expired"),
@@ -74,8 +94,8 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
           <Typography variant="caption" color="text.secondary" component="div">
             {[
               job.rowsPerSecond && t("exports.rate", { rate: number(job.rowsPerSecond) }),
-              t("exports.elapsed", { time: clock(job.elapsedMs + sinceUpdate) }),
-              job.etaMs !== null && t("exports.left", { time: clock(job.etaMs - sinceUpdate) }),
+              t("exports.elapsed", { time: duration(job.elapsedMs + sinceUpdate, i18n.language) }),
+              job.etaMs !== null && t("exports.left", { time: duration(job.etaMs - sinceUpdate, i18n.language, true) }),
             ]
               .filter(Boolean)
               .join(" · ")}
