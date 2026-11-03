@@ -52,6 +52,12 @@ var gateway = builder.AddProject<Projects.Acme_Gateway>("gateway-api")
     .WaitFor(dealershipApi)
     .WaitFor(documentApi);
 
+// The sample data (scripts/seed.ts), loaded through the gateway once everything is up. It runs on every start and is
+// safe to: it reuses what is already there. `bun run seed` runs the same script by hand.
+builder.AddExecutable("seed", "bun", "../..", "scripts/seed.ts")
+    .WithReference(gateway)
+    .WaitFor(gateway);
+
 builder.AddExecutable("web", "bun", "../../web", "run", "dev")
     .WithHttpEndpoint(env: "PORT")
     .WithExternalHttpEndpoints()
