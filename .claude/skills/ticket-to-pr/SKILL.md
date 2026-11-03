@@ -12,7 +12,7 @@ You run the whole loop for $ARGUMENTS with no person in between, except where th
 
 **Stop and report** (what was done, where it stopped, what is needed) when:
 
-- the plan has an open product question (step 1);
+- the plan has an open product question, or a screen with no design and no pick yet (step 1);
 - the architect sends the plan back a second time;
 - a step's check fails three times;
 - a reviewer's finding is still open after two rounds of fixes;
@@ -29,6 +29,10 @@ You run the whole loop for $ARGUMENTS with no person in between, except where th
    `add_comment` ("Questions before we build: …") and stop. A product owner answers on the ticket; the next
    `/ticket-to-pr $ARGUMENTS` reads the answers first. Never answer a product question yourself, and never move one
    into Decisions to keep going.
+4. **The design gate.** If the plan's Design is "Open", commit the prototypes in `docs/prototypes/$ARGUMENTS/`, post
+   them on the ticket with `add_comment` (each file, the one choice it shows, your recommendation first) and stop,
+   with the questions if there are any. The next run reads the pick from the ticket and records it. A design that is
+   "Given" or "Follows" an existing screen goes on without stopping.
 
 ## 2. Architect review
 
