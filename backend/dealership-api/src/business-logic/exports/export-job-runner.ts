@@ -27,21 +27,24 @@ import {
 import { requireLocation } from "../user-context/require-location";
 import { isValidDownloadLink } from "./download-link";
 import { ExportJob } from "./export-job";
+import { toExportJobResponseDto } from "./export-job.mapper";
 import type { ExportSource } from "./export-source";
-import { type XlsxRow, XlsxWorkbookWriter } from "./xlsx-workbook-writer";
+import { type XlsxRow, XlsxWorkbookWriter } from "./xlsx/xlsx-workbook-writer";
 import { SETTINGS, type Settings } from "#settings/settings";
 
-/**
- * From the settings (EXPORT_MAX_RUNNING, EXPORT_TTL_SECONDS, this._settings.exportDirectory, EXPORT_BATCH_SIZE): how many exports run at
- * once in this instance (the rest wait in line; each running export holds a database connection), how long a finished
- * file can be downloaded (and downloaded again after a dropped connection), where files go, and rows per round trip.
- * A job's record outlives its file (RECORD_TTL_FACTOR), so a late retry with the same idempotency key still finds it.
- */
+// The tunable limits come from the settings (src/settings/settings.ts):
+//   EXPORT_MAX_RUNNING   how many exports run at once in this instance; the rest wait in line. Each running export
+//                        holds a database connection.
+//   EXPORT_TTL_SECONDS   how long a finished file can be downloaded, and downloaded again after a dropped connection.
+//   EXPORT_BATCH_SIZE    rows per round trip (default 20,000). Measured with 40 ms between the service and Postgres,
+//                        1.6 million rows: 5,000 a fetch took 20.1 s (334 round trips), 50,000 took 7.8 s, at about
+//                        170 MB more memory.
+
+/** A job's record outlives its file this many times over, so a late retry with its idempotency key still finds it. */
 const RECORD_TTL_FACTOR = 4;
 /** While a job runs, the client gets a snapshot at least this often (elapsed time, estimate), even with no rows. */
 const HEARTBEAT_MS = 1000;
-// EXPORT_BATCH_SIZE (default 20,000): rows per round trip. Measured with 40 ms between the service and Postgres,
-// 1.6 million rows: 5,000 a fetch took 20.1 s (334 round trips), 50,000 took 7.8 s, at about 170 MB more memory.
+/** An Idempotency-Key is 1 to 255 printable ASCII characters (no spaces): what HTTP header values allow. */
 const IDEMPOTENCY_KEY = /^[\x21-\x7e]{1,255}$/;
 
 /**
@@ -104,7 +107,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
       if (existing.source.fingerprint !== source.fingerprint || existing.locationId !== locationId) {
         throw new UnprocessableEntityException("This Idempotency-Key was used for a different export.");
       }
-      return existing.toDto();
+      return toExportJobResponseDto(existing);
     }
     const job = new ExportJob(userContext.userId, locationId, source);
     this._jobs.set(job.id, job);
@@ -114,18 +117,18 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
     this._queue.push(job);
     this.updateQueuePositions();
     this.startNext();
-    return job.toDto();
+    return toExportJobResponseDto(job);
   }
 
   public get(userContext: UserContext, jobId: string): ExportJobResponseDto {
-    return this.ownJob(userContext, jobId).toDto();
+    return toExportJobResponseDto(this.ownJob(userContext, jobId));
   }
 
   public progress(userContext: UserContext, jobId: string): Observable<ExportJobResponseDto> {
     const job = this.ownJob(userContext, jobId);
     return merge(job.changes, interval(HEARTBEAT_MS)).pipe(
       startWith(null),
-      map(() => job.toDto()),
+      map(() => toExportJobResponseDto(job)),
       // The last state (completed, failed, cancelled) is sent, then the stream ends.
       takeWhile(() => !job.isFinished, true),
     );

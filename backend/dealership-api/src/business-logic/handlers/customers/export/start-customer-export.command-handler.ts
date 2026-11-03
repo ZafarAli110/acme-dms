@@ -19,6 +19,8 @@ import { CUSTOMER_EXPORT_COLUMNS } from "./customer-export-columns";
  */
 @Injectable()
 export class StartCustomerExportCommandHandler implements IStartCustomerExportCommandHandler {
+  // The runner class itself, not an interface from the abstractions: both live in business-logic, and the
+  // abstractions are for crossing layers. Controllers reach the same runner through EXPORT_JOBS.
   private readonly _exportJobRunner: ExportJobRunner;
   private readonly _clock: IClock;
 
