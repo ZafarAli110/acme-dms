@@ -67,8 +67,8 @@ dealership-api and web reload themselves; after changing identity-api, document-
 3. `bun run errors` shows nothing new.
 
 Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, run the `verify-ticket`
-skill (`/verify-ticket <KEY>`): it runs the gate, the **verifier** and **clean-code-reviewer** subagents, and writes
-`docs/evidence/<KEY>.md`.
+skill (`/verify-ticket <KEY>`): it runs the gate and the **verifier** subagent, and writes `docs/evidence/<KEY>.md`.
+The **clean-code-reviewer** reads the diff once, when you open the pull request: ask for it then, not before.
 
 ## Where to find what
 

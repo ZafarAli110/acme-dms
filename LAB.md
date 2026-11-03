@@ -6,8 +6,8 @@ This branch adds a package: run `bun install` once after switching.
 
 ## What this branch adds
 
-- The `verify-ticket` skill (`/verify-ticket <KEY>`): runs the checks, the `verifier` and `clean-code-reviewer`
-  subagents, and writes `docs/evidence/<KEY>.md`: each requirement, the command that checks it, what it should return
+- The `verify-ticket` skill (`/verify-ticket <KEY>`): runs the checks and the `verifier` subagent, and
+  writes `docs/evidence/<KEY>.md`: each requirement, the command that checks it, what it should return
   and what it returned.
 - The `check-in-browser` skill: drives the running app with `playwright-cli`, to check a change the way a user sees it.
 - `CLAUDE.md` ("Done means") now runs `/verify-ticket` before a ticket is called done.
