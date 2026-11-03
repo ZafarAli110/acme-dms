@@ -1,6 +1,6 @@
-// SessionStart hook (startup, resume, compact): tells Claude which plans still have unchecked steps, and whether a
-// handoff note is waiting, so work resumes from files instead of from a summary of the conversation. What it prints is
-// added to Claude's context.
+// SessionStart hook (startup, resume, compact): tells Claude which plans are not done yet, with their status, and
+// whether a handoff note is waiting, so work resumes from files instead of from a summary of the conversation. What it
+// prints is added to Claude's context.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -14,14 +14,15 @@ if (existsSync(HANDOFF)) {
 
 const open = readdirSync(PLANS)
   .filter((file) => file.endsWith(".md") && file !== "README.md")
-  .map((file) => ({ file, unchecked: uncheckedSteps(readFileSync(join(PLANS, file), "utf8")) }))
-  .filter((plan) => plan.unchecked > 0);
+  .map((file) => describe(file, readFileSync(join(PLANS, file), "utf8")))
+  .filter((plan) => plan.status !== "Done" && plan.unchecked > 0);
 
 if (open.length > 0) {
-  const lines = open.map((plan) => `- docs/plans/${plan.file}: ${plan.unchecked} unchecked`);
-  console.log(`Plans in progress. Read the plan before continuing its ticket:\n${lines.join("\n")}`);
+  const lines = open.map((plan) => `- docs/plans/${plan.file}: ${plan.status}, ${plan.unchecked} boxes unticked`);
+  console.log(`Plans not done yet. Read the plan before continuing its ticket:\n${lines.join("\n")}`);
 }
 
-function uncheckedSteps(plan: string): number {
-  return (plan.match(/^\s*- \[ \]/gm) ?? []).length;
+function describe(file: string, plan: string): { file: string; status: string; unchecked: number } {
+  const status = /\*\*Status:\*\*\s*([^·\n]+)/.exec(plan)?.[1]?.trim() ?? "no status";
+  return { file, status, unchecked: (plan.match(/^\s*- \[ \]/gm) ?? []).length };
 }
