@@ -80,7 +80,7 @@ After a ticket is done: `/qa <KEY>` has the **qa** subagent test it in the runni
 failure; when QA is clean, `/retro <KEY>` writes what went wrong as lessons with evidence (`docs/lessons/`), and
 `/learn` turns lessons that apply again into skills. A skill is the team's memory; a person approves each one.
 
-Work a ticket with `/ticket <KEY>`. Its plan, `docs/plans/<date>_<KEY>_<name>.md`, is the record of the work: if one
+Work a ticket with `/ticket <KEY>`. Its plan, `.ai-plans/<date>_<KEY>_<name>.md`, is the record of the work: if one
 exists, read it before doing anything else on that ticket.
 
 The backlog is the **acme-tracker** MCP server (`.mcp.json`): read a ticket with `get_ticket` rather than asking for it
