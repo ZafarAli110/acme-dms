@@ -55,9 +55,10 @@ userContext.dealerId)` in its own `where`; location-scoped data also has the use
   exists).
 - **The dealer and location come from the token** (`userContext`), never from a body, query string or header the
   client chose. A DTO with a `dealerId`, `locationId`, `createdBy` or `isDeleted` field is a finding.
-- **Every route has `@RequirePermission(…)`.** The `AuthorizationGuard` lets a route without one through for any
-  signed-in user, whatever their role; a route that must be open says why in a comment. Permissions are checked, never
-  role names.
+- **Every route has `@RequirePermission(…)`, or checks that the record is the caller's own.** The
+  `AuthorizationGuard` lets a route without a permission through for any signed-in user, whatever their role. That is
+  right only when the handler then answers "not found" for anything not the caller's (an export job:
+  `ExportJobRunner.ownJob`); otherwise it is a finding. Permissions are checked, never role names.
 - **No mass assignment:** a request DTO is never spread into `.set(...)` or `.values(...)`. Copy the fields the
   handler means to change, one by one.
 
@@ -102,8 +103,9 @@ await work.db
   `FromSqlInterpolated` or LINQ.
 - A shell command (`Bun.spawn`, `child_process`) built from input.
 - In the web app, `dangerouslySetInnerHTML`, or a URL from the API put into `href` without checking its scheme.
-- **Exports:** a cell whose text starts with `=`, `+`, `-` or `@` is a formula when the file is opened (CSV/formula
-  injection). User text written to a spreadsheet must be written as text, or prefixed so it cannot run.
+- **Exports:** in a CSV, or a spreadsheet cell written as a formula (`<f>`), text starting with `=`, `+`, `-` or `@`
+  runs when the file is opened (formula injection). An xlsx text cell (`t="inlineStr"`, as `textCell` writes) is shown
+  as text and never runs: check which one the code writes before you flag it.
 
 ## A04 Insecure design
 
