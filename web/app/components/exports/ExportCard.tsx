@@ -94,6 +94,8 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
               startIcon={<FileDownloadIcon />}
               href={`${entry.serviceUrl}/${job.downloadPath}`}
               download={job.fileName}
+              // Once the download starts the card has done its job. Wait a tick, so the browser follows the link first.
+              onClick={() => setTimeout(() => dismiss(job.id), 0)}
               data-testid="export-download"
             >
               {t("exports.download", { size: ((job.fileBytes ?? 0) / 1_048_576).toFixed(1) })}

@@ -6,7 +6,8 @@ import { useExports } from "../../core/contexts/exports/useExports";
 import type { ExportEntry } from "../../core/kernel/exportKernel";
 import { ExportCard } from "./ExportCard";
 
-const RING_SIZE = 40;
+// Wider than the 40px button, so the ring clears the icon's corners; centred on the button, not pinned to its corner.
+const RING_SIZE = 46;
 
 function isRunning(entry: ExportEntry): boolean {
   return entry.job.status === "queued" || entry.job.status === "counting" || entry.job.status === "writing";
@@ -73,8 +74,17 @@ export function ExportsButton() {
           variant="determinate"
           value={progressOf(running)}
           size={RING_SIZE}
-          thickness={3}
-          sx={{ position: "absolute", top: 0, left: 0, color: "inherit", pointerEvents: "none" }}
+          thickness={2.5}
+          sx={{
+            position: "absolute",
+            // Centred with margins, not transform: the determinate ring already uses transform to start at 12 o'clock.
+            top: "50%",
+            left: "50%",
+            mt: `-${RING_SIZE / 2}px`,
+            ml: `-${RING_SIZE / 2}px`,
+            color: "inherit",
+            pointerEvents: "none",
+          }}
         />
       )}
       <Popover
