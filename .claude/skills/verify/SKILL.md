@@ -37,12 +37,22 @@ Verified <date> on <branch> at <commit>.
 | ----------- | ------- | -------- | --- |
 
 Gate: `bun run gate:fast` passed. Review: <findings fixed, or "no findings">.
+
+## What these checks don't prove
+
+- <a case, size or path no row above exercises, and why it matters>
 ```
+
+A green check proves only what it checks. Before writing that section, ask of each row what would still pass if the
+code were wrong: the data was small (3 rows, not 1.6 million), only one user or one location was tried, a failure path
+never ran, the test shares the code's own assumption. Name at least one, and say whether it needs a person, a test, or
+nothing. "None" is never the answer: if you can't name a gap, the checks were not read.
 
 Every row's command must be one a reviewer can paste and run against a freshly reset system (`bun run reset`) and get
 the same result. No "checked in the browser".
 
 ## 4. Only then the tracker
 
-Comment on the ticket with `add_comment`: what changed, and the evidence file's table. Then move it with
+Comment on the ticket with `add_comment`: what changed, the evidence file's table, and what the checks don't
+prove. Then move it with
 `update_ticket_status` to `in-review` (a person moves it to `done`). Both ask for permission; that is intended.
