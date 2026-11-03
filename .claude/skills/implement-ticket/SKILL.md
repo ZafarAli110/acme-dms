@@ -54,6 +54,10 @@ Otherwise:
 One step at a time: do it, run its check, tick it, and add a line to the log. When a step turns out wrong, change the
 plan first, then the code. An acceptance box is ticked only when something checked it. Update **Now** as you go.
 
+**Look at what you built.** After a step that changes a screen, open it with the `check-in-browser` skill before you
+tick the step: screenshots at 1440 and 1024 wide, read each one, and say what you see. Fix anything overlapping,
+spilling out or cut off in that step, not at the end. Tests prove behaviour; only looking shows the layout.
+
 ## Finish
 
 Run the `verify-ticket` skill. Link `docs/evidence/<KEY>.md` from the plan, tick the last step only when verification
