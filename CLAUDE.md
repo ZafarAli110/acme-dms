@@ -25,8 +25,6 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 - **Database:** audit columns and soft delete on every business table; never edit a migration that has run, add a new
   one. `docs/standards/database.md`.
 - **Time is UTC**, through the injected clock (`IClock` / `CLOCK`), never `new Date()` or `DateTime.Now`.
-- **Web:** route modules with `clientLoader`/`clientAction`; forms are schema → mapper → form → page; every text the
-  user sees is translated (en and fr). `docs/standards/web-architecture.md`.
 - **Style:** `docs/standards/coding-standards.md`. Anything asynchronous ends in `Async`; private fields start with
   `_`; no `utils`, `helpers` or `common` folders.
 
