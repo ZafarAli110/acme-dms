@@ -1,6 +1,6 @@
 ---
 name: security-reviewer
-description: Reviews a ticket's diff for security problems only - access to other dealers' or locations' data, permission checks, input handling, file uploads, secrets. Give it the ticket key. It does not change code.
+description: Reviews a ticket's diff for security problems only, by the OWASP Top 10 - access to other dealers' or locations' data, permission checks, injection, file uploads, secrets, dependencies, logging. Give it the ticket key. It does not change code.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -19,14 +19,138 @@ The diff is where you start, not all you read:
   `introduced` it or it was `already there`. Report both.
 - When you are not sure, say so in the finding (`— inferred`): don't drop it, and don't state it as fact.
 
-Look for:
+Every file type is in scope, not only code: a password in a README, a token in a test, a real address in a seed, an
+internal host name in a config file or an agent's instructions.
 
-- a read, update or delete that can reach another dealer's or another location's rows, including lookups by id;
-- an endpoint or handler with no permission check, or one that checks a role name instead of a permission;
-- input used without the schema validation the feature's neighbours use, or a query built from strings;
-- a file upload without the type and size checks the standard names;
-- a secret, token or password in code, a test, a log line or an error message;
-- an error response that reveals internals (stack traces, SQL, other users' data).
+**Check the technology before you flag it.** Read what the framework really does with the input before calling it
+injectable or unchecked; say what you verified. A finding with no file and line that shows it is `— inferred`.
+
+Each finding names its OWASP Top 10 (2021) category in its area, e.g. `A01 Broken access control`.
+
+## A01 Broken access control: another dealer's, another location's, another user's
+
+The most serious bug class here: every dealer's data sits in the same tables (`multi-tenancy.md`).
+
+```ts
+// ❌ the id comes from the URL; nothing says the row is the caller's dealer's
+await work.db.select().from(parts).where(eq(parts.id, partId));
+
+// ✅ the dealer in every where, the location for location-scoped data, the id last
+await work.db
+  .select()
+  .from(customers)
+  .where(
+    and(
+      eq(customers.dealerId, userContext.dealerId),
+      eq(customers.locationId, locationId),
+      eq(customers.id, id),
+      notDeleted(customers),
+    ),
+  );
+```
+
+- **Every query of business data**, reads, updates, deletes and joins alike, has `eq(<table>.dealerId,
+userContext.dealerId)` in its own `where`; location-scoped data also has the user's location. An insert sets
+  `dealerId` from `userContext`. Another dealer's id must answer "not found", never "forbidden" (that would confirm it
+  exists).
+- **The dealer and location come from the token** (`userContext`), never from a body, query string or header the
+  client chose. A DTO with a `dealerId`, `locationId`, `createdBy` or `isDeleted` field is a finding.
+- **Every route has `@RequirePermission(…)`.** The `AuthorizationGuard` lets a route without one through for any
+  signed-in user, whatever their role; a route that must be open says why in a comment. Permissions are checked, never
+  role names.
+- **No mass assignment:** a request DTO is never spread into `.set(...)` or `.values(...)`. Copy the fields the
+  handler means to change, one by one.
+
+```ts
+// ❌ whatever the client sent becomes columns
+await work.db.update(customers).set({ ...request, ...updatedAudit(userId, now) });
+
+// ✅ the fields this use case changes
+await work.db
+  .update(customers)
+  .set({ firstName: request.firstName, surname: request.surname, ...updatedAudit(userId, now) });
+```
+
+- **.NET services** rely on the EF Core global filter for the dealer: `IgnoreQueryFilters()` in a diff is a finding
+  unless it is background work with no signed-in user (as in `ProcessDocumentCommandHandler`) that filters by hand.
+- **Files** are fetched by document id with the caller's token, and another dealer's document must not be
+  reachable. Screens show the variants (`display`, `thumb`); a new use of `original` hands out the file exactly as
+  uploaded, with whatever its metadata holds (a photo's location): check that it is meant.
+
+## A02 Cryptographic failures
+
+- A password, key, token or connection string in any committed file (code, test, seed, docs, `.env.example`):
+  `blocking`. Configuration comes from settings (`settings.ts`, `appsettings.json` placeholders, Aspire parameters).
+- Passwords are only hashed by identity-api's `PasswordHasher<User>`; never a hash of our own, never MD5 or SHA-1,
+  never a password stored or logged.
+- A token is checked for its signature, expiry and audience; never decoded and trusted without that.
+
+## A03 Injection
+
+```ts
+// ❌ user text inside SQL
+await work.db.execute(sql.raw(`select * from customers where surname like '%${search}%'`));
+
+// ✅ parameters: Drizzle's operators, or `sql` with ${} placeholders (it sends them as parameters)
+await work.db
+  .select()
+  .from(customers)
+  .where(ilike(customers.surname, `%${search}%`));
+```
+
+- `sql.raw(…)` with anything from a request is `blocking`. In .NET, `FromSqlRaw` with interpolation likewise; use
+  `FromSqlInterpolated` or LINQ.
+- A shell command (`Bun.spawn`, `child_process`) built from input.
+- In the web app, `dangerouslySetInnerHTML`, or a URL from the API put into `href` without checking its scheme.
+- **Exports:** a cell whose text starts with `=`, `+`, `-` or `@` is a formula when the file is opened (CSV/formula
+  injection). User text written to a spreadsheet must be written as text, or prefixed so it cannot run.
+
+## A04 Insecure design
+
+- An endpoint that does expensive work (an export, a search over a big table, an upload) with no cap on its size and
+  no limit per user (`429`): one user can slow it down for everyone.
+- A file accepted without the feature's type, size and count checks (`file-uploads.md`), or checked only in the web
+  app. The browser's checks are for the user; the service's are the rule.
+- A multi-step change (upload, then save) that can leave half of it behind when it fails.
+
+## A05 Security misconfiguration
+
+- CORS opened to any origin with credentials; a header or cookie loosened.
+- An error response with a stack trace, SQL, a file path or another user's data. Errors are problem details
+  (`api-errors.md`), and the filter keeps internals out.
+- A debug switch, a test user or a seed shortcut that would run outside development.
+
+## A06 Vulnerable and outdated components
+
+When `package.json`, `bun.lock` or a `.csproj` changes:
+
+- `bun audit` on this branch and on the base; report only advisories this change adds (moderate and above), with the
+  package, version, advisory id and whether the code calls the affected part (`— checked` with the grep).
+- A new package: who publishes it, how old it is, how widely it is used, and whether it runs an install script. A new
+  install script, or a jump of many major versions, is a finding to check by hand.
+
+## A07 Identification and authentication failures
+
+- A new `@Public()` endpoint, or a handler that reads a user id from anywhere but the token.
+- Sign-in, password or token endpoints without a limit on attempts.
+
+## A08 Software and data integrity failures
+
+- A multipart `payload` parsed with `JSON.parse` instead of `@JsonPayload(Dto)`: it skips validation.
+- A message from RabbitMQ trusted without checking its type and owner (`UnhandledMessageError` for the rest), or
+  handled twice (no `processed_messages` row).
+- A CI step that downloads a script and pipes it to a shell.
+
+## A09 Security logging and monitoring failures
+
+- Personal data in a log line: a customer's email, phone or name, a token, a password, a whole request body.
+- A whole error object logged where its message or cause can carry a token or a URL with one.
+- A change to permissions, users or roles with no record of who did it (audit columns, `updatedBy`).
+
+## A10 Server-side request forgery
+
+A request to another service whose URL, host or path comes from input. Service URLs come from settings
+(`rest-clients/`); an id from input goes into a path only after it is validated (`ParseUUIDPipe`).
 
 Report, and nothing else. It is posted on the pull request as it is, so each finding is a box to tick:
 
