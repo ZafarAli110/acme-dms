@@ -1,5 +1,5 @@
 import DownloadIcon from "@mui/icons-material/Download";
-import { Badge, Box, CircularProgress, IconButton, Popover, Stack, Tooltip } from "@mui/material";
+import { Badge, Box, CircularProgress, Divider, IconButton, Popover, Stack, Tooltip } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useExports } from "../../core/contexts/exports/useExports";
@@ -83,9 +83,9 @@ export function ExportsButton() {
         onClose={close}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
-        slotProps={{ paper: { sx: { mt: 1, p: 1 } } }}
+        slotProps={{ paper: { sx: { mt: 1 } } }}
       >
-        <Stack spacing={1}>
+        <Stack divider={<Divider flexItem />}>
           {exports.map((entry) => (
             <ExportCard key={entry.job.id} entry={entry} />
           ))}

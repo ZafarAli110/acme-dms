@@ -48,10 +48,10 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
   }[job.status];
 
   return (
-    <Card variant="outlined" sx={{ width: 360 }} data-testid="export-card">
+    <Card elevation={0} sx={{ width: 360, bgcolor: "transparent" }} data-testid="export-card">
       <CardContent sx={{ pb: "12px !important" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography variant="subtitle2" sx={{ flex: 1 }} noWrap>
+          <Typography variant="subtitle2" sx={{ flex: 1 }}>
             {entry.title}
           </Typography>
           <IconButton size="small" onClick={() => dismiss(job.id)} aria-label={t("exports.close")}>
