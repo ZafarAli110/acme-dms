@@ -15,6 +15,13 @@
       "when": 1793529576466,
       "tag": "0001_dealers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793730456920,
+      "tag": "0002_export_jobs",
+      "breakpoints": true
     }
   ]
 }

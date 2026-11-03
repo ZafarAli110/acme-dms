@@ -1,18 +1,24 @@
 import { type ArgumentsHost, ConflictException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
+import { TooManyRequestsException } from "#business-logic-abstractions/errors/too-many-requests.exception";
 import { fixedClock } from "#test-setup/time/fixed-clock";
 import type { ProblemDetailsDto } from "../../problem-details/problem-details.dto";
 import { ProblemDetailsFilter } from "../problem-details.filter";
 
-function captureProblem(exception: unknown): { status: number; contentType: string; body: ProblemDetailsDto } {
-  const captured = { status: 0, contentType: "", body: "" };
+function captureProblem(exception: unknown): {
+  status: number;
+  contentType: string;
+  headers: Record<string, string>;
+  body: ProblemDetailsDto;
+} {
+  const captured = { status: 0, headers: {} as Record<string, string>, body: "" };
   const response = {
     status(code: number) {
       captured.status = code;
       return response;
     },
-    setHeader(_name: string, value: string) {
-      captured.contentType = value;
+    setHeader(name: string, value: string) {
+      captured.headers[name] = value;
     },
     end(body: string) {
       captured.body = body;
@@ -28,7 +34,8 @@ function captureProblem(exception: unknown): { status: number; contentType: stri
   new ProblemDetailsFilter(fixedClock()).catch(exception, host);
   return {
     status: captured.status,
-    contentType: captured.contentType,
+    contentType: captured.headers["content-type"] ?? "",
+    headers: captured.headers,
     body: JSON.parse(captured.body) as ProblemDetailsDto,
   };
 }
@@ -55,6 +62,15 @@ describe("ProblemDetailsFilter", () => {
     );
     expect(body.userId).toBeNull();
     expect(body.traceId).toBeNull();
+  });
+
+  it("answers a limit with 429, its reason, and when to try again", () => {
+    const { status, headers, body } = captureProblem(new TooManyRequestsException("Wait for one to finish.", 30));
+
+    expect(status).toBe(429);
+    expect(body.type).toBe("urn:acme:error:too-many-requests");
+    expect(body.detail).toBe("Wait for one to finish.");
+    expect(headers["retry-after"]).toBe("30");
   });
 
   it("hides the details of unexpected errors", () => {

@@ -42,6 +42,15 @@ var dealershipApi = builder.AddExecutable("dealership-api", "bun", "../../backen
     .WaitFor(identityApi)
     .WaitFor(documentApi);
 
+// Runs the exports dealership-api queues (the export_jobs table): a process of its own, so a big export never slows the
+// API down. It waits for the API, which applies the database migrations when it starts and builds the bundle this runs
+// (dist/worker.js). Both use the same EXPORT_DIR default (the temp folder of this machine): the worker writes a file,
+// the API serves it.
+builder.AddExecutable("export-worker", "bun", "../../backend/dealership-api", "run", "worker")
+    .WithOtlpExporter()
+    .WithReference(dealershipDb)
+    .WaitFor(dealershipApi);
+
 // The single entry point for the web app: /api/<service>/... is routed to that service with the prefix removed.
 var gateway = builder.AddProject<Projects.Acme_Gateway>("gateway-api")
     .WithHttpHealthCheck("/v1/system/health")

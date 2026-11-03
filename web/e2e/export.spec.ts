@@ -13,7 +13,8 @@ test.describe("exporting the customer list", () => {
     await page.getByTestId("export-customers").click();
     await page.getByTestId("export-confirm").click();
 
-    const download = page.getByTestId("export-download");
+    // The newest card: exports of earlier runs that have not expired are back on the panel too.
+    const download = page.getByTestId("export-card").last().getByTestId("export-download");
     await expect(download).toBeVisible({ timeout: 60_000 });
     const file = await request.get((await download.getAttribute("href"))!);
     expect(file.status()).toBe(200);
@@ -29,8 +30,23 @@ test.describe("exporting the customer list", () => {
 
     await page.getByTestId("export-customers").click();
     await page.getByTestId("export-confirm").click();
-    await page.getByTestId("export-cancel").click();
+    const card = page.getByTestId("export-card").last();
+    await card.getByTestId("export-cancel").click();
 
-    await expect(page.getByTestId("export-status")).toHaveText(/Cancelled|ready to download/);
+    await expect(card.getByTestId("export-status")).toHaveText(/Cancelled|ready to download/);
+  });
+
+  test("an export is still there after a reload: it runs on the server", async ({ page }) => {
+    await signInAsync(page, MARIA);
+    await page.goto("/customers");
+    await expect(page.getByTestId("customers-table").locator(".MuiDataGrid-row").first()).toBeVisible();
+
+    await page.getByTestId("export-customers").click();
+    await page.getByTestId("export-confirm").click();
+    await expect(page.getByTestId("export-card").last()).toBeVisible();
+    await page.reload();
+    await page.getByTestId("exports-button").click();
+
+    await expect(page.getByTestId("export-card").first()).toBeVisible();
   });
 });

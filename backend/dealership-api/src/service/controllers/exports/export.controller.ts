@@ -34,24 +34,30 @@ export class ExportController {
     this._exportJobs = exportJobs;
   }
 
-  @Get(":jobId")
-  public get(
-    @CurrentUser() userContext: UserContext,
-    @Param("jobId", ParseUUIDPipe) jobId: string,
-  ): ExportJobResponseDto {
-    return this._exportJobs.get(userContext, jobId);
+  /** The user's exports at the selected location that have not expired, newest first: a reloaded page shows them. */
+  @Get()
+  public async findAllAsync(@CurrentUser() userContext: UserContext): Promise<ExportJobResponseDto[]> {
+    return this._exportJobs.listAsync(userContext);
   }
 
-  /** Server-sent events: a `progress` event at most a few times a second; the stream ends with the last state. */
-  @Sse(":jobId/events")
-  public events(
+  @Get(":jobId")
+  public async findOneAsync(
     @CurrentUser() userContext: UserContext,
     @Param("jobId", ParseUUIDPipe) jobId: string,
-  ): Observable<MessageEvent> {
+  ): Promise<ExportJobResponseDto> {
+    return this._exportJobs.getAsync(userContext, jobId);
+  }
+
+  /** Server-sent events: a `progress` event about once a second; the stream ends with the last state. */
+  @Sse(":jobId/events")
+  public async eventsAsync(
+    @CurrentUser() userContext: UserContext,
+    @Param("jobId", ParseUUIDPipe) jobId: string,
+  ): Promise<Observable<MessageEvent>> {
     let sequence = 0;
-    return this._exportJobs
-      .progress(userContext, jobId)
-      .pipe(map((snapshot) => ({ id: String(++sequence), type: "progress", data: snapshot })));
+    // Awaited before the stream opens, so someone else's export is a 404 answer, not an error inside the stream.
+    const progress = await this._exportJobs.progressAsync(userContext, jobId);
+    return progress.pipe(map((snapshot) => ({ id: String(++sequence), type: "progress", data: snapshot })));
   }
 
   /** Cancels a queued or running export; for a finished one, deletes its file now. */
@@ -77,7 +83,7 @@ export class ExportController {
     @Req() request: IncomingMessage,
     @Res() response: ServerResponse,
   ): Promise<void> {
-    const file = this._exportJobs.fileForLink(jobId, expires, signature);
+    const file = await this._exportJobs.fileForLinkAsync(jobId, expires, signature);
     // Opened before anything is sent: if the file has just expired, the client gets an error, not half a response.
     await using handle = await open(file.path);
     let start = 0;

@@ -1,8 +1,13 @@
+/** Which list an export is of. */
+export type ExportKind = "customers";
+
 export type ExportJobStatus = "queued" | "counting" | "writing" | "completed" | "failed" | "cancelled" | "expired";
 
 /** An export as the client follows it: enough for a progress bar, a throughput, a timer and an estimate. */
 export interface ExportJobResponseDto {
   id: string;
+  /** Which list it is of, so a client that lost its own record (a reload) can still name it. */
+  kind: ExportKind;
   status: ExportJobStatus;
   /** Rows written so far. */
   rows: number;
@@ -13,7 +18,7 @@ export interface ExportJobResponseDto {
   elapsedMs: number;
   /** Time left at the current rate, while writing; null otherwise. */
   etaMs: number | null;
-  /** Its place in line while queued (1 is next); null otherwise. */
+  /** Its place in line while queued (1 is next, as far as the line can tell: dealers take turns); null otherwise. */
   queuePosition: number | null;
   fileName: string;
   fileBytes: number | null;

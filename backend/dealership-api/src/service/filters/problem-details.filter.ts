@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 import { STATUS_CODES } from "node:http";
 import { trace } from "@opentelemetry/api";
+import { TooManyRequestsException } from "#business-logic-abstractions/errors/too-many-requests.exception";
 import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
 import { toIsoString } from "#business-logic-abstractions/time/to-iso-string";
 import { serializeError } from "../logging/serialize-error";
@@ -63,6 +64,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     });
 
     response.setHeader("content-type", "application/problem+json");
+    if (exception instanceof TooManyRequestsException) {
+      response.setHeader("retry-after", String(exception.retryAfterSeconds));
+    }
     response.status(status).end(JSON.stringify(problem));
   }
 

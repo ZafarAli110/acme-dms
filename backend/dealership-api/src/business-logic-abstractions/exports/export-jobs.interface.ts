@@ -9,15 +9,20 @@ export interface ExportFile {
   fileName: string;
 }
 
-/** The export jobs: following one, cancelling it, and the signed download of its file. Starting one is per list. */
+/**
+ * The export jobs: following one, listing the user's, cancelling one, and the signed download of its file. Starting
+ * one is per list (a start handler); an export worker, a process of its own, runs them.
+ */
 export interface IExportJobs {
-  get(userContext: UserContext, jobId: string): ExportJobResponseDto;
-  /** Snapshots while it runs, at most a few a second plus a heartbeat; ends after the last state. */
-  progress(userContext: UserContext, jobId: string): Observable<ExportJobResponseDto>;
+  getAsync(userContext: UserContext, jobId: string): Promise<ExportJobResponseDto>;
+  /** The user's exports at the selected location that have not expired, newest first: what a reloaded page shows. */
+  listAsync(userContext: UserContext): Promise<ExportJobResponseDto[]>;
+  /** Snapshots about once a second while it runs; ends after the last state. Someone else's export is a 404. */
+  progressAsync(userContext: UserContext, jobId: string): Promise<Observable<ExportJobResponseDto>>;
   /** Cancels a queued or running export; for a finished one, deletes the file now. */
   cancelAsync(userContext: UserContext, jobId: string): Promise<void>;
   /** The file, when the link's signature and time are good; no user context: the link is the permission. */
-  fileForLink(jobId: string, expires: string, signature: string): ExportFile;
+  fileForLinkAsync(jobId: string, expires: string, signature: string): Promise<ExportFile>;
 }
 
 export const EXPORT_JOBS = Symbol("IExportJobs");

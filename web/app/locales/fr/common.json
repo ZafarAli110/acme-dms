@@ -60,7 +60,7 @@
   },
   "exports": {
     "export": "Exporter vers Excel",
-    "queued": "En attente d'une place ({{position}} dans la file)…",
+    "queued": "En attente d'une place : {{position}} dans la file",
     "counting": "Comptage des lignes…",
     "sorting": "Tri de {{total}} lignes…",
     "writing": "{{rows}} sur {{total}} lignes",

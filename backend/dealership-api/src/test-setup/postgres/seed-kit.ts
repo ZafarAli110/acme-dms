@@ -5,6 +5,9 @@ import {
   type Bin,
   customers,
   type Customer,
+  type ExportJobRow,
+  exportJobs,
+  type NewExportJobRow,
   parts,
   type Part,
   partInventories,
@@ -124,5 +127,29 @@ export function seedKit(db: NodePgDatabase<typeof schema>) {
     return row!;
   }
 
-  return { addBinAsync, addCustomerAsync, addStockedPartAsync, addPhotoAsync };
+  /**
+   * An export job straight in the queue table, waiting unless the test says otherwise: an export of the customer
+   * list's names, asked for by the test user at `locationId` at SEEDED_AT.
+   */
+  async function addExportJobAsync(
+    job: Pick<NewExportJobRow, "locationId"> & Partial<NewExportJobRow>,
+  ): Promise<ExportJobRow> {
+    const [row] = await db
+      .insert(exportJobs)
+      .values({
+        dealerId: dealerOf(job.locationId),
+        ownerId: TEST_USER_ID,
+        kind: "customers",
+        request: { columns: [{ field: "name", header: "Name" }] },
+        fileName: "customers-2026-11-03.xlsx",
+        fingerprint: "seeded",
+        status: "queued",
+        createdAt: SEEDED_AT,
+        ...job,
+      })
+      .returning();
+    return row!;
+  }
+
+  return { addBinAsync, addCustomerAsync, addStockedPartAsync, addPhotoAsync, addExportJobAsync };
 }

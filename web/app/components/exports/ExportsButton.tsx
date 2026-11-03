@@ -2,7 +2,9 @@ import DownloadIcon from "@mui/icons-material/Download";
 import { Badge, Box, CircularProgress, Divider, IconButton, Popover, Stack, Tooltip } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { API_CONFIG } from "../../core/config/api";
 import { useExports } from "../../core/contexts/exports/useExports";
+import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import type { ExportEntry } from "../../core/kernel/exportKernel";
 import { ExportCard } from "./ExportCard";
 
@@ -21,27 +23,48 @@ function progressOf(running: ExportEntry[]): number {
 }
 
 /**
- * The exports this tab started, behind one button in the top bar, like a browser's downloads: a ring while one runs, a
- * dot when one is ready. The panel opens by itself when an export starts; otherwise nothing covers the page.
+ * The user's exports, behind one button in the top bar, like a browser's downloads: a ring while one runs, a dot when
+ * one is ready. The panel opens by itself when an export starts; otherwise nothing covers the page. The exports run
+ * on the server, so after a reload (or a switch of location) the button asks for that location's and shows them again.
  */
 export function ExportsButton() {
   const { t } = useTranslation();
-  const { exports } = useExports();
+  const { exports, restoreAsync } = useExports();
+  const { location } = useSelectedLocation();
   const anchor = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState<ReadonlySet<string>>(new Set());
   const count = exports.length;
-  const previousCount = useRef(count);
+  // Only an export started here opens the panel; ones put back after a reload wait behind the button.
+  const startedCount = exports.filter((entry) => !entry.restored).length;
+  const previousStartedCount = useRef(startedCount);
+  const locationId = location?.id ?? null;
+  const locationName = location?.name ?? "";
 
   useEffect(() => {
-    if (count > previousCount.current) {
+    if (startedCount > previousStartedCount.current) {
       setOpen(true);
     }
+    previousStartedCount.current = startedCount;
+  }, [startedCount]);
+
+  useEffect(() => {
     if (count === 0) {
       setOpen(false);
     }
-    previousCount.current = count;
   }, [count]);
+
+  useEffect(() => {
+    if (locationId === null) {
+      return;
+    }
+    // Every export kind is named here, as the page that starts it names it.
+    const titles = { customers: t("exports.customersTitle", { location: locationName }) };
+    // Not being able to restore them is not worth an error on every page: the exports are still on the server.
+    restoreAsync(API_CONFIG.dealershipUrl, (job) => titles[job.kind]).catch(() => {});
+    // Once per location, not on every render or change of language: the title is fixed when the card is made, as it is
+    // for an export started here.
+  }, [locationId]);
 
   if (count === 0) {
     return null;

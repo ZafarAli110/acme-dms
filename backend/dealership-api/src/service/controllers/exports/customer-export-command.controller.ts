@@ -21,15 +21,18 @@ export class CustomerExportCommandController {
     this._startCustomerExportCommandHandler = startCustomerExportCommandHandler;
   }
 
-  /** 202: the export runs in the background. Send an Idempotency-Key, so a retried request gets the same export. */
+  /**
+   * 202: the export is queued and an export worker runs it. Send an Idempotency-Key, so a retried request gets the
+   * same export. 429 (with Retry-After) when the user already has as many exports running or waiting as allowed.
+   */
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   @RequirePermission("customers.read")
-  public start(
+  public async startAsync(
     @CurrentUser() userContext: UserContext,
     @Body() request: ExportRequestDto,
     @Headers("idempotency-key") idempotencyKey: string | undefined,
-  ): ExportJobResponseDto {
-    return this._startCustomerExportCommandHandler.execute(userContext, request, idempotencyKey ?? null);
+  ): Promise<ExportJobResponseDto> {
+    return this._startCustomerExportCommandHandler.executeAsync(userContext, request, idempotencyKey ?? null);
   }
 }
