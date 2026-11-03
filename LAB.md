@@ -5,8 +5,9 @@
 ## What this branch adds
 
 - The `ticket` skill (`/ticket <KEY>`): takes a ticket from To Do to a verified change, keeping a plan in
-  `docs/plans/<date>_<KEY>_<name>.md`: its status first, then the requirement, the acceptance criteria as the goal,
-  the shape with high-level code, the steps with their checks; questions, decisions and the log last.
+  `.ai-plans/<date>_<KEY>_<name>.md`, copied from `.ai-plans/plan-template.md`: its status first, then the
+  requirement, the acceptance criteria as the goal, the shape with high-level code, the steps with their checks;
+  questions, decisions and the log last.
 - A design gate in `/ticket`: a screen the ticket shows is built from that design; one that follows an existing
   screen copies it; an open one gets two or three static prototypes in `docs/prototypes/<KEY>/` and a pick before any
   UI code.
@@ -17,9 +18,9 @@
 
 ## Try it
 
-1. Open `docs/plans/README.md` (the template) and `.claude/skills/ticket/SKILL.md`.
+1. Open `.ai-plans/plan-template.md` (every plan's shape) and `.claude/skills/ticket/SKILL.md`.
 2. With the tracker running, start `claude` and type `/ticket ACME-105`. Stop when it has written
-   its plan in `docs/plans/` and asked its questions; read the plan.
+   its plan in `.ai-plans/` and asked its questions; read the plan.
 3. Quit, start `claude` again: the hook lists the plan, and the work can carry on from the file.
 4. Two tickets at once, each in its own folder (the same in PowerShell):
 
@@ -39,7 +40,7 @@
 
 - The plan survives `/compact`, a restart, another model or another person. It is committed, so it travels with the
   branch and the reviewer reads it next to the diff.
-- About 150 lines at most: a plan is for a person to read.
+- About 200 lines, a soft limit: a plan is for a person to read.
 - Two notes, two jobs: the plan is the ticket's record, committed and shared; the handoff is your session's, local
   and short. A note you wrote survives a new session; a summary the model wrote is its guess at what mattered.
 
