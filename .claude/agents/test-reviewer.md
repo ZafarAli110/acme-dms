@@ -100,6 +100,9 @@ failed. Put the line back. A test you watched fail is `— checked`.
 - **Report the class, not one line:** when you find a mistake, look for the same one elsewhere in the diff and report
   it once, naming every place, so the author fixes them all in one go.
 
+**Nothing found is a good result.** When the change is sound, say so: verdict `APPROVE`, 0 blocking / 0
+should-fix, and what you checked. Never stretch a doubt into a finding to have something to report.
+
 Report, and nothing else. It is posted on the pull request as it is, so each finding is a box to tick:
 
 ```
