@@ -30,6 +30,14 @@ function Add-ToPath($Folder) {
   Update-Path
 }
 
+# Windows PowerShell 5.1 turns a program's stderr into errors even with 2>$null, and this script stops on any error.
+# A command whose failure is fine (removing an alias that may not be there) runs through this instead.
+function Invoke-Quietly([scriptblock]$Command) {
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try { & $Command 2>$null } finally { $ErrorActionPreference = $previous }
+}
+
 # winget's codes for "it is already here": 0x8A15002B (no newer version to upgrade to) and 0x8A150061 (already
 # installed). Both mean the tool is there, so neither is a failure.
 $WingetAlreadyInstalled = @(-1978335189, -1978335135)
@@ -47,7 +55,7 @@ function Install-WithWinget($Id) {
 # A tool an earlier run installed may not be on this window's PATH yet (it was opened before): read it again first.
 Update-Path
 
-# ── Administrator, winget, and profiles that are allowed to run ─────────────────────────────────────────────────────
+# -- Administrator, winget, and profiles that are allowed to run -----------------------------------------------------
 $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
   [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $admin) {
@@ -77,14 +85,14 @@ if (-not $lasting -or $lasting -in @("Restricted", "AllSigned")) {
   Note "PowerShell already runs local scripts (execution policy $lasting)"
 }
 
-# ── 1. Git ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+# -- 1. Git ----------------------------------------------------------------------------------------------------------
 Say "Git"
 if (Have "git") { Note "already installed: $(git --version)" } else { Install-WithWinget "Git.Git" }
 
 Say "GitHub CLI"
 if (Have "gh") { Note "already installed: $((gh --version | Select-Object -First 1))" } else { Install-WithWinget "GitHub.cli" }
 
-# ── 2. Node.js 26, through fnm: your existing Node (if any) stays as it is ─────────────────────────────────────────
+# -- 2. Node.js 26, through fnm: your existing Node (if any) stays as it is -----------------------------------------
 Say "Node.js 26 (through fnm)"
 $existingNode = $null
 if (Have "node") { $existingNode = (node -v) }
@@ -117,8 +125,8 @@ $nodeVersion = (Get-Content (Join-Path $PSScriptRoot ".nvmrc") -Raw).Trim().Trim
 if ((fnm list) -match "v$([regex]::Escape($nodeVersion))") { Note "Node $nodeVersion already installed through fnm" } else { fnm install $nodeVersion }
 if ($existingNode) {
   # Keep your existing Node outside this folder: no fnm default. Then check it in a fresh PowerShell.
-  fnm unalias default 2>$null
-  $outside = powershell -NoProfile -Command "Set-Location `$HOME; $profileLine; node -v" 2>$null
+  Invoke-Quietly { fnm unalias default } | Out-Null
+  $outside = Invoke-Quietly { powershell -NoProfile -Command "Set-Location `$HOME; $profileLine; node -v" }
   if ($outside -eq $existingNode) {
     Note "your Node $existingNode is unchanged outside acme-dms; inside it, fnm uses Node 26"
   } else {
@@ -127,19 +135,19 @@ if ($existingNode) {
   }
 }
 
-# ── 3. Bun ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+# -- 3. Bun ----------------------------------------------------------------------------------------------------------
 Say "Bun"
 if (Have "bun") { Note "already installed: bun $(bun --version)" } else {
   powershell -NoProfile -ExecutionPolicy Bypass -Command "irm bun.sh/install.ps1 | iex"
   Add-ToPath "$env:USERPROFILE\.bun\bin"
 }
 
-# ── 4. .NET 10 SDK ──────────────────────────────────────────────────────────────────────────────────────────────────
+# -- 4. .NET 10 SDK --------------------------------------------------------------------------------------------------
 Say ".NET 10 SDK"
 $sdks = if (Have "dotnet") { (dotnet --list-sdks) -join "`n" } else { "" }
 if ($sdks -match "(?m)^10\.") { Note "already installed: .NET SDK $((dotnet --list-sdks | Select-String '^10\.' | Select-Object -Last 1).ToString().Split(' ')[0])" } else { Install-WithWinget "Microsoft.DotNet.SDK.10" }
 
-# ── 5. Docker Desktop (needs WSL 2) ─────────────────────────────────────────────────────────────────────────────────
+# -- 5. Docker Desktop (needs WSL 2) ---------------------------------------------------------------------------------
 Say "Docker Desktop"
 $dockerApp = "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"
 $restart = $false
@@ -154,18 +162,26 @@ if ((Test-Path $dockerApp) -or (Have "docker")) { Note "already installed" } els
   $restart = $true
 }
 
-# ── 6. Aspire CLI ───────────────────────────────────────────────────────────────────────────────────────────────────
+# -- 6. Aspire CLI ---------------------------------------------------------------------------------------------------
 Say "Aspire CLI"
-$aspireBin = "$env:USERPROFILE\.aspire\bin"
-if ((Have "aspire") -or (Test-Path "$aspireBin\aspire.exe")) {
-  Add-ToPath $aspireBin
-  Note "already installed"
-} else {
+# The official installer uses %USERPROFILE%\.aspire\bin; a .NET global tool (dotnet tool install -g aspire.cli) lives in
+# %USERPROFILE%\.dotnet\tools. Whichever folder holds aspire.exe goes on your PATH, so every new terminal finds it.
+$aspireFolders = @("$env:USERPROFILE\.aspire\bin", "$env:USERPROFILE\.dotnet\tools")
+function Find-AspireFolder { $aspireFolders | Where-Object { Test-Path (Join-Path $_ "aspire.exe") } | Select-Object -First 1 }
+$aspireFolder = Find-AspireFolder
+if (-not $aspireFolder -and -not (Have "aspire")) {
   powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://aspire.dev/install.ps1 | iex"
-  Add-ToPath $aspireBin
+  $aspireFolder = Find-AspireFolder
+} else {
+  Note "already installed"
+}
+if ($aspireFolder) {
+  Add-ToPath $aspireFolder
+} elseif (-not (Have "aspire")) {
+  Write-Host "  The Aspire CLI was not found after installing. Open a new terminal and run 'aspire --version'." -ForegroundColor Yellow
 }
 
-# ── 7. This repository's packages ───────────────────────────────────────────────────────────────────────────────────
+# -- 7. This repository's packages -----------------------------------------------------------------------------------
 Say "Packages (bun install)"
 bun install
 if ($LASTEXITCODE -ne 0) { throw "bun install failed" }
@@ -173,11 +189,11 @@ if ($LASTEXITCODE -ne 0) { throw "bun install failed" }
 git config core.hooksPath .githooks
 Note "pre-commit check switched on (.githooks)"
 
-# ── Done ────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# -- Done ------------------------------------------------------------------------------------------------------------
 Say "Installed"
 foreach ($check in @("git --version", "gh --version", "node -v", "bun --version", "dotnet --version", "aspire --version", "docker --version")) {
   $tool = $check.Split(" ")[0]
-  if (Have $tool) { Note "$($check.PadRight(18)) $(Invoke-Expression $check 2>$null | Select-Object -First 1)" } else { Note "$($check.PadRight(18)) (open a new terminal to see it)" }
+  if (Have $tool) { Note "$($check.PadRight(18)) $(Invoke-Quietly { Invoke-Expression $check } | Select-Object -First 1)" } else { Note "$($check.PadRight(18)) (open a new terminal to see it)" }
 }
 Write-Host ""
 if ($restart) { Write-Host "Restart Windows once (WSL 2 and Docker Desktop need it), then start Docker Desktop." -ForegroundColor Yellow }
