@@ -66,11 +66,9 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
           {entry.problem ?? message}
         </Typography>
         {running && (
-          <LinearProgress
-            variant={job.totalRows && job.rows > 0 ? "determinate" : "indeterminate"}
-            value={percent}
-            sx={{ my: 1 }}
-          />
+          // Determinate from the start, at 0% until rows are written: switching from the moving indeterminate stripe to
+          // a bar near 0% looked like progress going backwards. The status line and the timer show it is working.
+          <LinearProgress variant="determinate" value={percent} sx={{ my: 1 }} />
         )}
         {running && (
           <Typography variant="caption" color="text.secondary" component="div">

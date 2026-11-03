@@ -74,6 +74,8 @@
     "cancel": "Cancel",
     "download": "Download ({{size}} MB)",
     "close": "Close",
-    "customersTitle": "Customers of {{location}}"
+    "customersTitle": "Customers of {{location}}",
+    "confirmTitle": "Export to Excel?",
+    "confirmMessage": "{{total}} customers at {{location}}, with the search, sort, filter and columns shown now. A large export takes a few minutes; it runs in the background while you keep working."
   }
 }

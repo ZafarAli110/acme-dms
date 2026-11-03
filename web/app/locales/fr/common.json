@@ -74,6 +74,8 @@
     "cancel": "Annuler",
     "download": "Télécharger ({{size}} Mo)",
     "close": "Fermer",
-    "customersTitle": "Clients de {{location}}"
+    "customersTitle": "Clients de {{location}}",
+    "confirmTitle": "Exporter vers Excel ?",
+    "confirmMessage": "{{total}} clients de {{location}}, avec la recherche, le tri, le filtre et les colonnes affichés. Un gros export prend quelques minutes ; il tourne en arrière-plan pendant que vous continuez."
   }
 }

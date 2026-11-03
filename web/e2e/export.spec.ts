@@ -11,6 +11,7 @@ test.describe("exporting the customer list", () => {
     await expect(page.getByTestId("customers-table").locator(".MuiDataGrid-row").first()).toBeVisible();
 
     await page.getByTestId("export-customers").click();
+    await page.getByTestId("export-confirm").click();
 
     const download = page.getByTestId("export-download");
     await expect(download).toBeVisible({ timeout: 60_000 });
@@ -27,6 +28,7 @@ test.describe("exporting the customer list", () => {
     await expect(page.getByTestId("customers-table").locator(".MuiDataGrid-row").first()).toBeVisible();
 
     await page.getByTestId("export-customers").click();
+    await page.getByTestId("export-confirm").click();
     await page.getByTestId("export-cancel").click();
 
     await expect(page.getByTestId("export-status")).toHaveText(/Cancelled|rows, ready to download/);
