@@ -1,5 +1,5 @@
 ---
-name: web-form-page
+name: build-form-page
 description: Builds or changes a create or edit page with a form in the web app (React Router, React Hook Form, Valibot, TanStack Query). Use for any ticket that adds or changes a form the user fills in.
 ---
 
