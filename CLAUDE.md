@@ -65,6 +65,8 @@ dealership-api and web reload themselves; after changing identity-api, document-
    a rooftop sam doesn't work at. `maria`, the manager, works at all three. Anything stored is also checked as `tom`
    (City Motors, another dealer): he must see none of it, and an id of Northwind's must be "not found" for him.
 3. `bun run errors` shows nothing new.
+4. Every screen the change adds or alters has been looked at: screenshots at 1440 and 1024 wide with the
+   `check-in-browser` skill, read and described. Nothing overlaps, spills out or is cut off.
 
 Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, run the `verify-ticket`
 skill (`/verify-ticket <KEY>`): it runs the gate and the **verifier** subagent, and writes `docs/evidence/<KEY>.md`.
