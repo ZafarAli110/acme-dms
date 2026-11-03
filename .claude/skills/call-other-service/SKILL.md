@@ -1,5 +1,5 @@
 ---
-name: service-client
+name: call-other-service
 description: Calls another Acme service (document-api, identity-api) from dealership-api through a typed REST client - the interface, the generated types, the named HTTP client and its resilience preset, error translation and tests - keeping business logic in the handler. Use when a change needs another service to do or return something, or changes how one is called.
 ---
 

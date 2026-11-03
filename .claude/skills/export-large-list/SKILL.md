@@ -1,5 +1,5 @@
 ---
-name: large-export
+name: export-large-list
 description: Builds an export (Excel or CSV) of a list or report that can be large, e.g. the customer list with a million rows. Use for any "export to Excel", "download as a file" or report of a table that can grow, in dealership-api and the web app.
 ---
 

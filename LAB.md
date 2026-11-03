@@ -13,7 +13,7 @@ ACME-108 (export the customer list) as the agent built it, with the lesson it wr
 1. `git diff lab/09-export-before lab/09-export-after --stat`: what one ticket changed.
 2. Read `docs/lessons/ACME-108.md`: what went wrong on the way, and the evidence for each lesson.
 3. Start the system (`bun run dev`), sign in, and export the customer list. Watch the export panel closely: one thing
-   in it is not right. Find it, then ask Claude to fix it with the harness (`/ticket`, then `/verify`).
+   in it is not right. Find it, then ask Claude to fix it with the harness (`/implement-ticket`, then `/verify-ticket`).
 
 ## What to notice
 

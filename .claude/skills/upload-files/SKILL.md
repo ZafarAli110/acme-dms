@@ -1,5 +1,5 @@
 ---
-name: file-uploads
+name: upload-files
 description: Accepts files with a record (photos, documents, attachments) - the multipart endpoint, the feature's type, size and count rules, storage in document-api and its processed or failed events, and the web form that sends them. Use when a ticket uploads, attaches, replaces or removes a file, or shows an uploaded image.
 ---
 
@@ -7,8 +7,8 @@ description: Accepts files with a record (photos, documents, attachments) - the 
 
 A file is never stored by the feature that receives it. dealership-api checks it against the feature's rules, hands it
 to **document-api**, and keeps a reference (`documentId`) and a status (`pending` → `ready` | `failed`) on its own row.
-The standard behind this: `docs/standards/file-uploads.md`. The working example is the part edit:
-`PATCH /v1/parts/{id}` → `UpdatePartCommandHandler` (`backend/dealership-api/src/business-logic/handlers/parts/update/`).
+The standard behind this: `docs/standards/file-uploads.md`. The working example is the part edit: `PATCH /v1/parts/{id}`
+→ `UpdatePartCommandHandler` (`backend/dealership-api/src/business-logic/handlers/parts/update/`).
 
 ## Who owns what
 

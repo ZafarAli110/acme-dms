@@ -1,6 +1,6 @@
 ---
-name: ticket
-description: Takes a tracker ticket from To Do to a verified change, keeping a plan file that survives compaction, a restart or a different model. Use when asked to work on a ticket, e.g. /ticket ACME-106, or to continue one.
+name: implement-ticket
+description: Takes a tracker ticket from To Do to a verified change, keeping a plan file that survives compaction, a restart or a different model. Use when asked to work on a ticket, e.g. /implement-ticket ACME-106, or to continue one.
 disable-model-invocation: true
 ---
 
@@ -26,7 +26,7 @@ Otherwise:
    is a soft limit: past it, check whether this is really two tickets, and say so if it is.
 4. **The design gate.** When the ticket adds or changes a screen, decide which design it is, in this order:
    - **Given:** the ticket carries a design (an image, a screenshot, a Figma link). Build from it, and check the
-     result against it with the `browser` skill's screenshot, if this branch has it.
+     result against it with the `check-in-browser` skill's screenshot, if this branch has it.
    - **Follows:** the change fits an existing screen (a field on a form, a list like Parts). Name that screen and copy
      its pattern; nothing to draw.
    - **Open:** a new screen, or a new part of one (a search box, a panel, a dialog), and nothing says how it looks.
@@ -37,8 +37,8 @@ Otherwise:
      the Design field and Decisions. No UI code until then.
 5. **Check it before you show it:**
    - every section of the template is there, in its order, or says "N/A: <reason>";
-   - every file in Files exists, or is marked **new**; the high-level code shows the logic that matters (a query, the order of
-     steps), and every name in it was found in the code or is marked new: no invented helpers;
+   - every file in Files exists, or is marked **new**; the high-level code shows the logic that matters (a query, the
+     order of steps), and every name in it was found in the code or is marked new: no invented helpers;
    - every acceptance row has a verb and something a person can see, and there is at least one failure row;
    - Scope matches the number of files; Status and Now are true.
 6. Show the plan as a person reads it: Status and Now, the requirement and the acceptance criteria, then what you need
@@ -52,5 +52,5 @@ plan first, then the code. An acceptance box is ticked only when something check
 
 ## Finish
 
-Run the `verify` skill. Link `docs/evidence/<KEY>.md` from the plan, tick the last step only when verification passed,
-and set Status to "Done".
+Run the `verify-ticket` skill. Link `docs/evidence/<KEY>.md` from the plan, tick the last step only when verification
+passed, and set Status to "Done".
