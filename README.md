@@ -161,19 +161,16 @@ Open a **new** terminal (so it sees the new `PATH`; on Windows an ordinary Power
 folder with `cd ~/acme-dms`, and run the check commands from the table. The tests use Docker too: dealership-api's
 tests run against a real Postgres that [Testcontainers](https://testcontainers.com) starts in Docker for each run.
 
-### 5. Sign in to GitHub, and fork
+### 5. Sign in to GitHub
 
-Lab 10's agents push a branch and open a pull request, so they need your GitHub account and a copy of the repository
-you can push to. Once, in the `acme-dms` folder:
+Lab 10's agents open a pull request and comment on it with the GitHub CLI, so it needs your account. Once:
 
 ```bash
-gh auth login         # GitHub.com, HTTPS, log in with a web browser
-gh repo fork --remote # your own copy on GitHub; origin is now yours, upstream is this one
-gh repo set-default   # choose your fork, so pull requests open there and not here
+gh auth login   # GitHub.com, HTTPS, log in with a web browser
 ```
 
-The same in PowerShell. Check with `git remote -v` (`origin` is your fork, `upstream` is `ZafarAli110/acme-dms`) and
-`gh repo set-default --view` (your fork).
+The same in PowerShell. A pull request needs a repository you can push to: on a clone of this one, lab 10's run
+stops at the push. To go all the way, push your clone to a repository of your own and make that `origin`.
 
 ## Run it
 
