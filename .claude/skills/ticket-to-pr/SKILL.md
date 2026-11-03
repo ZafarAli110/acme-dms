@@ -13,7 +13,6 @@ The ticket's plan (`.ai-plans/*_$ARGUMENTS_*.md`) is the run's memory: write eve
 **Stop and report** (what was done, where it stopped, what is needed) when:
 
 - the plan has an open product question, or a screen with no design and no pick yet (step 1);
-- the architect sends the plan back a second time;
 - a step's check fails three times;
 - a reviewer's finding is still open after two rounds of fixes;
 - anything would need a committed migration edited, a secret, a force-push, or a push to `main` or a `lab/` branch.
@@ -36,9 +35,10 @@ The ticket's plan (`.ai-plans/*_$ARGUMENTS_*.md`) is the run's memory: write eve
 
 ## 2. Architect review
 
-Start the **architect** subagent with the ticket key and the plan's path, and nothing else. It returns `APPROVED` or
-`CHANGES` with findings. Fix the plan and send it again. An approved plan is the go-ahead the `implement-ticket` skill
-would otherwise ask a person for.
+Step 1 already ran the one architect round (`implement-ticket`, "One architect round, always"): the plan was fixed for
+its findings and its verdict is in the Log. That round is the go-ahead the `implement-ticket` skill would otherwise ask
+a person for. It is not run again. If it moved a product decision into Questions, the questions gate (step 1) has
+already stopped the run.
 
 ## 3. Build
 
@@ -47,7 +47,7 @@ step that passes, have the **git** subagent commit it (`$ARGUMENTS: <what the st
 
 ## 4. Verify and open the pull request
 
-1. Run the `verify-ticket` skill. It runs the gate, the verifier and the clean-code-reviewer, writes
+1. Run the `verify-ticket` skill. It runs the gate and the verifier, writes
    `docs/evidence/$ARGUMENTS.md`, comments on the ticket and moves it to `in-review`.
 2. Have the **git** subagent push the branch (`git push -u origin $ARGUMENTS`) and open the pull request into the base
    branch from step 1: `gh pr create --base <base> --title "$ARGUMENTS: <title>" --body-file <file>`, the body being
@@ -61,8 +61,7 @@ Start, in parallel, each reviewer whose area the diff touches, each with the tic
 - **security-reviewer**: authentication, permissions, user input, file uploads, or a query built from input.
 - **performance-reviewer**: a query, a list or an export, or anything done per row.
 - **test-reviewer**: always.
-
-The clean-code-reviewer already ran in `verify-ticket`; run it again only if the code changed since.
+- **clean-code-reviewer**: always.
 
 **Check before you post.** For each `blocking` finding, open the file and line it cites and read what the code does.
 A finding the code plainly contradicts is not posted: record it in `docs/lessons/reviewers.md` under "Wrong", with
