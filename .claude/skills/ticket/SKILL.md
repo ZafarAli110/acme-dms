@@ -37,8 +37,8 @@ Otherwise:
      the Design field and Decisions. No UI code until then.
 5. **Check it before you show it:**
    - every section of the template is there, in its order, or says "N/A: <reason>";
-   - every file in Files exists, or is marked **new**; every name in the high-level code was found in the code, or
-     is marked new: no invented helpers;
+   - every file in Files exists, or is marked **new**; the high-level code shows the logic that matters (a query, the order of
+     steps), and every name in it was found in the code or is marked new: no invented helpers;
    - every acceptance row has a verb and something a person can see, and there is at least one failure row;
    - Scope matches the number of files; Status and Now are true.
 6. Show the plan as a person reads it: Status and Now, the requirement and the acceptance criteria, then what you need

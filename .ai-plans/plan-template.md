@@ -56,11 +56,20 @@ Files (each checked to exist, or marked **new**):
 1. `path/to/file.ts`: <what changes>
 2. `path/to/new-file.ts` (**new**): <what it is>
 
-High-level code: signatures and shapes only, no bodies; every name checked to exist or marked new.
+High-level code: enough to judge the approach, not the finished code. For each key piece, its signature and the
+logic that matters in a few lines: the query with its `where`, the order of steps in a handler, the branch that
+decides. Leave out what the pattern in Follows already shows. Every name checked to exist, or marked new.
 
 ```ts
-// path/to/file.ts
-export function name(input: Input): Promise<Output>;
+// business-logic/handlers/parts/create/create-part.command-handler.ts (new)
+public async executeAsync(userContext: UserContext, request: PartCreateRequestDto, files: PartPhotoUploadRequestDto[]): Promise<PartResponseDto> {
+  // 1. validate everything before writing anything
+  const [taken] = await work.db.select({ id: parts.id }).from(parts)
+    .where(and(eq(parts.dealerId, userContext.dealerId), eq(parts.partNumber, request.partNumber), notDeleted(parts)));
+  if (taken) { throw new ConflictException(`Part ${request.partNumber} already exists.`); }
+  files.forEach(validatePhotoFile);
+  // 2. upload, keeping each document id; 3. one transaction: part, inventory, photos; 4. on failure delete the uploads
+}
 ```
 
 **Impact:** Breaking changes: None | <who calls this and what changes for them> · Depends on: <a service, a migration,
