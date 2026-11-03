@@ -6,13 +6,14 @@
 
 - The steps for building a form page left `CLAUDE.md` (107 lines → 78) for a skill,
   `.claude/skills/web-form-page/SKILL.md`. Until a task needs it, only its description loads.
-- Two more skills: `api-endpoint` (a backend change) and `file-uploads` (a record with its files).
+- Three more skills: `api-endpoint` (a backend change), `file-uploads` (a record with its files) and
+  `service-client` (a call to another service).
 - `.claude/rules/web.md`: the web rules, loaded only when Claude works on a file under `web/`.
 
 ## Try it
 
 1. Start `claude`, type `/context all` and compare with lab 05: **Memory files** goes down, **Skills** goes up by
-   three descriptions.
+   four descriptions.
 2. Open `.claude/skills/web-form-page/SKILL.md` and read the `description` line: it is what Claude matches a task
    against.
 3. In a new session: `Plan only, change nothing: add an edit page for a customer's car.` Claude should load
