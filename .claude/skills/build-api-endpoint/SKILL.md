@@ -1,5 +1,5 @@
 ---
-name: api-endpoint
+name: build-api-endpoint
 description: Adds an API endpoint, or changes what one returns or saves, in dealership-api (NestJS, Drizzle) or the .NET services - from the scope of the data to the DTOs, handler, controller and its test. Use when a ticket needs data the API does not give yet, or a new rule when something is read or saved.
 ---
 
@@ -14,7 +14,7 @@ same kind rather than starting from a blank file:
 | a list for the user's location      | `customers/get-list/` (search, one sort, one filter, paging) |
 | one record                          | `customers/get/`                                             |
 | create, with a uniqueness check     | `bins/create/` (and its `__test__/`)                         |
-| change some fields (PATCH)          | `parts/update/`; with files, also the `file-uploads` skill   |
+| change some fields (PATCH)          | `parts/update/`; with files, also the `upload-files` skill   |
 | identity-api or document-api (.NET) | `references/dotnet.md`                                       |
 
 ## 1. Decide whose data it is, first

@@ -64,8 +64,8 @@ dealership-api and web reload themselves; after changing identity-api, document-
    (City Motors, another dealer): he must see none of it, and an id of Northwind's must be "not found" for him.
 3. `bun run errors` shows nothing new.
 
-Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, run the `verify` skill
-(`/verify <KEY>`): it runs the gate, the **verifier** and **clean-code-reviewer** subagents, and writes
+Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, run the `verify-ticket`
+skill (`/verify-ticket <KEY>`): it runs the gate, the **verifier** and **clean-code-reviewer** subagents, and writes
 `docs/evidence/<KEY>.md`.
 
 ## Where to find what
@@ -76,8 +76,8 @@ Say what you ran and what it returned. "Should work" is not done. Before calling
 The skills in `.claude/skills/` hold the procedures for the common kinds of change: an API endpoint, file uploads, a
 call to another service, a web form page.
 
-Work a ticket with `/ticket <KEY>`. Its plan, `.ai-plans/<date>_<KEY>_<name>.md`, is the record of the work: if one
-exists, read it before doing anything else on that ticket.
+Work a ticket with `/implement-ticket <KEY>`. Its plan, `.ai-plans/<date>_<KEY>_<name>.md`, is the record of the work:
+if one exists, read it before doing anything else on that ticket.
 
 The backlog is the **acme-tracker** MCP server (`.mcp.json`): read a ticket with `get_ticket` rather than asking for it
 to be pasted. Moving a ticket or commenting on it is visible to the whole team.
