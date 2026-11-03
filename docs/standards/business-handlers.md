@@ -64,6 +64,34 @@ tokens, and the plain types and constants they use. Every interface has an imple
 handler interface has no handler. A type two layers share (an error, a constant) may live here too; its comment says
 what it means, never behaviour that another layer is supposed to have.
 
+## Calling another service: the client carries, the handler decides
+
+A REST client (`rest-clients/<service>/`) is how a request reaches another Acme service, and nothing more. Business
+logic lives in the handler that calls it. The layer rules already keep a client away from the database and the
+handlers (it may not import `#persistence/**` or `#business-logic/**`); this keeps it from growing logic of its own.
+
+**One client method is one request** to one endpoint of the other service. It may:
+
+- build the URL and the headers (the user's token and location, so the other service makes its own checks);
+- turn our command into the other service's request, and its response into our type (its types are generated from
+  its OpenAPI document: `bun run generate:clients`);
+- run through the service's resilience preset, with retries for idempotent calls only (never an upload);
+- translate failure: a refusal (4xx) keeps the other service's reason, anything else is `503 Service Unavailable`,
+  the original error as the `cause`. A `404` on a delete may count as done ("already gone"): that is what an
+  idempotent delete means, not a business rule, and the method says so.
+
+It never:
+
+- decides whether to call, or calls once per record in a loop;
+- chains two requests, or cleans up after a failure (the handler deletes the documents it uploaded);
+- checks our rules (file types, counts, permissions) or reads our data;
+- knows our business words. A method or a branch that names something the other service has never heard of (a part,
+  a default photo, a reorder level) is in the wrong place.
+
+The handler depends on the interface in `business-logic-abstractions/rest-clients/`, never the class. The client's own
+test checks only the transport (the request it sends, how it reads each answer); handler tests use the fake in
+`src/test-setup/` and test the decisions.
+
 ## Adding a use case
 
 1. Request/response DTOs in `dto/` (responses are interfaces/records; requests are validated classes).
