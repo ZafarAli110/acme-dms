@@ -44,6 +44,9 @@ done
 say "Git"
 if git --version >/dev/null 2>&1; then note "already installed: $(git --version)"; else brew install git; fi
 
+say "GitHub CLI"
+if have gh; then note "already installed: $(gh --version | head -1)"; else brew install gh; fi
+
 # ── 3. Node.js 26, through fnm: your existing Node (if any) stays as it is ─────────────────────────────────────────
 say "Node.js 26 (through fnm)"
 existing_node=""
@@ -107,9 +110,10 @@ note "pre-commit check switched on (.githooks)"
 
 # ── Done ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 say "Installed"
-for check in "git --version" "node -v" "bun --version" "dotnet --version" "aspire --version" "docker --version"; do
+for check in "git --version" "gh --version" "node -v" "bun --version" "dotnet --version" "aspire --version" "docker --version"; do
   tool="${check%% *}"
   if have "$tool"; then printf '  %-18s %s\n' "$check" "$($check 2>/dev/null | head -1)"; else printf '  %-18s %s\n' "$check" "(open a new terminal to see it)"; fi
 done
 echo
 echo "Open a new terminal in this folder, start Docker Desktop (open -a Docker), then: bun run dev"
+echo "Once, for lab 10's pull requests: gh auth login, gh repo fork --remote, gh repo set-default (README, Setup, step 5)"
