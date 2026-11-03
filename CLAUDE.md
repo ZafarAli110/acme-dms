@@ -64,8 +64,8 @@ dealership-api and web reload themselves; after changing identity-api, document-
    (City Motors, another dealer): he must see none of it, and an id of Northwind's must be "not found" for him.
 3. `bun run errors` shows nothing new.
 
-Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, run the `verify` skill
-(`/verify <KEY>`): it runs the gate, the **verifier** and **clean-code-reviewer** subagents, and writes
+Say what you ran and what it returned. "Should work" is not done. Before calling a ticket done, run the `verify-ticket`
+skill (`/verify-ticket <KEY>`): it runs the gate, the **verifier** and **clean-code-reviewer** subagents, and writes
 `docs/evidence/<KEY>.md`.
 
 ## Where to find what
