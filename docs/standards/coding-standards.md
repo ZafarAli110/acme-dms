@@ -19,6 +19,30 @@
   a PATCH request body: it carries only the fields to change, and a field left out keeps its value.
 - Updates: PATCH when the client changes some fields (`PATCH /v1/parts/{id}`); PUT when it sets the whole thing
   (`PUT /v1/stock/{partId}` sets quantity and reorder level together; `PUT /v1/customers/{id}` sends every field).
+- **A PATCH field has three states**, and the request DTO, the handler and the tests keep all three apart:
+
+  | In the PATCH body      | Means           | The handler               |
+  | ---------------------- | --------------- | ------------------------- |
+  | left out (`undefined`) | keep the value  | does not touch the column |
+  | `null`                 | clear the value | sets the column to `null` |
+  | a value                | set the value   | sets the column           |
+
+  A required field has only two states: `@ValidateIf((_request, value) => value !== undefined)` then `@IsNotEmpty()`
+  lets it be left out but rejects `null` (`PartUpdateRequestDto.description`). Test each state of each optional field:
+  one test that leaves it out, one that sends `null`, one that sends a value.
+
+  ```ts
+  // ✅ each state kept apart (UpdatePartCommandHandler); `notes` stands for any optional field
+  .set({
+    ...(request.description === undefined ? {} : { description: request.description }),
+    ...(request.notes === undefined ? {} : { notes: request.notes }), // null clears it
+  })
+
+  // ❌ a truthy check: a price of 0 is never saved, and notes sent as null are never cleared
+  ...(request.unitPrice ? { unitPrice: request.unitPrice } : {}),
+  ...(request.notes ? { notes: request.notes } : {}),
+  ```
+
 - Time: a moment (created, updated, processed) is stored as `timestamptz` and is UTC everywhere, and is sent as ISO
   8601 with `Z` (`2026-10-28T09:15:00.000Z`). A calendar day with no time (a customer's last contact) is a `date`,
   sent as `YYYY-MM-DD`, so a time zone can never move it to the day before.
