@@ -1,6 +1,7 @@
 import { once } from "node:events";
 import { PassThrough, type Readable } from "node:stream";
 import yazl from "yazl";
+import { dateSerial, escapeXml, textCell } from "./xlsx-cells";
 
 // A forward-only xlsx writer, the Node counterpart of OpenXmlWriter (SAX). Rows go straight into the zip as
 // XML text; nothing about earlier rows is kept, so memory stays flat whatever the row count.
@@ -19,9 +20,6 @@ export type XlsxRow = readonly (string | number | null)[];
 const XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 /** Rows are joined into chunks of about this many characters before they are written. */
 const CHUNK_CHARS = 256_000;
-const DAY_MS = 86_400_000;
-/** Excel's day 0 is 1899-12-30; 1970-01-01 is day 25569. */
-const UNIX_EPOCH_SERIAL = 25_569;
 
 // cellXfs indexes in STYLES: 0 normal, 1 date, 2 money, 3 bold (headers).
 const STYLE_BY_KIND: Record<XlsxCellKind, string> = { text: "", integer: "", money: ' s="2"', date: ' s="1"' };
@@ -40,18 +38,6 @@ const STYLES =
   "</cellXfs>" +
   '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
   "</styleSheet>";
-
-function escapeXml(text: string): string {
-  return text.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch);
-}
-
-function textCell(text: string, style = ""): string {
-  return `<c t="inlineStr"${style}><is><t>${escapeXml(text)}</t></is></c>`;
-}
-
-function dateSerial(isoDate: string): number {
-  return Date.parse(isoDate) / DAY_MS + UNIX_EPOCH_SERIAL;
-}
 
 /** Writes rows into sheets of at most MAX_DATA_ROWS_PER_SHEET, each with a bold header row. */
 export class XlsxWorkbookWriter {
