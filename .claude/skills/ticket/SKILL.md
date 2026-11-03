@@ -28,6 +28,14 @@ Decisions the ticket and the standards leave open, one per line, each saying wha
 say whether …; checked <file or ticket>. A or B?" Facts are not questions: find them in the code, the docs, the
 tracker or the running system. Write "None" when nothing is open.
 
+## Design
+
+Only when the ticket adds or changes a screen; otherwise "No screen". One of:
+
+- Given: <the image, screenshot or Figma link on the ticket>. Build from it; check the result against it.
+- Follows: <the existing screen it copies, e.g. CustomerEdit>. That screen is the design.
+- Open: prototypes in docs/prototypes/<KEY>/, waiting for a pick. → Picked: <variant>, by <who>, <date>.
+
 ## Requirements
 
 Every requirement in the ticket, one per line, in the ticket's words, including the ones mentioned in passing. Then
@@ -59,8 +67,19 @@ The plan is for a person to read: one line per item, no paragraphs, a link to a 
 signatures rather than code. About 150 lines at most; if the work will not fit, it is more than one ticket: say so
 and stop.
 
-4. Show the questions first, then the requirements, shape and steps. Wait for the answers and a go-ahead before
-   changing code.
+4. **The design gate.** When the ticket adds or changes a screen, decide which design line it is, in this order:
+   - **Given:** the ticket carries a design (an image, a screenshot, a Figma link). Build from it, and check the
+     result against it with the `browser` skill's screenshot, if this branch has it.
+   - **Follows:** the change fits an existing screen (a field on a form, a list like Parts). Name that screen and copy
+     its pattern; nothing to draw.
+   - **Open:** a new screen, or a new part of one (a search box, a panel, a dialog), and nothing says how it looks.
+     Do **not** design it on your own in the real code. Make two or three static prototypes in
+     `docs/prototypes/<KEY>/` (`a.html`, `b.html`, `c.html`): plain HTML in the app's look, with the real labels and
+     sample rows, nothing wired up. Each differs in one real choice (where the search goes, a dialog or a page), named
+     in a comment at its top. Ask the product owner to pick, with your recommendation first, and record the pick in
+     Design and Decisions. No UI code until then.
+5. Show the questions and the design first, then the requirements, shape and steps. Wait for the answers, the pick
+   and a go-ahead before changing code.
 
 ## Work
 
