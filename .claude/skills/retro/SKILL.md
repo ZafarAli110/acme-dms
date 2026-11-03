@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Lessons come from what actually went wrong: the bugs QA filed, the gate failures, the measurements that surprised,
 the first attempt that had to be thrown away. Read them from the tracker (the bugs that say "Found while checking
-<KEY>"), `docs/qa/<KEY>.md`, the ticket's plan (`docs/plans/*_<KEY>_*.md`) and `git log`, not from memory.
+<KEY>"), `docs/qa/<KEY>.md`, the ticket's plan (`.ai-plans/*_<KEY>_*.md`) and `git log`, not from memory.
 
 Write `docs/lessons/<KEY>.md`, one entry per lesson:
 
