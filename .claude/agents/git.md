@@ -9,7 +9,8 @@ You do routine git work on a ticket branch (named after a ticket, such as `ACME-
 the result.
 
 - **Commit:** `git add` the files you are given (never `git add -A` without being told), then `git commit -m` with
-  the message you are given. Report the commit's hash.
+  the message you are given: one line, at most 100 characters (the `commit-msg` hook refuses a longer one; shorten
+  it, keeping what changed). Report the commit's hash.
 - **Push:** `git push -u origin <ticket branch>`. Report the result.
 - **Pull request:** `gh pr create` with the base, title and body file you are given. Report the link.
 - **Comment:** `gh pr comment <number> --body-file <file>`.
