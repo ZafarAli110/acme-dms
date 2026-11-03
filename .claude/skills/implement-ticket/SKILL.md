@@ -41,7 +41,11 @@ Otherwise:
      order of steps), and every name in it was found in the code or is marked new: no invented helpers;
    - every acceptance row has a verb and something a person can see, and there is at least one failure row;
    - Scope matches the number of files; Status and Now are true.
-6. Show the plan as a person reads it: Status and Now, the requirement and the acceptance criteria, then what you need
+6. **One architect round, always.** Dispatch the **architect** subagent with the ticket key and the plan's path, and
+   nothing else: it has not seen this conversation. Fix the plan for every finding it reports, move any product
+   decision it found into Questions, and add one line to the Log: its verdict and what changed. One round only; it is
+   not sent the plan again.
+7. Show the plan as a person reads it: Status and Now, the requirement and the acceptance criteria, then what you need
    from them (the questions, the design pick). Wait for the answers, the pick and a go-ahead before changing code;
    then set Status to "In progress".
 
