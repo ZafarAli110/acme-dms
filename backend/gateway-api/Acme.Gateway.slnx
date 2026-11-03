@@ -1,7 +1,7 @@
 <Solution>
-  <Project Path="Acme.Gateway/Acme.Gateway.csproj" />
+  <Project Path="src/Acme.Gateway/Acme.Gateway.csproj" />
   <Folder Name="/tests/">
     <Project Path="tests/Acme.Gateway.Tests/Acme.Gateway.Tests.csproj" />
   </Folder>
-  <Project Path="../service-defaults/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
+  <Project Path="../service-defaults/src/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
 </Solution>

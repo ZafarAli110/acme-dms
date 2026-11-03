@@ -16,7 +16,7 @@
     <Project Path="backend/document-api/tests/Acme.Documents.Tests/Acme.Documents.Tests.csproj" />
   </Folder>
   <Folder Name="/backend/gateway-api/">
-    <Project Path="backend/gateway-api/Acme.Gateway/Acme.Gateway.csproj" />
+    <Project Path="backend/gateway-api/src/Acme.Gateway/Acme.Gateway.csproj" />
     <Project Path="backend/gateway-api/tests/Acme.Gateway.Tests/Acme.Gateway.Tests.csproj" />
   </Folder>
   <Folder Name="/backend/identity-api/" />
@@ -31,6 +31,6 @@
     <Project Path="backend/identity-api/tests/Acme.Identity.Tests/Acme.Identity.Tests.csproj" />
   </Folder>
   <Folder Name="/backend/service-defaults/">
-    <Project Path="backend/service-defaults/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
+    <Project Path="backend/service-defaults/src/Acme.ServiceDefaults/Acme.ServiceDefaults.csproj" />
   </Folder>
 </Solution>
