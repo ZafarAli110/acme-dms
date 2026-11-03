@@ -266,9 +266,10 @@ Every project, in either language, has the same targets, run through [Nx](https:
 **VS Code:** open the repository folder. It offers the extensions in `.vscode/extensions.json` (C# Dev Kit, oxlint, so
 lint errors show as you type, EditorConfig, Bun, Playwright) and opens `AcmeDms.slnx`, so every C# project loads.
 
-Every commit runs a quick check of the staged files first (`.githooks/pre-commit`, switched on by the setup script; `bun run hooks` if you set up before it existed):
-formatting, oxlint with each project's import rules, and C# whitespace. CI runs every check on `main`, every `lab/`
-branch and every pull request.
+Every commit runs a quick check of the staged files first (`.githooks/pre-commit`, switched on by the setup script;
+`bun run hooks` if you set up before it existed): formatting, oxlint with each project's import rules, and C#
+whitespace. Then `.githooks/commit-msg` refuses a message whose first line is over 100 characters. CI runs every
+check on `main`, every `lab/` branch and every pull request.
 
 Every service, the gateway included, answers `GET /v1/system/health` in the same shape, which Aspire polls:
 
