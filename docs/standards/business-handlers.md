@@ -125,8 +125,10 @@ What every export shares lives beside the handlers, in `business-logic/exports/`
 
 Controllers reach the queue through `EXPORT_JOBS` (`business-logic-abstractions/exports/`). A start handler takes the
 queue class itself, and `ExportSource` stays in `business-logic`: it holds database queries, which the abstractions
-may not depend on. A new export (parts, say) adds its start handler, its source in `sources/` and one line in
-`export-sources.ts`.
+may not depend on. `export-sources.ts` (the registry and `ExportSourceBuilder`) stays beside it for the same reason,
+and because only this layer uses it: the start handler checks a request with it, the worker runs a job with it. A type
+goes in the abstractions when another layer needs it, not because it is a type. A new export (parts, say) adds its
+start handler, its source in `sources/` and one line in `export-sources.ts`.
 
 ### The limits
 
