@@ -116,4 +116,4 @@ for check in "git --version" "gh --version" "node -v" "bun --version" "dotnet --
 done
 echo
 echo "Open a new terminal in this folder, start Docker Desktop (open -a Docker), then: bun run dev"
-echo "Once, for lab 10's pull requests: gh auth login, gh repo fork --remote, gh repo set-default (README, Setup, step 5)"
+echo "Once, for lab 10's pull requests: gh auth login (README, Setup, step 5)"

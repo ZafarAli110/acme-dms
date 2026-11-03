@@ -147,4 +147,4 @@ foreach ($check in @("git --version", "gh --version", "node -v", "bun --version"
 Write-Host ""
 if ($restart) { Write-Host "Restart Windows once (WSL 2 and Docker Desktop need it), then start Docker Desktop." -ForegroundColor Yellow }
 Write-Host "Open a new terminal in this folder, start Docker Desktop, then: bun run dev"
-Write-Host "Once, for lab 10's pull requests: gh auth login, gh repo fork --remote, gh repo set-default (README, Setup, step 5)"
+Write-Host "Once, for lab 10's pull requests: gh auth login (README, Setup, step 5)"
