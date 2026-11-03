@@ -84,6 +84,7 @@ failure; when QA is clean, `/retro <KEY>` writes what went wrong as lessons with
 
 `/ticket-to-pr <KEY>` runs a ticket with agents from the plan to a reviewed pull request: an **architect** agent
 approves the plan, specialist reviewers check the pull request. It stops for any product question; a person merges.
+`/resolve-pr-comments <number>` fixes a pull request's open review comments and answers them in one comment.
 
 Work a ticket with `/ticket <KEY>`. Its plan, `docs/plans/<KEY>.md`, is the record of the work: if one exists, read it
 before doing anything else on that ticket.

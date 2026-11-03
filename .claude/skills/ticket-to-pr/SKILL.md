@@ -7,9 +7,8 @@ argument-hint: <ticket key>
 
 # Ticket to pull request: $ARGUMENTS
 
-You run the whole loop for $ARGUMENTS with no person in between, except where this file says stop. Start the session
-with `claude --model opusplan`: Opus plans, Sonnet builds. The plan file `docs/plans/$ARGUMENTS.md` is the run's
-memory: write every verdict and every step to its log.
+You run the whole loop for $ARGUMENTS with no person in between, except where this file says stop. The plan file
+`docs/plans/$ARGUMENTS.md` is the run's memory: write every verdict and every step to its log.
 
 **Stop and report** (what was done, where it stopped, what is needed) when:
 
@@ -58,10 +57,11 @@ Start, in parallel, each reviewer whose area the diff touches, each with the tic
 - **performance-reviewer**: a query, a list or an export, or anything done per row.
 - **test-reviewer**: always.
 
-The coding-standards-reviewer already ran in `verify`; run it again only if the code changed since. Post each
-reviewer's report on the pull request as it is (`gh pr comment --body-file`). Fix every `blocking` and `should-fix`
-finding this change `introduced` (the ones `already there` stay open for a person), commit, push, and run again only
-the reviewer that found it. A `REJECT` stops the run: hand it to a person.
+The coding-standards-reviewer already ran in `verify`; run it again only if the code changed since. Post all their
+reports in one comment, as a "Review round" (`.claude/skills/ticket-to-pr/pr-comments.md`). Then fix every `blocking`
+and `should-fix` finding this change `introduced` (the ones `already there` stay open for a person) by following
+steps 3 to 5 of `.claude/skills/resolve-pr-comments/SKILL.md`, and run again only the reviewer that found it. A
+`REJECT` stops the run: hand it to a person.
 
 ## 6. Hand over
 
