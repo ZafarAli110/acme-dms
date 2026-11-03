@@ -7,7 +7,7 @@ disable-model-invocation: true
 # Handoff: write down where you stopped
 
 Replace `.claude/handoff.md` (not committed: it is your session's note, one per checkout or worktree) with what the
-next session needs to act. A ticket's plan (`docs/plans/<KEY>.md`) is the record of the ticket and is committed; the
+next session needs to act. A ticket's plan (`docs/plans/*_<KEY>_*.md`) is the record of the ticket and is committed; the
 handoff points to it and holds only what the plan does not.
 
 ## Check reality first
@@ -20,7 +20,7 @@ true now, not what was planned. If something was run, say what it returned.
 ```markdown
 # Handoff
 
-Updated: <date> · Branch: <branch> · Last commit: <short hash and subject> · Plan: <docs/plans/KEY.md, or none>
+Updated: <date> · Branch: <branch> · Last commit: <short hash and subject> · Plan: <its file in docs/plans/, or none>
 
 ## Where we are
 
