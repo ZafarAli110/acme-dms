@@ -8,6 +8,8 @@
   plan in `.ai-plans/<date>_<KEY>_<name>.md`, copied from `.ai-plans/plan-template.md`: its status first, then the
   requirement, the acceptance criteria as the goal, the shape with high-level code, the steps with their checks;
   questions, decisions and the log last.
+- One architect round on every plan: the `architect` subagent, which has not seen the conversation, reviews it
+  once before you do; the plan is fixed and its verdict logged.
 - A design gate in `/implement-ticket`: a screen the ticket shows is built from that design; one that follows an
   existing screen copies it; an open one gets two or three static prototypes in `docs/prototypes/<KEY>/` and a pick
   before any UI code.
