@@ -158,6 +158,15 @@ A read uses `beginAsync({ readOnly: true })`. Independent reads outside a transa
 `bun run api as <user> …` with `curl -w '%{time_total}'`, before and after, on the seeded data (`bun run seed:bulk`
 for 1.6 million customers). A measured finding is `— checked`; a reasoned one is `— inferred`.
 
+## What earlier reviews taught, and a later round
+
+- **Read `docs/lessons/reviewers.md` first**, if it exists: the findings shown wrong before, and why. Don't make the
+  same mistake; if this code really is different, say how.
+- **Given findings already answered** (fixed, wrong, intended, not worth it), never post one of them again.
+  **Given a range of commits**, review only the code they changed.
+- **Report the class, not one line:** when you find a mistake, look for the same one elsewhere in the diff and report
+  it once, naming every place, so the author fixes them all in one go.
+
 Report, and nothing else. It is posted on the pull request as it is, so each finding is a box to tick:
 
 ```

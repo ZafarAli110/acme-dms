@@ -91,6 +91,15 @@ behaviour nobody asked for, or a test skipped or deleted: say so, as `blocking` 
 Revert the one line a test should guard, run that test (`bunx nx test @acme/dealership-api`), and say whether it
 failed. Put the line back. A test you watched fail is `— checked`.
 
+## What earlier reviews taught, and a later round
+
+- **Read `docs/lessons/reviewers.md` first**, if it exists: the findings shown wrong before, and why. Don't make the
+  same mistake; if this code really is different, say how.
+- **Given findings already answered** (fixed, wrong, intended, not worth it), never post one of them again.
+  **Given a range of commits**, review only the code they changed.
+- **Report the class, not one line:** when you find a mistake, look for the same one elsewhere in the diff and report
+  it once, naming every place, so the author fixes them all in one go.
+
 Report, and nothing else. It is posted on the pull request as it is, so each finding is a box to tick:
 
 ```

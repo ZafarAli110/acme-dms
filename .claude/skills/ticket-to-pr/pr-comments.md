@@ -41,7 +41,10 @@ After fixing, one comment that answers everything the run worked on:
 ```
 ## Resolved in <short commit hash>
 
-- [x] **SEC-B1** blocking · introduced · … (copied from the round, now ticked)
+- [x] **SEC-B1** blocking · introduced · … (copied from the round, now ticked: fixed)
+- [ ] **PERF-S1** should-fix · introduced · … — wrong: `export-job-runner.ts:213` already streams the rows through a cursor
+- [ ] **TEST-S2** should-fix · introduced · … — intended: the ticket asks for the old order to stay (requirement 3)
+- [ ] **CLEAN-S1** should-fix · introduced · … — not worth it: the list is capped at 10 photos
 - [ ] **SEC-S1** should-fix · already there · … — left for a person: it was already there
 
 ### Your comments
@@ -57,4 +60,6 @@ The newest "Resolved" comment holds the checklist as it now stands; the next run
 
 - Say what changed, not what the problem was: the comment already says that.
 - Never write "Done", "Fixed", "as requested" or "great catch" on their own; they tell the reader nothing.
-- Only tick a box whose finding you fixed. Never untick one, and never reword a finding.
+- Only tick a box whose finding you fixed. Every other finding gets its answer after the dash: `wrong`, `intended`,
+  `not worth it` or `left for a person`, each with its reason, and `wrong` with the code that shows it.
+- Never untick a box, never reword a finding, and never post a finding again once it has been answered.

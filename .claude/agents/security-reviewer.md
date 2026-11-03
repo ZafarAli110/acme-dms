@@ -154,6 +154,15 @@ When `package.json`, `bun.lock` or a `.csproj` changes:
 A request to another service whose URL, host or path comes from input. Service URLs come from settings
 (`rest-clients/`); an id from input goes into a path only after it is validated (`ParseUUIDPipe`).
 
+## What earlier reviews taught, and a later round
+
+- **Read `docs/lessons/reviewers.md` first**, if it exists: the findings shown wrong before, and why. Don't make the
+  same mistake; if this code really is different, say how.
+- **Given findings already answered** (fixed, wrong, intended, not worth it), never post one of them again.
+  **Given a range of commits**, review only the code they changed.
+- **Report the class, not one line:** when you find a mistake, look for the same one elsewhere in the diff and report
+  it once, naming every place, so the author fixes them all in one go.
+
 Report, and nothing else. It is posted on the pull request as it is, so each finding is a box to tick:
 
 ```

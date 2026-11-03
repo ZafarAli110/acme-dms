@@ -1,6 +1,6 @@
 ---
 name: resolve-pr-comments
-description: Works through a pull request's open review comments and the agent's unticked review findings - fixes each one, pushes, and answers them all in one comment. Started by a person with the pull request number, e.g. /resolve-pr-comments 12.
+description: Works through a pull request's open review comments and the agent's unticked review findings - checks whether each is real, fixes the real ones, answers the rest with the evidence, pushes, and replies to them all in one comment. Started by a person with the pull request number, e.g. /resolve-pr-comments 12.
 disable-model-invocation: true
 argument-hint: "[pull request number]"
 ---
@@ -28,27 +28,48 @@ A comment on a single line of the diff can't be read with these commands: ask re
 summary or a comment, and name the file and line. If nothing is open, say so and stop. Otherwise print the list once
 (the id or the author, the file and line, the first line) and carry on without waiting.
 
-## 3. Fix each one
+## 3. Judge each one, then fix it or answer it
 
-In order, for each:
+A reviewer can be wrong, and a finding that sounds sure is not proof. In order, for each:
 
 1. Read the comment, the file it names in full, and the standards it touches.
-2. Make the change it asks for, the way the standards say.
-3. Note, in one or two sentences, what changed.
+2. **Decide from the code, not from the comment's tone**, which of these it is:
+   - **real**: the code does what the finding says, and it matters. Make the change, the way the standards say, and
+     fix every place the same mistake appears in the diff, not only the line named.
+   - **wrong**: the code does not do what the finding says. Change nothing; the answer quotes the code that shows it
+     (`file:line`, and what that line really does).
+   - **intended**: true, but on purpose: the ticket, a standard or a comment in the code asks for it. Change nothing;
+     the answer names where.
+   - **not worth it**: true and harmless here, at the sizes this system has. Change nothing; say why. A person may
+     disagree.
+3. Note, in one or two sentences, what changed or why nothing did.
 
 Skip one that is unclear, asks for something outside the ticket, or goes against a standard, and note why: a person
 decides those. Don't stop to ask.
 
+## 3a. Record what the reviewers got wrong, and what they missed
+
+In `docs/lessons/reviewers.md` (its format is at the top of the file):
+
+- each agent finding you judged **wrong**, under "Wrong": the reviewer, the finding, why it was wrong, the evidence;
+- each **real** bug a person's comment found that no reviewer flagged, under "Missed": the bug, and what the reviewer
+  did not have in front of it (a rule nobody wrote down, a file it did not read, a check that does not exist).
+
+This file is how the reviewers learn: they read it before every review, and `/learn` turns what repeats into their
+instructions.
+
 ## 4. Prove it, commit, push
 
-`bun run gate:fast` passes. Then have the **git** subagent commit (`<KEY>: address review comments on #<number>`)
+`bun run gate:fast` passes. Then have the **git** subagent commit, with the fixes and `docs/lessons/reviewers.md` (`<KEY>: address review comments on #<number>`)
 and push (`git push -u origin <KEY>`).
 
 ## 5. Answer, in one comment
 
-One `gh pr comment <number> --body-file <file>` in the "Resolved" format: the checklist with each fixed box ticked, a
-short answer under each person's comment, and what was skipped and why.
+One `gh pr comment <number> --body-file <file>` in the "Resolved" format: the checklist with each fixed box ticked and
+every other finding answered (wrong, intended, not worth it, or left for a person, each with its reason), a short
+answer under each person's comment, and what was skipped and why.
 
 ## 6. Report
 
-The commit, the link to the comment, what was fixed, what was skipped and why.
+The commit, the link to the comment, what was fixed, what was answered as wrong, intended or not worth it, what was
+skipped and why, and what was added to `docs/lessons/reviewers.md`.

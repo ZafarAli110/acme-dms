@@ -57,14 +57,25 @@ Start, in parallel, each reviewer whose area the diff touches, each with the tic
 - **performance-reviewer**: a query, a list or an export, or anything done per row.
 - **test-reviewer**: always.
 
-The clean-code-reviewer already ran in `verify`; run it again only if the code changed since. Post all their
-reports in one comment, as a "Review round" (`.claude/skills/ticket-to-pr/pr-comments.md`). Then fix every `blocking`
-and `should-fix` finding this change `introduced` (the ones `already there` stay open for a person) by following
-steps 3 to 5 of `.claude/skills/resolve-pr-comments/SKILL.md`, and run again only the reviewer that found it. A
-`REJECT` stops the run: hand it to a person.
+The clean-code-reviewer already ran in `verify`; run it again only if the code changed since.
+
+**Check before you post.** For each `blocking` finding, open the file and line it cites and read what the code does.
+A finding the code plainly contradicts is not posted: record it in `docs/lessons/reviewers.md` under "Wrong", with
+that code, and list it in the hand-over so a person can disagree. Drop a finding only because the code shows it is not
+true, never because fixing it is work.
+
+Post all the reports in one comment, as a "Review round" (`.claude/skills/ticket-to-pr/pr-comments.md`). Then work
+through every `blocking` and `should-fix` finding this change `introduced` (the ones `already there` stay open for a
+person) by following steps 3 to 5 of `.claude/skills/resolve-pr-comments/SKILL.md`: judge each one, fix the real ones
+everywhere the same mistake appears, and answer the rest.
+
+**The next round** runs only the reviewer whose finding was fixed, and gives it two things: the commits since its last
+review (`git diff <last reviewed commit>...HEAD`), and the findings already answered. It reviews only that new code,
+and never posts an answered finding again. A `REJECT` stops the run: hand it to a person.
 
 ## 6. Hand over
 
-Stop. Report the pull request link, the evidence file, each reviewer's verdict, and anything left open. **A person
+Stop. Report the pull request link, the evidence file, each reviewer's verdict, anything left open, and every
+finding you did not post or answered as wrong, with the code that shows why. **A person
 checks that it works and merges**; the hook refuses `gh pr merge`. After the merge, `/qa $ARGUMENTS` tests the merged
 build and files a bug for each failure.
