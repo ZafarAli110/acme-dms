@@ -47,10 +47,23 @@ if (-not (Have "winget")) {
   Write-Host "winget is missing. Install 'App Installer' from the Microsoft Store, then run this again." -ForegroundColor Yellow
   exit 1
 }
-# fnm is switched on from your PowerShell profile, which only runs if the policy allows local scripts.
-if ((Get-ExecutionPolicy -Scope CurrentUser) -in @("Undefined", "Restricted")) {
-  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force
-  Note "PowerShell may now run local scripts for you (execution policy RemoteSigned, your user only)"
+# fnm is switched on from your PowerShell profile, which only runs if the policy allows local scripts. What counts is
+# the policy a NEW window gets: the first scope that sets one, Group Policy first, then your user, then the machine.
+# This window's -ExecutionPolicy Bypass is not one of them, so it is left out.
+$lasting = @("MachinePolicy", "UserPolicy", "CurrentUser", "LocalMachine") |
+  ForEach-Object { "$(Get-ExecutionPolicy -Scope $_)" } |
+  Where-Object { $_ -ne "Undefined" } |
+  Select-Object -First 1
+if (-not $lasting -or $lasting -in @("Restricted", "AllSigned")) {
+  try {
+    Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force
+    Note "PowerShell may now run local scripts for you (execution policy RemoteSigned, your user only)"
+  } catch {
+    # Saved for your user, but a more specific scope (usually Group Policy) still decides. Not a reason to stop.
+    Note "Your execution policy is set by your organisation ($lasting). If fnm does not switch on in a new window, ask IT."
+  }
+} else {
+  Note "PowerShell already runs local scripts (execution policy $lasting)"
 }
 
 # ── 1. Git ──────────────────────────────────────────────────────────────────────────────────────────────────────────
