@@ -47,7 +47,8 @@ passes, have the **git** subagent commit it (`$ARGUMENTS: <what the step did>`).
    `docs/evidence/$ARGUMENTS.md`, comments on the ticket and moves it to `in-review`.
 2. Have the **git** subagent push the branch (`git push -u origin $ARGUMENTS`) and open the pull request into the base
    branch from step 1: `gh pr create --base <base> --title "$ARGUMENTS: <title>" --body-file <file>`, the body being
-   the plan's requirements and the evidence table.
+   the plan's requirements, the decisions the ticket left open (the plan's Decisions), the evidence table, and what
+   the checks don't prove.
 
 ## 5. Specialist reviews
 
@@ -75,7 +76,14 @@ and never posts an answered finding again. A `REJECT` stops the run: hand it to 
 
 ## 6. Hand over
 
-Stop. Report the pull request link, the evidence file, each reviewer's verdict, anything left open, and every
-finding you did not post or answered as wrong, with the code that shows why. **A person
-checks that it works and merges**; the hook refuses `gh pr merge`. After the merge, `/qa $ARGUMENTS` tests the merged
-build and files a bug for each failure.
+Stop. Report, so a person can judge the work rather than trust it:
+
+- the pull request link and the evidence file;
+- **the decisions you took that the ticket did not**: each line of the plan's Decisions (a default, a scope, a choice
+  between two readings of the ticket), so a person can disagree before it merges;
+- **what the checks don't prove**, from the evidence file;
+- each reviewer's verdict, anything left open, and every finding you did not post or answered as wrong, with the code
+  that shows why.
+
+**A person checks that it works and merges**; the hook refuses `gh pr merge`. After the merge, `/qa $ARGUMENTS` tests
+the merged build and files a bug for each failure.
