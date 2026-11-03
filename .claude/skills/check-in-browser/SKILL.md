@@ -1,5 +1,5 @@
 ---
-name: browser
+name: check-in-browser
 description: Drives the running web app in a browser with playwright-cli, to check a change the way a user sees it (a form, a list, a field error, French labels). Use when verifying a web change, or when the verifier needs to see the page.
 ---
 
@@ -18,5 +18,5 @@ are in `bunx playwright-cli --help`; read that first.
    the checks and the other tickets rely on.
 5. Close the browser when you are done (`bunx playwright-cli close`).
 
-Report what you saw with the command that showed it, as the `verify` skill asks. A behaviour worth keeping becomes a
-Playwright test in `web/e2e/` (`bun run gate:slow`).
+Report what you saw with the command that showed it, as the `verify-ticket` skill asks. A behaviour worth keeping
+becomes a Playwright test in `web/e2e/` (`bun run gate:slow`).

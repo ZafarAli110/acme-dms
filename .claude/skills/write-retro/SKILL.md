@@ -1,6 +1,6 @@
 ---
-name: retro
-description: Writes what a finished ticket taught, as lessons with evidence, to docs/lessons/<KEY>.md. Use after a ticket's QA is clean, e.g. /retro ACME-108, or when asked what was learned.
+name: write-retro
+description: Writes what a finished ticket taught, as lessons with evidence, to docs/lessons/<KEY>.md. Use after a ticket's QA is clean, e.g. /write-retro ACME-108, or when asked what was learned.
 disable-model-invocation: true
 ---
 
@@ -31,4 +31,4 @@ Rules:
 - Do not restate a rule `docs/standards/` already has: say the standard was missed, and why.
 - Write what would have prevented it, not what happened to fix it this once.
 
-Then suggest `/learn`.
+Then suggest `/learn-from-lessons`.

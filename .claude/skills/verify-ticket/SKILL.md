@@ -1,6 +1,6 @@
 ---
-name: verify
-description: Proves a ticket's change is done, with evidence anyone can re-run, before the ticket moves. Use when implementation of a ticket is finished, or when asked to verify one. Takes the ticket key, e.g. /verify ACME-106.
+name: verify-ticket
+description: Proves a ticket's change is done, with evidence anyone can re-run, before the ticket moves. Use when implementation of a ticket is finished, or when asked to verify one. Takes the ticket key, e.g. /verify-ticket ACME-106.
 ---
 
 # Verify a ticket
