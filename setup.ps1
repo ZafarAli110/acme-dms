@@ -57,6 +57,9 @@ if ((Get-ExecutionPolicy -Scope CurrentUser) -in @("Undefined", "Restricted")) {
 Say "Git"
 if (Have "git") { Note "already installed: $(git --version)" } else { Install-WithWinget "Git.Git" }
 
+Say "GitHub CLI"
+if (Have "gh") { Note "already installed: $((gh --version | Select-Object -First 1))" } else { Install-WithWinget "GitHub.cli" }
+
 # ── 2. Node.js 26, through fnm: your existing Node (if any) stays as it is ─────────────────────────────────────────
 Say "Node.js 26 (through fnm)"
 $existingNode = $null
@@ -137,10 +140,11 @@ Note "pre-commit check switched on (.githooks)"
 
 # ── Done ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 Say "Installed"
-foreach ($check in @("git --version", "node -v", "bun --version", "dotnet --version", "aspire --version", "docker --version")) {
+foreach ($check in @("git --version", "gh --version", "node -v", "bun --version", "dotnet --version", "aspire --version", "docker --version")) {
   $tool = $check.Split(" ")[0]
   if (Have $tool) { Note "$($check.PadRight(18)) $(Invoke-Expression $check 2>$null | Select-Object -First 1)" } else { Note "$($check.PadRight(18)) (open a new terminal to see it)" }
 }
 Write-Host ""
 if ($restart) { Write-Host "Restart Windows once (WSL 2 and Docker Desktop need it), then start Docker Desktop." -ForegroundColor Yellow }
 Write-Host "Open a new terminal in this folder, start Docker Desktop, then: bun run dev"
+Write-Host "Once, for lab 10's pull requests: gh auth login, gh repo fork --remote, gh repo set-default (README, Setup, step 5)"

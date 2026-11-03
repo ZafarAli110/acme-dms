@@ -144,6 +144,7 @@ What it installs:
 | Tool                                                  | Version | Check              |
 | ----------------------------------------------------- | ------- | ------------------ |
 | Git                                                   | recent  | `git --version`    |
+| GitHub CLI (`gh`)                                     | recent  | `gh --version`     |
 | Node.js, through [fnm](https://github.com/Schniz/fnm) | 26      | `node -v`          |
 | Bun                                                   | 1.4.4+  | `bun -v`           |
 | .NET SDK (the SDK, not just the runtime)              | 10      | `dotnet --version` |
@@ -159,6 +160,20 @@ the end. `bun run dev` and `bun run gate:fast` refuse to start on any other Node
 Open a **new** terminal (so it sees the new `PATH`; on Windows an ordinary PowerShell is fine from now on), go to the
 folder with `cd ~/acme-dms`, and run the check commands from the table. The tests use Docker too: dealership-api's
 tests run against a real Postgres that [Testcontainers](https://testcontainers.com) starts in Docker for each run.
+
+### 5. Sign in to GitHub, and fork
+
+Lab 10's agents push a branch and open a pull request, so they need your GitHub account and a copy of the repository
+you can push to. Once, in the `acme-dms` folder:
+
+```bash
+gh auth login         # GitHub.com, HTTPS, log in with a web browser
+gh repo fork --remote # your own copy on GitHub; origin is now yours, upstream is this one
+gh repo set-default   # choose your fork, so pull requests open there and not here
+```
+
+The same in PowerShell. Check with `git remote -v` (`origin` is your fork, `upstream` is `ZafarAli110/acme-dms`) and
+`gh repo set-default --view` (your fork).
 
 ## Run it
 
