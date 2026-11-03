@@ -28,6 +28,11 @@ type Described = { resources?: { displayName: string; urls?: { name: string; url
 
 /** The URL of a running resource, e.g. resourceUrl('gateway-api', 'http'). Exits with a hint when nothing is running. */
 export function resourceUrl(resource: string, endpoint: string): string {
+  // Started by the AppHost (the seed resource): Aspire passes each referenced endpoint in this variable.
+  const fromAspire = process.env[`services__${resource}__${endpoint}__0`];
+  if (fromAspire) {
+    return fromAspire;
+  }
   let output = "";
   try {
     output = Bun.spawnSync(["aspire", "describe", resource, "--format", "Json", "--nologo"], {

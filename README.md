@@ -187,10 +187,8 @@ The first run takes a few minutes: it builds the .NET projects and pulls the con
 
 1. Open the **Dashboard** link the terminal prints (`http://localhost:15090/login?t=…`). The token in it logs you in.
 2. Wait until every resource is **Running** and **Healthy**.
-3. In a second terminal, load the sample data (once; it survives restarts):
-   ```bash
-   bun run seed
-   ```
+3. The **seed** resource loads the sample data once everything is up, then shows **Finished**. It runs on every start
+   and reuses what is already there, so nothing is duplicated; `bun run seed` runs it by hand.
 4. Open the **web** URL and sign in (the form is pre-filled with `sam`). The gateway is always at
    `http://localhost:5200`.
 5. Press **Ctrl+C** in the first terminal to stop everything.
@@ -341,6 +339,7 @@ echoed in every response and attached to every log line.
 | `password authentication failed` for Postgres   | An old data volume has a different password. Stop the app, remove the volume (`docker volume ls`, then `docker volume rm <name>`), and start again.                                                 |
 | A .NET change does not show up                  | Restarting a resource does not rebuild it. Run `dotnet build` on that project, then restart it in the dashboard, or stop and run `bun run dev` again. TypeScript services rebuild on save.          |
 | `bun run seed` says it cannot find the gateway  | Start the system first (`bun run dev`) and wait until everything is Healthy.                                                                                                                        |
+| `bun run dev` says packages are not installed   | You switched to a branch that adds a package (lab 09-after does). Run `bun install`, then start again.                                                                                              |
 | A photo stays `pending`                         | Check `bun run errors` and the RabbitMQ UI (the `rabbitmq` URL in the dashboard, user `acme`/`acme`): a message in a `*.dlq` queue tells you which consumer gave up and why.                        |
 | Port already in use                             | Another `aspire run` is still running: `aspire stop`, or close the other terminal.                                                                                                                  |
 
