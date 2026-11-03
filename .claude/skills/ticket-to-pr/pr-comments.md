@@ -19,7 +19,7 @@ step, never one per finding.
 ## A review round
 
 All the reviewers of one round in one comment, each report as the reviewer returned it. Give every id the reviewer's
-prefix, so ids are unique in the round: `STD` coding standards, `SEC` security, `PERF` performance, `TEST` tests.
+prefix, so ids are unique in the round: `CLEAN` clean code, `SEC` security, `PERF` performance, `TEST` tests.
 
 ```
 ## Review round 1
