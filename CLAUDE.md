@@ -84,7 +84,7 @@ failure; when QA is clean, `/retro <KEY>` writes what went wrong as lessons with
 approves the plan, specialist reviewers check the pull request. It stops for any product question; a person merges.
 `/resolve-pr-comments <number>` fixes a pull request's open review comments and answers them in one comment.
 
-Work a ticket with `/ticket <KEY>`. Its plan, `docs/plans/<date>_<KEY>_<name>.md`, is the record of the work: if one
+Work a ticket with `/ticket <KEY>`. Its plan, `.ai-plans/<date>_<KEY>_<name>.md`, is the record of the work: if one
 exists, read it before doing anything else on that ticket.
 
 The backlog is the **acme-tracker** MCP server (`.mcp.json`): read a ticket with `get_ticket` rather than asking for it
