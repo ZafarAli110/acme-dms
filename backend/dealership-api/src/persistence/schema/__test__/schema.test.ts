@@ -98,7 +98,7 @@ describe("the dealership schema", () => {
     );
 
     expect(result.rows).toEqual(
-      ["bins", "customers", "part_inventories", "part_photos", "parts"].map((table_name) => ({
+      ["bins", "customers", "export_jobs", "part_inventories", "part_photos", "parts"].map((table_name) => ({
         table_name,
         is_nullable: "NO",
       })),
