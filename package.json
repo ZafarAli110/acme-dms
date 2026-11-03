@@ -15,8 +15,8 @@
     "apphost"
   ],
   "scripts": {
-    "dev": "bun scripts/check-node.ts && aspire run",
-    "start": "bun scripts/check-node.ts && aspire start",
+    "dev": "bun scripts/check-node.ts && bun scripts/check-install.ts && aspire run",
+    "start": "bun scripts/check-node.ts && bun scripts/check-install.ts && aspire start",
     "stop": "aspire stop",
     "rebuild": "bun scripts/rebuild.ts",
     "hooks": "git config core.hooksPath .githooks",
