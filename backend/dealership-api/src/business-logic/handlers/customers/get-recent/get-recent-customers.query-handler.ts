@@ -14,7 +14,7 @@ import { toCustomerListItemDto } from "../customer.mapper";
 /** How many customers the "Recently contacted" panel on the home page shows. */
 export const RECENT_CUSTOMERS_LIMIT = 5;
 
-/** The selected location's customers contacted most recently, newest first, for the home page. */
+/** The selected location's customers contacted most recently, newest first (ties by surname, then id), for the home page. */
 @Injectable()
 export class GetRecentCustomersQueryHandler implements IGetRecentCustomersQueryHandler {
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
@@ -37,7 +37,7 @@ export class GetRecentCustomersQueryHandler implements IGetRecentCustomersQueryH
           notDeleted(customers),
         ),
       )
-      .orderBy(desc(customers.lastContactDate), asc(customers.surname))
+      .orderBy(desc(customers.lastContactDate), asc(customers.surname), asc(customers.id))
       .limit(RECENT_CUSTOMERS_LIMIT);
     return recent.map(toCustomerListItemDto);
   }

@@ -61,3 +61,19 @@ describe("GetRecentCustomersQueryHandler", () => {
     );
   });
 });
+
+describe("GetRecentCustomersQueryHandler with customers contacted on the same day", () => {
+  const database = useTestDatabase();
+
+  it("lists them in the same order every time: by surname, then by id", async () => {
+    const [first, second, third] = [1, 2, 3].map((n) => `01a1a25c-0000-7000-8000-00000000000${n}`);
+    // Inserted in the reverse of their id order, so only an explicit sort by id puts them right.
+    for (const id of [third, second, first]) {
+      await database.seed.addCustomerAsync({ id, locationId: NORTHSIDE, surname: "Same", ...contacted("2026-10-31") });
+    }
+
+    const recent = await new GetRecentCustomersQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE);
+
+    expect(recent.map((customer) => customer.id)).toEqual([first, second, third]);
+  });
+});

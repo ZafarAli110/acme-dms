@@ -89,7 +89,10 @@ None. Q1 answered on the ticket: A (2026-11-04, a person).
 
 ## Decisions
 
-- None. The product owner chose scope A (regression test on this endpoint; the all-handler guard is a follow-up
+- D1 The verifier found the top 5 changed between calls when customers tie on date and surname (the sort ended at
+  surname). Added `asc(customers.id)` as the last sort key, as the customer list does, with a test that fails without it.
+  Small and in the same line, but nobody asked for it: a person can disagree.
+- The product owner chose scope A (regression test on this endpoint; the all-handler guard is a follow-up
   ticket). No selected location answers 400: `docs/standards/multi-tenancy.md` rule 4.
 
 ## Log
@@ -105,3 +108,4 @@ None. Q1 answered on the ticket: A (2026-11-04, a person).
   tom opening the 15 Northwind ids of maria, sam and rita: 15x 404. (An earlier 404 on the endpoint was my wrong path: the gateway needs `/api/dealership`.)
 - 2026-11-05 11:08 Step 4: `bun run gate:fast` 22/22 tasks succeeded; `bun run errors` "No traces found". The pre-commit hook's `consistent-function-scoping` warning in the test fixed (helper moved to module scope).
 - 2026-11-05 11:08 No screen changed (backend only; the web app already sends the location and keys its cache by it), so no screenshots.
+- 2026-11-05 11:40 verify-ticket, verifier: PASS, with two gaps it named. (1) Mutation check, run by me: dropping the dealer filter fails 1 test, the location filter 2, notDeleted 1, the never-contacted filter 1; baseline 3/3 pass; file restored. (2) Tie order: before the fix the API and the home page showed different top 5 for the same state. New test (same surname and date, ids inserted in reverse) failed first, then passed with `asc(customers.id)`; 4/4 pass; `gate:fast` exit 0; three calls as sam return the same 5 ids; `bun run errors` clean.
