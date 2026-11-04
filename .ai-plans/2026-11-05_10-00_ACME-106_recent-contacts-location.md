@@ -10,7 +10,7 @@
 
 **Design:** No screen
 
-**Now:** Done: handler fixed, 3 handler tests pass · Next: step 3, run as maria, sam, tom · Blocked: None
+**Now:** Done: fix verified in the running system, gate passes · Next: verify-ticket, then push and open the PR · Blocked: None
 
 ## Requirement
 
@@ -30,15 +30,15 @@ customers to Northwind, worse than the ticket says. A grep of all handlers for a
 
 Happy
 
-- [ ] As `maria` at Riverside, every name in "Recently contacted" is in Riverside's Customers list, newest first
-- [ ] As `sam` at Northside, every name is in Northside's list and none is on Maria's list
-- [ ] Every listed customer opens (`GET /v1/customers/{id}` is 200 at the same location)
+- [x] As `maria` at Riverside, every name in "Recently contacted" is in Riverside's Customers list, newest first
+- [x] As `sam` at Northside, every name is in Northside's list and none is on Maria's list
+- [x] Every listed customer opens (`GET /v1/customers/{id}` is 200 at the same location)
 
 Failure
 
-- [ ] As `tom` (City Motors), none of Northwind's customers appear, and a Northwind id is "not found" for him
-- [ ] Without a selected location, the endpoint answers 400, like the customer list
-- [ ] A deleted customer, or one never contacted, does not appear
+- [x] As `tom` (City Motors), none of Northwind's customers appear, and a Northwind id is "not found" for him
+- [x] Without a selected location, the endpoint answers 400, like the customer list
+- [x] A deleted customer, or one never contacted, does not appear
 
 ## Load before building
 
@@ -80,8 +80,8 @@ public async executeAsync(userContext: UserContext): Promise<CustomerListItemDto
 
 - [x] 1. Rewrite the test with rows that must not come back (Riverside, Central/City Motors, deleted, never contacted) → verify: `bunx nx test @acme/dealership-api` fails on the new cases
 - [x] 2. Fix the handler → verify: same command passes
-- [ ] 3. Run in the system as maria, sam, tom → verify: `bun run api as <user> GET /v1/customers/recent`, compare with the customers list, open each id; tom sees none of Northwind's
-- [ ] 4. `bun run gate:fast` and `bun run errors` → verify: pass, nothing new
+- [x] 3. Run in the system as maria, sam, tom → verify: `bun run api as <user> GET /v1/customers/recent`, compare with the customers list, open each id; tom sees none of Northwind's
+- [x] 4. `bun run gate:fast` and `bun run errors` → verify: pass, nothing new
 
 ## Questions
 
@@ -98,3 +98,10 @@ None. Q1 answered on the ticket: A (2026-11-04, a person).
 - 2026-11-05 10:05 Architect: CHANGES. D1 moved to Questions (a product scope decision); D2 removed (the standard decides it). Status set to Waiting on answers.
 - 2026-11-05 10:20 Q1 answered A by a person on the ticket. Status In progress; architect round already done, not rerun.
 - 2026-11-05 10:40 Steps 1-2: test file rewritten (3 tests; the shared DB per file means one seed, read per user). Before the fix 4 of 5 assertions-tests failed (other location, other dealer leaked); after, `bunx nx test @acme/dealership-api -- get-recent` passes 3/3. Handler now filters dealerId + requireLocation.
+- 2026-11-05 11:05 Step 3, in the running system through the gateway (`/api/dealership/v1/customers/recent`), script in the scratchpad:
+  maria@Riverside 5 names, sam@Northside 5, rita@Westgate 5, tom@Central 2 (all of his contacted customers), all newest first.
+  Each id opens (200) at its own location and is found in that location's customer list (by phone, or email when the phone is null; tom's two are in his full list of 3).
+  0 ids shared between maria's and sam's lists. Maria's 5 ids as sam: 5x 404; sam's 5 as maria: 5x 404.
+  tom opening the 15 Northwind ids of maria, sam and rita: 15x 404. (An earlier 404 on the endpoint was my wrong path: the gateway needs `/api/dealership`.)
+- 2026-11-05 11:08 Step 4: `bun run gate:fast` 22/22 tasks succeeded; `bun run errors` "No traces found". The pre-commit hook's `consistent-function-scoping` warning in the test fixed (helper moved to module scope).
+- 2026-11-05 11:08 No screen changed (backend only; the web app already sends the location and keys its cache by it), so no screenshots.

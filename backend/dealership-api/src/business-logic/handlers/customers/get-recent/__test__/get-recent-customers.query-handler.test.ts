@@ -5,6 +5,8 @@ import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { AT_CENTRAL, AT_NORTHSIDE, AT_RIVERSIDE } from "#test-setup/users/test-users";
 import { GetRecentCustomersQueryHandler } from "../get-recent-customers.query-handler";
 
+const contacted = (day: string) => ({ lastContactDate: Temporal.PlainDate.from(day) });
+
 describe("GetRecentCustomersQueryHandler", () => {
   // One database serves every test of this file, so the rows are seeded once and each user's view is read from them.
   const database = useTestDatabase();
@@ -13,7 +15,6 @@ describe("GetRecentCustomersQueryHandler", () => {
   const seedOnceAsync = () => (seeded ??= seedAsync());
 
   async function seedAsync(): Promise<GetRecentCustomersQueryHandler> {
-    const contacted = (day: string) => ({ lastContactDate: Temporal.PlainDate.from(day) });
     await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Doyle", ...contacted("2026-10-23") });
     await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Byrne", ...contacted("2026-10-26") });
     // Must not come back at Northside: never contacted, deleted, another location, another dealer.
