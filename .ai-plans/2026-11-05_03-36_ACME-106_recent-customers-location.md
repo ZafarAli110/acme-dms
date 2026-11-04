@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-05 03:36
 
-**Status:** Verifying
+**Status:** Verifying (pull request #2 open, reviews done, waiting for a person)
 
 **Ticket:** ACME-106 · **Branch:** acme-106
 
@@ -10,7 +10,7 @@
 
 **Design:** No screen (the home page panel is unchanged; only the rows it receives change)
 
-**Now:** Done: handler fixed, tests pass, verified in the running system and the browser; evidence in `docs/evidence/ACME-106.md`; ticket in-review · Next: pull request, then the specialist reviews · Blocked: None
+**Now:** Done: fix, tests, evidence, pull request #2 (https://github.com/ZafarAli110/acme-dms/pull/2), two review rounds, all reviewers APPROVE · Next: a person checks it works and merges; then `/qa-ticket acme-106`; ACME-110 (index) is for whoever picks it up · Blocked: None
 
 ## Requirement
 
@@ -103,3 +103,5 @@ None open. Question 1 (scope of "the same mistake") was answered A on the ticket
 - 2026-11-05 03:45 Step 4, playwright-cli as maria: Northside panel showed Northside's ids, after the top-bar switch Riverside's five (the same ids the API returned); clicking Yasmin Ahmed opened her page, no error. Screenshots at 1440 and 1024 read: nothing overlaps or is cut off, no horizontal scroll (1024 vs 1024).
 - 2026-11-05 03:45 Seen, not fixed (not asked): customers who share a contact date and surname tie in `orderBy(lastContactDate desc, surname asc)`, so which tied customer fills the last of the five rows can change between loads (Kieran vs Connor Ashhurst). A stable tie-break (id) is a one-line follow-up; a person decides.
 - 2026-11-05 03:51 Step 5, verify-ticket: `bun run gate:fast` 22 of 22 with the cache off (the first run was all cache hits, not trusted). Verifier: PASS on every requirement. Its note that the 3 error traces came from its 404 checks was wrong: they are the browser cancelling in-flight requests on a location switch (`net::ERR_ABORTED`, reproduced). Evidence: `docs/evidence/ACME-106.md`. Ticket commented and moved to in-review.
+- 2026-11-05 03:55 Review round 1 (security, performance, test, clean-code): 0 blocking. TEST-S1 (the limit of 5 never exercised) fixed in 1ec00d3: a test with six customers at Central; removing `.limit()` fails it. PERF-S1 (no index for the sort, about 655 ms on Northside) left open: needs a migration, already there; follow-up ACME-110. Security and clean-code: no findings.
+- 2026-11-05 03:55 Review round 2 (test-reviewer only, on 1ec00d3): APPROVE, no findings. Handed over.
