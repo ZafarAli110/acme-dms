@@ -39,7 +39,6 @@
       "Bash(git switch *)",
       "WebFetch",
       "WebSearch",
-      "Write(.claude/skills/**)",
       "Edit(.claude/skills/**)",
       "Bash(bun run seed:bulk*)"
     ],
