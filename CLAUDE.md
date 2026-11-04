@@ -38,23 +38,24 @@ React web app, run together by Aspire. `README.md` explains the business, the de
   change (a refactor, a shared component), propose it with the trade-off; don't do it silently, and don't skip it.
 - **Read only what you need.** Find with the Grep and Glob tools first, then read the lines you need, not whole files
   or several at once: everything read stays in the conversation and is paid for again on every turn. In a shell
-  command, quote every pattern (`--include='*.ts'`): the shell may be zsh, which stops at an unquoted `*`.
+  command, quote every pattern (`--include='*.ts'`): zsh on macOS stops at an unquoted `*`, and quoting works in
+  every shell, Git Bash and PowerShell too.
 - **Plan before code.** Turn the task into checks first: a bug gets a test that reproduces it, a rule gets a
   test for the case it forbids. Then show the open questions and the plan, one check per step
   (`1. [step] → verify: [check]`), and wait for a go-ahead. Done is every check passing, not the code written.
 
 ## Commands
 
-| Command                                 | Use                                                                                           |
-| --------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `bun run gate:fast`                     | format check, lint, typecheck, tests for changed projects                                     |
-| `bunx nx test @acme/dealership-api`     | one project's tests                                                                           |
-| `bun run api as <user> <METHOD> <path>` | call the running system as a demo user (`--location <x>`; `--body`: the JSON alone, for `jq`) |
-| `bun run sql:explain "<select>"`        | how Postgres runs a query on the running data: its plan, read-only                            |
-| `bun run errors`                        | failed requests across all services                                                           |
-| `bun run reset`                         | back to the seeded data                                                                       |
-| `bun run start` / `bun run stop`        | start the whole system in the background / stop it                                            |
-| `bun run rebuild <service>`             | rebuild one .NET service from source and restart it                                           |
+| Command                                 | Use                                                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `bun run gate:fast`                     | format check, lint, typecheck, tests for changed projects                                       |
+| `bunx nx test @acme/dealership-api`     | one project's tests                                                                             |
+| `bun run api as <user> <METHOD> <path>` | call the running system as a demo user (`--location <x>`; `--body`: the JSON alone, to pipe on) |
+| `bun run sql:explain "<select>"`        | how Postgres runs a query on the running data: its plan, read-only                              |
+| `bun run errors`                        | failed requests across all services                                                             |
+| `bun run reset`                         | back to the seeded data                                                                         |
+| `bun run start` / `bun run stop`        | start the whole system in the background / stop it                                              |
+| `bun run rebuild <service>`             | rebuild one .NET service from source and restart it                                             |
 
 `api`, `errors` and `reset` need the system running: check with `bun run status`, and `bun run start` it if it is not.
 dealership-api and web reload themselves; after changing identity-api, document-api or gateway-api, rebuild it.
