@@ -2,7 +2,7 @@
 // first line is at most 100 characters, so `git log --oneline` and the pull request list stay readable. The rule is in
 // .claude/rules/git-policy.md; this is what makes it hold for people and agents alike.
 
-const MAX = 100;
+export const MAX = 100;
 
 const file = Bun.argv[2] ?? "";
 const message = await Bun.file(file).text();
