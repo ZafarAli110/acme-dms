@@ -44,9 +44,7 @@
       "Bash(git checkout *)",
       "WebFetch",
       "WebSearch",
-      "Write(.claude/skills/**)",
       "Edit(.claude/skills/**)",
-      "Write(.claude/agents/**)",
       "Edit(.claude/agents/**)",
       "Bash(bun run seed:bulk*)"
     ],
