@@ -41,10 +41,11 @@ After fixing, two things, in this order.
 **1. Update the review round in place**, so its checklist is the one place a reader looks. Tick each finding you fixed
 and add its answer after it; every box left unticked gets its answer too, so nobody has to guess whether it was skipped
 on purpose or the run broke off. Find the round's comment id at the end of its `url` (`#issuecomment-<id>`) in
-`gh pr view <number> --json comments`, write the whole updated body to a file, and replace it:
+`gh pr view <number> --json comments`, write the whole updated body to a file, and replace it (the quotes matter:
+PowerShell reads `{…}` as code):
 
 ```
-gh api -X PATCH repos/{owner}/{repo}/issues/comments/<id> -F body=@<file>
+gh api -X PATCH "repos/{owner}/{repo}/issues/comments/<id>" -F "body=@<file>"
 ```
 
 ```

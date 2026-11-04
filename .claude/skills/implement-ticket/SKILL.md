@@ -12,7 +12,7 @@ can take over; the file is what carries on. Write to it as you go, not at the en
 **Its name** starts with when it was created, so the folder reads in order:
 `.ai-plans/<YYYY-MM-DD>_<HH-MM>_<KEY>_<short-name>.md`, e.g. `.ai-plans/2026-11-04_15-30_ACME-107_new-part-page.md`.
 Find a ticket's plan by its key: `.ai-plans/*_<KEY>_*.md`. Take every date and time, in the name, Created and the Log,
-from the clock (`date '+%Y-%m-%d %H:%M'`), never from memory: a model does not know what time it is.
+from the clock (`date '+%Y-%m-%d %H:%M'`; PowerShell: `Get-Date -Format 'yyyy-MM-dd HH:mm'`), never from memory: a model does not know what time it is.
 
 ## Start, or resume
 
