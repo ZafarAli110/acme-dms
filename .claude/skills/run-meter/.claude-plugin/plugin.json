@@ -1,0 +1,6 @@
+{
+  "name": "run-meter",
+  "version": "0.1.0",
+  "description": "A band above the prompt: time, estimated cost, tokens, model calls and the running subagents since /run-meter",
+  "types": "./types/index.d.ts"
+}
