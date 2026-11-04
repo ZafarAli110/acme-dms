@@ -2,7 +2,8 @@
 The plan template. `/implement-ticket <KEY>` copies it to .ai-plans/<YYYY-MM-DD>_<HH-MM>_<KEY>_<short-name>.md, for
 example .ai-plans/2026-11-04_15-30_ACME-107_new-part-page.md, and fills it in. Every plan has this shape, in this order:
 what a reader needs first comes first. About 200 lines, a soft limit: longer means check whether it is two tickets.
-Delete this comment and every <placeholder> line that does not apply ("N/A: <reason>" when a whole section does not).
+Every date and time comes from the clock (`date '+%Y-%m-%d %H:%M'`), never from memory. Delete this comment and every
+<placeholder> line that does not apply ("N/A: <reason>" when a whole section does not).
 -->
 
 # <KEY>: <title>
