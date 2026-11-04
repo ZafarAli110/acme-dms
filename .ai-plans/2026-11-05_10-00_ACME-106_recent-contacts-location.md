@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-05 10:00
 
-**Status:** In progress
+**Status:** Done
 
 **Ticket:** ACME-106 · **Branch:** ACME-106 (base: practice/acme-106)
 
@@ -10,7 +10,7 @@
 
 **Design:** No screen
 
-**Now:** Done: fix verified in the running system, gate passes · Next: verify-ticket, then push and open the PR · Blocked: None
+**Now:** Done: verified, evidence in `docs/evidence/ACME-106.md` · Next: push, open the PR, specialist reviews · Blocked: None
 
 ## Requirement
 
@@ -109,3 +109,4 @@ None. Q1 answered on the ticket: A (2026-11-04, a person).
 - 2026-11-05 11:08 Step 4: `bun run gate:fast` 22/22 tasks succeeded; `bun run errors` "No traces found". The pre-commit hook's `consistent-function-scoping` warning in the test fixed (helper moved to module scope).
 - 2026-11-05 11:08 No screen changed (backend only; the web app already sends the location and keys its cache by it), so no screenshots.
 - 2026-11-05 11:40 verify-ticket, verifier: PASS, with two gaps it named. (1) Mutation check, run by me: dropping the dealer filter fails 1 test, the location filter 2, notDeleted 1, the never-contacted filter 1; baseline 3/3 pass; file restored. (2) Tie order: before the fix the API and the home page showed different top 5 for the same state. New test (same surname and date, ids inserted in reverse) failed first, then passed with `asc(customers.id)`; 4/4 pass; `gate:fast` exit 0; three calls as sam return the same 5 ids; `bun run errors` clean.
+- 2026-11-05 11:55 Evidence written: `docs/evidence/ACME-106.md` (at fc333c3). Every acceptance box ticked by a check in this Log.
