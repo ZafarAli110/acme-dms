@@ -3,14 +3,16 @@
 //   bun run api as rita GET /api/dealership/v1/system/user-context
 //   bun run api as maria --location riverside GET /api/dealership/v1/stock
 //   bun run api as maria POST /api/dealership/v1/parts '{"partNumber":"BP-100","description":"Brake pads","unitPrice":49}'
+//   bun run api as sam --body GET /api/dealership/v1/customers/recent | jq '.[].id'
 //
 // It signs in through identity-api, starts at the user's default location unless --location is given, and prints the
-// status, the correlation id and the JSON body.
+// status, the correlation id and the JSON body. With --body, standard output is the JSON body alone, ready for jq; the
+// status line goes to standard error, and the exit code still says whether the call succeeded.
 import { DEMO_USERS, callAsync, resourceUrl, signInAsync } from "./running-system";
 
 function usage(message: string): never {
   console.error(
-    `${message}\n\nUsage: bun run api as <${Object.keys(DEMO_USERS).join("|")}> [--location <name|code>] <METHOD> <path> [json-body]`,
+    `${message}\n\nUsage: bun run api as <${Object.keys(DEMO_USERS).join("|")}> [--location <name|code>] [--body] <METHOD> <path> [json-body]`,
   );
   process.exit(1);
 }
@@ -25,6 +27,11 @@ let locationFilter: string | undefined;
 if (rest[0] === "--location") {
   locationFilter = rest[1]?.toLowerCase();
   rest = rest.slice(2);
+}
+let bodyOnly = false;
+if (rest[0] === "--body") {
+  bodyOnly = true;
+  rest = rest.slice(1);
 }
 const [method, path, body] = rest;
 if (!method || !path) {
@@ -42,8 +49,9 @@ if (!location) {
 
 const response = await callAsync(gateway, session, location, method.toUpperCase(), path, body);
 const text = await response.text();
-console.log(`${method.toUpperCase()} ${path} as ${user} @ ${location.name} (${location.role})`);
-console.log(
+const report = bodyOnly ? console.error : console.log;
+report(`${method.toUpperCase()} ${path} as ${user} @ ${location.name} (${location.role})`);
+report(
   `→ ${response.status} ${response.statusText}   correlation-id: ${response.headers.get("x-correlation-id") ?? "-"}`,
 );
 try {
