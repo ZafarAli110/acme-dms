@@ -29,6 +29,18 @@ instructions and marks the entries here as learned.
 - **Evidence:** `backend/dealership-api/src/business-logic/exports/export-job-runner.ts`, `ownJob`.
 - **Learned:** the security reviewer's A01 now accepts an owner check that answers "not found".
 
+### performance-reviewer: "introduced" for a scan that was already there (5 Nov 2026)
+
+- **Finding:** PERF-S1 on ACME-106, no index for the recent-customers query, marked `introduced`, and sourced to
+  `database.md`.
+- **Why it was wrong:** the finding's own text says the query "was already a full scan before this change", and before
+  it the query had no location filter, so it read every customer of every dealer; now it reads one location's. The
+  missing index is true and stays open, but it is `already there`. The rule is in `.claude/agents/performance-reviewer.md`,
+  not in `database.md`.
+- **Evidence:** `get-recent-customers.query-handler.ts` before commit 5b23f8c (`where` had only `isNotNull` and
+  `notDeleted`); `persistence/schema/customers.ts:27` (only `ix_customers_location`).
+- **Learned:** not yet; one entry is not a pattern.
+
 ## Missed
 
 None yet.

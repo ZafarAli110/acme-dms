@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CENTRAL, NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { AT_CENTRAL, AT_NORTHSIDE, AT_RIVERSIDE } from "#test-setup/users/test-users";
-import { GetRecentCustomersQueryHandler } from "../get-recent-customers.query-handler";
+import { GetRecentCustomersQueryHandler, RECENT_CUSTOMERS_LIMIT } from "../get-recent-customers.query-handler";
 
 const contacted = (day: string) => ({ lastContactDate: Temporal.PlainDate.from(day) });
 
@@ -75,5 +75,25 @@ describe("GetRecentCustomersQueryHandler with customers contacted on the same da
     const recent = await new GetRecentCustomersQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE);
 
     expect(recent.map((customer) => customer.id)).toEqual([first, second, third]);
+  });
+});
+
+describe("GetRecentCustomersQueryHandler with more customers than the panel shows", () => {
+  const database = useTestDatabase();
+
+  it("returns only the newest ones, up to the limit", async () => {
+    const days = Array.from({ length: RECENT_CUSTOMERS_LIMIT + 1 }, (_, index) => index + 1);
+    for (const day of days) {
+      await database.seed.addCustomerAsync({
+        locationId: NORTHSIDE,
+        surname: `Day${String(day).padStart(2, "0")}`,
+        ...contacted(`2026-10-${String(day).padStart(2, "0")}`),
+      });
+    }
+
+    const recent = await new GetRecentCustomersQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE);
+
+    // The oldest (Day01) is the one left out.
+    expect(recent.map((customer) => customer.surname)).toEqual(["Day06", "Day05", "Day04", "Day03", "Day02"]);
   });
 });
