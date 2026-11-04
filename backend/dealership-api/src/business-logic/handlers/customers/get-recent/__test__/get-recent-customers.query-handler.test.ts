@@ -1,9 +1,9 @@
 import { BadRequestException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
-import { CITY_MOTORS, NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
+import { CENTRAL, CITY_MOTORS, NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
-import { AT_NORTHSIDE, AT_RIVERSIDE } from "#test-setup/users/test-users";
-import { GetRecentCustomersQueryHandler } from "../get-recent-customers.query-handler";
+import { AT_CENTRAL, AT_NORTHSIDE, AT_RIVERSIDE } from "#test-setup/users/test-users";
+import { GetRecentCustomersQueryHandler, RECENT_CUSTOMERS_LIMIT } from "../get-recent-customers.query-handler";
 
 const date = (iso: string) => Temporal.PlainDate.from(iso);
 
@@ -57,6 +57,22 @@ describe("GetRecentCustomersQueryHandler", () => {
     const recent = await new GetRecentCustomersQueryHandler(database.unitOfWorkFactory).executeAsync(AT_RIVERSIDE);
 
     expect(recent.map((customer) => customer.surname)).toEqual(["Riverside"]);
+  });
+
+  it("returns no more than the limit, the newest ones, when more customers qualify", async () => {
+    // Central holds no other test's customers, so these six are all the user can see.
+    for (const [index, surname] of ["Aa", "Bb", "Cc", "Dd", "Ee", "Ff"].entries()) {
+      await database.seed.addCustomerAsync({
+        locationId: CENTRAL,
+        surname,
+        lastContactDate: date(`2026-10-0${index + 1}`),
+      });
+    }
+
+    const recent = await new GetRecentCustomersQueryHandler(database.unitOfWorkFactory).executeAsync(AT_CENTRAL);
+
+    expect(RECENT_CUSTOMERS_LIMIT).toBe(5);
+    expect(recent.map((customer) => customer.surname)).toEqual(["Ff", "Ee", "Dd", "Cc", "Bb"]);
   });
 
   it("answers 400 when no location is selected", async () => {
