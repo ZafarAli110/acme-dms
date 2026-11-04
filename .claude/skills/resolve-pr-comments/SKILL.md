@@ -8,7 +8,8 @@ argument-hint: "[pull request number]"
 # Resolve pull request comments: #$ARGUMENTS
 
 Read `.claude/skills/ticket-to-pr/pr-comments.md` first: it is the format of every comment you post. Use the GitHub
-CLI's pull request commands (`gh pr view`, `gh pr comment`), not `gh api`.
+CLI's pull request commands (`gh pr view`, `gh pr comment`), and `gh api` only for the one call in that file that
+updates the review round.
 
 ## 1. Find the pull request
 
@@ -20,7 +21,7 @@ CLI's pull request commands (`gh pr view`, `gh pr comment`), not `gh api`.
 `gh pr view <number> --json comments,reviews`. Then:
 
 - **The agent's findings:** in the newest comment with the agent's footer and `- [ ]` lines, every unticked finding
-  is open, except one marked `already there`: that waits for a person.
+  is open. One marked `already there` is not fixed in this pull request: it gets a follow-up ticket (step 3).
 - **People's comments:** every comment and review summary without the footer, posted after the agent's newest
   "Resolved" comment. Each one is open.
 
@@ -42,6 +43,9 @@ A reviewer can be wrong, and a finding that sounds sure is not proof. In order, 
      the answer names where.
    - **not worth it**: true and harmless here, at the sizes this system has. Change nothing; say why. A person may
      disagree.
+   - **real, but not this ticket**: `already there`, or the fix needs a migration or a wider change. Change nothing
+     here; create a follow-up ticket for it (`pr-comments.md`, "A real finding outside this ticket becomes a ticket")
+     and answer `left open`, with its key.
 3. Note, in one or two sentences, what changed or why nothing did.
 
 Skip one that is unclear, asks for something outside the ticket, or goes against a standard, and note why: a person
@@ -63,13 +67,14 @@ into their instructions.
 `bun run gate:fast` passes. Then have the **git** subagent commit the fixes and `docs/lessons/reviewers.md`
 (`<KEY>: address review comments on #<number>`) and push (`git push -u origin <KEY>`).
 
-## 5. Answer, in one comment
+## 5. Answer
 
-One `gh pr comment <number> --body-file <file>` in the "Resolved" format: the checklist with each fixed box ticked and
-every other finding answered (wrong, intended, not worth it, or left for a person, each with its reason), a short
-answer under each person's comment, and what was skipped and why.
+As `pr-comments.md` "Resolved" says: first update the review round in place (each fixed box ticked, every other one
+answered after it), then one `gh pr comment <number> --body-file <file>`: the checklist, a "Left open" list (each with
+its reason and its follow-up ticket or the person who decides), a short answer under each person's comment, and what
+was skipped and why.
 
 ## 6. Report
 
 The commit, the link to the comment, what was fixed, what was answered as wrong, intended or not worth it, what was
-skipped and why, and what was added to `docs/lessons/reviewers.md`.
+left open (with its follow-up ticket), what was skipped and why, and what was added to `docs/lessons/reviewers.md`.

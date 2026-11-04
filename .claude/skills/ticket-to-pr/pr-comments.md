@@ -36,7 +36,24 @@ Verdict: APPROVE · 0 blocking / 0 should-fix
 
 ## Resolved
 
-After fixing, one comment that answers everything the run worked on:
+After fixing, two things, in this order.
+
+**1. Update the review round in place**, so its checklist is the one place a reader looks. Tick each finding you fixed
+and add its answer after it; every box left unticked gets its answer too, so nobody has to guess whether it was skipped
+on purpose or the run broke off. Find the round's comment id at the end of its `url` (`#issuecomment-<id>`) in
+`gh pr view <number> --json comments`, write the whole updated body to a file, and replace it:
+
+```
+gh api -X PATCH repos/{owner}/{repo}/issues/comments/<id> -F body=@<file>
+```
+
+```
+- [x] **SEC-B1** blocking · introduced · … → fixed in a1b2c3d
+- [ ] **PERF-S1** should-fix · already there · … → left open: needs a new migration, wider than this ticket. Follow-up: ACME-110
+- [ ] **CLEAN-S1** should-fix · introduced · … → not worth it: the list is capped at 10 photos
+```
+
+**2. Post one "Resolved" comment** that says what this round did:
 
 ```
 ## Resolved in <short commit hash>
@@ -44,8 +61,10 @@ After fixing, one comment that answers everything the run worked on:
 - [x] **SEC-B1** blocking · introduced · … (copied from the round, now ticked: fixed)
 - [ ] **PERF-S1** should-fix · introduced · … — wrong: `export-job-runner.ts:213` already streams the rows through a cursor
 - [ ] **TEST-S2** should-fix · introduced · … — intended: the ticket asks for the old order to stay (requirement 3)
-- [ ] **CLEAN-S1** should-fix · introduced · … — not worth it: the list is capped at 10 photos
-- [ ] **SEC-S1** should-fix · already there · … — left for a person: it was already there
+- [ ] **SEC-S1** should-fix · already there · … — left open: it was already there. Follow-up: ACME-110
+
+### Left open
+- **SEC-S1** — what it would take, why not here, and who acts next: the follow-up ticket, or the person named
 
 ### Your comments
 > <the first line of the person's comment>
@@ -60,6 +79,11 @@ The newest "Resolved" comment holds the checklist as it now stands; the next run
 
 - Say what changed, not what the problem was: the comment already says that.
 - Never write "Done", "Fixed", "as requested" or "great catch" on their own; they tell the reader nothing.
-- Only tick a box whose finding you fixed. Every other finding gets its answer after the dash: `wrong`, `intended`,
-  `not worth it` or `left for a person`, each with its reason, and `wrong` with the code that shows it.
-- Never untick a box, never reword a finding, and never post a finding again once it has been answered.
+- Only tick a box whose finding you fixed. Every other finding gets its answer: `wrong`, `intended`, `not worth it`
+  or `left open`, each with its reason, `wrong` with the code that shows it, and `left open` with its follow-up
+  ticket or the person who decides.
+- **A real finding outside this ticket becomes a ticket.** One that is `already there`, or needs a migration or a
+  wider change: check `list_tickets` for one that covers it, otherwise `create_ticket` (a `bug` for wrong behaviour, a
+  `story` otherwise) whose description starts `Found while reviewing <KEY> (#<number>).`, then the finding, its
+  evidence (the query plan, the command and what it returned) and the proposed fix. Link its key in the answer.
+- Never untick a box and never reword a finding: in the round you only tick and add the answer after it.

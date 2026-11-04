@@ -7,7 +7,7 @@ argument-hint: <ticket key>
 
 # Ticket to pull request: $ARGUMENTS
 
-You run the whole loop for $ARGUMENTS with no person in between, except where this file says stop. The plan file
+You run the whole loop for $ARGUMENTS with no person in between, except where this file says stop.
 The ticket's plan (`.ai-plans/*_$ARGUMENTS_*.md`) is the run's memory: write every verdict and every step to its log.
 
 **Stop and report** (what was done, where it stopped, what is needed) when:
@@ -69,8 +69,7 @@ that code, and list it in the hand-over so a person can disagree. Drop a finding
 true, never because fixing it is work.
 
 Post all the reports in one comment, as a "Review round" (`.claude/skills/ticket-to-pr/pr-comments.md`). Then work
-through every `blocking` and `should-fix` finding this change `introduced` (the ones `already there` stay open for a
-person) by following steps 3 to 5 of `.claude/skills/resolve-pr-comments/SKILL.md`: judge each one, fix the real ones
+through every `blocking` and `should-fix` finding by following steps 3 to 5 of `.claude/skills/resolve-pr-comments/SKILL.md`: judge each one, fix the real ones
 everywhere the same mistake appears, and answer the rest.
 
 **The next round** runs only the reviewer whose finding was fixed, and gives it two things: the commits since its last
@@ -79,9 +78,14 @@ and never posts an answered finding again. A `REJECT` stops the run: hand it to 
 
 ## 6. Hand over
 
-Stop. Report, so a person can judge the work rather than trust it:
+First bring the plan up to date: Status, **Now** (the pull request, what is left and who acts next) and a Log line
+for each review round, with the time from `date`. Have the **git** subagent commit and push it.
+
+Then stop. Report, so a person can judge the work rather than trust it:
 
 - the pull request link and the evidence file;
+- **what was left open, and why**: each finding not fixed, with its reason and its follow-up ticket (or the person who
+  decides), so nobody wonders whether it was skipped on purpose or the run broke off;
 - **the decisions you took that the ticket did not**: each line of the plan's Decisions (a default, a scope, a choice
   between two readings of the ticket), so a person can disagree before it merges;
 - **what the checks don't prove**, from the evidence file;

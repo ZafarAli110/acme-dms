@@ -156,8 +156,16 @@ A read uses `beginAsync({ readOnly: true })`. Independent reads outside a transa
 
 ## Measure when you can
 
-`bun run api as <user> …` with `curl -w '%{time_total}'`, before and after, on the seeded data (`bun run seed:bulk`
-for 1.6 million customers). A measured finding is `— checked`; a reasoned one is `— inferred`.
+On the seeded data (`bun run seed:bulk` for 1.6 million customers), when the system is running:
+
+- **A query:** `bun run sql:explain "<the handler's query, with real ids>"` (read-only). The plan shows whether an
+  index is used (`Index Scan`) or every row is read (`Seq Scan`), and the real time. Quote that line and the time in
+  the finding.
+- **An endpoint:** `bun run api as <user> …`, a few calls before and after; a gap smaller than the spread between
+  calls is noise, not a finding.
+
+A measured finding is `— checked`; a reasoned one is `— inferred`. Mark `introduced` only when this diff added the
+cost: a full scan that was there before the change is `already there`, even if the diff touches the query.
 
 ## What earlier reviews taught, and a later round
 
