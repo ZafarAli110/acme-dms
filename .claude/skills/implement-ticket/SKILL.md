@@ -11,7 +11,8 @@ can take over; the file is what carries on. Write to it as you go, not at the en
 
 **Its name** starts with when it was created, so the folder reads in order:
 `.ai-plans/<YYYY-MM-DD>_<HH-MM>_<KEY>_<short-name>.md`, e.g. `.ai-plans/2026-11-04_15-30_ACME-107_new-part-page.md`.
-Find a ticket's plan by its key: `.ai-plans/*_<KEY>_*.md`.
+Find a ticket's plan by its key: `.ai-plans/*_<KEY>_*.md`. Take every date and time, in the name, Created and the Log,
+from the clock (`date '+%Y-%m-%d %H:%M'`), never from memory: a model does not know what time it is.
 
 ## Start, or resume
 
@@ -62,3 +63,7 @@ spilling out or cut off in that step, not at the end. Tests prove behaviour; onl
 
 Run the `verify-ticket` skill. Link `docs/evidence/<KEY>.md` from the plan, tick the last step only when verification
 passed, and set Status to "Done".
+
+**Whenever you stop**, finished or not, Status and Now say what is true at that moment: what a person can see or run,
+what comes next and who does it, and anything left undone with its reason. A reader must never have to guess whether
+something was skipped on purpose or the run broke off.
