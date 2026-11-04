@@ -8,6 +8,7 @@
       "Bash(bun run format)",
       "Bash(bunx nx *)",
       "Bash(bun run api as *)",
+      "Bash(bun run sql:explain *)",
       "Bash(bun run status)",
       "Bash(bun run logs *)",
       "Bash(bun run traces *)",
@@ -30,6 +31,7 @@
       "Bash(git push -u origin ACME-*)",
       "Bash(gh pr create *)",
       "Bash(gh pr comment *)",
+      "Bash(gh api -X PATCH *issues/comments/*)",
       "Bash(gh pr view *)",
       "mcp__acme-tracker__update_ticket_status",
       "mcp__acme-tracker__add_comment"
