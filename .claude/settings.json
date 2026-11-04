@@ -8,6 +8,7 @@
       "Bash(bun run format)",
       "Bash(bunx nx *)",
       "Bash(bun run api as *)",
+      "Bash(bun run sql:explain *)",
       "Bash(bun run status)",
       "Bash(bun run logs *)",
       "Bash(bun run traces *)",
