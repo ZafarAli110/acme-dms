@@ -5,6 +5,8 @@
 This branch adds a package: run `bun install` once after switching. A pull request needs your GitHub account, once:
 `gh auth login`.
 
+Every piece of the harness, what it does and the lab that added it: `docs/HARNESS.md`.
+
 ## What this branch adds
 
 - `/ticket-to-pr <KEY>`: one ticket from the board to an open, reviewed pull request: plan, `architect` review, build,
