@@ -52,6 +52,7 @@ Demo users, all with the password `Acme123!`:
 | `bun run reset`     | Back to the sample data          |
 | `bun run api`       | Call the API as a demo user      |
 | `bun run errors`    | Recent failed requests (traces)  |
+| `bun run health`    | What is unhealthy, and why       |
 | `bun run test`      | Unit tests                       |
 | `bun run coverage`  | Tests with coverage, per project |
 | `bun run lint`      | Lint                             |
