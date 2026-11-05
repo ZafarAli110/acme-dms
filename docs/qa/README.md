@@ -1,4 +1,5 @@
 # QA
 
 One file per ticket, written by the `qa` subagent (`/qa-ticket <KEY>`): the test cases it wrote from the ticket before
-running anything, what each one did in the running system, and the bugs it filed for the failures.
+running anything, what each one did in the running system, and the bugs it filed for the failures. The same plan and
+results go on the ticket, with a screenshot for each case.
