@@ -9,7 +9,9 @@
   files, Docker).
 - `.claude/rules/git-policy.md`: the reasons behind the git lines, loaded at the start like `CLAUDE.md`.
 
-## Try it
+## Exercise
+
+**Goal:** Try one prompt from each list (allow, ask, deny), and see which one a rule alone could not stop.
 
 1. Open `.claude/settings.json` and `.claude/rules/git-policy.md`.
 2. Start `claude` and try one prompt from each list:
@@ -29,3 +31,20 @@ Small: three short prompts.
 ## Before you switch
 
 Type `/context all` and note **Memory files**: lab 06 compares it.
+
+## Next
+
+Changed files you want to keep? Put them on a branch of their own first, or they come with you (the same in
+PowerShell):
+
+```bash
+git switch -c run/<what-you-tried>
+git add -A
+git commit -m "<what you tried>"
+```
+
+Then:
+
+```bash
+git switch lab/06-skills
+```
