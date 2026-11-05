@@ -10,7 +10,11 @@ This branch adds a package: run `bun install` once after switching.
 run them: an `export_jobs` table, a separate `export-worker` process, fair turns between users, a limit per user
 (`429`), timeouts and a heartbeat.
 
-## Try it
+## Exercise
+
+**Goal:** Compare your fix with the finished version, and see what serving many dealers needed.
+
+**Tickets:** ACME-108 is already built on this branch: don't pick it. The others are open.
 
 1. Compare with your own fix: `git diff lab/09-export-after lab/09-export-final -- web/app/components/exports`.
 2. The rest: `git diff lab/09-export-after lab/09-export-final --stat`, then `docs/standards/business-handlers.md`.
@@ -24,3 +28,22 @@ run them: an `export_jobs` table, a separate `export-worker` process, fair turns
 ## Cost
 
 Nothing: reading and running, no agent.
+
+## Next
+
+Changed files you want to keep? Put them on a branch of their own first, or they come with you (the same in
+PowerShell):
+
+```bash
+git switch -c run/<what-you-tried>
+git add -A
+git commit -m "<what you tried>"
+```
+
+Then:
+
+```bash
+git switch lab/10-ticket-to-pr
+```
+
+`lab/10-ticket-to-pr` adds a package: run `bun install` once after switching.
