@@ -27,11 +27,18 @@ The ticket's plan (`.ai-plans/*_$ARGUMENTS_*.md`) is the run's memory: write eve
    pull requests run only on a branch named after a ticket; a hook refuses them anywhere else.
 2. Read `.claude/skills/implement-ticket/SKILL.md` and follow its "Start, or resume" section to write the plan:
    questions first, then requirements, decisions, shape, and steps each with its check. If the plan file already exists,
-   read it and continue from where its log stops.
+   read it and continue from where its log stops. Skip that section's last step (show the plan and wait for a
+   go-ahead): in this run, people answer on the ticket, never in the terminal.
 3. **The questions gate.** If the Questions section is not "None", post the questions on the ticket with
    `add_comment` ("Questions before we build: …") and stop. A product owner answers on the ticket; the next
    `/ticket-to-pr $ARGUMENTS` reads the answers first. Never answer a product question yourself, and never move one
    into Decisions to keep going.
+
+   **An answer on the ticket is the go-ahead.** A comment by a person (the tracker shows it as "a person", not "an
+   agent") after your questions answers them: a short reply such as "A" picks that option. Record each answer in
+   Decisions with "answered on the ticket", log it, and carry on without asking again in the terminal. Stop again
+   only for a question still unanswered, or an answer that is unclear: ask that one on the ticket.
+
 4. **The design gate.** If the plan's Design is "Open", commit the prototypes in `docs/prototypes/$ARGUMENTS/`, post
    them on the ticket with `add_comment` (each file, the one choice it shows, your recommendation first) and stop,
    with the questions if there are any. The next run reads the pick from the ticket and records it. A design that is
