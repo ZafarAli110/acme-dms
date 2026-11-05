@@ -220,6 +220,7 @@ From a second terminal (repo root, while `bun run dev` is running):
 | Command                                             | What it shows                                                          |
 | --------------------------------------------------- | ---------------------------------------------------------------------- |
 | `bun run status`                                    | every resource, its state and URL                                      |
+| `bun run health`                                    | what is not healthy, its last log lines, and the likely fix            |
 | `bun run start` / `bun run stop`                    | start the whole system in the background / stop it                     |
 | `bun run rebuild identity-api`                      | rebuild one .NET service after a change (the rest reload themselves)   |
 | `bun run logs dealership-api`                       | console output of one service                                          |
@@ -344,6 +345,7 @@ echoed in every response and attached to every log line.
 | `bun run seed` says it cannot find the gateway  | Start the system first (`bun run dev`) and wait until everything is Healthy.                                                                                                                        |
 | `bun run dev` says packages are not installed   | You switched to a branch that adds a package (lab 09-after does). Run `bun install`, then start again.                                                                                              |
 | A photo stays `pending`                         | Check `bun run errors` and the RabbitMQ UI (the `rabbitmq` URL in the dashboard, user `acme`/`acme`): a message in a `*.dlq` queue tells you which consumer gave up and why.                        |
+| A resource is Unhealthy, or keeps restarting    | `bun run health`: it names the resource, prints its last log lines and, for a known cause, the fix. The same lines are on the dashboard: click the resource, then **Console logs**.                 |
 | Port already in use                             | Another `aspire run` is still running: `aspire stop`, or close the other terminal.                                                                                                                  |
 
 ## Licence
