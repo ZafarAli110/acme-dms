@@ -18,7 +18,9 @@
 - `/write-handoff` and `/resume-handoff`: a short note of where your session stopped (`.claude/handoff.md`, not
   committed), and a fresh session that reads it, checks it against the repository and waits for your go-ahead.
 
-## Try it
+## Exercise
+
+**Goal:** Plan ACME-105 with `/implement-ticket`, restart Claude, and carry on from the plan file.
 
 1. Open `.ai-plans/plan-template.md` (every plan's shape) and `.claude/skills/implement-ticket/SKILL.md`.
 2. With the tracker running, start `claude` and type `/implement-ticket ACME-105`. Stop when it has written
@@ -49,3 +51,20 @@
 ## Cost
 
 Step 2 to the plan: moderate. Step 4 runs two tickets: large. Stop each at its plan unless you mean to build it.
+
+## Next
+
+Changed files you want to keep? Put them on a branch of their own first, or they come with you (the same in
+PowerShell):
+
+```bash
+git switch -c run/<what-you-tried>
+git add -A
+git commit -m "<what you tried>"
+```
+
+Then:
+
+```bash
+git switch lab/09-export-before
+```
