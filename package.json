@@ -22,6 +22,7 @@
     "hooks": "git config core.hooksPath .githooks",
     "status": "aspire describe",
     "logs": "aspire logs",
+    "health": "bun scripts/health.ts",
     "traces": "aspire otel traces",
     "errors": "aspire otel traces --has-error true",
     "api": "bun scripts/api.ts",
