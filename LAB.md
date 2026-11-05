@@ -15,7 +15,11 @@ Every piece of the harness, what it does and the lab that added it: `docs/HARNES
   `test-reviewer`, each only where the diff touches its area. A `git` subagent on a small model commits and pushes.
 - `/resolve-pr-comments <number>`: fixes a pull request's open comments, pushes, and answers them in one comment.
 
-## Try it
+## Exercise
+
+**Goal:** Take ACME-106 from the board to a reviewed pull request and through QA, and watch what it costs.
+
+**Tickets:** ACME-108 is already built on this branch: don't pick it. The others are open.
 
 1. Open `.claude/skills/ticket-to-pr/SKILL.md` and `.claude/agents/architect.md`.
 2. Install a plugin, once: the cost meter, which shows what the run costs while it runs. In Claude:
@@ -26,8 +30,9 @@ Every piece of the harness, what it does and the lab that added it: `docs/HARNES
 
    Answer `y`, pick the **user** scope, then `/show-meter` opens it beside the conversation.
 
-3. `bun run reset`, start the tracker, then in Claude `/show-meter reset` and `/ticket-to-pr ACME-106`. Answer what it
-   asks on the ticket. Watch the meter: each subagent appears as it runs, with its time, tokens and cost.
+3. A clean board: in `acme-tracker`, stop the tracker, `bun run reset`, then `bun start`. Here: Docker Desktop
+   running, and `bun run dev`. Then in Claude: `/clear`, `/show-meter reset` and `/ticket-to-pr ACME-106`. Answer
+   what it asks on the ticket. Watch the meter: each subagent appears as it runs, with its time, tokens and cost.
 4. Read the pull request it opens: the plan, the evidence, the reviewers' comments.
 5. Leave a review comment on the pull request yourself, then `/resolve-pr-comments <number>`.
 6. `/qa-ticket ACME-106`: a browser opens and the tester works through its plan while you watch. On the board, the
@@ -45,3 +50,13 @@ Every piece of the harness, what it does and the lab that added it: `docs/HARNES
 The largest single command in the labs: several agents across a whole ticket. Run it once, and read what it spent on
 the cost meter.
 A pull request needs a repository you can push to: push your clone to your own repository first.
+
+## Next
+
+This is the last lab. When you are done, close the pull request and delete its branch:
+
+```bash
+gh pr close <number> --delete-branch
+```
+
+Then `bun run reset` in acme-tracker for a clean board. Every piece of the harness, on one page: `docs/HARNESS.md`.
