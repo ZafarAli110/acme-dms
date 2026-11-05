@@ -7,7 +7,9 @@
 Acme DMS with no harness: no `CLAUDE.md`, no written standards, no hooks, no skills. The lint rules and the commit
 hook (`scripts/pre-commit.ts`) are already here, because a codebase enforces some rules on its own.
 
-## Try it
+## Exercise
+
+**Goal:** Give the bare agent ACME-101, with no harness at all, and watch what it opens, runs and decides.
 
 1. Start Claude with nothing loaded: `claude --safe-mode`. Type `/context`: no memory files, no skills.
 2. Open the board (acme-tracker, `bun start`, then http://localhost:4100) and copy ticket ACME-101.
@@ -24,7 +26,7 @@ hook (`scripts/pre-commit.ts`) are already here, because a codebase enforces som
 Step 3 builds a whole ticket: the most expensive thing in these labs. If you only want to see the idea, stop it after
 its first few steps (Esc).
 
-## Afterwards
+## Next
 
 Keep the run on a branch of its own before you switch (the same in PowerShell):
 
