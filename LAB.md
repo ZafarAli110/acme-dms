@@ -7,7 +7,9 @@
 `.mcp.json` connects the Acme Tracker (the team's board) for everyone who clones the repo. Claude can read tickets,
 move them and comment, instead of you pasting them.
 
-## Try it
+## Exercise
+
+**Goal:** Let Claude read ACME-104 from the board itself, then see what its tools cost in context.
 
 1. Start the tracker: in `acme-tracker`, `bun start`; the board is at http://localhost:4100.
 2. Start `claude` here and approve `acme-tracker` when it asks. Type `/mcp`: the tracker's tools are listed.
@@ -22,3 +24,20 @@ move them and comment, instead of you pasting them.
 ## Cost
 
 Small: one ticket read, no code changed.
+
+## Next
+
+Changed files you want to keep? Put them on a branch of their own first, or they come with you (the same in
+PowerShell):
+
+```bash
+git switch -c run/<what-you-tried>
+git add -A
+git commit -m "<what you tried>"
+```
+
+Then:
+
+```bash
+git switch lab/03-hooks
+```
