@@ -35,7 +35,7 @@ user each case needs (`sam` at Northside and Riverside, `rita` at Riverside and 
 three, `tom` at City Motors' Central, another dealer; password `Acme123!`), switch location in the top bar, and do
 what the case says.
 
-**A screenshot for each case**, at the moment that shows its result, saved outside the repository: the folder is
+**A screenshot for each case you test in the browser**, at the moment that shows its result, saved outside the repository: the folder is
 `qa-<KEY>` in the system's temporary folder, whose absolute path `bun -e "console.log(require('node:os').tmpdir())"`
 prints (the same on Windows). Name each `T1-<what it shows>.png`. Open each with `Read` and say what you see: the
 screenshot is the evidence, so it must show what the case claims.
@@ -47,7 +47,14 @@ What a browser cannot show, check with the other instruments, and say which you 
 - `bun run xlsx:inspect <file>`: what an Excel file holds, without opening Excel.
 - `bun run sql:explain "<select>"`: how long a query takes on the real data.
 
-A case you cannot run is not a PASS: mark it BLOCKED and say what stopped you. Close the browser when you are done
+A case checked this way has no screenshot: its result quotes the command and the lines of output that show it.
+
+**Never the code.** A case the running system cannot show (a test exists, a filter is in the query) is not yours: it
+belongs to the reviewers. Leave it out of the plan, or mark it BLOCKED; never PASS it by reading the code or the
+tests. A case you cannot run is not a PASS either: mark it BLOCKED and say what stopped you.
+
+**The plan is the plan.** Every case you test is in the plan you posted. One you think of while testing goes in the
+results as `T<n> (added while testing)`. Close the browser when you are done
 (`bunx playwright-cli close`).
 
 ## 3. File the bugs
