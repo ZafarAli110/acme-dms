@@ -12,7 +12,9 @@
 | after an edit     | `hooks/format-file.ts`   | formats the file                                      |
 | when Claude stops | `hooks/gate.ts`          | runs the checks; on a failure, Claude carries on      |
 
-## Try it
+## Exercise
+
+**Goal:** Ask Claude to edit a committed migration, and watch a hook refuse what `CLAUDE.md` can only ask.
 
 1. Open `.claude/settings.json`, then `.claude/hooks/protect-files.ts`.
 2. Start `claude` and prompt:
@@ -29,3 +31,20 @@
 ## Cost
 
 Small: one refused edit.
+
+## Next
+
+Changed files you want to keep? Put them on a branch of their own first, or they come with you (the same in
+PowerShell):
+
+```bash
+git switch -c run/<what-you-tried>
+git add -A
+git commit -m "<what you tried>"
+```
+
+Then:
+
+```bash
+git switch lab/04-subagents
+```
