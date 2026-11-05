@@ -10,7 +10,7 @@
 
 **Design:** No screen. The Home panel is unchanged; only the rows the API returns change.
 
-**Now:** Done: ticket read, cause found by reading the code · Done: handler filters by dealer and location, 6 handler tests pass · Done: steps 1-3, checked in the running system · Evidence: `docs/evidence/ACME-106.md` · Next: pull request, reviewers, then `/qa-ticket ACME-106` · Blocked: None
+**Now:** Done: ticket read, cause found by reading the code · Done: handler filters by dealer and location, 6 handler tests pass · Done: steps 1-3, checked in the running system · Evidence: `docs/evidence/ACME-106.md` · Next: `/qa-ticket ACME-106`, then a person merges PR #3 · Blocked: None
 
 ## Requirement
 
@@ -137,3 +137,5 @@ get 400 · Depends on: nothing · Performance: limit 5, filtered by dealer and l
   - No screen changed, so no browser screenshots.
 - 2026-11-05 17:09 "No location → 400": ticked by the unit test "is refused when no location is selected" (BadRequestException), passing in the 17:06 run. The `build-api-endpoint` skill was not loaded; the sibling `get-customer-list` handler was followed.
 - 2026-11-05 17:13 verify-ticket: `bun run gate:fast` passed (22/22, cached). Verifier: PASS on the API checks; the Home panel was not seen in a browser. Evidence: `docs/evidence/ACME-106.md`.
+- 2026-11-05 17:14 PR #3 opened (https://github.com/ZafarAli110/acme-dms/pull/3). Review round 1 posted: security APPROVE, clean-code APPROVE, performance APPROVE-WITH-CHANGES (PERF-S1), test APPROVE-WITH-CHANGES (TEST-S1, TEST-S2); no blocking findings, none dropped as wrong.
+- 2026-11-05 17:17 Round 1 answered: TEST-S1 fixed (a limit test; with the location filter removed 4 tests fail, including it; restored). PERF-S1 left open: ACME-110 (needs a migration). TEST-S2 left open: ACME-111 (no web code changed; the standard it cites is not in docs/standards). `bun run gate:fast` exit 0.

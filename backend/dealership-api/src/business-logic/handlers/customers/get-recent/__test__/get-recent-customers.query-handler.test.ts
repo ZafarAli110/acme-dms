@@ -54,6 +54,25 @@ describe("GetRecentCustomersQueryHandler", () => {
     expect(riverside.map((customer) => customer.surname)).toEqual(["Riversider"]);
   });
 
+  it("returns the selected location's 5 newest even when another location has newer contacts", async () => {
+    for (let day = 1; day <= 6; day++) {
+      await database.seed.addCustomerAsync({
+        locationId: NORTHSIDE,
+        surname: `North${day}`,
+        lastContactDate: Temporal.PlainDate.from(`2026-10-0${day}`),
+      });
+      await database.seed.addCustomerAsync({
+        locationId: RIVERSIDE,
+        surname: `River${day}`,
+        lastContactDate: Temporal.PlainDate.from(`2026-10-2${day}`),
+      });
+    }
+
+    const recent = await handler().executeAsync(AT_NORTHSIDE);
+
+    expect(recent.map((customer) => customer.surname)).toEqual(["North6", "North5", "North4", "North3", "North2"]);
+  });
+
   it("returns none of another dealer's customers, even ones filed under the same location id", async () => {
     await database.seed.addCustomerAsync({
       locationId: NORTHSIDE,
