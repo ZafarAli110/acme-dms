@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-05 16:59
 
-**Status:** In progress
+**Status:** Done (verified; pull request and QA to follow)
 
 **Ticket:** ACME-106 · **Branch:** ACME-106 (base: `lab/10-ticket-to-pr`)
 
@@ -10,7 +10,7 @@
 
 **Design:** No screen. The Home panel is unchanged; only the rows the API returns change.
 
-**Now:** Done: ticket read, cause found by reading the code · Done: handler filters by dealer and location, 6 handler tests pass · Next: step 3, check it in the running system · Blocked: None
+**Now:** Done: ticket read, cause found by reading the code · Done: handler filters by dealer and location, 6 handler tests pass · Done: steps 1-3, checked in the running system · Evidence: `docs/evidence/ACME-106.md` · Next: pull request, reviewers, then `/qa-ticket ACME-106` · Blocked: None
 
 ## Requirement
 
@@ -28,23 +28,23 @@ Done means every box is ticked, each by a check whose result is in the Log.
 
 Happy
 
-- [ ] As `maria` at Riverside, open Home → every name in "Recently contacted" is in Riverside's Customers list
-- [ ] As `sam` at Northside, open Home → every name is in Northside's list and none is on Maria's list
-- [ ] Click each name in the panel → the customer opens, no "not found" error
-- [ ] The panel shows the newest contact first, at most 5
+- [x] As `maria` at Riverside, open Home → every name in "Recently contacted" is in Riverside's Customers list
+- [x] As `sam` at Northside, open Home → every name is in Northside's list and none is on Maria's list
+- [x] Click each name in the panel → the customer opens, no "not found" error
+- [x] The panel shows the newest contact first, at most 5
 
 Failure: absent data, not allowed, another dealer
 
-- [ ] As `tom` (City Motors, Central) → sees none of Northwind's customers; a Northwind customer id is "not found" for him
-- [ ] A location with no contacted customers → an empty list, not another location's rows
-- [ ] No `x-location-id` → 400, like the customer list (via `requireLocation`)
+- [x] As `tom` (City Motors, Central) → sees none of Northwind's customers; a Northwind customer id is "not found" for him
+- [x] A location with no contacted customers → an empty list, not another location's rows
+- [x] No `x-location-id` → 400, like the customer list (via `requireLocation`)
 
 ## Load before building
 
-| Item                              | Kind     | Why                                         | Loaded? |
-| --------------------------------- | -------- | ------------------------------------------- | ------- |
-| `docs/standards/multi-tenancy.md` | Standard | dealer and location filter in every `where` | [x]     |
-| `build-api-endpoint`              | Skill    | handler and test shape                      | [ ]     |
+| Item                              | Kind     | Why                                         | Loaded?                                           |
+| --------------------------------- | -------- | ------------------------------------------- | ------------------------------------------------- |
+| `docs/standards/multi-tenancy.md` | Standard | dealer and location filter in every `where` | [x]                                               |
+| `build-api-endpoint`              | Skill    | handler and test shape                      | [ ] not loaded: followed the sibling list handler |
 
 ## Shape
 
@@ -98,7 +98,7 @@ get 400 · Depends on: nothing · Performance: limit 5, filtered by dealer and l
       handler, showing the leak
 - [x] 2. Add `userContext`, `requireLocation` and the dealer filter to the handler → verify:
       `bunx nx test @acme/dealership-api` passes
-- [ ] 3. Check it in the running system → verify, each with `bun run api as <user> [--location <x>] GET <path>`:
+- [x] 3. Check it in the running system → verify, each with `bun run api as <user> [--location <x>] GET <path>`:
       (a) `maria --location riverside` `GET /api/dealership/v1/customers/recent`: every name is in her Riverside
       `GET …/customers` list; (b) `sam` (Northside): every name is in his Northside list and none is in (a);
       (c) `GET …/customers/{id}` for every id returned in (a) and (b), as the same user at the same location: all
@@ -128,3 +128,12 @@ get 400 · Depends on: nothing · Performance: limit 5, filtered by dealer and l
 - 2026-11-05 17:02 Question 1 answered "A" on the ticket by a person. Building from step 1.
 - 2026-11-05 17:04 Step 1: six tests written. On the old handler 5 of 6 failed, returning Riverside's and City Motors' customers to Northside (only "deleted and never contacted" passed). Tests clear `customers` before each test: the test database is shared by a file's tests.
 - 2026-11-05 17:06 Step 2: handler takes `userContext`, `requireLocation`, dealer and location filters. `bunx nx test @acme/dealership-api --skip-nx-cache`: succeeded, all tests pass. Steps 1 and 2 are committed together: a commit of step 1 alone would hold failing tests.
+- 2026-11-05 17:08 Step 3, running system (`bun run start`, `bun run reset`; calls with `bun run api as <user> --location <x> --body GET …`; the API script cannot omit the location, so "no location → 400" is proved by the unit test only):
+  - maria @ Riverside: recent = 5 (Adeyemi 10-26, Doyle 10-23, Byrne 10-18, Nowak 10-11, Fischer 04-02), newest first; 0 ids missing from her Riverside list (7 customers); all 5 `GET /customers/{id}` 200.
+  - sam @ Northside: recent = 5 (Patel 10-27 … Hopper 10-02); 0 missing from his list (10); all 5 open 200; 0 of his ids are on maria's recent or list.
+  - rita @ Westgate: recent = 5, all Westgate; 0 missing from her list (6); all 5 open 200.
+  - tom @ Central: recent = 2 (Farooq, Ahmed), none of Northwind's; `GET /customers/{Patel, Northside}` = 404 "was not found at this location".
+  - `bun run errors`: one failed trace, `PUT /api/dealership/*` at 17:05:04, during startup seeding before my first call; not on the customers endpoints. Not investigated further.
+  - No screen changed, so no browser screenshots.
+- 2026-11-05 17:09 "No location → 400": ticked by the unit test "is refused when no location is selected" (BadRequestException), passing in the 17:06 run. The `build-api-endpoint` skill was not loaded; the sibling `get-customer-list` handler was followed.
+- 2026-11-05 17:13 verify-ticket: `bun run gate:fast` passed (22/22, cached). Verifier: PASS on the API checks; the Home panel was not seen in a browser. Evidence: `docs/evidence/ACME-106.md`.
