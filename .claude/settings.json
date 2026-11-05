@@ -29,6 +29,7 @@
     "ask": [
       "mcp__acme-tracker__update_ticket_status",
       "mcp__acme-tracker__add_comment",
+      "mcp__acme-tracker__attach_file",
       "Bash(bun run reset)",
       "Bash(bun run seed)",
       "Bash(bun add *)",
