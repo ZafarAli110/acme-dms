@@ -109,12 +109,19 @@ foreach ($profileFile in @("$documents\WindowsPowerShell\Microsoft.PowerShell_pr
   if ($content.Contains($profileLine)) {
     continue
   }
+  # Your profile is yours: keep a copy before touching it, and only ever add to it (New-Item -Force on a file that
+  # exists empties it, so it runs only when there is no profile yet).
+  if (Test-Path $profileFile) {
+    Copy-Item -Path $profileFile -Destination "$profileFile.before-acme-dms" -Force
+  }
   if ($content.Contains($oldProfileLine)) {
     # The unguarded line an older run wrote: replace it, so the error it prints in a new window goes away.
     Set-Content -Path $profileFile -Value $content.Replace($oldProfileLine, $profileLine) -NoNewline
     Note "fnm line in $profileFile now checks that fnm is there first"
   } else {
-    New-Item -ItemType File -Force -Path $profileFile | Out-Null
+    if (-not (Test-Path $profileFile)) {
+      New-Item -ItemType File -Force -Path $profileFile | Out-Null
+    }
     Add-Content -Path $profileFile -Value "`n# added by Acme DMS setup: Node versions per folder`n$profileLine"
     Note "fnm switched on in $profileFile"
   }
