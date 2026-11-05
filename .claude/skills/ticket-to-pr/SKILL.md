@@ -7,6 +7,10 @@ argument-hint: <ticket key>
 
 # Ticket to pull request: $ARGUMENTS
 
+**The ticket key, in any case.** `acme-106`, `Acme-106` and `ACME-106` are the same ticket: write it in capitals
+everywhere it appears (the branch, the plan's name, commits, comments, the tracker): below, `$ARGUMENTS` means that
+key in capitals.
+
 You run the whole loop for $ARGUMENTS with no person in between, except where this file says stop.
 The ticket's plan (`.ai-plans/*_$ARGUMENTS_*.md`) is the run's memory: write every verdict and every step to its log.
 

@@ -6,6 +6,9 @@ disable-model-invocation: true
 
 # QA a ticket
 
+**The ticket key, in any case.** `acme-106`, `Acme-106` and `ACME-106` are the same ticket: write it in capitals
+everywhere it appears (the branch, the plan's name, commits, comments, the tracker).
+
 1. Make sure the system is running (`bun run status`). QA tests the running system, not the code.
 2. Start the **qa** subagent with the ticket key and nothing else: no summary of the change, no hints. It tests what
    the ticket asks, in its own context.
