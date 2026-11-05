@@ -96,5 +96,6 @@ Then stop. Report, so a person can judge the work rather than trust it:
 - each reviewer's verdict, anything left open, and every finding you did not post or answered as wrong, with the code
   that shows why.
 
-**A person checks that it works and merges**; the hook refuses `gh pr merge`. After the merge, `/qa-ticket $ARGUMENTS`
-tests the merged build and files a bug for each failure.
+**Then QA, then a person merges.** `/qa-ticket $ARGUMENTS` tests the branch in the running app, in a browser people
+can watch, puts its test plan, results and screenshots on the ticket, and moves it to Done or back to In Progress. A
+person merges after QA; the hook refuses `gh pr merge`.

@@ -83,8 +83,8 @@ The **clean-code-reviewer** reads the diff once, when the pull request is opened
 The skills in `.claude/skills/` hold the procedures for the common kinds of change: an API endpoint, file uploads, a
 call to another service, a web form page.
 
-After a ticket is done: `/qa-ticket <KEY>` has the **qa** subagent test it in the running system and file a bug for each
-failure; when QA is clean, `/write-retro <KEY>` writes what went wrong as lessons with evidence (`docs/lessons/`), and
+Before a person merges: `/qa-ticket <KEY>` has the **qa** subagent test it in the running system, in a browser on screen,
+with its plan, results and screenshots on the ticket, and a bug for each failure; when QA is clean, `/write-retro <KEY>` writes what went wrong as lessons with evidence (`docs/lessons/`), and
 `/learn-from-lessons` turns lessons that apply again into skills. A skill is the team's memory; a person approves each
 one.
 

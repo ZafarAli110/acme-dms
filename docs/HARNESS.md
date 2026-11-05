@@ -11,8 +11,9 @@ runs, who starts it, and the lab that added it. Nothing here is loaded into Clau
   → build, one step and its check at a time (hooks format each file; the gate runs when Claude stops)
   → /verify-ticket → docs/evidence/<KEY>.md
   → pull request → specialist reviewers → /resolve-pr-comments
+  → /qa-ticket: In QA, test plan on the ticket, a browser you can watch, screenshots, then Done or back
   → a person merges
-  → /qa-ticket → /write-retro → /learn-from-lessons
+  → /write-retro → /learn-from-lessons
 ```
 
 ## Always loaded
@@ -41,7 +42,7 @@ anything. The ones marked **you** are started by a person (`/name`); the others 
 | `/implement-ticket <KEY>`  | you        | ticket to verified change, through a plan file that survives a restart            | 08  |
 | `/write-handoff`           | you        | a short note of where you stopped, in `.claude/handoff.md` (not committed)        | 08  |
 | `/resume-handoff`          | you        | a fresh session reads the note, checks it, and waits for your go-ahead            | 08  |
-| `/qa-ticket <KEY>`         | you        | the `qa` subagent tests the ticket from the ticket alone; a bug per failure       | 09  |
+| `/qa-ticket <KEY>`         | you        | In QA, a test plan on the ticket, a watched browser, screenshots; Done or back    | 09  |
 | `/write-retro <KEY>`       | you        | what the ticket taught, as lessons with evidence, in `docs/lessons/`              | 09  |
 | `/learn-from-lessons`      | you        | proven lessons become skills; reviewers' mistakes become their instructions       | 09  |
 | `/ticket-to-pr <KEY>`      | you        | the whole loop with agents, from the board to a reviewed pull request             | 10  |
@@ -101,5 +102,5 @@ included.
 | `.ai-plans/`             | `/implement-ticket`, `/ticket-to-pr`   | one plan per ticket, from `plan-template.md`                              |
 | `docs/prototypes/<KEY>/` | the design gate                        | two or three static prototypes when a screen has no design                |
 | `docs/evidence/`         | `/verify-ticket`                       | each requirement, the command that checks it, and what it returned        |
-| `docs/qa/`               | `/qa-ticket`                           | the test cases and what happened                                          |
+| `docs/qa/`               | `/qa-ticket`                           | the test cases and what happened (and on the ticket, with screenshots)    |
 | `docs/lessons/`          | `/write-retro`, `/resolve-pr-comments` | lessons with evidence; `reviewers.md`: what reviewers got wrong or missed |

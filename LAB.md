@@ -30,6 +30,9 @@ Every piece of the harness, what it does and the lab that added it: `docs/HARNES
    asks on the ticket. Watch the meter: each subagent appears as it runs, with its time, tokens and cost.
 4. Read the pull request it opens: the plan, the evidence, the reviewers' comments.
 5. Leave a review comment on the pull request yourself, then `/resolve-pr-comments <number>`.
+6. `/qa-ticket ACME-106`: a browser opens and the tester works through its plan while you watch. On the board, the
+   ticket moves to In QA, gets the test plan, then the results with a screenshot for each case, and moves to Done (or
+   back to In Progress with a bug). Then a person merges.
 
 ## What to notice
 
