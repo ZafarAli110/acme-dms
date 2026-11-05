@@ -5,6 +5,9 @@ description: Proves a ticket's change is done, with evidence anyone can re-run, 
 
 # Verify a ticket
 
+**The ticket key, in any case.** `acme-106`, `Acme-106` and `ACME-106` are the same ticket: write it in capitals
+everywhere it appears (the branch, the plan's name, commits, comments, the tracker).
+
 Done is decided by evidence, not by the person (or agent) who made the change. Two layers, in this order; stop at the
 first that fails and go back to the code. This is evidence, not review: the reviewers read the diff once, when the
 pull request is opened, not here.
