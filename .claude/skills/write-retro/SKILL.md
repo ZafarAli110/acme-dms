@@ -6,6 +6,9 @@ disable-model-invocation: true
 
 # Retro: what this ticket taught
 
+**The ticket key, in any case.** `acme-106`, `Acme-106` and `ACME-106` are the same ticket: write it in capitals
+everywhere it appears (the branch, the plan's name, commits, comments, the tracker).
+
 Lessons come from what actually went wrong: the bugs QA filed, the gate failures, the measurements that surprised,
 the first attempt that had to be thrown away. Read them from the tracker (the bugs that say "Found while checking
 <KEY>"), `docs/qa/<KEY>.md`, the ticket's plan (`.ai-plans/*_<KEY>_*.md`) and `git log`, not from memory.
