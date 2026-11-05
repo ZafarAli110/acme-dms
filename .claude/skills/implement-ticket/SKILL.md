@@ -6,6 +6,9 @@ disable-model-invocation: true
 
 # Work a ticket
 
+**The ticket key, in any case.** `acme-106`, `Acme-106` and `ACME-106` are the same ticket: write it in capitals
+everywhere it appears (the branch, the plan's name, commits, comments, the tracker).
+
 The plan file is the memory of this work. The conversation can be compacted, the session restarted, or another agent
 can take over; the file is what carries on. Write to it as you go, not at the end.
 
