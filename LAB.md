@@ -8,7 +8,9 @@
   the commands, what done means.
 - `docs/standards/` and `docs/ARCHITECTURE.md`: the written standards `CLAUDE.md` points to.
 
-## Try it
+## Exercise
+
+**Goal:** Give it the same ACME-101 prompt with `CLAUDE.md` in place, and compare with lab 00's run.
 
 1. Open `CLAUDE.md` and read "How to work". Scroll to the end: "Building a form page".
 2. Start `claude` (no `--safe-mode`) and type `/context all`. Under **Memory files**, find `CLAUDE.md` and its tokens.
@@ -24,11 +26,17 @@
 
 Step 3 builds a whole ticket. To keep it small, stop after the plan: the plan is the lesson.
 
-## Afterwards
+## Next
 
 ```bash
 git switch -c run/harness-101
 git add -A
 git commit -m "ACME-101 with the harness"
 git diff run/bare-101 run/harness-101 --stat
+```
+
+Then:
+
+```bash
+git switch lab/02-mcp
 ```
