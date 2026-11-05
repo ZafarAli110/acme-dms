@@ -11,6 +11,8 @@ hook (`scripts/pre-commit.ts`) are already here, because a codebase enforces som
 
 **Goal:** Give the bare agent ACME-101, with no harness at all, and watch what it opens, runs and decides.
 
+0. `bun run reset`: the database rebuilt from this branch, so a table an earlier run left behind cannot stop
+   dealership-api from starting. Do the same before every ticket run in these labs.
 1. Start Claude with nothing loaded: `claude --safe-mode`. Type `/context`: no memory files, no skills.
 2. Open the board (acme-tracker, `bun start`, then http://localhost:4100) and copy ticket ACME-101.
 3. Type `Implement this ticket:` and paste it. Only watch: what it opens, what it runs, what it decides.
