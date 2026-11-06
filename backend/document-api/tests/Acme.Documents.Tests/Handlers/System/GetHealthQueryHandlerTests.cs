@@ -12,7 +12,10 @@ public sealed class GetHealthQueryHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_ReportsOkWhenTheDatabaseIsReachable()
     {
-        var options = new DbContextOptionsBuilder<DocumentsDbContext>().UseInMemoryDatabase(nameof(ExecuteAsync_ReportsOkWhenTheDatabaseIsReachable)).Options;
+        var options = new DbContextOptionsBuilder<DocumentsDbContext>()
+            .UseNpgsql(await TestPostgres.NewDatabaseAsync(TestContext.CancellationToken))
+            .UseSnakeCaseNamingConvention()
+            .Options;
         await using var dbContext = new DocumentsDbContext(options, new TestDealerScope(null));
         var handler = new GetHealthQueryHandler(dbContext);
 
