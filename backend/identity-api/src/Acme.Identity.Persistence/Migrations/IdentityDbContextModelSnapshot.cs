@@ -183,6 +183,10 @@ namespace Acme.Identity.Persistence.Migrations
                     b.HasIndex("FamilyId")
                         .HasDatabaseName("ix_refresh_tokens_family_id");
 
+                    b.HasIndex("RevokedAt")
+                        .HasDatabaseName("ix_refresh_tokens_revoked_at")
+                        .HasFilter("revoked_at IS NOT NULL");
+
                     b.HasIndex("TokenHash")
                         .IsUnique()
                         .HasDatabaseName("ix_refresh_tokens_token_hash");
