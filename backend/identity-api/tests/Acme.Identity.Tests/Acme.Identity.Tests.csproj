@@ -14,5 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Acme.Identity.BusinessLogic\Acme.Identity.BusinessLogic.csproj" />
+    <ProjectReference Include="..\..\src\Acme.Identity.Service\Acme.Identity.Service.csproj" />
   </ItemGroup>
 </Project>

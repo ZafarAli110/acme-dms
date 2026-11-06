@@ -82,24 +82,41 @@ kept for an hour (to tell a copy from the owner) and then deleted, so a sign-in 
 **Signing out and recall.** `POST /v1/tokens/revoke` revokes the whole chain and removes the cookie; it answers 204 for any
 token, so signing out cannot fail on the service's side. If the web app cannot reach the service the cookie is still good,
 so the sign-out is remembered in `localStorage` (`acme.revokePending`) and the next load ends that sign-in first and signs no
-one in with it. The access token that is left does not live out its 15 minutes: every service asks identity-api whether a
-token's sign-in is still open (`GET /v1/sessions/current`, with the token; 401 when it was ended) and remembers an open
-answer for **10 seconds**, so a sign-out reaches every service within 10 seconds. Requests that find nothing remembered at
-the same moment share one question, and the question has a 2-second limit. dealership-api does this in its authentication
-guard (`SessionStatusChecker`); document-api and identity-api in the shared JWT validation (`Acme.ServiceDefaults`,
-`ISessionStatusChecker`; identity-api answers from its own database). An ended sign-in is remembered until its token would
-have expired. Unknown email and wrong password cost the same time at sign-in (a hash is checked either way).
+one in with it. The access token that is left does not live out its 15 minutes, and no request asks identity-api anything:
+
+- identity-api lists the sign-ins that ended lately (`GET /v1/sessions/revoked?since=`, open to the services: the ids are random
+  and say nothing about whose they are; never further back than an access token can live).
+- Every service **polls that list every 5 seconds** and keeps the answer in memory for as long as a token can live
+  (dealership-api: `RevokedSessionsFeed`; document-api in the shared JWT validation, `Acme.ServiceDefaults`, the same class
+  name). Checking a request is a lookup in memory: no network, no waiting, nothing to stampede after a restart, and the cost is
+  one small question per service instance, not per person. A sign-out reaches every service within about 5 seconds
+  (measured: 3). Each service asks once before it takes requests, and each question starts at the last answer's clock (or at
+  the oldest a live token could be), so a long outage still ends in a complete answer.
+- **identity-api being down or slow is not a hole.** New sign-ins can only end at identity-api, so while it is down there is
+  nothing new to learn; the services keep what they know and keep refusing it. identity-api answers for its own endpoints
+  from its database.
+- A token with no `sid` is refused: every token identity-api issues has one, and one without could never be ended.
+- Unknown email and wrong password cost the same time at sign-in (a hash is checked either way).
+
+**Guessing passwords.** Two limits, because each stops what the other cannot: **per address** (10 sign-ins and 120
+refreshes a minute: ASP.NET's rate limiter, answering 429 with `Retry-After`), and **per account** (`SignInThrottle`: after 5 wrong
+passwords in a row for one email, from any addresses, the next attempts wait 30 s, then 60 s, doubling to 15 minutes, until a
+right password or 30 quiet minutes; an email nobody has is counted the same, so the wait does not say which exist). The address
+is the caller's as the gateway forwards it (`X-Forwarded-For`, one hop trusted, the gateway's: a client cannot choose its own by
+sending the header); **do not expose identity-api to the internet directly**, because then that header would be the client's.
+Both are in memory, so each instance of identity-api counts for itself.
+
+**Renewing before it expires.** The web app fetches the next access token a minute before the one in use expires
+(`apiClient.renewBefore`), so a request, a multipart upload above all, is not sent twice. A background tab may run it late;
+the 401 path is still there for that.
 
 What this does not do, on purpose:
 
-- **A service cannot check while identity-api is down or failing.** The token, already verified and at most 15 minutes old,
-  is accepted (no answer, or any answer but 401) until identity-api answers again; revocation resumes with it. A service does
-  not stop serving because the sign-in authority restarts. Someone who can make identity-api slow can therefore delay a
-  sign-out reaching the services, by the time the slowness lasts; the token still ends within 15 minutes.
-- **No attempt limit on sign-in yet.** A limit per address needs the client address from the gateway (forwarded headers),
-  which is not set up: a per-address limit behind the gateway would count everyone as one.
-- **Up to 10 seconds, not instantly.** Each service remembers "open" for 10 seconds.
+- **Up to about 5 seconds, not instantly.** That is the polling interval.
 - **Script on the page can still call the API while the page is open**, as the person, for as long as it runs: it cannot
   take a token away to use elsewhere (the refresh token is unreachable, the access token is in memory), but httpOnly does
   not stop code running in the page from making requests.
-- **Tokens issued before a sign-in had an id** (no `sid`) are checked by expiry alone, until they expire.
+- **A sign-in's access token can outlive the sign-in's 8 hours by up to 15 minutes**: the chain ends by its lifetime, not by a
+  revocation, so it is not on the list. A token issued in the last minutes of a sign-in works for its own 15 minutes.
+- **The limits are per instance of identity-api.** A shared store (Redis, or the database) would make them exact across
+  instances; with one instance, or a few, an attacker still gets a small fraction of the guesses.
