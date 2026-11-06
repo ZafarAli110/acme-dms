@@ -114,6 +114,11 @@
   work, and its global query filter applies the dealer and soft delete to every query.
 - Tests: MSTest + Moq in `tests/`, one test class per handler (`CreateTokenCommandHandlerTests`), test methods named
   `MethodUnderTest_Behaviour` (`ExecuteAsync_RejectsAWrongPassword`).
+- Tests that touch the database run against a real Postgres, as dealership-api's do: Testcontainers starts one per
+  test run (`postgres:18.3`), the service's migrations are applied once to a template database, and each test gets a
+  copy of its own (`TestPostgres`). Never EF's in-memory provider: it runs no SQL, so it cannot show a query filter or
+  a translation that fails on Postgres, and it checks no constraint (unique indexes, foreign keys, the soft-delete
+  check).
 
 ## Before calling a change done
 
