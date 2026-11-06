@@ -79,24 +79,25 @@ cannot slip between a refresh's read and its insert and leave the new token live
 Web Locks API), and a sign-out waits for it, because each refresh replaces the cookie every tab shares. A replaced token is
 kept for an hour (to tell a copy from the owner) and then deleted, so a sign-in is a handful of rows.
 
-**Signing out and recall.** `POST /v1/tokens/revoke` revokes the whole chain and removes the cookie; it answers 204 for any
-token, so signing out cannot fail on the service's side. If the web app cannot reach the service the cookie is still good,
-so the sign-out is remembered in `localStorage` (`acme.revokePending`) and the next load ends that sign-in first and signs no
-one in with it. The access token that is left does not live out its 15 minutes, and no request asks identity-api anything:
+**Signing out.** `POST /v1/tokens/revoke` revokes the whole chain and removes the cookie; it answers 204 for any token, so
+signing out cannot fail on the service's side. If the web app cannot reach the service the cookie is still good, so the
+sign-out is remembered in `localStorage` (`acme.revokePending`) and the next load ends that sign-in first and signs no one in
+with it. Unknown email and wrong password cost the same time at sign-in (a hash is checked either way).
 
-- identity-api lists the sign-ins that ended lately (`GET /v1/sessions/revoked?since=`, open to the services: the ids are random
-  and say nothing about whose they are; never further back than an access token can live).
-- Every service **polls that list every 5 seconds** and keeps the answer in memory for as long as a token can live
-  (dealership-api: `RevokedSessionsFeed`; document-api in the shared JWT validation, `Acme.ServiceDefaults`, the same class
-  name). Checking a request is a lookup in memory: no network, no waiting, nothing to stampede after a restart, and the cost is
-  one small question per service instance, not per person. A sign-out reaches every service within about 5 seconds
-  (measured: 3). Each service asks once before it takes requests, and each question starts at the last answer's clock (or at
-  the oldest a live token could be), so a long outage still ends in a complete answer.
-- **identity-api being down or slow is not a hole.** New sign-ins can only end at identity-api, so while it is down there is
-  nothing new to learn; the services keep what they know and keep refusing it. identity-api answers for its own endpoints
-  from its database.
-- A token with no `sid` is refused: every token identity-api issues has one, and one without could never be ended.
-- Unknown email and wrong password cost the same time at sign-in (a hash is checked either way).
+**An access token is not taken back (a decision).** Signing out, a refresh token shown again and deleting a person all end
+the refresh-token chain, so the sign-in cannot be renewed. An access token already issued stays good until it expires, **at
+most 15 minutes**: the services check its signature and expiry, ask identity-api nothing about a request, and keep no list of
+ended sign-ins. This is the usual trade for short-lived signed tokens, and it is chosen on purpose:
+
+- **What it costs.** A copied access token works until it expires, even after its owner signs out or reuse detection ends
+  the sign-in; a person who was deleted keeps access for up to 15 minutes. Ordinary signing out is not affected: the browser
+  forgets the token, which lived only in memory.
+- **What it buys.** Nothing on a request's path but the signature check; identity-api being down stops only signing in and
+  renewing; no background traffic between the services.
+- **When to change it.** If a customer or an audit needs signing out, or removing a person, to take effect at once, the
+  services must refuse ended sign-ins: a list kept in memory, filled from identity-api when a service starts and then by
+  events (or checked once at the gateway), with identity-api keeping a revoked sign-in listed for as long as its access tokens
+  can live. Shortening the token instead (say 5 minutes) narrows the window at the cost of more renewals.
 
 **Guessing passwords.** Two limits, because each stops what the other cannot: **per address** (10 sign-ins and 120
 refreshes a minute: ASP.NET's rate limiter, answering 429 with `Retry-After`), and **per account** (`SignInThrottle`: after 5 wrong
