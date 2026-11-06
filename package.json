@@ -36,6 +36,7 @@
     "typecheck": "nx run-many -t typecheck && tsc --noEmit -p scripts/tsconfig.json",
     "test": "nx run-many -t test",
     "coverage": "bun scripts/coverage.ts",
+    "docs:check": "bun scripts/check-docs.ts",
     "gate:fast": "bun scripts/gate.ts",
     "gate:slow": "nx run @acme/web:e2e"
   },
