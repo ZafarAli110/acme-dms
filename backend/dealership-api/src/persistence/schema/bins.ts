@@ -6,13 +6,13 @@ import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 export const bins = pgTable(
   "bins",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    dealerId: uuid("dealer_id").notNull(),
-    locationId: uuid("location_id").notNull(),
-    code: varchar("code", { length: 20 }).notNull(),
-    description: varchar("description", { length: 100 }).notNull(),
+    dealerId: uuid().notNull(),
+    locationId: uuid().notNull(),
+    code: varchar({ length: 20 }).notNull(),
+    description: varchar({ length: 100 }).notNull(),
     ...auditColumns(),
   },
   (table) => [
