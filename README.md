@@ -44,16 +44,16 @@ Maria assigns people to locations on the **Locations** page; a change shows with
 
 ## What it does
 
-| Area                         | API (through the gateway)                                                                     | Web                                                    |
-| ---------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Sign-in                      | `POST /api/identity/v1/tokens` (+ `/refresh`, `/revoke`), `GET /api/identity/v1/users/me`     | sign-in page, location switcher                        |
-| Parts (stocked per location) | `GET/POST /api/dealership/v1/parts`, `GET/PATCH /api/dealership/v1/parts/{id}`                | list, search, create (with bin), edit page             |
-| Bins (per location)          | `GET/POST /api/dealership/v1/bins`                                                            | bin picker when creating a part                        |
-| Part photos                  | saved with the part (`PATCH …/parts/{id}`, multipart); `POST …/parts/{id}/photos` adds one    | on the edit page: add, remove, default; processing     |
-| Stock (per location)         | `GET /api/dealership/v1/stock`, `PUT /api/dealership/v1/stock/{partId}`                       | — (ticket ACME-101)                                    |
-| Customers (per location)     | `GET/POST /api/dealership/v1/customers`, `GET/PUT …/customers/{id}`, `GET …/customers/recent` | list, search, create, edit, recently contacted on Home |
-| Documents                    | `POST /api/documents/v1/documents`, `GET …/{id}`, `GET …/{id}/content/{variant}`              | images via `DocumentImage`                             |
-| Who am I                     | `GET /api/dealership/v1/system/user-context`                                                  | —                                                      |
+| Area                         | API (through the gateway)                                                                                            | Web                                                    |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Sign-in                      | `POST`/`DELETE /api/session` (the gateway), `GET /api/identity/v1/users/me`; scripts: `POST /api/identity/v1/tokens` | sign-in page, location switcher                        |
+| Parts (stocked per location) | `GET/POST /api/dealership/v1/parts`, `GET/PATCH /api/dealership/v1/parts/{id}`                                       | list, search, create (with bin), edit page             |
+| Bins (per location)          | `GET/POST /api/dealership/v1/bins`                                                                                   | bin picker when creating a part                        |
+| Part photos                  | saved with the part (`PATCH …/parts/{id}`, multipart); `POST …/parts/{id}/photos` adds one                           | on the edit page: add, remove, default; processing     |
+| Stock (per location)         | `GET /api/dealership/v1/stock`, `PUT /api/dealership/v1/stock/{partId}`                                              | — (ticket ACME-101)                                    |
+| Customers (per location)     | `GET/POST /api/dealership/v1/customers`, `GET/PUT …/customers/{id}`, `GET …/customers/recent`                        | list, search, create, edit, recently contacted on Home |
+| Documents                    | `POST /api/documents/v1/documents`, `GET …/{id}`, `GET …/{id}/content/{variant}`                                     | images via `DocumentImage`                             |
+| Who am I                     | `GET /api/dealership/v1/system/user-context`                                                                         | —                                                      |
 
 A part photo travels: dealership-api → document-api (stored, 202) → outbox → RabbitMQ → document-api's processor
 (WebP `display` and `thumb` variants) → `document.processed.v1` → dealership-api marks the photo ready. A file that
