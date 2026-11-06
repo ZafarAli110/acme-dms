@@ -1,3 +1,4 @@
+import { i18nValidationMessage } from "@nestjs/i18n";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsInt, IsNotEmpty, IsNumber, IsString, IsUUID, Matches, MaxLength, Min } from "class-validator";
 
@@ -10,7 +11,7 @@ export class PartCreateRequestDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  @Matches(/^[A-Z0-9-]+$/, { message: "partNumber may only contain capital letters, digits and dashes" })
+  @Matches(/^[A-Z0-9-]+$/, { message: i18nValidationMessage("validation.codeFormat") })
   public partNumber: string;
 
   @ApiProperty({ example: "Front brake pads, ceramic" })

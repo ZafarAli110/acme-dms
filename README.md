@@ -240,6 +240,7 @@ bun run api as maria --location riverside GET /api/dealership/v1/stock
 bun run api as rita GET /api/dealership/v1/customers
 bun run api as sam GET "/api/dealership/v1/parts?search=brake"
 bun run api as maria POST /api/dealership/v1/parts '{"partNumber":"BRK-PAD-009","description":"Pads","unitPrice":45}'
+bun run api as rita --lang fr POST /api/dealership/v1/customers '{"surname":""}'   # messages in French
 ```
 
 ## Everyday commands

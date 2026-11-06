@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { and, eq, inArray } from "drizzle-orm";
 import type { IUpdatePartCommandHandler } from "#business-logic-abstractions/handlers/parts/update/update-part.command-handler.interface";
@@ -64,7 +65,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       request.photos === undefined &&
       newPhotos.length === 0
     ) {
-      throw new BadRequestException("Send at least one change: description, unitPrice, photos or new photos.");
+      throw new BadRequestException(localized("errors.partNoChanges"));
     }
 
     // 1. Validate everything before writing anything.
@@ -72,7 +73,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     const { existing } = await this.readPartAsync(userContext.dealerId, locationId, partId);
     if (newPhotos.length !== files.length) {
       throw new BadRequestException(
-        `Send one newPhotos entry per photo file: ${newPhotos.length} entries, ${files.length} files.`,
+        localized("errors.photoEntriesMismatch", { entries: newPhotos.length, files: files.length }),
       );
     }
     files.forEach(validatePhotoFile);
@@ -80,17 +81,15 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     const kept = request.photos ?? existing.map((photo) => ({ id: photo.id, isDefault: photo.isDefault }));
     const unknown = kept.find((photo) => !existing.some((candidate) => candidate.id === photo.id));
     if (unknown) {
-      throw new BadRequestException(`Photo ${unknown.id} is not a photo of this part.`);
+      throw new BadRequestException(localized("errors.photoNotOfPart", { photoId: unknown.id }));
     }
     const total = kept.length + newPhotos.length;
     if (total > MAX_PHOTOS_PER_PART) {
-      throw new BadRequestException(
-        `A part can have at most ${MAX_PHOTOS_PER_PART} photos; this save would leave ${total}.`,
-      );
+      throw new BadRequestException(localized("errors.tooManyPhotosAfterSave", { max: MAX_PHOTOS_PER_PART, total }));
     }
     const defaults = [...kept, ...newPhotos].filter((photo) => photo.isDefault).length;
     if (total > 0 && defaults !== 1) {
-      throw new BadRequestException(`Choose exactly one default photo; ${defaults} are marked as default.`);
+      throw new BadRequestException(localized("errors.oneDefaultPhoto", { defaults }));
     }
     const removed = existing.filter((photo) => !kept.some((keep) => keep.id === photo.id));
 
@@ -188,7 +187,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const stocked = await findStockedPartAsync(work.db, dealerId, locationId, partId);
     if (!stocked) {
-      throw new NotFoundException(`Part ${partId} is not stocked at this location.`);
+      throw new NotFoundException(localized("errors.partNotStocked", { partId }));
     }
     return { stocked, existing: await findPhotosAsync(work.db, dealerId, partId) };
   }
