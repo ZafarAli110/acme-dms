@@ -6,6 +6,7 @@ using Acme.Identity.DTO.Tokens;
 using Acme.Identity.Service.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Acme.Identity.Service.Controllers.Tokens;
 
@@ -30,6 +31,7 @@ public sealed class TokenCommandController : ApiControllerBase
     }
 
     /// <summary>Signing in: the access token in the body, the refresh token in an httpOnly cookie.</summary>
+    [EnableRateLimiting(RateLimits.SignIn)]
     [HttpPost("v1/tokens")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<TokenCreateResponseDto>> CreateAsync([FromBody] TokenCreateRequestDto request, CancellationToken cancellationToken)
@@ -43,6 +45,7 @@ public sealed class TokenCommandController : ApiControllerBase
     /// A new access token for the cookie's refresh token, which the new cookie replaces. The person's roles and locations
     /// are read again. 401 ends the sign-in: the cookie is gone, unknown, ended, or was used twice.
     /// </summary>
+    [EnableRateLimiting(RateLimits.Token)]
     [HttpPost("v1/tokens/refresh")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<TokenCreateResponseDto>> RefreshAsync(CancellationToken cancellationToken)
@@ -58,6 +61,7 @@ public sealed class TokenCommandController : ApiControllerBase
     }
 
     /// <summary>Signing out: the sign-in ends everywhere and the cookie is removed. 204 whether or not it was an open one.</summary>
+    [EnableRateLimiting(RateLimits.Token)]
     [HttpPost("v1/tokens/revoke")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RevokeAsync(CancellationToken cancellationToken)

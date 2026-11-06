@@ -319,7 +319,7 @@ public sealed class RefreshTokenTests
     }
 
     private Task<IssuedTokens> SignInAsync(IdentityDbContext dbContext, TimeProvider clock) =>
-        new CreateTokenCommandHandler(dbContext, Issuer(), new PasswordHasher<User>(), clock)
+        new CreateTokenCommandHandler(dbContext, Issuer(), new PasswordHasher<User>(), new SignInThrottle(clock), clock)
             .ExecuteAsync(new TokenCreateRequestDto("rita@northwind.test", DemoData.Password), TestContext.CancellationToken);
 
     private static RefreshTokenCommandHandler Refresh(IdentityDbContext dbContext, TimeProvider clock) => new(dbContext, Issuer(), clock);

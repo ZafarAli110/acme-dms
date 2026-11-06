@@ -24,4 +24,10 @@ public static class TokenSettings
     /// it is the race and is tolerated; after them it ends the whole sign-in.
     /// </summary>
     public const int RefreshReuseGraceSeconds = 20;
+
+    /// <summary>
+    /// How far back the revoked-sessions feed looks: an access token lives this long (and a minute more for clock drift), so
+    /// a sign-in ended longer ago can no longer have a token that works. A service that asks every few seconds gets all it needs.
+    /// </summary>
+    public const int RevokedFeedWindowSeconds = LifetimeSeconds + 60;
 }
