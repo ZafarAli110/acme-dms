@@ -59,7 +59,7 @@ customerId }))` (`#i18n/messages`). The exception's own message stays English, s
   that is missing or loses a placeholder.
 - Validation messages are the catalogs' `validation.*` (`isNotEmpty`, `maxLength`, …). Valibot's rules are mapped to
   them in one place, `toValidationMessage` (`service/validation/valibot-pipe.ts`): a new kind of rule (a new Valibot
-  action) gets its case there and a test in `request-schemas.test.ts`. `{property}` shows the field under its screen
+  action) gets its case there and in `service/swagger/valibot-openapi.ts`, and a test in `request-schemas.test.ts`. `{property}` shows the field under its screen
   name (`fields.*`); add a new field there.
 - A message stored to be read later (an export's failure) is stored as its key and translated when it is read.
 - document-api and identity-api (.NET) still answer in English; a refusal of theirs is passed on as they wrote it.

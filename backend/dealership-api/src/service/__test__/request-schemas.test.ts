@@ -158,3 +158,28 @@ describe("the OpenAPI schemas", () => {
     expect(required).toContain("companyName");
   });
 });
+
+/** A request schema nobody can convert would break Swagger: every one is converted here, whatever rules it uses. */
+describe("every request schema", () => {
+  it("has an OpenAPI schema and an English message for each of its rules", async () => {
+    const dtoFolder = join(import.meta.dirname, "..", "..", "dto");
+    const files = readdirSync(dtoFolder, { recursive: true, encoding: "utf8" }).filter((file) => file.endsWith(".ts"));
+    const names: string[] = [];
+    for (const file of files) {
+      const exported = (await import(join(dtoFolder, file))) as Record<string, unknown>;
+      for (const [name, value] of Object.entries(exported)) {
+        if (name.endsWith("Schema")) {
+          names.push(name);
+          expect(() => valibotToOpenApi(value), name).not.toThrow();
+        }
+      }
+    }
+
+    expect(names.length).toBeGreaterThan(8);
+  });
+
+  it("names a rule it does not know, instead of leaving it out of the document", () => {
+    expect(() => valibotToOpenApi(v.pipe(v.string(), v.startsWith("A")))).toThrow(/rule "starts_with"/);
+    expect(() => valibotToOpenApi(v.date())).toThrow(/schema "date"/);
+  });
+});

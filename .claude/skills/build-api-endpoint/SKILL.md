@@ -48,7 +48,7 @@ dealer itself.
   (`@Body({ schema: PartCreateRequestSchema })`). It holds only what the user may set: never `dealerId`,
   `locationId`, `id` or audit fields.
 - **A rule's message** comes from the catalogs' `validation.*`: `toValidationMessage` (`service/validation/valibot-pipe.ts`)
-  maps each Valibot action to one. A new kind of action gets its case there, and a case in `request-schemas.test.ts`.
+  maps each Valibot action to one. A new kind of action gets its case there and in `valibot-openapi.ts` (Swagger); the tests fail, naming the rule, until it has both.
   A new field name goes into `fields.*` of both catalogs. A `@Body()` or `@Query()` with no `{ schema }` is checked by
   nothing: a test refuses it.
 - **Swagger reads the schema** (`service/swagger/valibot-openapi.ts`): lengths, ranges, formats and enums show by

@@ -47,7 +47,6 @@
     "@opentelemetry/sdk-logs": "3.0.0",
     "@opentelemetry/sdk-metrics": "3.0.0",
     "@opentelemetry/sdk-node": "0.300.0",
-    "@valibot/to-json-schema": "1.8.0",
     "amqplib": "2.2.0",
     "drizzle-orm": "1.0.0-rc.5",
     "jose": "6.2.14",
