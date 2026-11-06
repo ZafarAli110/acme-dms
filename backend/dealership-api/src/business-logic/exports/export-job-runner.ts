@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { createWriteStream } from "node:fs";
 import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -99,13 +100,13 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   public start(userContext: UserContext, source: ExportSource, idempotencyKey: string | null): ExportJobResponseDto {
     const locationId = requireLocation(userContext);
     if (idempotencyKey !== null && !IDEMPOTENCY_KEY.test(idempotencyKey)) {
-      throw new UnprocessableEntityException("The Idempotency-Key is 1 to 255 printable characters.");
+      throw new UnprocessableEntityException(localized("exports.idempotencyKeyFormat"));
     }
     const keyId = idempotencyKey === null ? null : `${userContext.userId}:${idempotencyKey}`;
     const existing = keyId === null ? null : (this._jobsByIdempotencyKey.get(keyId) ?? null);
     if (existing) {
       if (existing.source.fingerprint !== source.fingerprint || existing.locationId !== locationId) {
-        throw new UnprocessableEntityException("This Idempotency-Key was used for a different export.");
+        throw new UnprocessableEntityException(localized("exports.idempotencyKeyReused"));
       }
       return toExportJobResponseDto(existing);
     }
@@ -139,11 +140,12 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
     if (job.status === "queued") {
       this._queue.splice(this._queue.indexOf(job), 1);
       this.updateQueuePositions();
-      job.fail("cancelled", "Cancelled before it started.");
+      job.fail("cancelled", "exports.failure.cancelledBeforeStart");
       return;
     }
     if (!job.isFinished) {
-      job.abort.abort(new Error("Cancelled by the user."));
+      // The reason becomes the job's stored error: a catalog key, translated when the job is read.
+      job.abort.abort(new Error("exports.failure.cancelledByUser"));
       return;
     }
     await this.deleteFileAsync(job);
@@ -155,13 +157,13 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   public fileForLink(jobId: string, expires: string, signature: string): ExportFile {
     const job = this._jobs.get(jobId);
     if (!job || !isValidDownloadLink(jobId, expires, signature, this._clock.now().epochMilliseconds)) {
-      throw new ForbiddenException("This download link is not valid, or has run out. Export again.");
+      throw new ForbiddenException(localized("exports.linkInvalid"));
     }
     if (job.status === "expired") {
-      throw new GoneException("This export has expired. Export again.");
+      throw new GoneException(localized("exports.expired"));
     }
     if (job.status !== "completed" || job.filePath === null) {
-      throw new ConflictException(`The export is ${job.status}, not completed.`);
+      throw new ConflictException(localized("exports.notCompleted", { status: job.status }));
     }
     return { path: job.filePath, bytes: job.fileBytes ?? 0, fileName: job.source.fileName };
   }
@@ -170,7 +172,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
   private ownJob(userContext: UserContext, jobId: string): ExportJob {
     const job = this._jobs.get(jobId);
     if (!job || job.ownerId !== userContext.userId) {
-      throw new NotFoundException("No such export.");
+      throw new NotFoundException(localized("exports.notFound"));
     }
     return job;
   }
@@ -236,7 +238,7 @@ export class ExportJobRunner implements IExportJobs, OnModuleInit, OnModuleDestr
         job.fail("cancelled", message);
       } else {
         this._logger.error(`Export ${job.id} failed: ${message}`);
-        job.fail("failed", "The export failed. Try again.");
+        job.fail("failed", "exports.failure.failed");
       }
     }
   }
