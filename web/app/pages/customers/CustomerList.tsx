@@ -59,7 +59,8 @@ export default function CustomerList() {
   const startExport = (): void => {
     const visible = columns
       .filter((column) => visibility.columnVisibilityModel[column.field] !== false)
-      .map((column) => ({ field: column.field, header: column.headerName ?? column.field }));
+      // A column with no heading of its own is sent without one: the server names it, never with the field's name.
+      .map((column) => ({ field: column.field, header: column.headerName }));
     setConfirmingExport(false);
     setExportProblem(null);
     startAsync(

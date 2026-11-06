@@ -112,6 +112,19 @@ describe("StartCustomerExportCommandHandler", () => {
     expect(sheet?.dateCells[1]).toEqual([false, false, true]);
   });
 
+  it("heads each column with the header the request gives, or with the column's own heading when it gives none", async () => {
+    await database.seed.addCustomerAsync({ locationId: NORTHSIDE, firstName: "Cy", surname: "Cole", city: "Hull" });
+
+    const started = await handler.executeAsync(
+      AT_NORTHSIDE,
+      request({ columns: [{ field: "lastContactDate", header: "Date" }, { field: "city" }, { field: "companyName" }] }),
+      null,
+    );
+    const [sheet] = await fileOfAsync(await finishedAsync(started));
+
+    expect(sheet?.rows[0]).toEqual(["Date", "City", "Company"]);
+  });
+
   it("gives a retry with the same idempotency key the same export, and refuses the key for another request", async () => {
     const first = await handler.executeAsync(AT_NORTHSIDE, request(), "key-1");
     const retry = await handler.executeAsync(AT_NORTHSIDE, request(), "key-1");

@@ -32,7 +32,7 @@ export function customerExportSource(
         `"${column.field}" cannot be exported. It can be: ${Object.keys(CUSTOMER_EXPORT_COLUMNS).join(", ")}.`,
       );
     }
-    return { ...definition, field: column.field, header: column.header };
+    return { ...definition, field: column.field, header: column.header ?? definition.header };
   });
   // Built now, so a sort or filter the list doesn't have is refused before the export is queued.
   const where = customerListWhere(scope.dealerId, scope.locationId, request);
