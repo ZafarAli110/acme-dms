@@ -23,7 +23,7 @@ documents later).
 4. **Processing is asynchronous.** The upload returns 202 with status `pending`; the feature updates the status when
    `document.processed.v1` or `document.failed.v1` arrives for its `ownerType`.
 5. **Never use the original file name as a storage key** — keep it as metadata only.
-6. **Images are fetched with the bearer token** (`GET /api/documents/v1/documents/{id}/content/{variant}`) and shown
+6. **Images are fetched like any other request** (`GET /api/documents/v1/documents/{id}/content/{variant}`, the gateway adding the token) and shown
    through an object URL in the web app (`DocumentImage`).
 
 ## Saving a record together with its files
