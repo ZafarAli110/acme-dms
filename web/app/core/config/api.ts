@@ -5,4 +5,6 @@ export const API_CONFIG = {
   documentsUrl: "/api/documents",
   /** A request with no answer after this long fails with RequestTimeoutError. */
   timeoutMs: 15_000,
+  /** Signing out waits this long for each service call it makes: it must never hang because a service is down. */
+  signOutWaitMs: 5000,
 } as const;
