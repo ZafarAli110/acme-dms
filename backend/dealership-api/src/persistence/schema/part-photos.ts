@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, pgTable, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, snakeCase, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { parts } from "./parts";
 
 export type PartPhotoStatus = "pending" | "ready" | "failed";
 
 /** A photo of a part. The file is a document in document-api; `status` follows its processing. */
-export const partPhotos = pgTable(
+export const partPhotos = snakeCase.table(
   "part_photos",
   {
     id: uuid()
