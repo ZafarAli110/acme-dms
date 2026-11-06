@@ -30,24 +30,26 @@ runs, who starts it, and the lab that added it. Nothing here is loaded into Clau
 A skill is a set of steps Claude loads only when a task needs it; until then only its one-line description costs
 anything. The ones marked **you** are started by a person (`/name`); the others Claude loads when a task matches.
 
-| Skill                      | Started by | What it does                                                                      | Lab |
-| -------------------------- | ---------- | --------------------------------------------------------------------------------- | --- |
-| `build-form-page`          | Claude     | builds or changes a create or edit page with a form                               | 06  |
-| `build-api-endpoint`       | Claude     | adds or changes an API endpoint, from the data's scope to the test                | 06  |
-| `upload-files`             | Claude     | a record with its files: the endpoint, the rules, storage, the form               | 06  |
-| `call-other-service`       | Claude     | dealership-api calling document-api or identity-api through a typed client        | 06  |
-| `check-in-browser`         | Claude     | checks a screen in a real browser, with screenshots at two widths                 | 07  |
-| `export-large-list`        | Claude     | an Excel or CSV export of a list that can be large                                | 10  |
-| `/verify-ticket <KEY>`     | you        | evidence anyone can re-run: the gate, the verifier, screenshots, `docs/evidence/` | 07  |
-| `/implement-ticket <KEY>`  | you        | ticket to verified change, through a plan file that survives a restart            | 08  |
-| `/write-handoff`           | you        | a short note of where you stopped, in `.claude/handoff.md` (not committed)        | 08  |
-| `/resume-handoff`          | you        | a fresh session reads the note, checks it, and waits for your go-ahead            | 08  |
-| `/qa-ticket <KEY>`         | you        | In QA, a test plan on the ticket, a visible browser, screenshots; Done or back    | 09  |
-| `/write-retro <KEY>`       | you        | what the ticket taught, as lessons with evidence, in `docs/lessons/`              | 09  |
-| `/learn-from-lessons`      | you        | proven lessons become skills; reviewers' mistakes become their instructions       | 09  |
-| `/ticket-to-pr <KEY>`      | you        | the whole loop with agents, from the board to a reviewed pull request             | 10  |
-| `/review-pr <n>`           | you        | the four reviewers on any pull request, one review round posted; changes no code  | 10  |
-| `/resolve-pr-comments <n>` | you        | judges each review comment, fixes the real ones, answers the rest                 | 10  |
+| Skill                         | Started by | What it does                                                                      | Lab |
+| ----------------------------- | ---------- | --------------------------------------------------------------------------------- | --- |
+| `build-form-page`             | Claude     | builds or changes a create or edit page with a form                               | 06  |
+| `build-api-endpoint`          | Claude     | adds or changes an API endpoint, from the data's scope to the test                | 06  |
+| `react-router-framework-mode` | Claude     | a web page's route, loader, action, redirects and a list's URL state              | —   |
+| `tanstack-query`              | Claude     | server data in the web app: keys, options, hooks, the cache, invalidation         | —   |
+| `upload-files`                | Claude     | a record with its files: the endpoint, the rules, storage, the form               | 06  |
+| `call-other-service`          | Claude     | dealership-api calling document-api or identity-api through a typed client        | 06  |
+| `check-in-browser`            | Claude     | checks a screen in a real browser, with screenshots at two widths                 | 07  |
+| `export-large-list`           | Claude     | an Excel or CSV export of a list that can be large                                | 10  |
+| `/verify-ticket <KEY>`        | you        | evidence anyone can re-run: the gate, the verifier, screenshots, `docs/evidence/` | 07  |
+| `/implement-ticket <KEY>`     | you        | ticket to verified change, through a plan file that survives a restart            | 08  |
+| `/write-handoff`              | you        | a short note of where you stopped, in `.claude/handoff.md` (not committed)        | 08  |
+| `/resume-handoff`             | you        | a fresh session reads the note, checks it, and waits for your go-ahead            | 08  |
+| `/qa-ticket <KEY>`            | you        | In QA, a test plan on the ticket, a visible browser, screenshots; Done or back    | 09  |
+| `/write-retro <KEY>`          | you        | what the ticket taught, as lessons with evidence, in `docs/lessons/`              | 09  |
+| `/learn-from-lessons`         | you        | proven lessons become skills; reviewers' mistakes become their instructions       | 09  |
+| `/ticket-to-pr <KEY>`         | you        | the whole loop with agents, from the board to a reviewed pull request             | 10  |
+| `/review-pr <n>`              | you        | the four reviewers on any pull request, one review round posted; changes no code  | 10  |
+| `/resolve-pr-comments <n>`    | you        | judges each review comment, fixes the real ones, answers the rest                 | 10  |
 
 ## Subagents
 
