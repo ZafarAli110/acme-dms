@@ -5,7 +5,8 @@ import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.inte
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { BinCreateRequestDto } from "#dto/bins/bin-create-request.dto";
 import type { BinResponseDto } from "#dto/bins/bin-response.dto";
-import { bins, notDeleted } from "#persistence/schema/index";
+import { bins } from "#persistence/schema/bins";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,

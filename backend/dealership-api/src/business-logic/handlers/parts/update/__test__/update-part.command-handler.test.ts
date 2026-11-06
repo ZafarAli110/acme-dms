@@ -5,7 +5,8 @@ import { fixedClock } from "#test-setup/time/fixed-clock";
 import { AT_NORTHSIDE } from "#test-setup/users/test-users";
 import { NORTHSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
-import { partPhotos, parts } from "#persistence/schema/index";
+import { partPhotos } from "#persistence/schema/part-photos";
+import { parts } from "#persistence/schema/parts";
 import { fakeDocumentApi, jpeg } from "#test-setup/document-api/fake-document-api";
 import { UpdatePartCommandHandler } from "../update-part.command-handler";
 
