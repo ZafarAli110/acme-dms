@@ -24,6 +24,7 @@
         "@nestjs/common": "12.4.0",
         "@nestjs/core": "12.4.0",
         "@nestjs/http-client": "0.0.3",
+        "@nestjs/i18n": "0.0.3",
         "@nestjs/platform-node": "12.4.0",
         "@nestjs/resilience": "0.0.3",
         "@nestjs/swagger": "12.1.1",
@@ -323,6 +324,8 @@
     "@nestjs/core": ["@nestjs/core@12.4.0", "", { "dependencies": { "fast-safe-stringify": "2.1.1", "iterare": "1.2.1", "path-to-regexp": "8.4.2", "tslib": "2.9.1", "uid": "2.0.2" }, "peerDependencies": { "@nestjs/common": "^12.0.0", "@nestjs/microservices": "^12.0.0", "@nestjs/platform-express": "^12.0.0", "@nestjs/websockets": "^12.0.0", "reflect-metadata": "^0.1.12 || ^0.2.0", "rxjs": "^7.1.0" }, "optionalPeers": ["@nestjs/microservices", "@nestjs/platform-express", "@nestjs/websockets"] }, "sha512-gUH66sFy9gaZrmwMWC2LfM3R0Tacxautms+NgoIJ05J6YtvBbCyRlNslqtDC2f0wDVduswRWErIrJtIHtKon4w=="],
 
     "@nestjs/http-client": ["@nestjs/http-client@0.0.3", "", { "peerDependencies": { "@nestjs/common": "^11.0.0 || ^12.0.0", "@nestjs/core": "^11.0.0 || ^12.0.0", "reflect-metadata": "^0.1.13 || ^0.2.0" } }, "sha512-5zaIfgfPoESg4CgkTdgzLDtidQBXcycVXxO1Ah7TZzJ1tR2pN1enSXAniG5UgqWEbKaQcr5V8+b2OA1dvhTC/g=="],
+
+    "@nestjs/i18n": ["@nestjs/i18n@0.0.3", "", { "peerDependencies": { "@nestjs/common": "^12.1.0", "@nestjs/core": "^12.1.0", "@standard-schema/spec": "^1.0.0", "class-validator": "^0.14.0", "reflect-metadata": "^0.1.13 || ^0.2.0", "rxjs": "^7.1.0" }, "optionalPeers": ["@standard-schema/spec", "class-validator"] }, "sha512-CflVy5WUjR9trAtXE7Y6XCAC2p/Xbaq0eFHXZur/GNJL14dNykvl5IInrgKacGnSbT3BfbI5feP552R7JqApVw=="],
 
     "@nestjs/mapped-types": ["@nestjs/mapped-types@12.0.1", "", { "peerDependencies": { "@nestjs/common": "^10.0.0 || ^11.0.0 || ^12.0.0", "class-transformer": "^0.4.0 || ^0.5.0", "class-validator": "^0.13.0 || ^0.14.0 || ^0.15.0", "reflect-metadata": "^0.1.12 || ^0.2.0" }, "optionalPeers": ["class-transformer", "class-validator"] }, "sha512-AHkgYt6UgJ5XBE3v4zGUUdfPD7kCGBzOa/uHfOYkkRTfojYWLRCCdAJiyWNpIFHCySJH/MR2F/z4MrMo5YheHg=="],
 

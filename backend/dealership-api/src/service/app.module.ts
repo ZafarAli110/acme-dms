@@ -1,6 +1,8 @@
-import { type MiddlewareConsumer, Module, type NestModule, ValidationPipe } from "@nestjs/common";
+import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from "@nestjs/core";
+import { I18nModule, I18nValidationPipe } from "@nestjs/i18n";
 import { LoggerModule } from "nestjs-pino";
+import { i18nOptions } from "#i18n/messages";
 import { BusinessLogicModule } from "#business-logic/business-logic.module";
 import { REST_CLIENT_RESILIENCE_PRESETS, RestClientsModule } from "#rest-clients/rest-clients.module";
 import { SETTINGS, type Settings } from "#settings/settings";
@@ -31,6 +33,7 @@ import { ProblemDetailsFilter } from "./filters/problem-details.filter";
 @Module({
   // The composition root: the only place that wires implementations (REST clients) to abstractions.
   imports: [
+    I18nModule.forRoot(i18nOptions()),
     SettingsModule,
     LoggerModule.forRoot(loggerOptions),
     // Every controller's @Timeout() takes defaults.timeout (REQUEST_TIMEOUT); the presets are the REST clients'.
@@ -69,7 +72,8 @@ import { ProblemDetailsFilter } from "./filters/problem-details.filter";
     // Request DTOs are validated (class-validator); unknown properties are rejected.
     {
       provide: APP_PIPE,
-      useValue: new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+      // ValidationPipe whose messages come from the catalogs (`validation.*`), in the request's language.
+      useValue: new I18nValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     },
   ],
 })
