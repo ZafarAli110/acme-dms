@@ -43,23 +43,25 @@ Demo users, all with the password `Acme123!`:
 
 ## Commands
 
-| Command             | What it does                     |
-| ------------------- | -------------------------------- |
-| `bun run dev`       | Start everything                 |
-| `bun run start`     | Start everything, in background  |
-| `bun run stop`      | Stop it                          |
-| `bun run rebuild`   | Rebuild one .NET service         |
-| `bun run reset`     | Back to the sample data          |
-| `bun run api`       | Call the API as a demo user      |
-| `bun run errors`    | Recent failed requests (traces)  |
-| `bun run health`    | What is unhealthy, and why       |
-| `bun run test`      | Unit tests                       |
-| `bun run coverage`  | Tests with coverage, per project |
-| `bun run lint`      | Lint                             |
-| `bun run typecheck` | Type-check                       |
-| `bun run format`    | Format                           |
-| `bun run gate:fast` | What CI checks, on changed code  |
-| `bun run hooks`     | Turn on the pre-commit check     |
+| Command                | What it does                     |
+| ---------------------- | -------------------------------- |
+| `bun run dev`          | Start everything                 |
+| `bun run start`        | Start everything, in background  |
+| `bun run stop`         | Stop it                          |
+| `bun run rebuild`      | Rebuild one .NET service         |
+| `bun run reset`        | Back to the sample data          |
+| `bun run api`          | Call the API as a demo user      |
+| `bun run errors`       | Recent failed requests (traces)  |
+| `bun run health`       | What is unhealthy, and why       |
+| `bun run sql:explain`  | A query's plan (read-only)       |
+| `bun run test`         | Unit tests                       |
+| `bun run coverage`     | Tests with coverage, per project |
+| `bun run lint`         | Lint                             |
+| `bun run typecheck`    | Type-check                       |
+| `bun run format`       | Format                           |
+| `bun run format:check` | Check formatting only            |
+| `bun run gate:fast`    | What CI checks, on changed code  |
+| `bun run hooks`        | Turn on the pre-commit check     |
 
 ## Licence
 
