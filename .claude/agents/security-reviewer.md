@@ -81,6 +81,9 @@ await work.db
 
 - **.NET services** rely on the EF Core global filter for the dealer: `IgnoreQueryFilters()` in a diff is a finding
   unless it is background work with no signed-in user (as in `ProcessDocumentCommandHandler`) that filters by hand.
+- **identity-api** filters by dealer with `IdentityDbContext.DealerFilter` (a named EF Core query filter); turning it
+  off (`IgnoreQueryFilters()`, or naming it) on a request path is a finding: only sign-in, the seeder and key rotation
+  run with no dealer.
 - **Files** are fetched by document id with the caller's token, and another dealer's document must not be
   reachable. Screens show the variants (`display`, `thumb`); a new use of `original` hands out the file exactly as
   uploaded, with whatever its metadata holds (a photo's location): check that it is meant.

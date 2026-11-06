@@ -14,4 +14,6 @@ internal sealed class HttpCurrentActor : ICurrentActor
     }
 
     public Guid UserId => _httpContextAccessor.HttpContext.FindUserContext()?.UserId ?? SystemUser.Id;
+
+    public Guid? DealerId => _httpContextAccessor.HttpContext.FindUserContext()?.DealerId;
 }

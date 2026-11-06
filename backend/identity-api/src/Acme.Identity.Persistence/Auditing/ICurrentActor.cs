@@ -4,4 +4,7 @@ namespace Acme.Identity.Persistence.Auditing;
 public interface ICurrentActor
 {
     Guid UserId { get; }
+
+    /// <summary>The signed-in user's dealer, which every query is filtered by; null with no one signed in (sign-in itself, background work).</summary>
+    Guid? DealerId { get; }
 }

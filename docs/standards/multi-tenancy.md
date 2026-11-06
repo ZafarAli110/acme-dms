@@ -44,6 +44,10 @@ returns nothing it should not, and a write for another dealer or location is ref
 - **A new business table gets its policy** in the migration that creates it, by the same kinds.
 - Something a request must count or see across dealers (an export's place in line) is a `SECURITY DEFINER` function
   that returns only what is needed, never a reason to switch the role off.
+- identity-api (EF Core) does the same with a named query filter, `IdentityDbContext.DealerFilter`: a signed-in
+  user's queries see only their dealer's users, locations, role assignments and dealer. With no one signed in (sign-in
+  itself, the seeder, key rotation) it filters nothing; `IgnoreQueryFilters([IdentityDbContext.DealerFilter])` is a
+  finding outside those.
 
 ## Location: explicit, and only for location-scoped data
 

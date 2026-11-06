@@ -1,4 +1,5 @@
 using Acme.Identity.BusinessLogic.Seeding;
+using Acme.Identity.Persistence.Auditing;
 using Acme.Identity.Persistence.Database;
 using Acme.Identity.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +10,8 @@ namespace Acme.Identity.Tests.Support;
 /// <summary>An in-memory identity database holding the demo dealer, locations and users, one per test.</summary>
 internal static class DemoDatabase
 {
-    public static async Task<IdentityDbContext> CreateAsync(CancellationToken cancellationToken)
+    /// <summary>The demo data; read through <paramref name="actor"/>'s eyes when given (its dealer filters every query).</summary>
+    public static async Task<IdentityDbContext> CreateAsync(CancellationToken cancellationToken, ICurrentActor? actor = null)
     {
         var options = new DbContextOptionsBuilder<IdentityDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         var dbContext = new IdentityDbContext(options);
@@ -37,6 +39,12 @@ internal static class DemoDatabase
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return dbContext;
+        if (actor is null)
+        {
+            return dbContext;
+        }
+
+        await dbContext.DisposeAsync();
+        return new IdentityDbContext(options, actor);
     }
 }
