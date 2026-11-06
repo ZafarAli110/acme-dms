@@ -25,8 +25,9 @@ were reverted, or if the bug came back?** A test that passes either way is not a
 **Where tests live here** (`coding-standards.md`): backend handler tests in `__test__/` next to the handler, Vitest,
 against a real Postgres that Testcontainers starts (`useTestDatabase()`), with the shared setup in `src/test-setup/`
 (the seed kit, `AT_NORTHSIDE` and the other test users, `fixedClock()`, the fake document-api). .NET tests in
-`tests/…Tests/`. The web app has no component tests: its behaviour is tested end to end with Playwright in
-`web/e2e/`. Don't ask for a React component test; do ask for an end-to-end test when a screen's behaviour changed.
+`tests/…Tests/`. The web app's pure logic (`formatters/`, `mappers/`, `schemas/`) has Vitest unit tests in a
+`__test__/` folder next to it; its screens are tested end to end with Playwright in `web/e2e/`, never as components.
+Don't ask for a React component test; do ask for an end-to-end test when a screen's behaviour changed.
 
 ## Coverage: what has no test
 
@@ -45,8 +46,8 @@ against a real Postgres that Testcontainers starts (`useTestDatabase()`), with t
 - **The edges of a list:** no rows, exactly one page, the last page, and two rows with the same sort value (they must
   not swap between pages, so the order ends with the id).
 - **The edges of a number:** a price, a quantity or a count at `0`, at its limit and past it, and anything rounded.
-- **Pure logic in the web app** (`formatters/`, `mappers/`, `schemas/`): the web app has no unit-test runner yet, so
-  this is not a finding on its own; say when a change adds logic there that only an end-to-end test reaches.
+- **Pure logic in the web app** (`formatters/`, `mappers/`, `schemas/`): a new or changed function with no unit test
+  in its `__test__/` folder, or one tested only through an end-to-end test.
 
 ## The test that can't fail
 
