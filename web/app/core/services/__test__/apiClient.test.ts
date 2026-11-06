@@ -40,40 +40,32 @@ const problem = (status: number) =>
   );
 const json = (body: unknown) => Response.json(body);
 
-/** A service that accepts one access token at a time and trades the refresh cookie (the browser sends it) for the next. */
-function fakeService(options: { refreshAnswer: () => Response | Promise<Response> }) {
-  let valid = "token-1";
-  const calls: { url: string; authorization: string | null; fromThePage: string | null }[] = [];
+/** The gateway and the services behind it: 401 once the session has ended, otherwise an answer. */
+function fakeGateway() {
+  let ended = false;
+  const calls: { url: string; method: string; authorization: string | null; fromThePage: string | null }[] = [];
   const handler = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
-    const address = String(url);
     const headers = new Headers(init?.headers);
     calls.push({
-      url: address,
+      url: String(url),
+      method: init?.method ?? "GET",
       authorization: headers.get("authorization"),
       fromThePage: headers.get("x-requested-with"),
     });
-    if (address.endsWith("/v1/tokens/revoke")) {
+    if (String(url) === "/api/session") {
       return new Response(null, { status: 204 });
     }
-    if (address.endsWith("/v1/tokens/refresh")) {
-      const answer = await options.refreshAnswer();
-      if (answer.ok) {
-        valid = "token-2";
-        return json({ accessToken: "token-2", tokenType: "Bearer", expiresIn: 900 });
-      }
-      return answer;
-    }
-    return headers.get("authorization") === `Bearer ${valid}` ? json({ ok: true }) : problem(401);
+    return ended ? problem(401) : json({ ok: true });
   };
-  return { handler, calls, expireAccessToken: () => (valid = "token-rotated-away") };
+  return { handler, calls, end: () => (ended = true) };
 }
 
-describe("ApiClient and an expired access token", () => {
+describe("ApiClient with the gateway's session", () => {
   let expired: number;
 
   beforeEach(() => {
     vi.stubGlobal("window", { sessionStorage: new FakeStorage() });
-    session.setToken("token-1");
+    session.setSignedIn(true);
     expired = 0;
     sessionExpiry.onExpired(() => {
       expired += 1;
@@ -82,42 +74,24 @@ describe("ApiClient and an expired access token", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    session.clear();
     sessionExpiry.onExpired(() => undefined);
   });
 
-  it("trades the refresh token for a new access token and sends the request again", async () => {
-    const service = fakeService({ refreshAnswer: () => json({}) });
-    service.expireAccessToken();
-    vi.stubGlobal("fetch", vi.fn(service.handler));
+  it("sends no token, only the page's own header and the location: the browser sends the session cookie", async () => {
+    const gateway = fakeGateway();
+    vi.stubGlobal("fetch", vi.fn(gateway.handler));
+    session.setLocationId("riverside");
 
     await expect(apiClient.getAsync("/api/dealership/v1/customers")).resolves.toEqual({ ok: true });
 
-    expect(service.calls.map((call) => call.authorization)).toEqual(["Bearer token-1", null, "Bearer token-2"]);
-    // The refresh is the page's own request (a header a form on another site cannot add), and carries no token.
-    expect(service.calls[1]).toMatchObject({ url: "/api/identity/v1/tokens/refresh", fromThePage: "acme-web" });
-    expect(session.getToken()).toBe("token-2");
-    expect(expired).toBe(0);
+    expect(gateway.calls[0]).toMatchObject({ authorization: null, fromThePage: "acme-web" });
   });
 
-  it("refreshes once for requests that found the token expired together", async () => {
-    const service = fakeService({ refreshAnswer: () => json({}) });
-    service.expireAccessToken();
-    vi.stubGlobal("fetch", vi.fn(service.handler));
-
-    const answers = await Promise.all([
-      apiClient.getAsync("/api/dealership/v1/customers"),
-      apiClient.getAsync("/api/dealership/v1/parts"),
-      apiClient.getAsync("/api/dealership/v1/stock"),
-    ]);
-
-    expect(answers).toEqual([{ ok: true }, { ok: true }, { ok: true }]);
-    expect(service.calls.filter((call) => call.url.endsWith("/v1/tokens/refresh"))).toHaveLength(1);
-  });
-
-  it("ends the sign-in when the service refuses the refresh cookie, and the caller gets its 401", async () => {
-    const service = fakeService({ refreshAnswer: () => problem(401) });
-    service.expireAccessToken();
-    vi.stubGlobal("fetch", vi.fn(service.handler));
+  it("ends the sign-in when a signed-in tab gets a 401, and the caller gets its 401", async () => {
+    const gateway = fakeGateway();
+    gateway.end();
+    vi.stubGlobal("fetch", vi.fn(gateway.handler));
 
     const error = await apiClient.getAsync("/api/dealership/v1/customers").catch((caught: unknown) => caught);
 
@@ -126,90 +100,29 @@ describe("ApiClient and an expired access token", () => {
     expect(expired).toBe(1);
   });
 
-  it("keeps the sign-in when the service cannot be reached to refresh", async () => {
-    const service = fakeService({ refreshAnswer: () => Promise.reject(new TypeError("offline")) });
-    service.expireAccessToken();
-    vi.stubGlobal("fetch", vi.fn(service.handler));
+  it("does not end anything for a 401 before signing in, or for signing in's own 401 (a wrong password)", async () => {
+    const gateway = fakeGateway();
+    gateway.end();
+    vi.stubGlobal("fetch", vi.fn(gateway.handler));
 
-    const error = await apiClient.getAsync("/api/dealership/v1/customers").catch((caught: unknown) => caught);
-
-    expect((error as ApiError).problem.status).toBe(401);
-    expect(expired).toBe(0);
-    expect(session.getToken()).toBe("token-1");
-  });
-
-  it("does not refresh without an access token, or for the token endpoints' own 401 (a wrong password)", async () => {
-    const service = fakeService({ refreshAnswer: () => json({}) });
-    vi.stubGlobal("fetch", vi.fn(service.handler));
-    service.expireAccessToken();
-
-    await expect(apiClient.postAsync("/api/identity/v1/tokens", { email: "a", password: "b" })).rejects.toBeInstanceOf(
+    await expect(apiClient.postAsync("/api/dealership/v1/anything", {}, { anonymous: true })).rejects.toBeInstanceOf(
       ApiError,
     );
     session.clear();
-    await expect(apiClient.getAsync("/api/dealership/v1/customers")).rejects.toBeInstanceOf(ApiError);
+    await expect(apiClient.getAsync("/api/identity/v1/users/me")).rejects.toBeInstanceOf(ApiError);
 
-    expect(service.calls.some((call) => call.url.endsWith("/v1/tokens/refresh"))).toBe(false);
+    expect(expired).toBe(0);
   });
 
-  it("gets a new tab or a reload its first access token from the cookie: true when there is a sign-in, false when not", async () => {
-    session.clear();
-    const signedIn = fakeService({ refreshAnswer: () => json({}) });
-    vi.stubGlobal("fetch", vi.fn(signedIn.handler));
-    await expect(apiClient.refreshAccessTokenAsync()).resolves.toBe(true);
-    expect(session.getToken()).toBe("token-2");
-
-    session.clear();
-    const signedOut = fakeService({ refreshAnswer: () => problem(401) });
-    vi.stubGlobal("fetch", vi.fn(signedOut.handler));
-    await expect(apiClient.refreshAccessTokenAsync()).resolves.toBe(false);
-    expect(session.getToken()).toBeNull();
-
-    const down = fakeService({ refreshAnswer: () => new Response(null, { status: 503 }) });
-    vi.stubGlobal("fetch", vi.fn(down.handler));
-    await expect(apiClient.refreshAccessTokenAsync()).rejects.toThrow();
-  });
-
-  it("signs out on the service as the page: true when it answered, false when it could not be reached", async () => {
-    const service = fakeService({ refreshAnswer: () => json({}) });
-    const fetchMock = vi.fn(service.handler);
+  it("signs out at the gateway as the page: true when it answered, false when it could not be reached", async () => {
+    const gateway = fakeGateway();
+    const fetchMock = vi.fn(gateway.handler);
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(apiClient.revokeSignInAsync()).resolves.toBe(true);
-    expect(service.calls[0]).toMatchObject({
-      url: "/api/identity/v1/tokens/revoke",
-      authorization: null,
-      fromThePage: "acme-web",
-    });
+    await expect(apiClient.signOutAsync()).resolves.toBe(true);
+    expect(gateway.calls[0]).toMatchObject({ url: "/api/session", method: "DELETE", fromThePage: "acme-web" });
 
     fetchMock.mockRejectedValue(new TypeError("offline"));
-    await expect(apiClient.revokeSignInAsync()).resolves.toBe(false);
-  });
-
-  it("gets the next access token a minute before this one expires, and stops when the tab signs out", async () => {
-    vi.useFakeTimers();
-    try {
-      const service = fakeService({ refreshAnswer: () => json({}) });
-      vi.stubGlobal("fetch", vi.fn(service.handler));
-      const refreshes = () => service.calls.filter((call) => call.url.endsWith("/v1/tokens/refresh")).length;
-
-      apiClient.renewBefore(900);
-      await vi.advanceTimersByTimeAsync(838_000);
-      expect(refreshes()).toBe(0);
-
-      await vi.advanceTimersByTimeAsync(2_000);
-      expect(refreshes()).toBe(1);
-      expect(session.getToken()).toBe("token-2");
-
-      // The answer's own lifetime schedules the next one.
-      await vi.advanceTimersByTimeAsync(840_000);
-      expect(refreshes()).toBe(2);
-
-      session.clear();
-      await vi.advanceTimersByTimeAsync(2_000_000);
-      expect(refreshes()).toBe(2);
-    } finally {
-      vi.useRealTimers();
-    }
+    await expect(apiClient.signOutAsync()).resolves.toBe(false);
   });
 });
