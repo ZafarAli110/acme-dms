@@ -43,6 +43,7 @@ const json = (body: unknown) => Response.json(body);
 /** The gateway and the services behind it: 401 once the session has ended, otherwise an answer. */
 function fakeGateway() {
   let ended = false;
+  let refused = false;
   const calls: { url: string; method: string; authorization: string | null; fromThePage: string | null }[] = [];
   const handler = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const headers = new Headers(init?.headers);
@@ -55,9 +56,17 @@ function fakeGateway() {
     if (String(url) === "/api/session") {
       return new Response(null, { status: 204 });
     }
-    return ended ? problem(401) : json({ ok: true });
+    if (refused) {
+      return problem(401);
+    }
+    if (ended) {
+      const answer = problem(401);
+      answer.headers.set("x-acme-session", "ended");
+      return answer;
+    }
+    return json({ ok: true });
   };
-  return { handler, calls, end: () => (ended = true) };
+  return { handler, calls, end: () => (ended = true), refuse: () => (refused = true) };
 }
 
 describe("ApiClient with the gateway's session", () => {
@@ -98,6 +107,16 @@ describe("ApiClient with the gateway's session", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).problem.status).toBe(401);
     expect(expired).toBe(1);
+  });
+
+  it("does not sign out for a service's own 401 while the session lives: that is an error to show", async () => {
+    const gateway = fakeGateway();
+    gateway.refuse();
+    vi.stubGlobal("fetch", vi.fn(gateway.handler));
+
+    await expect(apiClient.getAsync("/api/dealership/v1/customers")).rejects.toBeInstanceOf(ApiError);
+
+    expect(expired).toBe(0);
   });
 
   it("does not end anything for a 401 before signing in, or for signing in's own 401 (a wrong password)", async () => {

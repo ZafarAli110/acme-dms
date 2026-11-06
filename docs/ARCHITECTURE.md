@@ -72,12 +72,16 @@ can use. The browser gets **`acme_session`**: 256 random bits, `HttpOnly` (out o
 The answer is 204 with the cookie, or identity-api's own refusal (401, or 429 with `Retry-After`) as it gave it.
 
 **Every request.** A request to `/api/…` with the cookie is sent on with the session's access token
-(`Authorization: Bearer`, `SessionMiddleware`); the services check its signature and expiry, as before. Within a minute of
+(`Authorization: Bearer`, `SessionMiddleware`), and **without the session cookie**, whose value is the key to the session's
+tokens: it never goes past the gateway. The services check the token's signature and expiry, as before. Within a minute of
 its expiry the gateway first renews it (`POST /v1/tokens/refresh`), **one renewal per session at a time on every gateway
-instance** (the row is locked, then read again). A renewal **reads the person's roles and locations again**, so a change
+instance** (the row is locked, then read again). A renewal runs to the end on its own time limit, not the browser's: a tab
+closed midway must not leave the session holding a refresh token identity-api has already replaced. If identity-api cannot
+be reached, a token that has not yet expired is still sent; signing in then answers 503. A renewal **reads the person's roles and locations again**, so a change
 Maria makes on the Locations page reaches a signed-in person within 15 minutes, and a person who was deleted cannot renew.
-When identity-api has ended the sign-in, the gateway deletes the session and answers 401, and the page goes to the sign-in
-page. A request without the cookie is sent on as it came: a script's own token reaches the services unchanged.
+When identity-api has ended the sign-in, the gateway deletes the session and answers 401 with `X-Acme-Session: ended`; on
+that answer only, the page goes to the sign-in page (a service's own 401 is an error to show, not a sign-out). Signing in
+again ends the session the browser had. A request without the cookie is sent on as it came: a script's own token reaches the services unchanged.
 
 **Requests made from another site.** The browser sends the cookie with every request to `/api`, so the gateway refuses
 (403) a request that changes something (anything but `GET`, `HEAD` and `OPTIONS`), and any sign-in or sign-out, without
@@ -91,15 +95,16 @@ period the replay gets an access token and **no new refresh token**. identity-ap
 time (`SELECT … FOR UPDATE`), so a sign-out cannot slip between a renewal's read and its insert and leave the new token
 live. A replaced token is kept for an hour (to tell a copy from the owner) and then deleted.
 
-**Signing out.** `DELETE /api/session` deletes the session and removes the cookie: **from the next request on, that cookie
-signs no one in**, a copy of it included, on every gateway instance. The gateway then asks identity-api to revoke the chain
+**Signing out.** `DELETE /api/session` deletes the session, removes the cookie and tells the browser to drop what it cached
+(`Clear-Site-Data: "cache"`): **from the next request on, that cookie signs no one in**, a copy of it included, on every
+gateway instance. A stream already open (an export's progress) runs on: its token was checked when it opened. The gateway then asks identity-api to revoke the chain
 (`POST /v1/tokens/revoke`); that can fail without harm, because nothing outside the deleted session had the refresh
 token. If the page cannot reach the gateway the cookie is still good, so the sign-out is remembered in `localStorage`
 (`acme.revokePending`) and the next load ends that sign-in first and signs no one in with it. Unknown email and wrong
 password cost the same time at sign-in (a hash is checked either way).
 
 **An access token is not taken back (a decision).** Signing out of the browser is immediate, because the session is
-deleted and its token never left the gateway. An access token itself stays good until it expires, **at most 15 minutes**:
+deleted and its token never reached the browser. An access token itself stays good until it expires, **at most 15 minutes**:
 the services check its signature and expiry, ask identity-api nothing about a request, and keep no list of ended sign-ins.
 This is the usual trade for short-lived signed tokens, and it is chosen on purpose:
 
@@ -119,7 +124,8 @@ until a right password or 30 quiet minutes; an email nobody has is counted the s
 The address is the browser's, as the gateway forwards it (`X-Forwarded-For`, one hop trusted, the gateway's, also on the
 sign-ins and renewals it makes for a browser: a client cannot choose its own by sending the header); **do not expose
 identity-api to the internet directly**, because then that header would be the client's. Both are in memory, so each
-instance of identity-api counts for itself.
+instance of identity-api counts for itself. Behind a load balancer the gateway must take the browser's address from it
+(`UseForwardedHeaders`, trusting that hop only); otherwise every browser has the balancer's address and shares one limit.
 
 What this does not do, on purpose:
 
