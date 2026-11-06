@@ -77,7 +77,7 @@ The **clean-code-reviewer** reads the diff once, when the pull request is opened
 
 ## Where to find what
 
-`docs/ARCHITECTURE.md` (services and layers), `docs/standards/` (the team's rules), `contracts/README.md` (messages),
+`docs/ARCHITECTURE.md` (services and layers), `docs/standards/` (the team's rules), `docs/contracts.md` (messages),
 `README.md` "Where to find what". Follow an existing feature of the same kind before inventing a new shape.
 
 The skills in `.claude/skills/` hold the procedures for the common kinds of change: an API endpoint, file uploads, a
