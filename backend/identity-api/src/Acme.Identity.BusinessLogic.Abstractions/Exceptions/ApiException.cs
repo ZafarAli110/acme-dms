@@ -16,6 +16,14 @@ public sealed class ApiException : Exception
         Category = category;
     }
 
+    /// <summary>Too many attempts: the client is told how long to wait (the <c>Retry-After</c> header).</summary>
+    public ApiException(ApiErrorCategory category, string message, int retryAfterSeconds)
+        : base(message)
+    {
+        Category = category;
+        RetryAfterSeconds = retryAfterSeconds;
+    }
+
     public ApiException()
     {
     }
@@ -31,4 +39,7 @@ public sealed class ApiException : Exception
     }
 
     public ApiErrorCategory Category { get; } = ApiErrorCategory.BadRequest;
+
+    /// <summary>How long the client should wait before trying again, when the failure is "too many attempts".</summary>
+    public int? RetryAfterSeconds { get; }
 }

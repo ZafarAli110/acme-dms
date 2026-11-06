@@ -8,4 +8,5 @@ public enum ApiErrorCategory
     Forbidden = 403,
     NotFound = 404,
     Conflict = 409,
+    TooManyRequests = 429,
 }
