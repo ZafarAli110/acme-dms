@@ -125,6 +125,9 @@ API sorts and filters by (its list's `ListColumns`, e.g. `CUSTOMER_LIST_COLUMNS`
 column's filter to the operators the API takes for its type. Column definitions live in the feature's `columns/`
 folder; a cell that needs more than text is a small component in `components/`, rendered by a module-level `renderX`
 function. Which columns are shown is kept per grid in this browser (`useColumnVisibility`).
+The rows scroll inside the grid, which `<ScrollRestoration />` (the window only) does not see: `AppDataGrid` calls
+`useGridScrollRestore`, which saves the grid's scroll per history entry (`location.key`, in `sessionStorage`) and puts it
+back when that entry is shown again, so Back from a record lands on the same rows. A new entry starts at the top.
 
 Never `useState` for what the URL can hold, and never `useEffect` to copy server data into state: give the form its
 `defaultValues`, and remount it with a `key` when the record changes.

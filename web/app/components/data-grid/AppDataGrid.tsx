@@ -8,10 +8,12 @@ import {
   type GridRowParams,
   type GridSortModel,
   type GridValidRowModel,
+  useGridApiRef,
 } from "@mui/x-data-grid";
 import { frFR } from "@mui/x-data-grid/locales";
 import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useGridScrollRestore } from "../../core/hooks/useGridScrollRestore";
 import { type ListParams, MAX_LIST_DEPTH, PAGE_SIZES } from "../../core/paging/listParams";
 import { INSET_SURFACE } from "../../theme";
 import { AppDataGridToolbar } from "./AppDataGridToolbar";
@@ -59,6 +61,9 @@ export function AppDataGrid<Row extends GridValidRowModel>({
   testId,
 }: AppDataGridProps<Row>) {
   const { t, i18n } = useTranslation();
+  // The rows scroll inside the grid: put them back where they were when this history entry is shown again (Back).
+  const apiRef = useGridApiRef();
+  useGridScrollRestore(apiRef, rows.length > 0);
   // The filter as the user edits it: an operator picked but no value typed yet is not in the URL, yet must stay in
   // the panel. Whenever the URL's filter or search changes (Back, a shared link), it starts again from the URL.
   const urlFilter = server ? toFilterModel(server.params, columns) : { items: [] };
@@ -117,6 +122,7 @@ export function AppDataGrid<Row extends GridValidRowModel>({
       data-testid={testId}
     >
       <DataGrid<Row>
+        apiRef={apiRef}
         columns={columns}
         rows={rows}
         loading={loading}
