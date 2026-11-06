@@ -57,5 +57,9 @@
     "columns": "Columns",
     "filters": "Filters",
     "search": "Search"
+  },
+  "paging": {
+    "rows": "{{from}}–{{to}} of {{total}}",
+    "cappedRows": "{{from}}–{{to}} of {{total}} (the list shows the first {{max}}: search or filter to narrow it)"
   }
 }

@@ -12,6 +12,7 @@ import {
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
 import { listFilter, listOrderBy, type ListColumns } from "../../../list-query/list-columns";
+import { pageOffset } from "../../../list-query/page-offset";
 import { requireLocation } from "../../../user-context/require-location";
 import { toCustomerListItemDto } from "../customer.mapper";
 
@@ -67,7 +68,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
         ),
       )
       .limit(pageSize)
-      .offset((page - 1) * pageSize);
+      .offset(pageOffset(page, pageSize));
     const [counted] = await work.db.select({ total: count() }).from(customers).where(where);
     const total = counted?.total ?? 0;
     return { items: items.map(toCustomerListItemDto), total, page, pageSize };
