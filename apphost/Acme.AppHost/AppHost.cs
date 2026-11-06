@@ -10,6 +10,8 @@ var postgres = builder.AddPostgres("postgres", username, password).WithDataVolum
 var identityDb = postgres.AddDatabase("identity");
 var dealershipDb = postgres.AddDatabase("dealership");
 var documentsDb = postgres.AddDatabase("documents");
+// The gateway's own: the browsers' sign-ins (the gateway is the web app's backend, see docs/ARCHITECTURE.md).
+var gatewayDb = postgres.AddDatabase("gateway");
 
 var rabbitmq = builder.AddRabbitMQ("rabbitmq", username, password).WithManagementPlugin();
 
@@ -57,6 +59,8 @@ var gateway = builder.AddProject<Projects.Acme_Gateway>("gateway-api")
     .WithReference(identityApi)
     .WithReference(dealershipApi.GetEndpoint("http"))
     .WithReference(documentApi)
+    .WithReference(gatewayDb)
+    .WaitFor(gatewayDb)
     .WaitFor(identityApi)
     .WaitFor(dealershipApi)
     .WaitFor(documentApi);
