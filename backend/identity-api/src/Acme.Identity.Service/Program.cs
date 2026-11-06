@@ -1,4 +1,6 @@
 using Acme.Identity.Persistence.Auditing;
+using Microsoft.AspNetCore.HttpOverrides;
+using Acme.Identity.Service;
 using Acme.Identity.Service.Authorization;
 using Acme.Identity.BusinessLogic;
 using Acme.Identity.BusinessLogic.Abstractions.Signing;
@@ -26,6 +28,18 @@ builder.Services.AddBusinessLogic();
 // otherwise ask identity-api over HTTP.
 builder.Services.AddScoped<Acme.ServiceDefaults.Authentication.ISessionStatusChecker, Acme.Identity.Service.Authorization.DbSessionStatusChecker>();
 builder.Services.AddControllers();
+// The gateway forwards the caller's address in X-Forwarded-For; the services are reached only through it. With one hop trusted
+// (the gateway's, the last entry), a client cannot choose its own address by sending the header itself. Do not expose identity-api
+// to the internet directly: then that header would be the client's.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+builder.Services.AddAcmeRateLimits();
+builder.Services.AddMemoryCache();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 // After the service's own handler: Postgres failures become 409/400/503 with a meaningful message, not a 500. The
 // unique indexes get their own message (names from IdentityDbContext's HasIndex(...).IsUnique()).
@@ -51,7 +65,9 @@ using (var scope = app.Services.CreateScope())
     await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync(CancellationToken.None);
 }
 
+app.UseForwardedHeaders();
 app.UseServiceDefaults();
+app.UseRateLimiter();
 app.UseAcmeAuthorization();
 app.MapControllers();
 

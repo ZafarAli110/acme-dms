@@ -1,160 +1,155 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using Acme.ServiceDefaults.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Acme.Documents.Tests.Authentication;
 
-/// <summary>How a service learns that a sign-in was ended: it asks identity-api, and remembers the answer briefly.</summary>
+/// <summary>How a service learns that a sign-in was ended: it keeps the list of ended sign-ins, asking identity-api every few seconds.</summary>
 [TestClass]
 public sealed class SessionStatusTests
 {
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public async Task AnOpenSignIn_IsAskedAgainOnlyAfterTenSeconds_SoEndingOneReachesAServiceWithinThem()
+    public async Task ASignInIdentityApiListedAsEnded_IsRefused_AndOthersAreNot()
+    {
+        var ended = Guid.NewGuid();
+        var open = Guid.NewGuid();
+        var clock = new TestClock();
+        var identity = new FakeIdentity(clock) { Revoked = { ended } };
+        var feed = NewFeed(identity, clock);
+
+        await feed.RefreshAsync(TestContext.CancellationToken);
+
+        Assert.IsFalse(await feed.IsActiveAsync(NewSession(ended, clock), TestContext.CancellationToken));
+        Assert.IsTrue(await feed.IsActiveAsync(NewSession(open, clock), TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task ALookup_NeverCallsIdentityApi()
     {
         var clock = new TestClock();
-        var cache = new SessionStatusCache(new MemoryCache(new MemoryCacheOptions { Clock = clock.AsSystemClock() }), clock);
-        var asked = 0;
-        var session = NewSession(clock);
+        var identity = new FakeIdentity(clock);
+        var feed = NewFeed(identity, clock);
+        await feed.RefreshAsync(TestContext.CancellationToken);
 
-        Task<bool> Ask(CancellationToken _)
+        for (var i = 0; i < 50; i++)
         {
-            asked++;
-            return Task.FromResult(true);
+            await feed.IsActiveAsync(NewSession(Guid.NewGuid(), clock), TestContext.CancellationToken);
         }
 
-        await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken);
-        await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken);
-        Assert.AreEqual(1, asked);
-
-        clock.Advance(TimeSpan.FromSeconds(11));
-        await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken);
-        Assert.AreEqual(2, asked);
+        Assert.AreEqual(1, identity.Questions.Count);
     }
 
     [TestMethod]
-    public async Task AnEndedSignIn_IsNeverAskedAgain_ForAsLongAsItsAccessTokenCouldBeShown()
+    public async Task TheFirstQuestionLooksBackAsFarAsAnAccessTokenCanLive_AndTheNextStartsAtTheLastAnswer()
     {
         var clock = new TestClock();
-        var cache = new SessionStatusCache(new MemoryCache(new MemoryCacheOptions { Clock = clock.AsSystemClock() }), clock);
-        var asked = 0;
-        var session = NewSession(clock);
+        var identity = new FakeIdentity(clock);
+        var feed = NewFeed(identity, clock);
 
-        Task<bool> Ask(CancellationToken _)
-        {
-            asked++;
-            return Task.FromResult(false);
-        }
+        await feed.RefreshAsync(TestContext.CancellationToken);
+        clock.Advance(TimeSpan.FromSeconds(5));
+        await feed.RefreshAsync(TestContext.CancellationToken);
 
-        Assert.IsFalse(await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken));
-        clock.Advance(TimeSpan.FromMinutes(10));
-        Assert.IsFalse(await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken));
-
-        Assert.AreEqual(1, asked);
+        Assert.AreEqual(clock.GetUtcNow().AddSeconds(-5) - RevokedSessionsFeed.RememberFor, identity.Questions[0]);
+        // The last answer's own clock, a little back (so an end at that very moment is not missed).
+        Assert.AreEqual(clock.GetUtcNow().AddSeconds(-5).AddSeconds(-2), identity.Questions[1]);
     }
 
     [TestMethod]
-    public async Task IdentityApi_ThatSays401_EndsTheSignIn_AndAnyOtherAnswerOrNoAnswerDoesNot()
-    {
-        Assert.IsFalse(await CheckAsync(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)));
-        Assert.IsTrue(await CheckAsync(_ => new HttpResponseMessage(HttpStatusCode.NoContent)));
-        // A service does not stop serving because the sign-in authority is failing or restarting.
-        Assert.IsTrue(await CheckAsync(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)));
-        Assert.IsTrue(await CheckAsync(_ => new HttpResponseMessage(HttpStatusCode.Forbidden)));
-        Assert.IsTrue(await CheckAsync(_ => throw new HttpRequestException("identity-api is restarting")));
-    }
-
-    [TestMethod]
-    public async Task RequestsThatFindNothingRememberedTogether_ShareOneQuestion()
+    public async Task AfterALongOutage_TheFirstAnswerStillCoversEveryTokenThatCanBeShown()
     {
         var clock = new TestClock();
-        var cache = new SessionStatusCache(new MemoryCache(new MemoryCacheOptions()), clock);
-        var session = NewSession(clock);
-        var asked = 0;
-        var release = new TaskCompletionSource();
+        var identity = new FakeIdentity(clock);
+        var feed = NewFeed(identity, clock);
+        await feed.RefreshAsync(TestContext.CancellationToken);
+        identity.Down = true;
+        clock.Advance(TimeSpan.FromHours(2));
+        await feed.RefreshAsync(TestContext.CancellationToken);
+        identity.Down = false;
 
-        async Task<bool> Ask(CancellationToken _)
-        {
-            Interlocked.Increment(ref asked);
-            await release.Task;
-            return true;
-        }
+        await feed.RefreshAsync(TestContext.CancellationToken);
 
-        var together = Enumerable.Range(0, 6).Select(_ => cache.IsActiveAsync(session, Ask, TestContext.CancellationToken)).ToList();
-        release.SetResult();
-        var answers = await Task.WhenAll(together);
-
-        Assert.AreEqual(1, asked);
-        Assert.IsTrue(answers.All(answer => answer));
+        // The last good answer is two hours old: the question starts where it left off, and identity-api caps it at the
+        // token lifetime, so it is never asked to look further back than a token can live.
+        Assert.IsTrue(identity.Questions.Last() <= clock.GetUtcNow().AddHours(-2).AddMinutes(1));
     }
 
     [TestMethod]
-    public async Task AnEndedSignIn_IsAskedAgainOnceItsAccessTokenCouldNoLongerBeShown()
+    public async Task WhenIdentityApiCannotBeReached_WhatIsKnownIsKept_AndNothingIsRefused()
+    {
+        var ended = Guid.NewGuid();
+        var clock = new TestClock();
+        var identity = new FakeIdentity(clock) { Revoked = { ended } };
+        var feed = NewFeed(identity, clock);
+        await feed.RefreshAsync(TestContext.CancellationToken);
+
+        identity.Down = true;
+        await feed.RefreshAsync(TestContext.CancellationToken);
+
+        Assert.IsFalse(await feed.IsActiveAsync(NewSession(ended, clock), TestContext.CancellationToken));
+        Assert.IsTrue(await feed.IsActiveAsync(NewSession(Guid.NewGuid(), clock), TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task AnEndedSignIn_IsForgottenOnceItsAccessTokenCouldNoLongerBeShown()
+    {
+        var ended = Guid.NewGuid();
+        var clock = new TestClock();
+        var identity = new FakeIdentity(clock) { Revoked = { ended } };
+        var feed = NewFeed(identity, clock);
+        await feed.RefreshAsync(TestContext.CancellationToken);
+        identity.Revoked.Clear();
+
+        clock.Advance(RevokedSessionsFeed.RememberFor - TimeSpan.FromSeconds(1));
+        await feed.RefreshAsync(TestContext.CancellationToken);
+        Assert.IsTrue(feed.IsRevoked(ended));
+
+        clock.Advance(TimeSpan.FromSeconds(2));
+        await feed.RefreshAsync(TestContext.CancellationToken);
+        Assert.IsFalse(feed.IsRevoked(ended));
+    }
+
+    [TestMethod]
+    public async Task TheService_AsksOnceBeforeItTakesRequests()
     {
         var clock = new TestClock();
-        var cache = new SessionStatusCache(new MemoryCache(new MemoryCacheOptions { Clock = clock.AsSystemClock() }), clock);
-        var session = NewSession(clock);
-        var asked = 0;
+        var identity = new FakeIdentity(clock) { Revoked = { Guid.NewGuid() } };
+        var feed = NewFeed(identity, clock);
 
-        Task<bool> Ask(CancellationToken _)
-        {
-            asked++;
-            return Task.FromResult(false);
-        }
+        await feed.StartAsync(TestContext.CancellationToken);
+        await feed.StopAsync(TestContext.CancellationToken);
 
-        await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken);
-        clock.Advance(TimeSpan.FromMinutes(16));
-        await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken);
-
-        Assert.AreEqual(2, asked);
+        Assert.IsGreaterThanOrEqualTo(1, identity.Questions.Count);
     }
 
     [TestMethod]
-    public async Task TheTokenHook_RefusesAnEndedSignIn_AcceptsAnOpenOne_AndLeavesTokensWithoutASignInIdToTheirExpiry()
+    public async Task TheTokenHook_RefusesAnEndedSignIn_AcceptsAnOpenOne_AndRefusesATokenWithNoSignInId()
     {
         var ended = await ValidateAsync(sessionIsActive: false, claims: [new Claim("sid", Guid.NewGuid().ToString())]);
         var open = await ValidateAsync(sessionIsActive: true, claims: [new Claim("sid", Guid.NewGuid().ToString())]);
-        var noSid = await ValidateAsync(sessionIsActive: false, claims: []);
+        var noSid = await ValidateAsync(sessionIsActive: true, claims: []);
 
         Assert.IsNotNull(ended.Result?.Failure, "a token whose sign-in ended must be refused");
         Assert.IsNull(open.Result);
-        Assert.IsNull(noSid.Result);
+        Assert.IsNotNull(noSid.Result?.Failure, "a token with no sign-in id could never be ended, so it is not accepted");
     }
 
-    [TestMethod]
-    public async Task TheCheck_SendsTheAccessTokenToIdentityApi()
+    private RevokedSessionsFeed NewFeed(FakeIdentity identity, TimeProvider clock)
     {
-        HttpRequestMessage? seen = null;
-
-        await CheckAsync(request =>
-        {
-            seen = request;
-            return new HttpResponseMessage(HttpStatusCode.NoContent);
-        });
-
-        Assert.AreEqual("http://identity-api/v1/sessions/current", seen!.RequestUri!.ToString());
-        Assert.AreEqual("Bearer", seen.Headers.Authorization!.Scheme);
-        Assert.AreEqual("the-access-token", seen.Headers.Authorization.Parameter);
-    }
-
-    private async Task<bool> CheckAsync(Func<HttpRequestMessage, HttpResponseMessage> answer)
-    {
-        var clock = new TestClock();
-        var cache = new SessionStatusCache(new MemoryCache(new MemoryCacheOptions()), clock);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["services:identity-api:http:0"] = "http://identity-api" })
             .Build();
-        var checker = new HttpSessionStatusChecker(new HttpClient(new FakeHandler(answer)), cache, configuration, NullLogger<HttpSessionStatusChecker>.Instance);
-        return await checker.IsActiveAsync(NewSession(clock), TestContext.CancellationToken);
+        return new RevokedSessionsFeed(new HttpClient(identity), clock, configuration, NullLogger<RevokedSessionsFeed>.Instance);
     }
 
     private async Task<TokenValidatedContext> ValidateAsync(bool sessionIsActive, IEnumerable<Claim> claims)
@@ -176,33 +171,45 @@ public sealed class SessionStatusTests
         return context;
     }
 
+    private static AccessTokenSession NewSession(Guid sessionId, TimeProvider clock) =>
+        new(sessionId, "the-access-token", clock.GetUtcNow().AddMinutes(15));
+
     private sealed class FixedChecker(bool active) : ISessionStatusChecker
     {
         public Task<bool> IsActiveAsync(AccessTokenSession session, CancellationToken cancellationToken) => Task.FromResult(active);
     }
 
-    private static AccessTokenSession NewSession(TimeProvider clock) =>
-        new(Guid.NewGuid(), "the-access-token", clock.GetUtcNow().AddMinutes(15));
-
-    private sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
+    /// <summary>identity-api, as the feed sees it: it answers with the ids it has and remembers what it was asked.</summary>
+    private sealed class FakeIdentity(TimeProvider clock) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(answer(request));
+        public List<Guid> Revoked { get; } = [];
+
+        public List<DateTimeOffset> Questions { get; } = [];
+
+        public bool Down { get; set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (Down)
+            {
+                throw new HttpRequestException("identity-api is down");
+            }
+
+            var since = DateTimeOffset.Parse(Uri.UnescapeDataString(request.RequestUri!.Query.Replace("?since=", string.Empty)), System.Globalization.CultureInfo.InvariantCulture);
+            Questions.Add(since);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { now = clock.GetUtcNow(), revoked = Revoked }),
+            });
+        }
     }
 
     private sealed class TestClock : TimeProvider
     {
-        private DateTimeOffset _now = DateTimeOffset.UtcNow;
+        private DateTimeOffset _now = DateTimeOffset.Parse("2026-11-07T10:00:00Z", global::System.Globalization.CultureInfo.InvariantCulture);
 
         public override DateTimeOffset GetUtcNow() => _now;
 
         public void Advance(TimeSpan by) => _now += by;
-
-        public Microsoft.Extensions.Internal.ISystemClock AsSystemClock() => new Clock(this);
-
-        private sealed class Clock(TestClock owner) : Microsoft.Extensions.Internal.ISystemClock
-        {
-            public DateTimeOffset UtcNow => owner._now;
-        }
     }
 }
