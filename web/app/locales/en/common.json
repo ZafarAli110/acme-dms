@@ -72,7 +72,7 @@
     "elapsed": "{{time}} elapsed",
     "left": "about {{time}} left",
     "cancel": "Cancel",
-    "download": "Download ({{size}} MB)",
+    "download": "Download ({{size}})",
     "close": "Close",
     "customersTitle": "Customers of {{location}}"
   }
