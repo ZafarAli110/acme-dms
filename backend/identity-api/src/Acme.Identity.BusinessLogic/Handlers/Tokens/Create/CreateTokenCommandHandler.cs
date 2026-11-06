@@ -1,14 +1,10 @@
-using System.Security.Claims;
-using System.Text.Json;
+using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens.Create;
 using Acme.Identity.BusinessLogic.Abstractions.Signing;
-using Acme.Identity.BusinessLogic.Handlers.Users;
 using Acme.Identity.DTO.Tokens;
 using Acme.Identity.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 using Acme.Identity.BusinessLogic.Abstractions.Exceptions;
 using Acme.Identity.Persistence.Database;
 
@@ -17,26 +13,24 @@ namespace Acme.Identity.BusinessLogic.Handlers.Tokens.Create;
 internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
 {
     private const string InvalidCredentials = "Email or password is incorrect.";
-    private static readonly JsonSerializerOptions _claimJsonOptions = new(JsonSerializerDefaults.Web);
-
     private readonly IdentityDbContext _dbContext;
-    private readonly ISigningKeyProvider _signingKeyProvider;
+    private readonly AccessTokenIssuer _accessTokenIssuer;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly TimeProvider _timeProvider;
 
     public CreateTokenCommandHandler(
         IdentityDbContext dbContext,
-        ISigningKeyProvider signingKeyProvider,
+        AccessTokenIssuer accessTokenIssuer,
         IPasswordHasher<User> passwordHasher,
         TimeProvider timeProvider)
     {
         _dbContext = dbContext;
-        _signingKeyProvider = signingKeyProvider;
+        _accessTokenIssuer = accessTokenIssuer;
         _passwordHasher = passwordHasher;
         _timeProvider = timeProvider;
     }
 
-    public async Task<TokenCreateResponseDto> ExecuteAsync(TokenCreateRequestDto request, CancellationToken cancellationToken)
+    public async Task<IssuedTokens> ExecuteAsync(TokenCreateRequestDto request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -53,34 +47,27 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
             throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
         }
 
-        var signingKey = await _signingKeyProvider.GetSigningKeyAsync(cancellationToken);
         var now = _timeProvider.GetUtcNow();
-        var locations = UserLocationMapper.ToUserLocationDtos(user)
-            .Select(l => new { id = l.Id, code = l.Code, name = l.Name, role = l.Role, permissions = l.Permissions });
+        // A sign-in starts a chain of refresh tokens: its id is the access tokens' `sid`, and the chain ends at this time.
+        var sessionId = Guid.CreateVersion7();
+        var accessToken = await _accessTokenIssuer.IssueAsync(user, sessionId, now, cancellationToken);
 
-        var descriptor = new SecurityTokenDescriptor
+        // Tokens that can no longer be used are cleared as people sign in: the table stays as small as the people at work.
+        await _dbContext.RefreshTokens
+            .Where(t => t.UserId == user.Id && (t.ExpiresAt <= now || t.RevokedAt != null))
+            .ExecuteDeleteAsync(cancellationToken);
+        var refreshToken = RefreshTokenSecret.Create();
+        _dbContext.RefreshTokens.Add(new RefreshToken
         {
-            Issuer = TokenSettings.Issuer,
-            Audience = TokenSettings.Audience,
-            IssuedAt = now.UtcDateTime,
-            NotBefore = now.UtcDateTime,
-            Expires = now.AddSeconds(TokenSettings.LifetimeSeconds).UtcDateTime,
-            SigningCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256),
-            Subject = new ClaimsIdentity(
-            [
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Name, user.DisplayName),
-                new Claim("dealer_id", user.DealerId.ToString()),
-                new Claim("dealer_name", user.Dealer?.Name ?? string.Empty),
-            ]),
-            Claims = new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["locations"] = JsonSerializer.SerializeToElement(locations, _claimJsonOptions),
-            },
-        };
+            Id = sessionId,
+            FamilyId = sessionId,
+            UserId = user.Id,
+            TokenHash = RefreshTokenSecret.Hash(refreshToken),
+            CreatedAt = now,
+            ExpiresAt = now.AddSeconds(TokenSettings.RefreshLifetimeSeconds),
+        });
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var accessToken = new JsonWebTokenHandler().CreateToken(descriptor);
-        return new TokenCreateResponseDto(accessToken, "Bearer", TokenSettings.LifetimeSeconds);
+        return new IssuedTokens(new TokenCreateResponseDto(accessToken, "Bearer", TokenSettings.LifetimeSeconds), refreshToken);
     }
 }
