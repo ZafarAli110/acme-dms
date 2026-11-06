@@ -71,23 +71,33 @@ on the Locations page reaches a signed-in person within 15 minutes, and a person
 
 **Rotation and reuse.** Every use replaces the refresh token, and the tokens of one sign-in form a chain (`family_id`, the
 `sid`). A token that was already replaced and is shown again is a copy in another hand: after a short grace period
-(`RefreshReuseGraceSeconds`, 20 s, for the same person's second request racing the first) **the whole chain is revoked**,
-the owner's newest token with it. Across tabs one refresh runs at a time (the Web Locks API), because each refresh replaces
-the cookie every tab shares.
+(`RefreshReuseGraceSeconds`, 20 s, for the same person's second request racing the first, such as an answer that was lost)
+**the whole chain is revoked**, the owner's newest token with it. Inside the grace period the replay gets an access token
+and **no new refresh token**, so a copy used in that window gets 15 minutes and nothing that lasts. A refresh, another
+refresh of the same sign-in and a sign-out take the sign-in's rows one after the other (`SELECT … FOR UPDATE`), so a sign-out
+cannot slip between a refresh's read and its insert and leave the new token live. Across tabs one refresh runs at a time (the
+Web Locks API), and a sign-out waits for it, because each refresh replaces the cookie every tab shares. A replaced token is
+kept for an hour (to tell a copy from the owner) and then deleted, so a sign-in is a handful of rows.
 
 **Signing out and recall.** `POST /v1/tokens/revoke` revokes the whole chain and removes the cookie; it answers 204 for any
-token, so signing out cannot fail. The access token that is left does not live out its 15 minutes: every service asks
-identity-api whether a token's sign-in is still open (`GET /v1/sessions/current`, with the token; 401 when it was ended)
-and remembers an open answer for **10 seconds**, so a sign-out reaches every service within 10 seconds. dealership-api does
-this in its authentication guard (`SessionStatusChecker`); document-api and identity-api in the shared JWT validation
-(`Acme.ServiceDefaults`, `ISessionStatusChecker`; identity-api answers from its own database). An ended sign-in is
-remembered until its token would have expired.
+token, so signing out cannot fail on the service's side. If the web app cannot reach the service the cookie is still good,
+so the sign-out is remembered in `localStorage` (`acme.revokePending`) and the next load ends that sign-in first and signs no
+one in with it. The access token that is left does not live out its 15 minutes: every service asks identity-api whether a
+token's sign-in is still open (`GET /v1/sessions/current`, with the token; 401 when it was ended) and remembers an open
+answer for **10 seconds**, so a sign-out reaches every service within 10 seconds. Requests that find nothing remembered at
+the same moment share one question, and the question has a 2-second limit. dealership-api does this in its authentication
+guard (`SessionStatusChecker`); document-api and identity-api in the shared JWT validation (`Acme.ServiceDefaults`,
+`ISessionStatusChecker`; identity-api answers from its own database). An ended sign-in is remembered until its token would
+have expired. Unknown email and wrong password cost the same time at sign-in (a hash is checked either way).
 
 What this does not do, on purpose:
 
-- **A service cannot check while identity-api is down.** The token, already verified and at most 15 minutes old, is
-  accepted until identity-api answers again; revocation resumes with it. A service does not stop serving because the
-  sign-in authority restarts.
+- **A service cannot check while identity-api is down or failing.** The token, already verified and at most 15 minutes old,
+  is accepted (no answer, or any answer but 401) until identity-api answers again; revocation resumes with it. A service does
+  not stop serving because the sign-in authority restarts. Someone who can make identity-api slow can therefore delay a
+  sign-out reaching the services, by the time the slowness lasts; the token still ends within 15 minutes.
+- **No attempt limit on sign-in yet.** A limit per address needs the client address from the gateway (forwarded headers),
+  which is not set up: a per-address limit behind the gateway would count everyone as one.
 - **Up to 10 seconds, not instantly.** Each service remembers "open" for 10 seconds.
 - **Script on the page can still call the API while the page is open**, as the person, for as long as it runs: it cannot
   take a token away to use elsewhere (the refresh token is unreachable, the access token is in memory), but httpOnly does

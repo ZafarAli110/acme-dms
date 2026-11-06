@@ -1,4 +1,6 @@
 const LOCATION_KEY = "acme.locationId";
+/** In localStorage (not sessionStorage): a sign-out that could not reach the service must still be known to the next tab. */
+const REVOKE_PENDING_KEY = "acme.revokePending";
 const CHANNEL_NAME = "acme.session";
 
 /** What tabs of the app tell each other about the sign-in. A tab never receives its own messages. */
@@ -46,6 +48,33 @@ export const session = {
   clear: (): void => {
     accessToken = null;
     tabStorage()?.removeItem(LOCATION_KEY);
+  },
+
+  /**
+   * Signing out clears this tab, but ending the sign-in is a request to identity-api, which can fail (it is down, or slow).
+   * The refresh cookie is then still good, and the next person to open the app would be signed in as the last one. So a
+   * sign-out that did not get through is remembered here, and the next load ends the sign-in first and signs no one in.
+   */
+  isRevokePending: (): boolean => {
+    try {
+      return typeof window !== "undefined" && window.localStorage.getItem(REVOKE_PENDING_KEY) !== null;
+    } catch {
+      return false;
+    }
+  },
+  setRevokePending: (pending: boolean): void => {
+    try {
+      if (typeof window === "undefined") {
+        return;
+      }
+      if (pending) {
+        window.localStorage.setItem(REVOKE_PENDING_KEY, "1");
+      } else {
+        window.localStorage.removeItem(REVOKE_PENDING_KEY);
+      }
+    } catch {
+      // Nothing to remember it in.
+    }
   },
 
   /** Tells the other tabs this tab signed in or out, so they follow. */

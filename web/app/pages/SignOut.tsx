@@ -7,8 +7,8 @@ import { systemQueries } from "../core/queries/systemQueries";
  * kept of the service's answers, then shows the sign-in page.
  */
 export async function clientAction() {
-  authKernel.signOut();
-  await systemQueries.clearBrowserCacheAsync();
+  // Both at once: ending the sign-in on the service, and the browser dropping what it kept of the service's answers.
+  await Promise.all([authKernel.signOutAsync(), systemQueries.clearBrowserCacheAsync()]);
   return redirect("/sign-in");
 }
 

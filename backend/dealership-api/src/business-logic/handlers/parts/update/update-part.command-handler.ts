@@ -161,7 +161,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
               partPhotos.id,
               removed.map((photo) => photo.id),
             ),
-          )!,
+          ),
           userContext.userId,
           now,
         );

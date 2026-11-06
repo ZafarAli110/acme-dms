@@ -13,6 +13,8 @@ namespace Acme.Identity.BusinessLogic.Handlers.Tokens.Create;
 internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
 {
     private const string InvalidCredentials = "Email or password is incorrect.";
+    private static readonly User _unknownUser = new();
+    private static readonly Lazy<string> _unknownUserHash = new(() => new PasswordHasher<User>().HashPassword(_unknownUser, Guid.NewGuid().ToString()));
     private readonly IdentityDbContext _dbContext;
     private readonly AccessTokenIssuer _accessTokenIssuer;
     private readonly IPasswordHasher<User> _passwordHasher;
@@ -42,13 +44,21 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
             .AsNoTracking()
             .SingleOrDefaultAsync(u => u.Email == email, cancellationToken);
 
-        if (user is null || _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+        if (user is null)
+        {
+            // An unknown email costs the same as a wrong password: a hash is checked either way, so the time does not say
+            // which emails have an account.
+            _passwordHasher.VerifyHashedPassword(_unknownUser, _unknownUserHash.Value, request.Password);
+            throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
+        }
+
+        if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
         {
             throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
         }
 
         var now = _timeProvider.GetUtcNow();
-        // A sign-in starts a chain of refresh tokens: its id is the access tokens' `sid`, and the chain ends at this time.
+        // A sign-in starts a chain of refresh tokens: its id is the access tokens' `sid`, and its refresh tokens end after the lifetime.
         var sessionId = Guid.CreateVersion7();
         var accessToken = await _accessTokenIssuer.IssueAsync(user, sessionId, now, cancellationToken);
 

@@ -50,25 +50,21 @@ export async function findStockedPartsAsync(
   const [counted] = await db
     .select({ total: count() })
     .from(partInventories)
-    .innerJoin(parts, and(eq(parts.id, partInventories.partId)))
-    .innerJoin(bins, and(eq(bins.id, partInventories.binId)))
+    .innerJoin(parts, eq(parts.id, partInventories.partId))
+    .innerJoin(bins, eq(bins.id, partInventories.binId))
     .where(where);
   return { items, total: counted?.total ?? 0 };
 }
 
 /** The part as the request's location stocks it, or null when it is not stocked there (or deleted). */
 export async function findStockedPartAsync(db: Database, partId: string): Promise<StockedPart | null> {
-  const [stocked] = await stockedParts(db, and(eq(partInventories.partId, partId)));
+  const [stocked] = await stockedParts(db, eq(partInventories.partId, partId));
   return stocked ?? null;
 }
 
 /** The part's photos, oldest first. */
 export function findPhotosAsync(db: Database, partId: string): Promise<PartPhoto[]> {
-  return db
-    .select()
-    .from(partPhotos)
-    .where(and(eq(partPhotos.partId, partId)))
-    .orderBy(asc(partPhotos.createdAt));
+  return db.select().from(partPhotos).where(eq(partPhotos.partId, partId)).orderBy(asc(partPhotos.createdAt));
 }
 
 /** Each part's thumbnail: its default photo when that is ready, otherwise its first ready photo. */
@@ -94,8 +90,8 @@ function stockedParts(db: Database, where: SQL | undefined) {
   return db
     .select({ part: parts, inventory: partInventories, bin: bins })
     .from(partInventories)
-    .innerJoin(parts, and(eq(parts.id, partInventories.partId)))
-    .innerJoin(bins, and(eq(bins.id, partInventories.binId)))
+    .innerJoin(parts, eq(parts.id, partInventories.partId))
+    .innerJoin(bins, eq(bins.id, partInventories.binId))
     .where(where)
     .$dynamic();
 }

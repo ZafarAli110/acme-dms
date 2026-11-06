@@ -98,7 +98,7 @@ export class ExportQueue implements IExportJobs {
 
     if (idempotencyKey !== null) {
       // The policy shows this request its location's exports. The key is the user's across locations, so a key
-      // already used at another location is asked of the database (export_key_in_use, the `export_user_scope` migration): a refusal.
+      // already used at another location is asked of the database (`export_key_in_use`, in the `export_user_scope` migration): a refusal.
       const [existing] = await work.db.select().from(exportJobs).where(eq(exportJobs.idempotencyKey, idempotencyKey));
       if (existing) {
         if (existing.fingerprint !== enqueue.source.fingerprint) {
@@ -114,7 +114,7 @@ export class ExportQueue implements IExportJobs {
       }
     }
 
-    // The limit is per user, not per location: counted by a function that sees all the user's exports (0006).
+    // The limit is per user, not per location: counted by a function that sees all the user's exports (the `export_user_scope` migration).
     const active = await work.db.execute<{ total: string }>(
       sql`SELECT export_active_count(ARRAY[${sql.join(
         ACTIVE_STATUSES.map((status) => sql`${status}`),

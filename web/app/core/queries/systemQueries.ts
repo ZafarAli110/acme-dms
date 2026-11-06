@@ -1,9 +1,6 @@
 import { API_CONFIG } from "../config/api";
 import { apiClient } from "../services/apiClient";
 
-/** How long sign-out waits for the service: it must never hang because a service is down. */
-const SIGN_OUT_WAIT_MS = 2000;
-
 /** Calls that are about the service, not a record. */
 export const systemQueries = {
   /**
@@ -15,7 +12,7 @@ export const systemQueries = {
   clearBrowserCacheAsync: (): Promise<void> =>
     apiClient
       .postAsync<void>(`${API_CONFIG.dealershipUrl}/v1/system/sign-out`, undefined, {
-        signal: AbortSignal.timeout(SIGN_OUT_WAIT_MS),
+        signal: AbortSignal.timeout(API_CONFIG.signOutWaitMs),
       })
       .catch(() => undefined),
 };

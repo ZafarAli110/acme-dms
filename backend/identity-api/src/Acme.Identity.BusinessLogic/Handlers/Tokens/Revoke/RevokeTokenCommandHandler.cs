@@ -29,12 +29,20 @@ internal sealed class RevokeTokenCommandHandler : IRevokeTokenCommandHandler
 
         var hash = RefreshTokenSecret.Hash(refreshToken);
         var familyId = await _dbContext.RefreshTokens
+            .AsNoTracking()
             .Where(t => t.TokenHash == hash)
             .Select(t => (Guid?)t.FamilyId)
             .SingleOrDefaultAsync(cancellationToken);
-        if (familyId is not null)
+        if (familyId is null)
         {
-            await RefreshTokenChain.RevokeAsync(_dbContext, familyId.Value, _timeProvider.GetUtcNow(), cancellationToken);
+            return;
         }
+
+        // Behind a refresh of this sign-in that is running, so the token it makes is revoked too: the lock, then a new
+        // statement, which sees what that refresh committed.
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await RefreshTokenChain.LockAsync(_dbContext, familyId.Value, cancellationToken);
+        await RefreshTokenChain.RevokeAsync(_dbContext, familyId.Value, _timeProvider.GetUtcNow(), cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 }

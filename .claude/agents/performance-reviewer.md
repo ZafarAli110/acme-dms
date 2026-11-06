@@ -66,7 +66,7 @@ location's setup (bins).
 
 - `orderBy` before `limit`/`offset`, **ending with the id** (`listOrderBy(…, [asc(customers.id)])`): two rows with the
   same surname otherwise swap between pages, and a row shows twice or never.
-- A page size the client sends is capped (`PageQuerySchema`: `v.maxValue(100)`); a list with no `limit` is a full read
+- A page size the client sends is capped (`ListQuerySchema`: `v.maxValue(100)`); a list with no `limit` is a full read
   waiting for a big dealer.
 
 ## No N+1: one query for many rows, not one per row

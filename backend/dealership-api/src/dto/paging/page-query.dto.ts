@@ -19,7 +19,3 @@ export const PAGE_QUERY_ENTRIES = {
   page: omittable(v.pipe(wholeNumber(1), v.description("From 1; the default is 1"))),
   pageSize: omittable(v.pipe(wholeNumber(1), v.maxValue(100), v.description("From 1 to 100; the default is 25"))),
 };
-
-/** Query string for list endpoints. */
-export const PageQuerySchema = v.strictObject(PAGE_QUERY_ENTRIES);
-export type PageQueryDto = v.InferOutput<typeof PageQuerySchema>;

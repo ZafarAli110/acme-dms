@@ -80,7 +80,7 @@ export const en = {
     binCodeExists: "A bin with this code already exists at this location.",
     partAlreadyStocked: "This part is already stocked at this location.",
   },
-  /** The rules a request is validated by, named as class-validator named them: `toValidationMessage` (valibot-pipe.ts) maps Valibot's rules to these. */
+  /** The rules a request is validated by, named by what they check (`isNotEmpty`, `maxLength`, …): `toValidationMessage` (valibot-pipe.ts) maps Valibot's rules to these. */
   validation: {
     isNotEmpty: "{property} is required.",
     isString: "{property} must be text.",

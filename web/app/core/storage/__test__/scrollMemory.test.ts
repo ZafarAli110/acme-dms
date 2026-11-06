@@ -46,20 +46,30 @@ describe("scrollMemory", () => {
   it("forgets an entry that is back at the top, and a value that is not a position", () => {
     scrollMemory.write("abc", 300);
     scrollMemory.write("abc", 0);
-    store.setItem("gridScroll:bad", "not a number");
+    store.setItem("acme.gridScroll", JSON.stringify({ bad: { top: "not a number", at: 1 }, worse: 7 }));
 
     expect(scrollMemory.read("abc")).toBeNull();
     expect(scrollMemory.read("bad")).toBeNull();
+    expect(scrollMemory.read("worse")).toBeNull();
+    store.setItem("acme.gridScroll", "{not json");
+    expect(scrollMemory.read("abc")).toBeNull();
+    expect(() => scrollMemory.write("abc", 10)).not.toThrow();
+    expect(scrollMemory.read("abc")).toBe(10);
   });
 
-  it("keeps the newest 50 entries", () => {
+  it("keeps the 50 most recently written entries, not the ones the storage happens to list first", () => {
     for (let index = 0; index < 60; index += 1) {
-      scrollMemory.write(`k${index}`, index + 1);
+      scrollMemory.write(`k${index}`, index + 1, 1000 + index);
     }
+    // The first entry is written again, so it is the newest: it must survive the next trim.
+    scrollMemory.write("k0", 999, 5000);
+    scrollMemory.write("k60", 61, 5001);
 
-    expect(scrollMemory.read("k0")).toBeNull();
-    expect(scrollMemory.read("k9")).toBeNull();
-    expect(scrollMemory.read("k10")).toBe(11);
+    expect(scrollMemory.read("k0")).toBe(999);
+    expect(scrollMemory.read("k60")).toBe(61);
+    expect(scrollMemory.read("k1")).toBeNull();
+    expect(scrollMemory.read("k11")).toBeNull();
+    expect(scrollMemory.read("k12")).toBe(13);
     expect(scrollMemory.read("k59")).toBe(60);
   });
 

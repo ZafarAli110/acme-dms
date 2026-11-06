@@ -27,7 +27,8 @@ public static class AuthenticationServiceCollectionExtensions
         services.AddMemoryCache();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<SessionStatusCache>();
-        services.AddHttpClient<HttpSessionStatusChecker>();
+        // A slow identity-api must not hold a request for the HttpClient default of 100 seconds.
+        services.AddHttpClient<HttpSessionStatusChecker>(client => client.Timeout = TimeSpan.FromSeconds(2));
         services.TryAddScoped<ISessionStatusChecker>(provider => provider.GetRequiredService<HttpSessionStatusChecker>());
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
@@ -61,7 +62,7 @@ public static class AuthenticationServiceCollectionExtensions
     /// A token whose sign-in was ended (the person signed out, or a replaced refresh token was used again) is refused
     /// even though it has not expired. Tokens issued before sign-ins had an id (no <c>sid</c>) are checked by expiry alone.
     /// </summary>
-    private static async Task EndedSessionsAreRefusedAsync(TokenValidatedContext context)
+    public static async Task EndedSessionsAreRefusedAsync(TokenValidatedContext context)
     {
         if (!Guid.TryParse(context.Principal?.FindFirst("sid")?.Value, out var sessionId) || context.SecurityToken is not JsonWebToken token)
         {

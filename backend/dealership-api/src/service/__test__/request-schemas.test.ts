@@ -13,6 +13,17 @@ import { englishMessage } from "#i18n/messages";
 import { valibotToOpenApi } from "../swagger/valibot-openapi";
 import { toValidationMessage, type ValibotIssue } from "../validation/valibot-pipe";
 
+/** The parts of a Valibot schema or rule the walk above reads. */
+interface SchemaNode {
+  type: string;
+  kind?: string;
+  wrapped?: SchemaNode;
+  item?: SchemaNode;
+  pipe?: SchemaNode[];
+  entries?: Record<string, SchemaNode>;
+  options?: unknown;
+}
+
 /** The English messages a schema gives for a request, as the problem-details filter would answer them. */
 function problems(schema: v.GenericSchema, input: unknown): string[] {
   const result = v.safeParse(schema, input);
@@ -176,6 +187,45 @@ describe("every request schema", () => {
     }
 
     expect(names.length).toBeGreaterThan(8);
+  });
+
+  it("has a validation message for every rule and type of every request schema (an unmapped one would answer a wrong message)", async () => {
+    const dtoFolder = join(import.meta.dirname, "..", "..", "dto");
+    const files = readdirSync(dtoFolder, { recursive: true, encoding: "utf8" }).filter((file) => file.endsWith(".ts"));
+    const kinds = new Set<string>();
+    const walk = (node: SchemaNode): void => {
+      // What can refuse a value is a type that checks it, or a rule that does; wrappers hand the value on.
+      const checks =
+        !["nullable", "optional", "nullish"].includes(node.type) &&
+        !["metadata", "transformation"].includes(node.kind ?? "");
+      if (checks && node.type !== "object_with_rest") {
+        kinds.add(node.type);
+      }
+      for (const child of [node.wrapped, node.item, ...(node.pipe ?? []), ...Object.values(node.entries ?? {})]) {
+        if (child) {
+          walk(child);
+        }
+      }
+      if (node.type === "union") {
+        (node.options as SchemaNode[]).forEach(walk);
+      }
+    };
+    for (const file of files) {
+      for (const [name, value] of Object.entries((await import(join(dtoFolder, file))) as Record<string, unknown>)) {
+        if (name.endsWith("Schema")) {
+          walk(value as SchemaNode);
+        }
+      }
+    }
+
+    for (const type of kinds) {
+      expect(
+        () => toValidationMessage({ type, message: "", path: [{ key: "field" }] }),
+        `the rule "${type}"`,
+      ).not.toThrow();
+    }
+    expect(kinds.size).toBeGreaterThan(12);
+    expect(() => toValidationMessage({ type: "starts_with", message: "" })).toThrow(/rule "starts_with"/);
   });
 
   it("names a rule it does not know, instead of leaving it out of the document", () => {

@@ -1,5 +1,10 @@
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
-import { runWithDataScope, setDataScope } from "#request-scope/data-scope";
+import { type DataScope, runWithDataScope, setDataScope } from "#request-scope/data-scope";
+
+/** What the authorization guard records for a request of this user. */
+function scopeOf(userContext: UserContext): DataScope {
+  return { dealerId: userContext.dealerId, locationId: userContext.locationId, userId: userContext.userId };
+}
 
 /** A handler as the controllers call it: the user first, then the request. */
 type RequestHandler = { executeAsync(userContext: UserContext, ...args: never[]): unknown };
@@ -18,11 +23,7 @@ export function asRequest<THandler extends RequestHandler>(handler: THandler): T
       }
       return (userContext: UserContext, ...args: unknown[]): unknown =>
         runWithDataScope(() => {
-          setDataScope({
-            dealerId: userContext.dealerId,
-            locationId: userContext.locationId,
-            userId: userContext.userId,
-          });
+          setDataScope(scopeOf(userContext));
           return Reflect.apply(target.executeAsync, target, [userContext, ...args]) as unknown;
         });
     },
@@ -32,11 +33,7 @@ export function asRequest<THandler extends RequestHandler>(handler: THandler): T
 /** Runs `work` as a request of this user does, in their data scope, for code that is not a handler (a service). */
 export function inRequest<T>(userContext: UserContext, work: () => Promise<T>): Promise<T> {
   return runWithDataScope(() => {
-    setDataScope({
-      dealerId: userContext.dealerId,
-      locationId: userContext.locationId,
-      userId: userContext.userId,
-    });
+    setDataScope(scopeOf(userContext));
     return work();
   });
 }

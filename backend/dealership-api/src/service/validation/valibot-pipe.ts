@@ -38,7 +38,8 @@ function listOfValues(expected: string | null | undefined): string {
 
 /**
  * Valibot's issue as the catalog's message: the same texts the service always answered with, in the request's
- * language. A rule that has no message of its own here is a type error in a test (`valibot-pipe.test.ts`), not a guess.
+ * language. A rule with no message of its own here throws, never a wrong message: `request-schemas.test.ts` walks every
+ * request schema and fails, naming the rule, until it has a case here (and one in `service/swagger/valibot-openapi.ts`).
  */
 export function toValidationMessage(issue: ValibotIssue): ValidationMessage {
   const { type, requirement, input, received, expected, path } = issue;
@@ -88,8 +89,12 @@ export function toValidationMessage(issue: ValibotIssue): ValidationMessage {
       return received === "undefined"
         ? { key: "validation.isNotEmpty", args: { property } }
         : { key: "validation.whitelistValidation", args: { property } };
-    default:
+    case "string":
       return { key: "validation.isString", args: { property } };
+    default:
+      throw new Error(
+        `No validation message for the Valibot rule "${String(type)}" (service/validation/valibot-pipe.ts).`,
+      );
   }
 }
 

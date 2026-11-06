@@ -24,6 +24,8 @@ export class SessionStatusChecker {
   private readonly _logger = new Logger(SessionStatusChecker.name);
   private readonly _identityApiUrl: string;
   private readonly _remembered = new Map<string, { open: boolean; until: number }>();
+  /** Requests that find nothing remembered together (a page load sends several) share one question. */
+  private readonly _asking = new Map<string, Promise<boolean>>();
 
   public constructor(@Inject(SETTINGS) settings: Settings) {
     this._identityApiUrl = requireSetting(settings.identityApiUrl, "services__identity-api__http__0");
@@ -38,11 +40,26 @@ export class SessionStatusChecker {
       return known.open;
     }
 
+    let asking = this._asking.get(claims.sid);
+    if (!asking) {
+      asking = this.askAndRememberAsync(token, claims.sid, claims.exp, now).finally(() => {
+        this._asking.delete(claims.sid ?? "");
+      });
+      this._asking.set(claims.sid, asking);
+    }
+    return asking;
+  }
+
+  private async askAndRememberAsync(
+    token: string,
+    sessionId: string,
+    tokenEndsAt: number | undefined,
+    now: number,
+  ): Promise<boolean> {
     const open = await this.askAsync(token);
-    const tokenEnds = (claims.exp ?? 0) * 1000;
-    const until = open ? now + OPEN_SIGN_IN_REMEMBERED_MS : tokenEnds;
+    const until = open ? now + OPEN_SIGN_IN_REMEMBERED_MS : (tokenEndsAt ?? 0) * 1000;
     if (until > now) {
-      this.remember(claims.sid, { open, until }, now);
+      this.remember(sessionId, { open, until }, now);
     }
     return open;
   }
@@ -53,6 +70,8 @@ export class SessionStatusChecker {
         headers: { authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(ASK_TIMEOUT_MS),
       });
+      // The answer is the status; the body (none) is never read, so the connection goes back to the pool at once.
+      await response.body?.cancel();
       return response.status !== 401;
     } catch (error) {
       this._logger.warn(

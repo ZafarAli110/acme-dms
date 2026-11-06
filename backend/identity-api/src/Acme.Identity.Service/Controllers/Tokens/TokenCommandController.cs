@@ -35,7 +35,7 @@ public sealed class TokenCommandController : ApiControllerBase
     public async Task<ActionResult<TokenCreateResponseDto>> CreateAsync([FromBody] TokenCreateRequestDto request, CancellationToken cancellationToken)
     {
         var issued = await _createTokenCommandHandler.ExecuteAsync(request, cancellationToken);
-        RefreshCookie.Set(Response, _environment, issued.RefreshToken);
+        RefreshCookie.Set(Response, _environment, issued.RefreshToken!);
         return issued.Response;
     }
 
@@ -49,7 +49,11 @@ public sealed class TokenCommandController : ApiControllerBase
     {
         RequireThePage();
         var issued = await _refreshTokenCommandHandler.ExecuteAsync(Request.Cookies[RefreshCookie.Name], cancellationToken);
-        RefreshCookie.Set(Response, _environment, issued.RefreshToken);
+        if (issued.RefreshToken is not null)
+        {
+            RefreshCookie.Set(Response, _environment, issued.RefreshToken);
+        }
+
         return issued.Response;
     }
 
