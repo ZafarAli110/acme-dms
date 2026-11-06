@@ -4,7 +4,6 @@ import type { IGetBinListQueryHandler } from "#business-logic-abstractions/handl
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { BinResponseDto } from "#dto/bins/bin-response.dto";
 import { bins } from "#persistence/schema/bins";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -24,7 +23,7 @@ export class GetBinListQueryHandler implements IGetBinListQueryHandler {
   public async executeAsync(userContext: UserContext): Promise<BinResponseDto[]> {
     requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const rows = await work.db.select().from(bins).where(notDeleted(bins)).orderBy(asc(bins.code));
+    const rows = await work.db.select().from(bins).orderBy(asc(bins.code));
     return rows.map(toBinResponseDto);
   }
 }

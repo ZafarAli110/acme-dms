@@ -25,6 +25,7 @@ import {
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
 import { createdAudit, updatedAudit } from "../../../audit/audit-fields";
+import { softDeleteAsync } from "../../../audit/soft-delete";
 import { requireLocation } from "../../../user-context/require-location";
 import { toPartResponseDto } from "../part.mapper";
 import { findPhotosAsync, findStockedPartAsync } from "../part.queries";
@@ -151,23 +152,19 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       }
       if (removed.length > 0) {
         // Soft delete: the row stays, marked deleted, so who removed which photo and when is never lost.
-        await work.db
-          .update(partPhotos)
-          .set({
-            isDeleted: true,
-            deletedAt: now,
-            deletedBy: userContext.userId,
-            ...updatedAudit(userContext.userId, now),
-          })
-          .where(
-            and(
-              eq(partPhotos.partId, partId),
-              inArray(
-                partPhotos.id,
-                removed.map((photo) => photo.id),
-              ),
+        await softDeleteAsync(
+          work.db,
+          partPhotos,
+          and(
+            eq(partPhotos.partId, partId),
+            inArray(
+              partPhotos.id,
+              removed.map((photo) => photo.id),
             ),
-          );
+          )!,
+          userContext.userId,
+          now,
+        );
       }
       for (const photo of kept) {
         await work.db

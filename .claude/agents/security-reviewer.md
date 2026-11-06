@@ -38,11 +38,8 @@ The most serious bug class here: every dealer's data sits in the same tables (`m
 // ❌ the id comes from the URL; nothing says the row is the caller's dealer's
 await work.db.select().from(parts).where(eq(parts.id, partId));
 
-// ✅ the dealer and the location are the row-level policy's; the handler says the id and not deleted
-await work.db
-  .select()
-  .from(customers)
-  .where(and(eq(customers.id, id), notDeleted(customers)));
+// ✅ the dealer and the location are the row-level policy's; the handler says the id
+await work.db.select().from(customers).where(eq(customers.id, id));
 ```
 
 - **Row-level security is the rule** (`multi-tenancy.md`): the request's dealer and location are the table's policy,

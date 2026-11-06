@@ -6,7 +6,6 @@ import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto"
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
 import type { PageResponseDto } from "#dto/paging/page-response.dto";
 import { customers } from "#persistence/schema/customers";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -64,16 +63,12 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
 }
 
 /**
- * The customers a list query shows: not deleted, searched and filtered. Whose they are is the database's to say: a
- * request sees its own location's customers (row-level security), and the export, which works outside a request, adds
- * the dealer and the location itself. Shared with the export, so the file holds exactly the rows the list shows.
+ * The customers a list query shows, searched and filtered. Whose they are, and that they are not deleted, is the
+ * database's to say: a request sees its own location's live customers (row-level security), and the export, which
+ * works outside a request, adds the dealer, the location and `notDeleted` itself. Shared with the export, so the file holds exactly the rows the list shows.
  */
 export function customerListWhere(query: ListQueryDto): SQL | undefined {
-  return and(
-    notDeleted(customers),
-    query.search ? matching(`%${query.search}%`) : undefined,
-    listFilter(CUSTOMER_LIST_COLUMNS, query),
-  );
+  return and(query.search ? matching(`%${query.search}%`) : undefined, listFilter(CUSTOMER_LIST_COLUMNS, query));
 }
 
 /** The list's order: the query's sort, else by name; always ending with the id, so equal values keep one order. */

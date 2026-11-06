@@ -3,7 +3,6 @@ import { bins, type Bin } from "#persistence/schema/bins";
 import { partInventories, type PartInventory } from "#persistence/schema/part-inventories";
 import { partPhotos, type PartPhoto } from "#persistence/schema/part-photos";
 import { parts, type Part } from "#persistence/schema/parts";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
 import { listFilter, listOrderBy, type ListColumns } from "../../list-query/list-columns";
@@ -38,7 +37,6 @@ export async function findStockedPartsAsync(
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 25;
   const where = and(
-    notDeleted(partInventories),
     query.search
       ? or(ilike(parts.partNumber, `%${query.search}%`), ilike(parts.description, `%${query.search}%`))
       : undefined,
@@ -52,15 +50,15 @@ export async function findStockedPartsAsync(
   const [counted] = await db
     .select({ total: count() })
     .from(partInventories)
-    .innerJoin(parts, and(eq(parts.id, partInventories.partId), notDeleted(parts)))
-    .innerJoin(bins, and(eq(bins.id, partInventories.binId), notDeleted(bins)))
+    .innerJoin(parts, and(eq(parts.id, partInventories.partId)))
+    .innerJoin(bins, and(eq(bins.id, partInventories.binId)))
     .where(where);
   return { items, total: counted?.total ?? 0 };
 }
 
 /** The part as the request's location stocks it, or null when it is not stocked there (or deleted). */
 export async function findStockedPartAsync(db: Database, partId: string): Promise<StockedPart | null> {
-  const [stocked] = await stockedParts(db, and(eq(partInventories.partId, partId), notDeleted(partInventories)));
+  const [stocked] = await stockedParts(db, and(eq(partInventories.partId, partId)));
   return stocked ?? null;
 }
 
@@ -69,7 +67,7 @@ export function findPhotosAsync(db: Database, partId: string): Promise<PartPhoto
   return db
     .select()
     .from(partPhotos)
-    .where(and(eq(partPhotos.partId, partId), notDeleted(partPhotos)))
+    .where(and(eq(partPhotos.partId, partId)))
     .orderBy(asc(partPhotos.createdAt));
 }
 
@@ -81,7 +79,7 @@ export async function findThumbnailsAsync(db: Database, partIds: string[]): Prom
   const photos = await db
     .select()
     .from(partPhotos)
-    .where(and(inArray(partPhotos.partId, partIds), eq(partPhotos.status, "ready"), notDeleted(partPhotos)))
+    .where(and(inArray(partPhotos.partId, partIds), eq(partPhotos.status, "ready")))
     .orderBy(desc(partPhotos.isDefault), asc(partPhotos.createdAt));
   const thumbnails = new Map<string, PartPhoto>();
   for (const photo of photos) {
@@ -96,8 +94,8 @@ function stockedParts(db: Database, where: SQL | undefined) {
   return db
     .select({ part: parts, inventory: partInventories, bin: bins })
     .from(partInventories)
-    .innerJoin(parts, and(eq(parts.id, partInventories.partId), notDeleted(parts)))
-    .innerJoin(bins, and(eq(bins.id, partInventories.binId), notDeleted(bins)))
+    .innerJoin(parts, and(eq(parts.id, partInventories.partId)))
+    .innerJoin(bins, and(eq(bins.id, partInventories.binId)))
     .where(where)
     .$dynamic();
 }

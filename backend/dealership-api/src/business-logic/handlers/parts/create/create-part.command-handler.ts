@@ -9,7 +9,6 @@ import type { PartResponseDto } from "#dto/parts/part-response.dto";
 import { bins } from "#persistence/schema/bins";
 import { partInventories } from "#persistence/schema/part-inventories";
 import { parts } from "#persistence/schema/parts";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -38,14 +37,14 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
     const [bin] = await work.db
       .select()
       .from(bins)
-      .where(and(eq(bins.id, request.binId), notDeleted(bins)));
+      .where(and(eq(bins.id, request.binId)));
     if (!bin) {
       throw new BadRequestException(localized("errors.binNotAtLocation", { binId: request.binId }));
     }
     const [taken] = await work.db
       .select({ id: parts.id })
       .from(parts)
-      .where(and(eq(parts.partNumber, request.partNumber), notDeleted(parts)));
+      .where(and(eq(parts.partNumber, request.partNumber)));
     if (taken) {
       throw new ConflictException(localized("errors.partNumberExists", { partNumber: request.partNumber }));
     }

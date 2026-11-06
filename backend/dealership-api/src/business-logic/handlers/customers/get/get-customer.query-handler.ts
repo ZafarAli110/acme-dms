@@ -5,7 +5,6 @@ import type { IGetCustomerQueryHandler } from "#business-logic-abstractions/hand
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
 import { customers } from "#persistence/schema/customers";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -28,7 +27,7 @@ export class GetCustomerQueryHandler implements IGetCustomerQueryHandler {
     const [customer] = await work.db
       .select()
       .from(customers)
-      .where(and(eq(customers.id, customerId), notDeleted(customers)));
+      .where(and(eq(customers.id, customerId)));
     if (!customer) {
       throw new NotFoundException(localized("errors.customerNotFound", { customerId }));
     }

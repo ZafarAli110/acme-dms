@@ -45,9 +45,14 @@ A check constraint (`ck_<table>_deleted`) keeps the three delete columns consist
 
 Business rows are never removed; a delete sets `is_deleted`, `deleted_at` and `deleted_by` (and `updated_*`).
 
-- **Reads leave deleted rows out**: in NestJS every query of a business table, and every join, adds
-  `notDeleted(table)` (`persistence/schema/soft-delete/not-deleted.ts`); in EF Core the global query filter does it. Code that lifts the filters on purpose
-  (background work uses `IgnoreQueryFilters()`) checks `IsDeleted` itself.
+- **Reads leave deleted rows out by themselves**: in NestJS a restrictive row-level-security policy
+  (`<table>_not_deleted`, migration 0007) hides them from every query and join of a request; in EF Core the global
+  query filter does it. A handler writes no `notDeleted`, and marks a row deleted with `softDeleteAsync`
+  (`business-logic/audit/soft-delete.ts`), the one place that lifts the policy for that statement and sets the audit
+  columns. Code that works outside a request (NestJS worker and consumer, the owner role) or lifts the filters on
+  purpose (.NET background work uses `IgnoreQueryFilters()`) checks deleted rows itself:
+  `notDeleted(table)` (`persistence/schema/soft-delete/not-deleted.ts`). A new soft-deleted table needs its policy; a
+  test fails until it has one.
 - **In .NET, `Remove()` is a soft delete**: the interceptor turns it into an update. Rows that belong to a deleted row
   and are not audited (a document's `document_contents`) are removed with it, so stored files do not outlive their
   record.

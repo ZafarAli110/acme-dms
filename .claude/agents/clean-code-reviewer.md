@@ -30,21 +30,16 @@ or a helper before saying what it contains; look at a neighbouring feature befor
 
 ```ts
 // ❌ no dealer in the where: another company's customer is one id away
-await work.db
-  .select()
-  .from(customers)
-  .where(and(eq(customers.id, id), notDeleted(customers)));
+await work.db.select().from(customers).where(eq(customers.id, id));
 
-// ✅ the id and not deleted; the dealer and the location are the row-level policy's (requireLocation called first)
-await work.db
-  .select()
-  .from(customers)
-  .where(and(eq(customers.id, id), notDeleted(customers)));
+// ✅ the id; dealer, location and not-deleted are the row-level policies' (requireLocation called first)
+await work.db.select().from(customers).where(eq(customers.id, id));
 ```
 
 - A request's query does not repeat the dealer or the location (row-level security does: a hand-written one is noise);
-  code outside a request (worker, consumer) does name them; every read
-  and join adds `notDeleted(…)` (`multi-tenancy.md`, `database.md`).
+  code outside a request (worker, consumer) does name them and adds `notDeleted(…)`.
+  A request's query has no `notDeleted` (a policy leaves deleted rows out), and a delete is `softDeleteAsync`, not a
+  hand-set `isDeleted` (`multi-tenancy.md`, `database.md`).
 - A migration is added, never edited once committed; a new business table has audit columns and soft delete.
 
 ## DTOs and PATCH

@@ -93,6 +93,17 @@ are.** No repository layer: handlers keep querying with Drizzle through the unit
   them from the request's own settings (no argument names a dealer or a user). The queue's other lookups (get, cancel,
   list) now rely on the policy too; an export is seen at the location it was started from, as the policy always said.
 
+## Soft delete, the same way (migration `0007`)
+
+`notDeleted(…)` was the one filter still repeated in every handler, and a missed one shows a deleted row. A restrictive
+`FOR SELECT` policy per soft-delete table (`<table>_not_deleted`) is ANDed with the dealer and location policies, so
+every read and join of a request leaves deleted rows out. Postgres also checks the changed row of an `UPDATE` against it,
+so marking a row deleted would be refused: `softDeleteAsync` (`business-logic/audit/soft-delete.ts`) sets
+`app.soft_deleting` for that one statement and writes the audit columns, and is the only way a handler deletes. The same
+setting is the extension point for a "restore" or an audit view. Code outside a request keeps `notDeleted(…)`
+(the customer export). Tests: deleted rows are hidden from a request and visible to the owner; every table with
+`is_deleted` must have the policy (both verified to fail without it).
+
 ## Not in this change
 
 Cross-location reads (`app.location_ids`), declaring policies in the Drizzle schema (`pgPolicy`), the .NET services (EF

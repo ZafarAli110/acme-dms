@@ -12,7 +12,6 @@ import type { PartPhotoResponseDto } from "#dto/parts/part-photo-response.dto";
 import type { PartPhotoUploadRequestDto } from "#dto/parts/part-photo-upload-request.dto";
 import { partPhotos } from "#persistence/schema/part-photos";
 import { parts } from "#persistence/schema/parts";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -92,7 +91,7 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
     const [part] = await work.db
       .select({ id: parts.id })
       .from(parts)
-      .where(and(eq(parts.id, partId), notDeleted(parts)));
+      .where(and(eq(parts.id, partId)));
     if (!part) {
       throw new NotFoundException(localized("errors.partNotFound", { partId }));
     }

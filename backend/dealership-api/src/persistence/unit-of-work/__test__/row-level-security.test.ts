@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
+import { bins } from "#persistence/schema/bins";
 import { customers } from "#persistence/schema/customers";
 import { exportJobs } from "#persistence/schema/export-jobs";
 import { parts } from "#persistence/schema/parts";
@@ -172,5 +173,35 @@ describe("row-level security", () => {
     });
 
     expect(position).toBe(4);
+  });
+
+  it("leaves deleted rows out of a request's reads, and still shows them to code outside a request", async () => {
+    await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "GoneCustomer", deleted: true });
+    await database.seed.addBinAsync({ locationId: NORTHSIDE, code: "GONE-1", deleted: true });
+
+    const asRequest = await asRequestAsync(AT_NORTHSIDE, async (db) => ({
+      customers: (await db.select({ surname: customers.surname }).from(customers)).map((row) => row.surname),
+      bins: (await db.select({ code: bins.code }).from(bins)).map((row) => row.code),
+    }));
+    const asOwner = await asRequestAsync(null, (db) => db.select({ surname: customers.surname }).from(customers));
+
+    expect(asRequest.customers).toEqual(["AtNorthside"]);
+    expect(asRequest.bins).not.toContain("GONE-1");
+    expect(asOwner.map((row) => row.surname)).toContain("GoneCustomer");
+  });
+
+  it("has the deleted-rows filter on every table that can be soft-deleted", async () => {
+    const result = await database.db.execute<{ table: string }>(sql`
+      SELECT c.relname AS "table"
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'is_deleted' AND NOT a.attisdropped
+      WHERE n.nspname = 'public' AND c.relkind = 'r'
+        AND NOT EXISTS (
+          SELECT 1 FROM pg_policy p
+          WHERE p.polrelid = c.oid AND NOT p.polpermissive AND p.polname = c.relname || '_not_deleted')`);
+
+    // A new soft-deleted table needs a restrictive `<table>_not_deleted` policy in its migration.
+    expect(result.rows.map((row) => row.table)).toEqual([]);
   });
 });

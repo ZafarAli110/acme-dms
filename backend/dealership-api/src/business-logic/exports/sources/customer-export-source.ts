@@ -1,3 +1,4 @@
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import { localized } from "#i18n/messages";
 import { createHash } from "node:crypto";
 import { BadRequestException } from "@nestjs/common";
@@ -44,6 +45,7 @@ export function customerExportSource(
   const where = and(
     eq(customers.dealerId, scope.dealerId),
     eq(customers.locationId, scope.locationId),
+    notDeleted(customers),
     customerListWhere(request),
   );
   const orderBy = customerListOrderBy(request);

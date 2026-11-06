@@ -4,7 +4,6 @@ import type { IGetRecentCustomersQueryHandler } from "#business-logic-abstractio
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
 import { customers } from "#persistence/schema/customers";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -33,7 +32,7 @@ export class GetRecentCustomersQueryHandler implements IGetRecentCustomersQueryH
     const recent = await work.db
       .select()
       .from(customers)
-      .where(and(isNotNull(customers.lastContactDate), notDeleted(customers)))
+      .where(and(isNotNull(customers.lastContactDate)))
       // Ends with the id: two customers last contacted the same day with one surname keep their order.
       .orderBy(desc(customers.lastContactDate), asc(customers.surname), asc(customers.id))
       .limit(RECENT_CUSTOMERS_LIMIT);

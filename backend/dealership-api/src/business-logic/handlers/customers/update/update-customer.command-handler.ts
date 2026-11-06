@@ -7,7 +7,6 @@ import type { UserContext } from "#business-logic-abstractions/user-context/user
 import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
 import type { CustomerUpdateRequestDto } from "#dto/customers/customer-update-request.dto";
 import { customers } from "#persistence/schema/customers";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -38,7 +37,7 @@ export class UpdateCustomerCommandHandler implements IUpdateCustomerCommandHandl
   ): Promise<CustomerResponseDto> {
     requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync();
-    const isThisCustomer = and(eq(customers.id, customerId), notDeleted(customers));
+    const isThisCustomer = eq(customers.id, customerId);
     // PUT: every field comes from the request; identity, location and creation stay as they were. Only from the
     // version the save started from, in the same statement, so two saves can never both win.
     const [updated] = await work.db

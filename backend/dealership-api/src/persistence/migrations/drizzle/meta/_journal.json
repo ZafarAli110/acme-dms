@@ -50,6 +50,13 @@
       "when": 1793985356020,
       "tag": "0006_export_user_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793985799698,
+      "tag": "0007_soft_delete_policies",
+      "breakpoints": true
     }
   ]
 }

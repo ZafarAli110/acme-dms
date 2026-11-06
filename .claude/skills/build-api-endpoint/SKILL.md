@@ -21,13 +21,13 @@ same kind rather than starting from a blank file:
 
 Every row belongs to one dealer, and some data to one location (`docs/standards/multi-tenancy.md`, the table).
 In dealership-api Postgres row-level security filters for you: the request's queries see only its dealer's rows, and a
-location-scoped table only its location's. Say only what is the handler's own: a location is required, a row is not
-deleted.
+location-scoped table only its location's. Say only what is the handler's own: a location is required. Not
+deleted is the database's too.
 
 ```ts
-// ✅ the location is required (400 without one); the policy picks dealer and location; never a deleted row
+// ✅ the location is required (400 without one); the policies pick dealer, location and live rows
 requireLocation(userContext);
-await work.db.select().from(bins).where(notDeleted(bins));
+await work.db.select().from(bins);
 
 // ❌ the dealer and the location by hand: repeats the policy, and drifts from it
 await work.db

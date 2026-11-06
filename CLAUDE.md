@@ -8,9 +8,10 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 - **Many dealers, one database.** Northwind Motors and City Motors share every table. **Postgres row-level security
   filters for you** in dealership-api: a request's queries see only its dealer's rows, and location-scoped data (customers,
   cars, inventory, bins, appointments) only its location's. A handler does not repeat `dealerId` or `locationId` in its
-  `where`; it still calls `requireLocation(userContext)` (a request with no location is a 400, not an empty list), adds
-  `notDeleted(…)`, and sets `dealerId` and `locationId` on every insert. Code outside a request (export worker, consumer,
-  seed) is not filtered and names the dealer itself. Every new business table gets its policy in its migration. Read
+  `where`; it still calls `requireLocation(userContext)` (a request with no location is a 400, not an empty list), and sets `dealerId` and `locationId` on every insert. Deleted rows are
+  left out the same way (a policy per table): no `notDeleted` in a request, and a delete goes through `softDeleteAsync`.
+  Code outside a request (export worker, consumer,
+  seed) is not filtered and names the dealer and `notDeleted` itself. Every new business table gets its policy in its migration. Read
   `docs/standards/multi-tenancy.md` before touching any data.
 - **One use case, one handler.** controller → handler interface → handler → unit of work. Controllers stay thin.
   Handlers query with Drizzle through `await using work = await this._unitOfWorkFactory.beginAsync()`; no

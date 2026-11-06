@@ -45,8 +45,9 @@ location is refused (migration 0004). This is the rule, not a backstop: handlers
 - The policies, by kind of table: location-scoped (`customers`, `bins`, `part_inventories`): dealer and location;
   `export_jobs`: dealer, location and its owner; dealer-scoped (`parts`, `part_photos`): dealer; no dealer at all
   (`processed_messages`): none. With no location selected, location-scoped tables return nothing.
-- **Write only what is the handler's own business**: `notDeleted(…)` (a policy does not know soft delete), the id, the
-  search, the rules. The policy's conditions join the same `WHERE`, so the indexes are used as before. Inserts still
+- **Write only what is the handler's own business**: the id, the search, the rules. Deleted rows are left out by a
+  restrictive policy per table too (`database.md`, "Soft delete"), so no `notDeleted(…)`; outside a request it is
+  written by hand. The policy's conditions join the same `WHERE`, so the indexes are used as before. Inserts still
   set `dealerId` and `locationId` from `userContext`; the policy refuses any other value.
 - **A new business table gets its policy** in the migration that creates it, by the same kinds, and a test
   (`row-level-security.test.ts`) fails until it has one, unless it is on the short list there with its reason.

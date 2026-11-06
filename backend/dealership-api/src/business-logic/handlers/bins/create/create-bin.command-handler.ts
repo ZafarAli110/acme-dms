@@ -1,13 +1,12 @@
 import { localized } from "#i18n/messages";
 import { ConflictException, Inject, Injectable } from "@nestjs/common";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { ICreateBinCommandHandler } from "#business-logic-abstractions/handlers/bins/create/create-bin.command-handler.interface";
 import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { BinCreateRequestDto } from "#dto/bins/bin-create-request.dto";
 import type { BinResponseDto } from "#dto/bins/bin-response.dto";
 import { bins } from "#persistence/schema/bins";
-import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -33,10 +32,7 @@ export class CreateBinCommandHandler implements ICreateBinCommandHandler {
   public async executeAsync(userContext: UserContext, request: BinCreateRequestDto): Promise<BinResponseDto> {
     const locationId = requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync();
-    const [existing] = await work.db
-      .select({ id: bins.id })
-      .from(bins)
-      .where(and(eq(bins.code, request.code), notDeleted(bins)));
+    const [existing] = await work.db.select({ id: bins.id }).from(bins).where(eq(bins.code, request.code));
     if (existing) {
       throw new ConflictException(localized("errors.binExists", { code: request.code }));
     }
