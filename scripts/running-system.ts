@@ -89,6 +89,7 @@ export function callAsync(
   path: string,
   body?: BodyInit,
   json = true,
+  extraHeaders: Record<string, string> = {},
 ): Promise<Response> {
   return fetch(`${gateway}${path}`, {
     method,
@@ -96,6 +97,7 @@ export function callAsync(
       authorization: `Bearer ${session.token}`,
       "x-location-id": location.id,
       ...(json && body ? { "content-type": "application/json" } : {}),
+      ...extraHeaders,
     },
     body,
   });

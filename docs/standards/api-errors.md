@@ -33,6 +33,23 @@ exactly these fields (always present; `null` when unknown):
 - 4xx errors are logged as warnings, 5xx as errors.
 - NestJS: `service/filters/problem-details.filter.ts`. .NET: `Acme.ServiceDefaults/ProblemDetails/`.
 
+## Messages in the user's language (dealership-api)
+
+`detail`, and every other message a person reads, comes in the language the request asks for (`Accept-Language`,
+which the web app sets to the language the user chose): English or French, English for anything else.
+
+- Throw with a catalog key, never a sentence: `new NotFoundException(localized("errors.customerNotFound", {
+customerId }))` (`#i18n/messages`). The exception's own message stays English, so logs, traces and tests read
+  English; the problem-details filter sends the request's language.
+- A new message goes into both catalogs, `src/i18n/catalogs/en.ts` and `fr.ts`, under the same key with the same
+  `{placeholders}`. The types refuse a key English lacks; `i18n/__test__/catalogs.test.ts` refuses a French message
+  that is missing or loses a placeholder.
+- Validation messages are the catalogs' `validation.*`, by class-validator's constraint name (`isNotEmpty`,
+  `maxLength`); a rule of your own uses `i18nValidationMessage("validation.<key>")`. `{property}` shows the field
+  under its screen name (`fields.*`); add a new field there.
+- A message stored to be read later (an export's failure) is stored as its key and translated when it is read.
+- document-api and identity-api (.NET) still answer in English; a refusal of theirs is passed on as they wrote it.
+
 ## Database errors
 
 A query that breaks a database rule is not an unexpected error: the client gets a status it can act on and a message

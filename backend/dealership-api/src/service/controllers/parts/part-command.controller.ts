@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import {
   BadRequestException,
   Body,
@@ -125,7 +126,7 @@ export class PartCommandController {
     @UploadedFile() file: UploadedFileLike | undefined,
   ): Promise<PartPhotoResponseDto> {
     if (!file) {
-      throw new BadRequestException('Send the photo as multipart form field "file".');
+      throw new BadRequestException(localized("errors.photoFileMissing"));
     }
     return this._uploadPartPhotoCommandHandler.executeAsync(userContext, partId, {
       fileName: uploadedFileName(file),

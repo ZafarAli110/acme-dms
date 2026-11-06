@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { IGetCustomerQueryHandler } from "#business-logic-abstractions/handlers/customers/get/get-customer.query-handler.interface";
@@ -36,7 +37,7 @@ export class GetCustomerQueryHandler implements IGetCustomerQueryHandler {
         ),
       );
     if (!customer) {
-      throw new NotFoundException(`Customer ${customerId} was not found at this location.`);
+      throw new NotFoundException(localized("errors.customerNotFound", { customerId }));
     }
     return toCustomerResponseDto(customer);
   }
