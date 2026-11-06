@@ -33,6 +33,12 @@
       "Bash(gh pr comment *)",
       "Bash(gh api -X PATCH *issues/comments/*)",
       "Bash(gh pr view *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr diff *)",
+      "Bash(git fetch origin *)",
+      "Bash(git worktree add --detach *)",
+      "Bash(git worktree remove *)",
+      "Bash(git rev-parse *)",
       "mcp__acme-tracker__update_ticket_status",
       "mcp__acme-tracker__add_comment",
       "mcp__acme-tracker__attach_file"
