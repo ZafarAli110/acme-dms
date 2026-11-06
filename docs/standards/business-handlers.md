@@ -106,7 +106,7 @@ test checks only the transport (the request it sends, how it reads each answer);
 
 ## List endpoints: one sort, one filter
 
-A list endpoint takes `ListQueryDto`: the page, a free-text `search`, and the data grid's one sort (`sort`,
+A list endpoint takes `ListQueryDto` (the type of `ListQuerySchema`, given to `@Query({ schema: ListQuerySchema })`): the page, a free-text `search`, and the data grid's one sort (`sort`,
 `direction`) and one filter (`filterField`, `filterOperator`, `filterValue`). The list declares which fields can be
 sorted and filtered, once, as `ListColumns` next to its handler (`CUSTOMER_LIST_COLUMNS`, `STOCKED_PART_COLUMNS`):
 each field's SQL (a column, or an expression such as "surname, first name") and its type (`text`, `number`, `date`,

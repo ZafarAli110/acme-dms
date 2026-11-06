@@ -47,6 +47,10 @@ dealer itself.
 - **A request** is a Valibot `v.strictObject` schema, its type taken from it (`v.InferOutput`), given to the parameter
   (`@Body({ schema: PartCreateRequestSchema })`). It holds only what the user may set: never `dealerId`,
   `locationId`, `id` or audit fields.
+- **A rule's message** comes from the catalogs' `validation.*`: `toValidationMessage` (`service/validation/valibot-pipe.ts`)
+  maps each Valibot action to one. A new kind of action gets its case there, and a case in `request-schemas.test.ts`.
+  A new field name goes into `fields.*` of both catalogs. A `@Body()` or `@Query()` with no `{ schema }` is checked by
+  nothing: a test refuses it.
 - **A PATCH request** keeps three states apart for each optional field (`coding-standards.md`):
 
 ```ts
@@ -102,12 +106,12 @@ resource, both controllers in the module.
 @Post()
 @HttpCode(HttpStatus.CREATED)
 @RequirePermission("parts.write")
-public createAsync(@CurrentUser() userContext: UserContext, @Body() request: BinCreateRequestDto): Promise<BinResponseDto> {
+public createAsync(@CurrentUser() userContext: UserContext, @Body({ schema: BinCreateRequestSchema }) request: BinCreateRequestDto): Promise<BinResponseDto> {
   return this._createBinCommandHandler.executeAsync(userContext, request);
 }
 ```
 
-A list takes `ListQueryDto` and returns `PageResponseDto<T>`: one sort, one filter, a page size of at most 100, ordered
+A list takes `@Query({ schema: ListQuerySchema }) query: ListQueryDto` and returns `PageResponseDto<T>`: one sort, one filter, a page size of at most 100, ordered
 to the id (`business-handlers.md`, "List endpoints").
 
 ## 5. The test (`__test__/`, a real Postgres)

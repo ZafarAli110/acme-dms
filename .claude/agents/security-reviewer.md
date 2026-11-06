@@ -154,7 +154,7 @@ time` gives the publish date).
 
 ## A08 Software and data integrity failures
 
-- A multipart `payload` parsed with `JSON.parse` instead of `@JsonPayload(Dto)`: it skips validation.
+- A multipart `payload` parsed with `JSON.parse` instead of `@JsonPayload(Schema)`: it skips validation.
 - A message from RabbitMQ trusted without checking its type and owner (`UnhandledMessageError` for the rest), or
   handled twice (no `processed_messages` row).
 - A CI step that downloads a script and pipes it to a shell.

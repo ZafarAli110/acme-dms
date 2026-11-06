@@ -15,7 +15,7 @@ The standard behind this: `docs/standards/file-uploads.md`. The working example 
 ```
 web form            FormData: a JSON `payload` field + the files, sent by the page's clientAction
    ↓
-controller          multipart parsing and transport limits (MultipleFilesUpload), the payload validated (@JsonPayload)
+controller          multipart parsing and transport limits (MultipleFilesUpload), the payload validated (@JsonPayload(schema))
    ↓
 command handler     the feature's rules (types, size, count), then upload → save → clean up
    ↓
@@ -37,7 +37,7 @@ not the rules; document-api enforces only its own (20 MB, variants for images on
 public updateAsync(
   @CurrentUser() userContext: UserContext,
   @Param("partId", ParseUUIDPipe) partId: string,
-  @JsonPayload(PartUpdateRequestDto) request: PartUpdateRequestDto, // validated like a JSON body
+  @JsonPayload(PartUpdateRequestSchema) request: PartUpdateRequestDto, // validated like a JSON body
   @UploadedFiles() files: UploadedFileLike[] | undefined,
 ): Promise<PartResponseDto> {
   return this._handler.executeAsync(userContext, partId, request, (files ?? []).map(toUploadRequest));
@@ -46,8 +46,8 @@ public updateAsync(
 
 - One request per Save: the record's fields as a JSON `payload` field, the files as one repeated field. Never a JSON
   save followed by one upload per file: the user could be left with half a save.
-- `@JsonPayload(Dto)`, never `JSON.parse` by hand: multipart skips the global validation pipe, and the decorator puts
-  it back (the same DTO rules, unknown properties refused).
+- `@JsonPayload(Schema)`, never `JSON.parse` by hand: multipart skips the global validation pipe, and the decorator puts
+  it back (the same schema rules and messages, unknown properties refused).
 - The file name goes through `uploadedFileName(file)`: the parser reads names as Latin-1 and garbles accents.
 
 ## The feature's rules: constants next to the handler
