@@ -24,9 +24,9 @@ instructions and marks the entries here as learned.
 ### security-reviewer: export routes without a permission (4 Nov 2026)
 
 - **Finding:** `GET`, `DELETE` and the events of `/v1/exports/:jobId` have no `@RequirePermission`.
-- **Why it was wrong:** each goes through `ExportJobRunner.ownJob`, which answers "not found" for any job that is not
+- **Why it was wrong:** each goes through `ExportQueue.ownJobAsync`, which answers "not found" for any job that is not
   the caller's own; a permission would add nothing.
-- **Evidence:** `backend/dealership-api/src/business-logic/exports/export-job-runner.ts`, `ownJob`.
+- **Evidence:** `backend/dealership-api/src/business-logic/exports/export-queue.ts`, `ownJobAsync`.
 - **Learned:** the security reviewer's A01 now accepts an owner check that answers "not found".
 
 ## Missed

@@ -150,8 +150,8 @@ change for it.
 const rows = await work.db.select().from(customers).where(where);
 await writeWorkbookAsync(rows);
 
-// ✅ one query read through a cursor, each row written as it arrives (ExportJobRunner)
-const rows = work.stream(job.source.rowsQuery(work.db), this._settings.exportBatchSize);
+// ✅ one query read through a cursor, each row written as it arrives (ExportWorker)
+const rows = work.stream(source.rowsQuery(work.db), this._settings.exportBatchSize);
 for await (const row of rows as AsyncIterable<XlsxRow>) {
   await writer.writeRowAsync(row);
 }

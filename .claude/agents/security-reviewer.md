@@ -61,7 +61,7 @@ userContext.dealerId)` in its own `where`; location-scoped data also has the use
 - **Every route has `@RequirePermission(…)`, or checks that the record is the caller's own.** The
   `AuthorizationGuard` lets a route without a permission through for any signed-in user, whatever their role. That is
   right only when the handler then answers "not found" for anything not the caller's (an export job:
-  `ExportJobRunner.ownJob`); otherwise it is a finding. Permissions are checked, never role names.
+  `ExportQueue.ownJobAsync`); otherwise it is a finding. Permissions are checked, never role names.
 - **Ids in URLs are opaque** (UUIDs). A new table or route with a sequential id lets anyone guess the next record.
 - **No mass assignment:** a request DTO is never spread into `.set(...)` or `.values(...)`. Copy the fields the
   handler means to change, one by one.

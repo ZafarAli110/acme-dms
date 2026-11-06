@@ -60,7 +60,7 @@ gh api -X PATCH "repos/{owner}/{repo}/issues/comments/<id>" -F "body=@<file>"
 ## Resolved in <short commit hash>
 
 - [x] **SEC-B1** blocking · introduced · … (copied from the round, now ticked: fixed)
-- [ ] **PERF-S1** should-fix · introduced · … — wrong: `export-job-runner.ts:213` already streams the rows through a cursor
+- [ ] **PERF-S1** should-fix · introduced · … — wrong: `export-worker.ts:332` already streams the rows through a cursor
 - [ ] **TEST-S2** should-fix · introduced · … — intended: the ticket asks for the old order to stay (requirement 3)
 - [ ] **SEC-S1** should-fix · already there · … — left open: it was already there. Follow-up: ACME-110
 
