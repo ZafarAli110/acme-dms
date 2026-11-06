@@ -22,6 +22,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentActor, HttpCurrentActor>();
 builder.Services.AddPersistence(connectionString);
 builder.Services.AddBusinessLogic();
+// identity-api answers "is this sign-in open" from its own database; registered before AddAcmeAuthentication, which would
+// otherwise ask identity-api over HTTP.
+builder.Services.AddScoped<Acme.ServiceDefaults.Authentication.ISessionStatusChecker, Acme.Identity.Service.Authorization.DbSessionStatusChecker>();
 builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 // After the service's own handler: Postgres failures become 409/400/503 with a meaningful message, not a 500. The

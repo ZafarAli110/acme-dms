@@ -8,6 +8,7 @@ import {
   ServerUnreachableError,
 } from "../config/apiErrors";
 import { session } from "../storage/sessionStore";
+import { sessionExpiry } from "./sessionExpiry";
 
 export interface RequestOptions {
   /** Cancels the request, e.g. TanStack Query's `signal` when a query is no longer needed. */
@@ -16,6 +17,21 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** False for a request that lasts as long as the work it follows (server-sent events): no timeout. */
   timeout?: boolean;
+  /** True for a request that is not made as the signed-in person (the token endpoints): no token, no refresh and retry. */
+  anonymous?: boolean;
+}
+
+/** The token endpoints answer 401 for a wrong password or an ended sign-in; that is their answer, not a reason to refresh. */
+const TOKEN_ENDPOINTS = `${API_CONFIG.identityUrl}/v1/tokens`;
+
+/** What identity-api requires of a refresh or revoke: a header only the page itself adds (a form on another site cannot). */
+const FROM_THE_PAGE = { "x-requested-with": "acme-web" };
+
+/** One refresh at a time across every open tab of the app (Web Locks), where the browser has them. */
+function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
+  return typeof navigator !== "undefined" && "locks" in navigator
+    ? navigator.locks.request("acme.refresh", work)
+    : work();
 }
 
 /**
@@ -24,6 +40,9 @@ export interface RequestOptions {
  * problem details, `ServerUnreachableError` or `RequestTimeoutError`.
  */
 class ApiClient {
+  /** One refresh at a time, whatever number of requests found the token expired together. */
+  private _refreshing: Promise<boolean> | null = null;
+
   public getAsync<T>(url: string, options?: RequestOptions): Promise<T> {
     return this.requestAsync<T>(url, { method: "GET" }, options);
   }
@@ -49,7 +68,7 @@ class ApiClient {
     return this.requestAsync<T>(url, { method: "POST", body: formData }, options);
   }
 
-  /** Multipart: a record and its files in one request. */
+  /** Multipart PATCH: the changed fields of a record and its photos, in one request. */
   public patchFormAsync<T>(url: string, formData: FormData, options?: RequestOptions): Promise<T> {
     return this.requestAsync<T>(url, { method: "PATCH", body: formData }, options);
   }
@@ -104,14 +123,93 @@ class ApiClient {
     return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
   }
 
+  /**
+   * Sends the request as the signed-in person. An access token lives minutes: a 401 for a token this tab sent is the
+   * token expiring, so it is traded once for a new one (the refresh cookie) and the request is sent again. When the
+   * service refuses the cookie the sign-in is over (`sessionExpiry`), and the caller gets the 401 it had.
+   */
   private async sendAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
+    const response = await this.sendOnceAsync(url, init, options);
+    const canRefresh =
+      response.status === 401 &&
+      options?.anonymous !== true &&
+      !url.startsWith(TOKEN_ENDPOINTS) &&
+      session.getToken() !== null;
+    if (!canRefresh) {
+      return response;
+    }
+    let refreshed: boolean;
+    try {
+      refreshed = await this.refreshAccessTokenAsync();
+    } catch {
+      // No answer from the service: the sign-in is kept, the caller gets its 401, and the next request tries again.
+      return response;
+    }
+    if (!refreshed) {
+      sessionExpiry.expire();
+      return response;
+    }
+    return this.sendOnceAsync(url, init, options);
+  }
+
+  /**
+   * Trades the refresh cookie for a new access token, kept in `session`. True when there is one; false when identity-api
+   * refused the cookie (no sign-in, ended, or used twice); throws when it cannot be reached. One at a time in this tab, and
+   * one at a time across the tabs (a lock), because each refresh replaces the cookie: a second tab asking with the cookie
+   * the first just replaced would look like a stolen one.
+   */
+  public refreshAccessTokenAsync(): Promise<boolean> {
+    this._refreshing ??= withRefreshLock(() => this.refreshOnceAsync()).finally(() => {
+      this._refreshing = null;
+    });
+    return this._refreshing;
+  }
+
+  private async refreshOnceAsync(): Promise<boolean> {
+    const response = await this.sendOnceAsync(
+      `${TOKEN_ENDPOINTS}/refresh`,
+      { method: "POST", headers: FROM_THE_PAGE },
+      { anonymous: true },
+    );
+    if (response.ok) {
+      const { accessToken } = (await response.json()) as { accessToken: string };
+      session.setToken(accessToken);
+      return true;
+    }
+    if (response.status === 401) {
+      return false;
+    }
+    throw new ServerUnreachableError();
+  }
+
+  /**
+   * Ends the sign-in on identity-api, which removes the refresh cookie. True when the service answered; false when it could
+   * not be reached in time, in which case the cookie is still good and the caller must try again (`session.setRevokePending`).
+   * Behind a refresh that is running (the same lock), so that refresh's new cookie is the one this removes.
+   */
+  public async revokeSignInAsync(): Promise<boolean> {
+    try {
+      const response = await withRefreshLock(() =>
+        this.sendOnceAsync(
+          `${TOKEN_ENDPOINTS}/revoke`,
+          { method: "POST", headers: FROM_THE_PAGE },
+          { anonymous: true, signal: AbortSignal.timeout(API_CONFIG.signOutWaitMs) },
+        ),
+      );
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  private async sendOnceAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
     // Stops at the timeout or when the caller cancels (TanStack Query, when a query is no longer needed).
     const timeout = options?.timeout === false ? null : AbortSignal.timeout(API_CONFIG.timeoutMs);
     const signals = [options?.signal, timeout].filter((candidate) => candidate instanceof AbortSignal);
     const signal = signals.length > 0 ? AbortSignal.any(signals) : null;
 
-    const token = session.getToken();
-    const locationId = session.getLocationId();
+    const token = options?.anonymous === true ? null : session.getToken();
+    const locationId = options?.anonymous === true ? null : session.getLocationId();
     // The caller's headers (a JSON body's content type) plus who is asking and where. A FormData body gets its
     // multipart content type, with the boundary, from fetch itself.
     const headers = new Headers(init.headers);
