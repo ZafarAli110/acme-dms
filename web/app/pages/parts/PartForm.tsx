@@ -1,3 +1,4 @@
+import { formatNumber } from "../../core/formatters/formatNumber";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert, Box, Button, Chip, Grid, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Fragment, useMemo } from "react";
@@ -24,20 +25,23 @@ interface PartFormProps {
  * the page's clientAction; nothing is saved before that.
  */
 export function PartForm({ part, locationName, canEdit }: PartFormProps) {
-  const { t } = useTranslation("parts");
+  const { t, i18n } = useTranslation("parts");
   const { t: tCommon } = useTranslation();
   const navigate = useNavigate();
   const submit = useSubmit();
   const actionData = useActionData<typeof clientAction>();
   const isSubmitting = useNavigation().state === "submitting";
 
-  const schema = useMemo(() => createPartUpdateSchema(t), [t]);
-  const methods = useForm<PartFormValues>({ resolver: valibotResolver(schema), defaultValues: toFormValues(part) });
+  const schema = useMemo(() => createPartUpdateSchema(t, i18n.language), [t, i18n.language]);
+  const methods = useForm<PartFormValues>({
+    resolver: valibotResolver(schema),
+    defaultValues: toFormValues(part, i18n.language),
+  });
   const { isDirty } = methods.formState;
   const disabled = !canEdit || isSubmitting;
 
   const save = methods.handleSubmit((values) =>
-    submit(toUpdateFormData(values, part), { method: "post", encType: "multipart/form-data" }),
+    submit(toUpdateFormData(values, part, i18n.language), { method: "post", encType: "multipart/form-data" }),
   );
 
   return (
@@ -137,7 +141,7 @@ export function PartForm({ part, locationName, canEdit }: PartFormProps) {
                   {t("columns.bin")}: <strong>{part.inventory.binCode}</strong>
                 </Typography>
                 <Typography>
-                  {t("columns.onHand")}: <strong>{part.inventory.quantityOnHand}</strong>
+                  {t("columns.onHand")}: <strong>{formatNumber(part.inventory.quantityOnHand, i18n.language)}</strong>
                 </Typography>
                 <Typography>
                   {t("columns.reorderLevel")}: <strong>{part.inventory.reorderLevel}</strong>
