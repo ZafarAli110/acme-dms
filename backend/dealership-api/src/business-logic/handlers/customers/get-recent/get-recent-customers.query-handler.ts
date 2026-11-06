@@ -2,7 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { and, asc, desc, isNotNull } from "drizzle-orm";
 import type { IGetRecentCustomersQueryHandler } from "#business-logic-abstractions/handlers/customers/get-recent/get-recent-customers.query-handler.interface";
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
-import { customers, notDeleted } from "#persistence/schema/index";
+import { customers } from "#persistence/schema/customers";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,

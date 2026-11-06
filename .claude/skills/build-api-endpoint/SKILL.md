@@ -62,7 +62,7 @@ public description?: string;
   `business-logic/handlers/<area>/<name>/`: `<Verb><Thing>QueryHandler` or `…CommandHandler`, one public
   `executeAsync`.
 - Data through the unit of work: `await using work = await this._unitOfWorkFactory.beginAsync()` (`{ readOnly: true }`
-  for a query), Drizzle on `#persistence/schema/index`, `await work.commitAsync()` after a write. No repositories; a
+  for a query), Drizzle on the table's own file (`#persistence/schema/customers`), `await work.commitAsync()` after a write. No repositories; a
   query several handlers share is a function next to the mapper (`parts/part.queries.ts`).
 - Time from the injected clock (`this._clock.now()`); audit columns from `createdAudit` / `updatedAudit`.
 - An expected failure throws the Nest exception (`NotFoundException`, `ConflictException` for a duplicate); it becomes
