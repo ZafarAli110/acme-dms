@@ -1,4 +1,4 @@
-/** The RabbitMQ message envelope every Acme service uses (see contracts/README.md). */
+/** The RabbitMQ message envelope every Acme service uses (see docs/contracts.md). */
 export interface MessageEnvelopeDto<TData> {
   messageId: string;
   type: string;
