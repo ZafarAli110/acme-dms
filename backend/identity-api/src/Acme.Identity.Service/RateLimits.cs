@@ -13,7 +13,6 @@ public static class RateLimits
 {
     public const string SignIn = "sign-in";
     public const string Token = "token";
-    public const string Feed = "feed";
 
     public static IServiceCollection AddAcmeRateLimits(this IServiceCollection services) =>
         services.AddRateLimiter(options =>
@@ -21,8 +20,6 @@ public static class RateLimits
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddPolicy(SignIn, context => PerAddress(context, permits: 10));
             options.AddPolicy(Token, context => PerAddress(context, permits: 120));
-            // Every service instance asks every few seconds: well under this, and far under what would be an attack.
-            options.AddPolicy(Feed, context => PerAddress(context, permits: 120));
             options.OnRejected = async (context, cancellationToken) =>
             {
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
