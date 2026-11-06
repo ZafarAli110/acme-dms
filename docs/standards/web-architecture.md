@@ -24,7 +24,7 @@ app/
     middleware/          routerContext.ts, authClientMiddleware.ts
     queries/             queryClient.ts, QueryProvider.tsx, and API calls shared by features (identity, documents)
     services/            apiClient.ts: the only code that calls fetch
-    storage/             sessionStore.ts: the access token (in memory) and the selected location
+    storage/             sessionStore.ts: whether this tab is signed in, and the selected location
     types/               types shared by features (page.ts)
   components/            React components used by several features: Layout, Sidebar, TopBar, LanguageSwitcher,
                          FormGuards, PageHeader, ErrorAlert, DocumentImage; data-grid/ (AppDataGrid, its toolbar,
@@ -59,10 +59,11 @@ route modules are PascalCase (`PartList.tsx`, `PartEdit.tsx`, `PartCreate.tsx`, 
 `core/kernel/authKernel.ts` and `core/kernel/locationKernel.ts` are the single source of truth for who is signed in
 and which location is selected. They are plain classes outside React, so middleware, loaders and actions can use them:
 
-- The access token lives minutes, in memory only (`session`): `apiClient` renews it with the refresh cookie (httpOnly; the
-  page never sees it) on a 401 and sends the request again, and ends the session (`sessionExpiry`, the auth kernel) when
-  identity-api refuses the cookie. A new tab or a reload gets its token the same way. Sign-out revokes the sign-in
-  (`docs/ARCHITECTURE.md`, "Signing in"). A page never handles an expired token, or a token.
+- The page holds no token: the gateway keeps the sign-in, and the browser sends its session cookie (httpOnly; the page never
+  sees it) with every request. `apiClient` adds `X-Requested-With: acme-web` to every request (the gateway refuses a change
+  without it), and a 401 for a signed-in tab ends the session (`sessionExpiry`, the auth kernel). A new tab or a reload is
+  signed in by the same cookie. Signing in and out are `POST` and `DELETE /api/session` (`docs/ARCHITECTURE.md`,
+  "Signing in"). A page never handles a token.
 - React reads them with `useAuth()` (`user`) and `useSelectedLocation()` (`location`, `locations`, `can(permission)`,
   `switchLocation`). Never read session storage or call identity-api from a page.
 - The API client sends the selected location as `x-location-id`. Switching location refreshes what is on screen.
