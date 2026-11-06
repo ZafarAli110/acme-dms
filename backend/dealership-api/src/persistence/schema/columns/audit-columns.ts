@@ -8,13 +8,13 @@ import { instant } from "./temporal-columns";
  */
 export function auditColumns() {
   return {
-    createdAt: instant("created_at").notNull(),
-    createdBy: uuid("created_by").notNull(),
-    updatedAt: instant("updated_at").notNull(),
-    updatedBy: uuid("updated_by").notNull(),
-    isDeleted: boolean("is_deleted").notNull().default(false),
-    deletedAt: instant("deleted_at"),
-    deletedBy: uuid("deleted_by"),
+    createdAt: instant().notNull(),
+    createdBy: uuid().notNull(),
+    updatedAt: instant().notNull(),
+    updatedBy: uuid().notNull(),
+    isDeleted: boolean().notNull().default(false),
+    deletedAt: instant(),
+    deletedBy: uuid(),
   };
 }
 
