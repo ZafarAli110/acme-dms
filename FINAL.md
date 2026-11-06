@@ -8,17 +8,19 @@ the board to a reviewed pull request, then `/qa-ticket`, then a person merges in
 
 ## The tickets
 
-| Ticket   | What                                                        | Status                                   |
-| -------- | ----------------------------------------------------------- | ---------------------------------------- |
-| ACME-101 | Find the customer's car by its plate or VIN                 | built                                    |
-| ACME-102 | Check-in photos of the customer's car                       | to build                                 |
-| ACME-103 | Log a call or visit with a customer                         | to build                                 |
-| ACME-104 | Is the part in stock? (customer on the phone)               | to build                                 |
-| ACME-105 | Customers due a service call-back                           | to build                                 |
-| ACME-106 | "Recently contacted" shows customers from another location  | to build                                 |
-| ACME-107 | Add a new part, with its photos, on its own page            | to build                                 |
-| ACME-108 | Export the customer list to Excel                           | built: a job queue and a separate worker |
-| ACME-109 | Two people edit the same customer and one change disappears | to build: a row version, 409 when stale  |
+| Ticket   | What                                                        | Status                                               |
+| -------- | ----------------------------------------------------------- | ---------------------------------------------------- |
+| ACME-101 | Find the customer's car by its plate or VIN                 | built                                                |
+| ACME-102 | Check-in photos of the customer's car                       | to build                                             |
+| ACME-103 | Log a call or visit with a customer                         | to build                                             |
+| ACME-104 | Is the part in stock? (customer on the phone)               | to build                                             |
+| ACME-105 | Customers due a service call-back                           | to build                                             |
+| ACME-106 | "Recently contacted" shows customers from another location  | to build                                             |
+| ACME-107 | Add a new part, with its photos, on its own page            | to build                                             |
+| ACME-108 | Export the customer list to Excel                           | built: a job queue and a separate worker             |
+| ACME-109 | Two people edit the same customer and one change disappears | to build: a row version, 409 when stale              |
+| ACME-110 | The customer list stays quick at our biggest location       | to build: indexes that fit the list's queries        |
+| ACME-111 | A change in one service never breaks another unnoticed      | to build: a written contract both sides test against |
 
 ## Build the next one
 
