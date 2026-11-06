@@ -144,6 +144,10 @@ When `package.json`, `bun.lock` or a `.csproj` changes:
   package, version, advisory id and whether the code calls the affected part (`— checked` with the grep).
 - A new package: who publishes it, how old it is, how widely it is used, and whether it runs an install script. A new
   install script, or a jump of many major versions, is a finding to check by hand.
+- **Release age** (`bunfig.toml`: `exact`, `minimumReleaseAge = "7d"`): a version range (`^`, `~`, `latest`) in a
+  `package.json`, a version published less than 7 days ago, or a change that lowers `minimumReleaseAge` or adds to
+  `minimumReleaseAgeExcludes`, is a finding unless its commit says which security fix it takes (`npm view <package>
+time` gives the publish date).
 
 ## A07 Identification and authentication failures
 
