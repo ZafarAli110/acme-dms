@@ -19,7 +19,7 @@ export class UnitOfWork implements AsyncDisposable {
 
   public constructor(client: PoolClient) {
     this._client = client;
-    this.db = drizzle(client);
+    this.db = drizzle(client, { casing: "snake_case" });
   }
 
   public async commitAsync(): Promise<void> {
