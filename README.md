@@ -63,7 +63,7 @@ cannot be processed is retried three times, then marked failed and dead-lettered
 
 ```
                              ┌─► identity-api (.NET)     ── Postgres: identity
-web (React) ──► gateway-api ─┼─► dealership-api (NestJS) ── Postgres: dealership
+web (React) ──► gateway-api ─┼─► dealership-api (NestJS) ── Postgres: dealership ◄── export-worker (NestJS)
                 (YARP)       └─► document-api (.NET)     ── Postgres: documents
                                        │     ▲
                                        └HTTP─┘   events via RabbitMQ
@@ -73,6 +73,7 @@ web (React) ──► gateway-api ─┼─► dealership-api (NestJS) ── Po
 | ---------------- | ------------------- | --------------------------------------------------------------- |
 | `identity-api`   | C# (.NET 10)        | dealers, locations, users, roles; issues access tokens (JWT)    |
 | `dealership-api` | TypeScript (NestJS) | parts catalogue, stock and other dealership data                |
+| `export-worker`  | TypeScript (NestJS) | runs the exports dealership-api queues; no HTTP, same codebase  |
 | `document-api`   | C# (.NET 10)        | photos and files, image processing                              |
 | `gateway-api`    | C# (YARP)           | the only entry point: `/api/<service>/...` goes to that service |
 | `web`            | TypeScript (React)  | the dealership UI; talks only to the gateway                    |
@@ -188,7 +189,9 @@ bun run dev          # = aspire run (Docker Desktop must be running)
 The first run takes a few minutes: it builds the .NET projects and pulls the container images.
 
 1. Open the **Dashboard** link the terminal prints (`http://localhost:15090/login?t=…`). The token in it logs you in.
-2. Wait until every resource is **Running** and **Healthy**.
+2. Wait until every resource is **Running** and **Healthy**. **export-worker** has no HTTP endpoint, so it shows
+   **Running** only: it is dealership-api's export worker (`bun run worker` in `backend/dealership-api`), which writes
+   the Excel files the export button queues. Without it, exports wait in line.
 3. The **seed** resource loads the sample data once everything is up, then shows **Finished**. It runs on every start
    and reuses what is already there, so nothing is duplicated; `bun run seed` runs it by hand.
 4. Open the **web** URL and sign in (the form is pre-filled with `sam`). The gateway is always at

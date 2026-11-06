@@ -1,10 +1,14 @@
 import { apiClient } from "../services/apiClient";
 
+/** Which list an export is of. */
+export type ExportKind = "customers";
+
 export type ExportStatus = "queued" | "counting" | "writing" | "completed" | "failed" | "cancelled" | "expired";
 
 /** An export as dealership-api reports it (ExportJobResponseDto). */
 export interface ExportJob {
   id: string;
+  kind: ExportKind;
   status: ExportStatus;
   rows: number;
   totalRows: number | null;
@@ -20,7 +24,7 @@ export interface ExportJob {
   error: string | null;
 }
 
-/** One export the user started in this tab, with what it is of and where its service is. */
+/** One export the user started, with what it is of and where its service is. */
 export interface ExportEntry {
   title: string;
   serviceUrl: string;
@@ -29,14 +33,16 @@ export interface ExportEntry {
   receivedAt: number;
   /** A failure to start or to follow it (the network), not the export's own failure. */
   problem: string | null;
+  /** Put back from the service (after a reload), not started in this tab just now. */
+  restored: boolean;
 }
 
 const FINISHED: ReadonlySet<ExportStatus> = new Set(["completed", "failed", "cancelled", "expired"]);
 
 /**
- * The exports this tab started, outside React, so one keeps running and reporting while the user works on other
- * pages. Each is followed through its server-sent events until it finishes. React reads it through `useExports()`;
- * the export panel in the layout shows it.
+ * The user's exports, outside React, so one keeps running and reporting while the user works on other pages. Each is
+ * followed through its server-sent events until it finishes. The exports run on the server, so a reload loses none:
+ * `restoreAsync` puts them back. React reads it through `useExports()`; the exports button in the top bar shows it.
  */
 export class ExportKernel {
   private _snapshot: ExportEntry[] = [];
@@ -60,8 +66,27 @@ export class ExportKernel {
     const job = await apiClient.postAsync<ExportJob>(`${serviceUrl}/${path}`, body, {
       headers: { "idempotency-key": crypto.randomUUID() },
     });
-    this.put({ title, serviceUrl, job, receivedAt: performance.now(), problem: null });
+    this.put({ title, serviceUrl, job, receivedAt: performance.now(), problem: null, restored: false });
     void this.followAsync(job.id);
+  }
+
+  /**
+   * Puts back the user's exports at the selected location that the service still has (after a reload, or a location
+   * switch), and follows the ones still running. Ones already on the panel are left as they are; cancelled ones are
+   * not brought back, since the user chose to drop them.
+   */
+  public async restoreAsync(serviceUrl: string, titleOf: (job: ExportJob) => string): Promise<void> {
+    const jobs = await apiClient.getAsync<ExportJob[]>(`${serviceUrl}/v1/exports`);
+    // The service lists the newest first; the panel shows them in the order they were started.
+    for (const job of jobs.toReversed()) {
+      if (this.find(job.id) || job.status === "cancelled") {
+        continue;
+      }
+      this.put({ title: titleOf(job), serviceUrl, job, receivedAt: performance.now(), problem: null, restored: true });
+      if (!FINISHED.has(job.status)) {
+        void this.followAsync(job.id);
+      }
+    }
   }
 
   public async cancelAsync(jobId: string): Promise<void> {

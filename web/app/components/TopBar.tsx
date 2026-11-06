@@ -30,6 +30,7 @@ import { useAuth } from "../core/contexts/auth/useAuth";
 import { useLocationChangeGuard } from "../core/contexts/location/LocationChangeGuardContext";
 import { useSelectedLocation } from "../core/contexts/location/useSelectedLocation";
 import { formatRole } from "../core/formatters/formatRole";
+import { ExportsButton } from "./exports/ExportsButton";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { APPBAR_HEIGHT, TRANSITION } from "./Sidebar";
 
@@ -123,6 +124,7 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
 
         <Box sx={{ flexGrow: 1 }} />
 
+        <ExportsButton />
         <LanguageSwitcher />
         <Tooltip title={dark ? t("topBar.lightMode") : t("topBar.darkMode")}>
           <IconButton

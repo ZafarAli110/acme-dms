@@ -1,16 +1,18 @@
 import { BadRequestException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
-import { lastValueFrom } from "rxjs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { beforeAll, describe, expect, it } from "vitest";
 import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
+import { exportJobs } from "#persistence/schema/index";
+import { readSettings } from "#settings/settings";
 import { NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { fixedClock } from "#test-setup/time/fixed-clock";
 import { AT_NORTHSIDE, AT_RIVERSIDE, userAt } from "#test-setup/users/test-users";
 import { readXlsxAsync } from "#test-setup/xlsx/read-xlsx";
-import { ExportJobRunner } from "../../../../exports/export-job-runner";
+import { ExportQueue } from "../../../../exports/export-queue";
+import { ExportWorker } from "../../../../exports/export-worker";
 import { StartCustomerExportCommandHandler } from "../start-customer-export.command-handler";
-import { readSettings } from "#settings/settings";
 
 const date = (iso: string) => Temporal.PlainDate.from(iso);
 
@@ -27,29 +29,34 @@ function request(changes: Partial<ExportRequestDto> = {}): ExportRequestDto {
 
 describe("StartCustomerExportCommandHandler", () => {
   const database = useTestDatabase();
-  let runner: ExportJobRunner;
+  let queue: ExportQueue;
+  let worker: ExportWorker;
   let handler: StartCustomerExportCommandHandler;
 
-  beforeAll(async () => {
-    runner = new ExportJobRunner(database.unitOfWorkFactory, fixedClock(), readSettings({}));
-    await runner.onModuleInit();
-    handler = new StartCustomerExportCommandHandler(runner, fixedClock());
+  beforeAll(() => {
+    const settings = readSettings({});
+    queue = new ExportQueue(database.unitOfWorkFactory, fixedClock(), settings);
+    worker = new ExportWorker(database.unitOfWorkFactory, fixedClock(), settings);
+    handler = new StartCustomerExportCommandHandler(queue, fixedClock());
   });
 
-  afterAll(() => {
-    runner.onModuleDestroy();
-  });
-
-  const finishedAsync = (job: ExportJobResponseDto): Promise<ExportJobResponseDto> =>
-    lastValueFrom(runner.progress(AT_NORTHSIDE, job.id));
+  /** Lets the worker run everything waiting (as its own process would), then reads the export as its owner. */
+  const finishedAsync = async (job: ExportJobResponseDto): Promise<ExportJobResponseDto> => {
+    await worker.runUntilIdleAsync();
+    return queue.getAsync(AT_NORTHSIDE, job.id);
+  };
 
   const fileOfAsync = async (job: ExportJobResponseDto) => {
     const link = new URL(job.downloadPath!, "http://service/");
-    const file = runner.fileForLink(job.id, link.searchParams.get("expires")!, link.searchParams.get("signature")!);
+    const file = await queue.fileForLinkAsync(
+      job.id,
+      link.searchParams.get("expires")!,
+      link.searchParams.get("signature")!,
+    );
     return readXlsxAsync(file.path);
   };
 
-  it("writes every row the list shows: this location's, filtered and sorted as asked, with the chosen columns", async () => {
+  it("queues the export, and the worker writes every row the list shows: this location's, filtered and sorted as asked, with the chosen columns", async () => {
     const seed = database.seed;
     await seed.addCustomerAsync({
       locationId: NORTHSIDE,
@@ -81,7 +88,7 @@ describe("StartCustomerExportCommandHandler", () => {
     });
     await seed.addCustomerAsync({ locationId: RIVERSIDE, firstName: "Ed", surname: "Elm", city: "Leeds" });
 
-    const started = handler.execute(
+    const started = await handler.executeAsync(
       AT_NORTHSIDE,
       request({
         filterField: "status",
@@ -95,6 +102,7 @@ describe("StartCustomerExportCommandHandler", () => {
     const finished = await finishedAsync(started);
     const [sheet] = await fileOfAsync(finished);
 
+    expect(started).toMatchObject({ kind: "customers", status: "queued", queuePosition: 1, rows: 0 });
     expect(finished).toMatchObject({ status: "completed", rows: 2, totalRows: 2 });
     expect(sheet?.rows).toEqual([
       ["Name", "City", "Last contact"],
@@ -105,40 +113,47 @@ describe("StartCustomerExportCommandHandler", () => {
   });
 
   it("gives a retry with the same idempotency key the same export, and refuses the key for another request", async () => {
-    const first = handler.execute(AT_NORTHSIDE, request(), "key-1");
-    const retry = handler.execute(AT_NORTHSIDE, request(), "key-1");
+    const first = await handler.executeAsync(AT_NORTHSIDE, request(), "key-1");
+    const retry = await handler.executeAsync(AT_NORTHSIDE, request(), "key-1");
 
     expect(retry.id).toBe(first.id);
-    expect(() => handler.execute(AT_NORTHSIDE, request({ sort: "city" }), "key-1")).toThrow(
+    await expect(handler.executeAsync(AT_NORTHSIDE, request({ sort: "city" }), "key-1")).rejects.toThrow(
       UnprocessableEntityException,
     );
     await finishedAsync(first);
   });
 
-  it("refuses a column the list can't export, and a sort it doesn't have, before starting", () => {
-    expect(() =>
-      handler.execute(AT_NORTHSIDE, request({ columns: [{ field: "password", header: "P" }] }), null),
-    ).toThrow(BadRequestException);
-    expect(() => handler.execute(AT_NORTHSIDE, request({ sort: "password" }), null)).toThrow(BadRequestException);
+  it("refuses a column the list can't export, and a sort it doesn't have, before queueing anything", async () => {
+    const before = await database.db.select().from(exportJobs);
+
+    await expect(
+      handler.executeAsync(AT_NORTHSIDE, request({ columns: [{ field: "password", header: "P" }] }), null),
+    ).rejects.toThrow(BadRequestException);
+    await expect(handler.executeAsync(AT_NORTHSIDE, request({ sort: "password" }), null)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(await database.db.select().from(exportJobs)).toHaveLength(before.length);
   });
 
   it("keeps someone else's export to them: another user's lookup is not found", async () => {
-    const job = handler.execute(AT_RIVERSIDE, request(), null);
+    const job = await handler.executeAsync(AT_RIVERSIDE, request(), null);
 
-    expect(() => runner.get(userAt(NORTHSIDE), job.id)).not.toThrow();
-    expect(() => runner.get({ ...AT_RIVERSIDE, userId: "30000000-0000-0000-0000-0000000000bb" }, job.id)).toThrow(
-      NotFoundException,
-    );
+    await expect(queue.getAsync(userAt(NORTHSIDE), job.id)).resolves.toMatchObject({ id: job.id });
+    await expect(
+      queue.getAsync({ ...AT_RIVERSIDE, userId: "30000000-0000-0000-0000-0000000000bb" }, job.id),
+    ).rejects.toThrow(NotFoundException);
     await finishedAsync(job);
   });
 
-  it("cancels an export and deletes what it wrote", async () => {
-    const job = handler.execute(AT_NORTHSIDE, request(), null);
-    await runner.cancelAsync(AT_NORTHSIDE, job.id);
+  it("cancels a waiting export: the worker never writes it", async () => {
+    const job = await handler.executeAsync(AT_NORTHSIDE, request(), null);
+    await queue.cancelAsync(AT_NORTHSIDE, job.id);
 
     const finished = await finishedAsync(job);
+    const [row] = await database.db.select().from(exportJobs).where(eq(exportJobs.id, job.id));
 
     expect(finished.status).toBe("cancelled");
     expect(finished.downloadPath).toBeNull();
+    expect(row?.attempts).toBe(0);
   });
 });

@@ -41,8 +41,22 @@ export interface Environment {
   "services__document-api__http__0"?: string;
   /** Aspire: where traces, metrics and logs go. Unset: telemetry is off. */
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
-  /** Exports running at once in this instance (each holds a database connection). */
+  /** Exports one export worker runs at once (each holds a database connection while it reads). */
   EXPORT_MAX_RUNNING?: string;
+  /** Exports one dealer may have running at once, across every worker, so one dealer cannot take every slot. */
+  EXPORT_MAX_RUNNING_PER_DEALER?: string;
+  /** Exports one user may have running or waiting at once; another is refused (429) until one finishes. */
+  EXPORT_MAX_PER_USER?: string;
+  /** How often, in milliseconds, an export worker looks for waiting exports. */
+  EXPORT_POLL_MS?: string;
+  /** How often, in milliseconds, the API reads a followed export's state to send it to the browser. */
+  EXPORT_PROGRESS_POLL_MS?: string;
+  /** How long, in seconds, one of an export's SQL statements may run (its count, or its rows). */
+  EXPORT_STATEMENT_TIMEOUT_SECONDS?: string;
+  /** How long, in seconds, a whole export may run before it is stopped and failed. */
+  EXPORT_MAX_SECONDS?: string;
+  /** After how many seconds without a heartbeat a running export counts as abandoned by its worker. */
+  EXPORT_STALE_SECONDS?: string;
   /** How long, in seconds, a finished export can be downloaded. */
   EXPORT_TTL_SECONDS?: string;
   /** Where export files are written. */
@@ -68,8 +82,22 @@ export interface Settings {
   identityApiUrl: string | null;
   documentApiUrl: string | null;
   otlpEndpoint: string | null;
+  /** Exports this worker runs at once; the rest wait in line in the export_jobs table. */
   exportMaxRunning: number;
+  exportMaxRunningPerDealer: number;
+  exportMaxPerUser: number;
+  exportPollMs: number;
+  exportProgressPollMs: number;
+  exportStatementTimeoutSeconds: number;
+  exportMaxSeconds: number;
+  exportStaleSeconds: number;
   exportFileTtlMs: number;
+  /**
+   * Where export files are written. The API and the export worker must see the same folder: the worker writes the
+   * file, the API serves it. The default is under the operating system's temp folder, which is the same path for both
+   * processes on one machine (Aspire starts both with the same environment). In production this would be object
+   * storage (a bucket both reach), not a local folder.
+   */
   exportDirectory: string;
   exportBatchSize: number;
 }
@@ -95,7 +123,22 @@ export function readSettings(environment: Environment): Settings {
     identityApiUrl: environment["services__identity-api__http__0"] ?? null,
     documentApiUrl: environment["services__document-api__http__0"] ?? null,
     otlpEndpoint: environment.OTEL_EXPORTER_OTLP_ENDPOINT ?? null,
-    exportMaxRunning: readWholeNumber("EXPORT_MAX_RUNNING", environment.EXPORT_MAX_RUNNING, 2),
+    exportMaxRunning: readWholeNumber("EXPORT_MAX_RUNNING", environment.EXPORT_MAX_RUNNING, 5),
+    exportMaxRunningPerDealer: readWholeNumber(
+      "EXPORT_MAX_RUNNING_PER_DEALER",
+      environment.EXPORT_MAX_RUNNING_PER_DEALER,
+      3,
+    ),
+    exportMaxPerUser: readWholeNumber("EXPORT_MAX_PER_USER", environment.EXPORT_MAX_PER_USER, 2),
+    exportPollMs: readWholeNumber("EXPORT_POLL_MS", environment.EXPORT_POLL_MS, 1000),
+    exportProgressPollMs: readWholeNumber("EXPORT_PROGRESS_POLL_MS", environment.EXPORT_PROGRESS_POLL_MS, 1000),
+    exportStatementTimeoutSeconds: readWholeNumber(
+      "EXPORT_STATEMENT_TIMEOUT_SECONDS",
+      environment.EXPORT_STATEMENT_TIMEOUT_SECONDS,
+      600,
+    ),
+    exportMaxSeconds: readWholeNumber("EXPORT_MAX_SECONDS", environment.EXPORT_MAX_SECONDS, 900),
+    exportStaleSeconds: readWholeNumber("EXPORT_STALE_SECONDS", environment.EXPORT_STALE_SECONDS, 60),
     exportFileTtlMs: readWholeNumber("EXPORT_TTL_SECONDS", environment.EXPORT_TTL_SECONDS, 900) * 1000,
     exportDirectory: environment.EXPORT_DIR ?? join(tmpdir(), "acme-dealership-exports"),
     exportBatchSize: readWholeNumber("EXPORT_BATCH_SIZE", environment.EXPORT_BATCH_SIZE, 20_000),

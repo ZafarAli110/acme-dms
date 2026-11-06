@@ -117,24 +117,74 @@ the id, so rows with equal values keep one order from page to page. Count with t
 ## Work that outlives the request: exports
 
 An export of a long list can't finish inside one request, so it runs as a background **job**: the request that starts
-it returns at once with the job's id, and the work happens after it. The job waits in line (only a few run at once,
-each holding a database connection), reports progress, can be cancelled, and its file expires. The user only ever sees
-"an export"; "job" is the run.
+it returns at once (202) with the job's id, and the work happens after it, in another process. The job waits in line,
+reports progress, can be cancelled, and its file expires. The user only ever sees "an export"; "job" is the run.
+
+**The queue is a table.** Every export is a row in `export_jobs` (`persistence/schema/export-jobs.ts`): who asked
+(`dealer_id`, `location_id`, `owner_id`), what for (`kind` and the validated `request`), and how it is going
+(`status`, `rows`, `total_rows`, `heartbeat_at`, the file). It is an operational table like `processed_messages`: no
+audit columns and no soft delete; rows are deleted outright once their file has long expired. Nothing lives in a
+process's memory, so a restart of the API or of a worker loses no export.
+
+**Two processes.** dealership-api only queues and reads: a start handler checks the request (a column, sort or filter
+the list doesn't have is a 400 now, not after it has waited) and inserts the row. The **export worker**
+(`service/worker.ts`, `bun run worker`, the `export-worker` resource in Aspire) claims waiting rows, counts and streams
+the rows in one snapshot into an .xlsx (a temp file, renamed when complete), and writes progress to the row about once
+a second. Following an export (`GET /v1/exports/{id}`, its server-sent events) reads the row; `GET /v1/exports` lists
+the user's exports at the location, so a reloaded page shows them again. Both processes use the same `EXPORT_DIR`; in
+production it would be object storage both reach.
 
 The use case follows the shape above: `IStartCustomerExportCommandHandler` in
 `business-logic-abstractions/handlers/customers/export/`, and its handler in `business-logic/handlers/customers/export/`.
 What every export shares lives beside the handlers, in `business-logic/exports/`:
 
-| File                           | What it is                                                                   |
-| ------------------------------ | ---------------------------------------------------------------------------- |
-| `export-job-runner.ts`         | the queue: starts, follows, cancels and expires jobs; one per service        |
-| `export-job.ts`                | one job's state: status, rows written, when it started and finished          |
-| `export-job.mapper.ts`         | a job as the client sees it (`ExportJobResponseDto`)                         |
-| `export-source.ts`             | what a start handler gives the runner: file name, columns, count, rows query |
-| `download-link.ts`             | the signed link the browser downloads the file with                          |
-| `xlsx/xlsx-workbook-writer.ts` | writes the rows into an .xlsx as they come, so memory stays flat             |
-| `xlsx/xlsx-cells.ts`           | the small pieces of SpreadsheetML each cell is built from                    |
+| File                                | What it is                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------ |
+| `export-queue.ts`                   | the API's side: queues, follows, lists and cancels jobs, checks download links |
+| `export-worker.ts`                  | the worker's side: claims and runs jobs, heartbeats, the sweeper               |
+| `export-worker.module.ts`           | what the worker process runs: the database, the clock, the worker              |
+| `export-job.mapper.ts`              | a job's row as the client sees it (`ExportJobResponseDto`)                     |
+| `export-source.ts`                  | what one list's export reads: file name, columns, count, rows query            |
+| `export-sources.ts`                 | every exportable list by `kind`: how the worker rebuilds a job's queries       |
+| `sources/customer-export-source.ts` | the customer list's export, built from its request                             |
+| `download-link.ts`                  | the signed link the browser downloads the file with                            |
+| `xlsx/xlsx-workbook-writer.ts`      | writes the rows into an .xlsx as they come, so memory stays flat               |
+| `xlsx/xlsx-cells.ts`                | the small pieces of SpreadsheetML each cell is built from                      |
 
-Controllers reach the runner through `EXPORT_JOBS` (`business-logic-abstractions/exports/`). A start handler takes the
-runner class itself, and `ExportSource` stays in `business-logic`: it hands the runner database queries, which the
-abstractions may not depend on. A new export (parts, say) adds only its start handler and its columns.
+Controllers reach the queue through `EXPORT_JOBS` (`business-logic-abstractions/exports/`). A start handler takes the
+queue class itself, and `ExportSource` stays in `business-logic`: it holds database queries, which the abstractions
+may not depend on. `export-sources.ts` (the registry and `ExportSourceBuilder`) stays beside it for the same reason,
+and because only this layer uses it: the start handler checks a request with it, the worker runs a job with it. A type
+goes in the abstractions when another layer needs it, not because it is a type. A new export (parts, say) adds its
+start handler, its source in `sources/` and one line in `export-sources.ts`.
+
+### The limits
+
+| Setting                            | Default | What it limits                                                                |
+| ---------------------------------- | ------- | ----------------------------------------------------------------------------- |
+| `EXPORT_MAX_PER_USER`              | 2       | a user's exports running or waiting; one more is a 429 with `Retry-After: 30` |
+| `EXPORT_MAX_RUNNING`               | 5       | exports one worker runs at once (each holds a database connection)            |
+| `EXPORT_MAX_RUNNING_PER_DEALER`    | 3       | one dealer's exports running across all workers                               |
+| `EXPORT_STATEMENT_TIMEOUT_SECONDS` | 600     | one of an export's SQL statements (`SET LOCAL statement_timeout`)             |
+| `EXPORT_MAX_SECONDS`               | 900     | a whole export; then it is failed ("Try a smaller filter.")                   |
+| `EXPORT_STALE_SECONDS`             | 60      | silence before a running export counts as abandoned by its worker             |
+| `EXPORT_TTL_SECONDS`               | 900     | how long a finished file can be downloaded                                    |
+
+`EXPORT_POLL_MS` (how often a worker looks for work), `EXPORT_PROGRESS_POLL_MS` (how often a followed export is read
+for the browser) and `EXPORT_BATCH_SIZE` (rows per round trip) tune the rest; all are in `settings/settings.ts`.
+
+**Claiming is fair.** A worker claims as many waiting jobs as it has free slots, in one statement with
+`FOR UPDATE SKIP LOCKED`, so two workers never take the same job. Jobs are ranked by how many their dealer already
+has running plus their place in that dealer's line, so dealers take turns and one dealer exporting a lot never keeps
+another's single export waiting. Two workers claiming at the same instant can put a dealer briefly over its limit; a
+per-dealer advisory lock would close that if it ever mattered.
+
+**The sweeper** runs in every worker every 15 seconds. A running job whose heartbeat is older than
+`EXPORT_STALE_SECONDS` goes back to the line (its place kept) once, and is failed the second time ("The export stopped
+responding. Try again."); a finished file past its time is deleted and the job marked expired; rows long past their
+file are deleted. **No distributed lock:** each of these is one conditional `UPDATE` or `DELETE`, and Postgres lets
+only one worker change a given row, so two sweepers at once do the work once. `@nestjs/locks` (official, v0.0.5) is
+for work that must run on exactly one instance, such as a nightly report; this is not that.
+
+**Cancelling:** a waiting export is cancelled at once; a running one gets `cancel_requested_at`, and its worker stops at
+its next progress check (about a second) and marks it cancelled; a finished one's file is deleted now.

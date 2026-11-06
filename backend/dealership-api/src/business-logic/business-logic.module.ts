@@ -41,7 +41,7 @@ import { GetHealthQueryHandler } from "./handlers/system/get-health/get-health.q
 
 import { EXPORT_JOBS } from "#business-logic-abstractions/exports/export-jobs.interface";
 import { START_CUSTOMER_EXPORT_COMMAND_HANDLER } from "#business-logic-abstractions/handlers/customers/export/start-customer-export.command-handler.interface";
-import { ExportJobRunner } from "./exports/export-job-runner";
+import { ExportQueue } from "./exports/export-queue";
 import { StartCustomerExportCommandHandler } from "./handlers/customers/export/start-customer-export.command-handler";
 
 /** Registers every business handler against its abstraction token. Add one line per new handler. */
@@ -70,12 +70,13 @@ const HANDLERS = [
 @Module({
   imports: [PersistenceModule],
   // The clock handlers use for the current time (tests pass a fixed one).
-  // One export runner for the service: it holds the running and finished exports. Controllers reach it as EXPORT_JOBS.
+  // The export queue: start handlers queue exports in it, controllers follow them through EXPORT_JOBS. An export worker
+  // (service/worker.ts, a process of its own) runs them; the API never does.
   providers: [
     ...HANDLERS,
     { provide: CLOCK, useClass: SystemClock },
-    ExportJobRunner,
-    { provide: EXPORT_JOBS, useExisting: ExportJobRunner },
+    ExportQueue,
+    { provide: EXPORT_JOBS, useExisting: ExportQueue },
   ],
   exports: [...HANDLERS.map((handler) => handler.provide), CLOCK, EXPORT_JOBS],
 })

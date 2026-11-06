@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { type ClientLoaderFunctionArgs, Link as RouterLink, useNavigate, useNavigation } from "react-router";
 import { AppDataGrid } from "../../components/data-grid/AppDataGrid";
 import { ErrorAlert } from "../../components/ErrorAlert";
+import { ExportConfirmDialog } from "../../components/exports/ExportConfirmDialog";
 import { API_CONFIG } from "../../core/config/api";
 import { useExports } from "../../core/contexts/exports/useExports";
 import { PageHeader } from "../../components/PageHeader";
@@ -37,6 +38,7 @@ export default function CustomerList() {
   const { t: tCommon } = useTranslation();
   const { startAsync } = useExports();
   const [exportProblem, setExportProblem] = useState<unknown>(null);
+  const [confirmingExport, setConfirmingExport] = useState(false);
   const { location, can } = useSelectedLocation();
   const navigate = useNavigate();
   const { params, update } = useListParams();
@@ -58,6 +60,7 @@ export default function CustomerList() {
     const visible = columns
       .filter((column) => visibility.columnVisibilityModel[column.field] !== false)
       .map((column) => ({ field: column.field, header: column.headerName ?? column.field }));
+    setConfirmingExport(false);
     setExportProblem(null);
     startAsync(
       tCommon("exports.customersTitle", { location: location?.name ?? "" }),
@@ -81,7 +84,11 @@ export default function CustomerList() {
         onRowClick={openCustomer}
         actions={
           <Fragment>
-            <Button startIcon={<FileDownloadIcon />} onClick={startExport} data-testid="export-customers">
+            <Button
+              startIcon={<FileDownloadIcon />}
+              onClick={() => setConfirmingExport(true)}
+              data-testid="export-customers"
+            >
               {tCommon("exports.export")}
             </Button>
             {can("customers.write") && (
@@ -100,6 +107,16 @@ export default function CustomerList() {
         searchPlaceholder={t("search")}
         noRowsLabel={noRows}
         testId="customers-table"
+      />
+      <ExportConfirmDialog
+        open={confirmingExport}
+        title={tCommon("exports.confirmTitle")}
+        message={tCommon("exports.confirmMessage", {
+          total: (data?.total ?? 0).toLocaleString(i18n.language),
+          location: location?.name ?? "",
+        })}
+        onCancel={() => setConfirmingExport(false)}
+        onConfirm={startExport}
       />
     </Fragment>
   );

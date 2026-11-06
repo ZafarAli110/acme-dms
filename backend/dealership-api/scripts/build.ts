@@ -7,7 +7,8 @@ const { version } = (await Bun.file(new URL("../../../package.json", import.meta
 
 async function buildAsync(): Promise<boolean> {
   const result = await Bun.build({
-    entrypoints: ["src/service/main.ts", "src/service/observability/telemetry.ts"],
+    // The API, the export worker (a process of its own), and the telemetry both load first.
+    entrypoints: ["src/service/main.ts", "src/service/worker.ts", "src/service/observability/telemetry.ts"],
     outdir: "dist",
     target: "node",
     format: "esm",

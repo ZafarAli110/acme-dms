@@ -9,7 +9,9 @@ Learned from ACME-108 (`docs/lessons/ACME-108.md`). Each step names the lesson i
 
 1. **A background job, not a request.** `POST /v1/<list>/exports` answers 202 with the job; the job writes a temp file
    and reports progress; the file is downloaded afterwards through a signed link with a length and `Range`, and
-   expires. (L6) Reuse `ExportJobRunner` with an `ExportSource`; do not write a second runner.
+   expires. (L6) Reuse the queue: the start handler queues the job with `ExportQueue`, its `ExportSource` lives in
+   `business-logic/exports/sources/` and is registered by kind in `export-sources.ts`, and the export worker runs it;
+   do not write a second queue or runner.
 2. **Exactly what the list shows.** Build the source from the list's own `…ListWhere` and `…ListOrderBy` (its
    location, search, filter and sort, ending with the id) and the visible columns in their order, under the headings
    the client sends.
