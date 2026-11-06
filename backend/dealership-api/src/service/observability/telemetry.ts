@@ -1,7 +1,7 @@
 // Loaded with `node --import` before the app, so instrumentation is in place before any module is required.
 // Exporters read OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_SERVICE_NAME themselves (Aspire sets them for every resource);
 // settings only decides whether telemetry is on.
-import { register } from "node:module";
+import { register } from "import-in-the-middle/register-hooks.mjs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-proto";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
@@ -15,8 +15,10 @@ import { NodeSDK } from "@opentelemetry/sdk-node";
 import { settings } from "#settings/settings";
 
 if (settings.otlpEndpoint !== null) {
-  // ESM modules (including node:http as imported by the Nest adapter) can only be patched through a loader hook.
-  register("@opentelemetry/instrumentation/hook.mjs", import.meta.url);
+  // ESM modules (including node:http as imported by the Nest adapter) can only be patched through a loader hook. Node 26
+  // runs it in this thread (`module.registerHooks`), not on the second thread `module.register` starts, which Node
+  // deprecated; Node 26 is the least we run on (.nvmrc), so there is no older-Node path.
+  register();
 
   const sdk = new NodeSDK({
     traceExporter: new OTLPTraceExporter(),
