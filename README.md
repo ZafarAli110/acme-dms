@@ -43,25 +43,32 @@ Demo users, all with the password `Acme123!`:
 
 ## Commands
 
-| Command                | What it does                     |
-| ---------------------- | -------------------------------- |
-| `bun run dev`          | Start everything                 |
-| `bun run start`        | Start everything, in background  |
-| `bun run stop`         | Stop it                          |
-| `bun run rebuild`      | Rebuild one .NET service         |
-| `bun run reset`        | Back to the sample data          |
-| `bun run api`          | Call the API as a demo user      |
-| `bun run errors`       | Recent failed requests (traces)  |
-| `bun run health`       | What is unhealthy, and why       |
-| `bun run sql:explain`  | A query's plan (read-only)       |
-| `bun run test`         | Unit tests                       |
-| `bun run coverage`     | Tests with coverage, per project |
-| `bun run lint`         | Lint                             |
-| `bun run typecheck`    | Type-check                       |
-| `bun run format`       | Format                           |
-| `bun run format:check` | Check formatting only            |
-| `bun run gate:fast`    | What CI checks, on changed code  |
-| `bun run hooks`        | Turn on the pre-commit check     |
+| Command                         | What it does                      |
+| ------------------------------- | --------------------------------- |
+| `bun run dev`                   | Start everything                  |
+| `bun run start`                 | Start everything, in background   |
+| `bun run stop`                  | Stop it                           |
+| `bun run status`                | Every service, its state and URL  |
+| `bun run logs dealership-api`   | One service's console output      |
+| `bun run traces dealership-api` | One service's recent traces       |
+| `bun run rebuild`               | Rebuild one .NET service          |
+| `bun run reset`                 | Back to the sample data           |
+| `bun run seed`                  | Add the sample data               |
+| `bun run seed:bulk`             | Add 1.6M customers, for big lists |
+| `bun run api`                   | Call the API as a demo user       |
+| `bun run errors`                | Recent failed requests (traces)   |
+| `bun run health`                | What is unhealthy, and why        |
+| `bun run sql:explain`           | A query's plan (read-only)        |
+| `bun run test`                  | Unit tests                        |
+| `bun run coverage`              | Tests with coverage, per project  |
+| `bun run lint`                  | Lint                              |
+| `bun run typecheck`             | Type-check                        |
+| `bun run format`                | Format                            |
+| `bun run format:check`          | Check formatting only             |
+| `bun run gate:fast`             | What CI checks, on changed code   |
+| `bun run gate:slow`             | End-to-end tests of the web app   |
+| `bun run docs:check`            | Docs still match the repository   |
+| `bun run hooks`                 | Turn on the pre-commit check      |
 
 ## Licence
 
