@@ -1,6 +1,15 @@
+import { translateMessage } from "#i18n/messages";
 import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
 import { signedDownloadPath } from "./download-link";
 import type { ExportJob } from "./export-job";
+
+/**
+ * Why a job stopped, in the reader's language: the runner stores a catalog key (`exports.failure.failed`). Any other
+ * text (a reason the service gave while stopping) is shown as it is.
+ */
+function storedError(error: string): string {
+  return error.startsWith("exports.failure.") ? translateMessage(error) : error;
+}
 
 /** Under this much writing time the rate is noise (a few rows in a few milliseconds), so none is shown yet. */
 const MIN_MS_FOR_RATE = 500;
@@ -28,6 +37,6 @@ export function toExportJobResponseDto(job: ExportJob, nowMs: number = Date.now(
     fileBytes: job.fileBytes,
     downloadPath: job.status === "completed" && expiresAt !== null ? signedDownloadPath(job.id, expiresAt) : null,
     expiresAt: expiresAt === null ? null : Temporal.Instant.fromEpochMilliseconds(expiresAt).toString(),
-    error: job.error,
+    error: job.error === null ? null : storedError(job.error),
   };
 }
