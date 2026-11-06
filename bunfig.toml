@@ -3,3 +3,12 @@ printWidth = 120
 singleQuote = false
 bracketSpacing = true
 trailingComma = "all"
+
+[install]
+# Pin exactly: `bun add` writes the version it resolved, never a ^ or ~ range.
+exact = true
+# Supply-chain guard: never install a package version published less than 7 days ago, so a just-published or
+# compromised release cannot land here before the ecosystem has had a chance to flag it. A security fix may be taken
+# sooner: list the package in minimumReleaseAgeExcludes in the same commit, and say why in its message.
+minimumReleaseAge = "7d"
+minimumReleaseAgeExcludes = []
