@@ -7,6 +7,7 @@ import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
 import { listFilter, listOrderBy, type ListColumns } from "../../list-query/list-columns";
+import { pageOffset } from "../../list-query/page-offset";
 
 /** A part as one location stocks it: the catalogue record, its inventory there, and the bin it is in. */
 export interface StockedPart {
@@ -49,7 +50,7 @@ export async function findStockedPartsAsync(
   const items = await stockedParts(db, where)
     .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, [asc(parts.partNumber)], [asc(parts.id)]))
     .limit(pageSize)
-    .offset((page - 1) * pageSize);
+    .offset(pageOffset(page, pageSize));
   // The same joins as the page, so a filter on the bin counts the same rows it shows.
   const [counted] = await db
     .select({ total: count() })
