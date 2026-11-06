@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { rm, stat } from "node:fs/promises";
 import {
   ConflictException,
@@ -87,7 +88,7 @@ export class ExportQueue implements IExportJobs {
   ): Promise<ExportJobResponseDto> {
     const locationId = requireLocation(userContext);
     if (idempotencyKey !== null && !IDEMPOTENCY_KEY.test(idempotencyKey)) {
-      throw new UnprocessableEntityException("The Idempotency-Key is 1 to 255 printable characters.");
+      throw new UnprocessableEntityException(localized("exports.idempotencyKeyFormat"));
     }
     const now = this._clock.now();
     await using work = await this._unitOfWorkFactory.beginAsync();
@@ -108,7 +109,7 @@ export class ExportQueue implements IExportJobs {
         );
       if (existing) {
         if (existing.fingerprint !== enqueue.source.fingerprint || existing.locationId !== locationId) {
-          throw new UnprocessableEntityException("This Idempotency-Key was used for a different export.");
+          throw new UnprocessableEntityException(localized("exports.idempotencyKeyReused"));
         }
         return toExportJobResponseDto(existing, await this.queuePositionAsync(work.db, existing), now);
       }
@@ -126,10 +127,7 @@ export class ExportQueue implements IExportJobs {
       );
     const limit = this._settings.exportMaxPerUser;
     if ((active?.total ?? 0) >= limit) {
-      throw new TooManyRequestsException(
-        `You already have ${limit} exports running or waiting. Wait for one to finish, or cancel one.`,
-        RETRY_AFTER_SECONDS,
-      );
+      throw new TooManyRequestsException(localized("exports.tooManyRunning", { limit }), RETRY_AFTER_SECONDS);
     }
 
     const job: NewExportJobRow = {
@@ -209,7 +207,7 @@ export class ExportQueue implements IExportJobs {
     if (job.status === "queued") {
       await work.db
         .update(exportJobs)
-        .set({ status: "cancelled", error: "Cancelled before it started.", finishedAt: now })
+        .set({ status: "cancelled", error: "exports.failure.cancelledBeforeStart", finishedAt: now })
         .where(own);
     } else if (RUNNING_STATUSES.includes(job.status)) {
       await work.db
@@ -229,28 +227,28 @@ export class ExportQueue implements IExportJobs {
   public async fileForLinkAsync(jobId: string, expires: string, signature: string): Promise<ExportFile> {
     const now = this._clock.now();
     if (!isValidDownloadLink(jobId, expires, signature, now.epochMilliseconds)) {
-      throw new ForbiddenException("This download link is not valid, or has run out. Export again.");
+      throw new ForbiddenException(localized("exports.linkInvalid"));
     }
     // The signed link is the permission (it was handed only to the owner), so the row is read by its id alone.
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const [job] = await work.db.select().from(exportJobs).where(eq(exportJobs.id, jobId));
     if (!job) {
-      throw new ForbiddenException("This download link is not valid, or has run out. Export again.");
+      throw new ForbiddenException(localized("exports.linkInvalid"));
     }
     const expired =
       job.status === "expired" || (job.expiresAt !== null && Temporal.Instant.compare(job.expiresAt, now) <= 0);
     if (expired) {
-      throw new GoneException("This export has expired. Export again.");
+      throw new GoneException(localized("exports.expired"));
     }
     if (job.status !== "completed" || job.filePath === null) {
-      throw new ConflictException(`The export is ${job.status}, not completed.`);
+      throw new ConflictException(localized("exports.notCompleted", { status: job.status }));
     }
     const bytes = await stat(job.filePath).then(
       (file) => file.size,
       () => null,
     );
     if (bytes === null) {
-      throw new GoneException("This export's file is no longer there. Export again.");
+      throw new GoneException(localized("exports.fileGone"));
     }
     return { path: job.filePath, bytes, fileName: job.fileName };
   }
@@ -265,7 +263,7 @@ export class ExportQueue implements IExportJobs {
     const query = db.select().from(exportJobs).where(this.ownJobWhere(userContext, jobId));
     const [job] = options.lock ? await query.for("update") : await query;
     if (!job) {
-      throw new NotFoundException("No such export.");
+      throw new NotFoundException(localized("exports.notFound"));
     }
     return job;
   }

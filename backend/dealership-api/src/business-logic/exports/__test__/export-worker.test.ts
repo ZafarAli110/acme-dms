@@ -85,7 +85,8 @@ describe("ExportWorker", () => {
 
     expect(await statusOfAsync(job.id)).toMatchObject({
       status: "failed",
-      error: "The export stopped responding. Try again.",
+      // The catalog key; the API sends its text in the reader's language.
+      error: "exports.failure.stoppedResponding",
     });
   });
 

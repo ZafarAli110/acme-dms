@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { createHash } from "node:crypto";
 import { BadRequestException } from "@nestjs/common";
 import { count } from "drizzle-orm";
@@ -23,13 +24,16 @@ export function customerExportSource(
 ): ExportSource {
   const fields = request.columns.map((column) => column.field);
   if (new Set(fields).size !== fields.length) {
-    throw new BadRequestException("Each column can be in the file once.");
+    throw new BadRequestException(localized("exports.duplicateColumn"));
   }
   const columns = request.columns.map((column) => {
     const definition = CUSTOMER_EXPORT_COLUMNS[column.field];
     if (!definition) {
       throw new BadRequestException(
-        `"${column.field}" cannot be exported. It can be: ${Object.keys(CUSTOMER_EXPORT_COLUMNS).join(", ")}.`,
+        localized("exports.columnNotExportable", {
+          field: column.field,
+          fields: Object.keys(CUSTOMER_EXPORT_COLUMNS).join(", "),
+        }),
       );
     }
     return { ...definition, field: column.field, header: column.header ?? definition.header };

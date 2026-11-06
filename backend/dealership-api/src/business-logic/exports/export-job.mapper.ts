@@ -1,7 +1,16 @@
+import { translateMessage } from "#i18n/messages";
 import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
 import type { ExportJobRow } from "#persistence/schema/export-jobs";
 import { toIsoString } from "#business-logic-abstractions/time/to-iso-string";
 import { signedDownloadPath } from "./download-link";
+
+/**
+ * Why a job stopped, in the reader's language: the worker stores a catalog key (`exports.failure.tooLong`), since it
+ * runs outside any request. A job stored before that kept its English text, shown as it is.
+ */
+function storedError(error: string): string {
+  return error.startsWith("exports.failure.") ? translateMessage(error) : error;
+}
 
 /** Under this much writing time the rate is noise (a few rows in a few milliseconds), so none is shown yet. */
 const MIN_MS_FOR_RATE = 500;
@@ -39,6 +48,6 @@ export function toExportJobResponseDto(
     downloadPath:
       job.status === "completed" && expiresAt !== null ? signedDownloadPath(job.id, expiresAt.epochMilliseconds) : null,
     expiresAt: expiresAt === null ? null : toIsoString(expiresAt),
-    error: job.error,
+    error: job.error === null ? null : storedError(job.error),
   };
 }
