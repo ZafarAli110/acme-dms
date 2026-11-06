@@ -58,7 +58,7 @@ export class AuthKernel {
 
   /** Throws the identity-api problem (for example 401) when the email or password is wrong. */
   public async signInAsync(email: string, password: string): Promise<void> {
-    const { accessToken } = await identityQueries.signInAsync(email, password);
+    const { accessToken, expiresIn } = await identityQueries.signInAsync(email, password);
     // Start from a clean session: a location left by an earlier user must never be sent with the new token.
     session.clear();
     queryClient.clear();
@@ -66,6 +66,7 @@ export class AuthKernel {
     // The sign-in made a new cookie: a sign-out that could not end the old one is moot.
     session.setRevokePending(false);
     session.setToken(accessToken);
+    apiClient.renewBefore(expiresIn);
     this.commit(RESOLVING);
     this._resolving = this.resolveUserAsync();
     await this._resolving;
