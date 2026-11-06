@@ -65,17 +65,18 @@ cannot be processed is retried three times, then marked failed and dead-lettered
                              ┌─► identity-api (.NET)     ── Postgres: identity
 web (React) ──► gateway-api ─┼─► dealership-api (NestJS) ── Postgres: dealership
                 (YARP)       └─► document-api (.NET)     ── Postgres: documents
+                  └── Postgres: gateway (the browsers' sign-ins)
                                        │     ▲
                                        └HTTP─┘   events via RabbitMQ
 ```
 
-| Service          | Language            | Owns                                                            |
-| ---------------- | ------------------- | --------------------------------------------------------------- |
-| `identity-api`   | C# (.NET 10)        | dealers, locations, users, roles; issues access tokens (JWT)    |
-| `dealership-api` | TypeScript (NestJS) | parts catalogue, stock and other dealership data                |
-| `document-api`   | C# (.NET 10)        | photos and files, image processing                              |
-| `gateway-api`    | C# (YARP)           | the only entry point: `/api/<service>/...` goes to that service |
-| `web`            | TypeScript (React)  | the dealership UI; talks only to the gateway                    |
+| Service          | Language            | Owns                                                                                          |
+| ---------------- | ------------------- | --------------------------------------------------------------------------------------------- |
+| `identity-api`   | C# (.NET 10)        | dealers, locations, users, roles; issues access tokens (JWT)                                  |
+| `dealership-api` | TypeScript (NestJS) | parts catalogue, stock and other dealership data                                              |
+| `document-api`   | C# (.NET 10)        | photos and files, image processing                                                            |
+| `gateway-api`    | C# (YARP)           | the only entry point: `/api/<service>/...` goes to that service; keeps the browsers' sign-ins |
+| `web`            | TypeScript (React)  | the dealership UI; talks only to the gateway                                                  |
 
 Each service owns its database, and no service reads another's. Services validate tokens with identity-api's public
 keys (`/.well-known/openid-configuration`). [Aspire](https://aspire.dev) runs all of it locally and shows logs, traces
@@ -88,7 +89,7 @@ acme-dms/
     identity-api/         .NET: Acme.Identity.{Service, BusinessLogic.Abstractions, BusinessLogic, DTO, Persistence}
     document-api/         .NET: Acme.Documents.{same layers}
     dealership-api/src/   NestJS, same layers: service/, business-logic-abstractions/, business-logic/, dto/, persistence/
-    gateway-api/          .NET: Acme.Gateway, a YARP reverse proxy (routes in appsettings.json)
+    gateway-api/          .NET: Acme.Gateway, a YARP reverse proxy (routes in appsettings.json) and the web app's sign-in
     service-defaults/     .NET platform code every .NET service uses (telemetry, auth, problem details, correlation)
   web/                    React single-page app (Vite)
   scripts/                helper scripts (see "Look around a running system")
@@ -282,8 +283,7 @@ Every service, the gateway included, answers `GET /v1/system/health` in the same
 { "service": "dealership-api", "status": "ok", "version": "26.11.0", "databaseReachable": true }
 ```
 
-`status` is `degraded` when the service cannot reach its database; the gateway has none, so its `databaseReachable` is
-`null`. The version is set once, in the root `package.json`: .NET reads it through `Directory.Build.props`, and
+`status` is `degraded` when the service cannot reach its database; the gateway's is its sessions database. The version is set once, in the root `package.json`: .NET reads it through `Directory.Build.props`, and
 dealership-api's build writes it in.
 
 ## Conventions
