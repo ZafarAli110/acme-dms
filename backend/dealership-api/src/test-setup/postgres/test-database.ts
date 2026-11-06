@@ -19,7 +19,7 @@ export async function createTestDatabaseAsync(): Promise<TestDatabase> {
   const pool = new Pool({ connectionString, max: 4 });
   return {
     connectionString,
-    db: drizzle(pool),
+    db: drizzle(pool, { casing: "snake_case" }),
     async [Symbol.asyncDispose]() {
       await pool.end();
       await runAdminAsync(adminUrl, `DROP DATABASE ${name} WITH (FORCE)`);

@@ -9,19 +9,19 @@ export type CustomerStatus = "active" | "prospect" | "inactive";
 export const customers = pgTable(
   "customers",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    dealerId: uuid("dealer_id").notNull(),
-    locationId: uuid("location_id").notNull(),
-    firstName: varchar("first_name", { length: 100 }).notNull(),
-    surname: varchar("surname", { length: 100 }).notNull(),
-    companyName: varchar("company_name", { length: 200 }),
-    email: varchar("email", { length: 254 }),
-    phone: varchar("phone", { length: 40 }),
-    city: varchar("city", { length: 100 }),
-    status: varchar("status", { length: 20 }).$type<CustomerStatus>().notNull(),
-    lastContactDate: plainDate("last_contact_date"),
+    dealerId: uuid().notNull(),
+    locationId: uuid().notNull(),
+    firstName: varchar({ length: 100 }).notNull(),
+    surname: varchar({ length: 100 }).notNull(),
+    companyName: varchar({ length: 200 }),
+    email: varchar({ length: 254 }),
+    phone: varchar({ length: 40 }),
+    city: varchar({ length: 100 }),
+    status: varchar({ length: 20 }).$type<CustomerStatus>().notNull(),
+    lastContactDate: plainDate(),
     ...auditColumns(),
   },
   (table) => [
