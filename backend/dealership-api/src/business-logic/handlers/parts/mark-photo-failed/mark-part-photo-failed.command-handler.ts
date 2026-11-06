@@ -5,7 +5,8 @@ import { UnhandledMessageError } from "#business-logic-abstractions/messaging/un
 import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
 import { SYSTEM_USER_ID } from "#business-logic-abstractions/user-context/system-user";
 import type { DocumentFailedMessageDto, MessageEnvelopeDto } from "#dto/messages/document-messages.dto";
-import { partPhotos, processedMessages } from "#persistence/schema/index";
+import { partPhotos } from "#persistence/schema/part-photos";
+import { processedMessages } from "#persistence/schema/processed-messages";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,

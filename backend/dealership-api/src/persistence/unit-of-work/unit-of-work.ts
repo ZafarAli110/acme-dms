@@ -1,9 +1,8 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PoolClient } from "pg";
-import * as schema from "../schema";
 
 /** Typed access to the dealership database: tables, columns, joins and results all come from the schema. */
-export type Database = NodePgDatabase<typeof schema>;
+export type Database = NodePgDatabase;
 
 /**
  * One use case's work: one connection, one transaction. Hold it with `await using`, so it is always finished:
@@ -20,7 +19,7 @@ export class UnitOfWork implements AsyncDisposable {
 
   public constructor(client: PoolClient) {
     this._client = client;
-    this.db = drizzle(client, { schema });
+    this.db = drizzle(client);
   }
 
   public async commitAsync(): Promise<void> {
