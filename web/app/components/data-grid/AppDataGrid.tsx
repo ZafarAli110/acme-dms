@@ -12,7 +12,7 @@ import {
 import { frFR } from "@mui/x-data-grid/locales";
 import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type ListParams, PAGE_SIZES } from "../../core/paging/listParams";
+import { type ListParams, MAX_LIST_DEPTH, PAGE_SIZES } from "../../core/paging/listParams";
 import { INSET_SURFACE } from "../../theme";
 import { AppDataGridToolbar } from "./AppDataGridToolbar";
 import { fromFilterModel, sameFilter, toFilterModel, toPaginationModel, toSortModel } from "./listGridModels";
@@ -58,7 +58,7 @@ export function AppDataGrid<Row extends GridValidRowModel>({
   noRowsLabel,
   testId,
 }: AppDataGridProps<Row>) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   // The filter as the user edits it: an operator picked but no value typed yet is not in the URL, yet must stay in
   // the panel. Whenever the URL's filter or search changes (Back, a shared link), it starts again from the URL.
   const urlFilter = server ? toFilterModel(server.params, columns) : { items: [] };
@@ -127,6 +127,18 @@ export function AppDataGrid<Row extends GridValidRowModel>({
           ...(i18n.language.startsWith("fr") ? frFR.components.MuiDataGrid.defaultProps.localeText : {}),
           noRowsLabel,
           noResultsOverlayLabel: noRowsLabel,
+          // The grid's rowCount stops at the API's depth limit, so it cannot say how many rows there are: the footer says.
+          ...(server
+            ? {
+                paginationDisplayedRows: ({ from, to }: { from: number; to: number }) =>
+                  t(server.rowCount > MAX_LIST_DEPTH ? "paging.cappedRows" : "paging.rows", {
+                    from: from.toLocaleString(i18n.language),
+                    to: to.toLocaleString(i18n.language),
+                    total: server.rowCount.toLocaleString(i18n.language),
+                    max: MAX_LIST_DEPTH.toLocaleString(i18n.language),
+                  }),
+              }
+            : {}),
         }}
         columnVisibilityModel={columnVisibilityModel}
         onColumnVisibilityModelChange={onColumnVisibilityModelChange}
@@ -144,7 +156,8 @@ export function AppDataGrid<Row extends GridValidRowModel>({
               paginationMode: "server",
               sortingMode: "server",
               filterMode: "server",
-              rowCount: server.rowCount,
+              // The pager stops at the last page the API allows; narrow the list with search or a filter to go further.
+              rowCount: Math.min(server.rowCount, MAX_LIST_DEPTH),
               paginationModel: toPaginationModel(server.params),
               onPaginationModelChange: handlePaginationModelChange,
               sortModel,
