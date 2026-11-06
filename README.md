@@ -230,6 +230,7 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run traces dealership-api`                     | recent traces of one service                                           |
 | `bun run errors`                                    | only failed (5xx) traces, across all services                          |
 | `bun run sql:explain "select …"`                    | how Postgres runs one query: its plan, rows and time (read-only)       |
+| `bun run xlsx:inspect <file>`                       | an Excel file's sheets, row counts, header and first and last rows     |
 | `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)                             |
 | `bun run seed`                                      | add the sample parts, stock, photos, customers                         |
 | `bun run seed:bulk`                                 | add 1.6M customers at Northside, 400k at Riverside, 250k at Westgate   |
