@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Acme.Gateway.Tests.Support;
 
 namespace Acme.Gateway.Tests;
 
@@ -13,10 +13,10 @@ public sealed class HealthEndpointTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public async Task GetHealth_AnswersInTheSharedShape_WithNoDatabase()
+    public async Task GetHealth_AnswersInTheSharedShape_WithItsSessionsDatabase()
     {
-        await using var factory = new WebApplicationFactory<Program>();
-        using var client = factory.CreateClient();
+        await using var gateway = await TestGateway.NewAsync(TestContext.CancellationToken);
+        var client = gateway.Browser;
 
         using var response = await client.GetAsync(new Uri("/v1/system/health", UriKind.Relative), TestContext.CancellationToken);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.CancellationToken));
@@ -27,14 +27,14 @@ public sealed class HealthEndpointTests
         Assert.AreEqual("gateway-api", body.GetProperty("service").GetString());
         Assert.AreEqual("ok", body.GetProperty("status").GetString());
         StringAssert.Matches(body.GetProperty("version").GetString(), new System.Text.RegularExpressions.Regex(@"^\d+\.\d+\.\d+$"));
-        Assert.AreEqual(JsonValueKind.Null, body.GetProperty("databaseReachable").ValueKind);
+        Assert.IsTrue(body.GetProperty("databaseReachable").GetBoolean());
     }
 
     [TestMethod]
     public async Task EveryResponse_ForbidsCaching()
     {
-        await using var factory = new WebApplicationFactory<Program>();
-        using var client = factory.CreateClient();
+        await using var gateway = await TestGateway.NewAsync(TestContext.CancellationToken);
+        var client = gateway.Browser;
 
         using var response = await client.GetAsync(new Uri("/v1/system/health", UriKind.Relative), TestContext.CancellationToken);
 
