@@ -18,17 +18,20 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
     private readonly IdentityDbContext _dbContext;
     private readonly AccessTokenIssuer _accessTokenIssuer;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly SignInThrottle _signInThrottle;
     private readonly TimeProvider _timeProvider;
 
     public CreateTokenCommandHandler(
         IdentityDbContext dbContext,
         AccessTokenIssuer accessTokenIssuer,
         IPasswordHasher<User> passwordHasher,
+        SignInThrottle signInThrottle,
         TimeProvider timeProvider)
     {
         _dbContext = dbContext;
         _accessTokenIssuer = accessTokenIssuer;
         _passwordHasher = passwordHasher;
+        _signInThrottle = signInThrottle;
         _timeProvider = timeProvider;
     }
 
@@ -38,6 +41,13 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
 
         // Emails are stored lower-case, so an exact match is a case-insensitive match.
         var email = request.Email.Trim().ToLowerInvariant();
+        var wait = _signInThrottle.WaitFor(email);
+        if (wait > TimeSpan.Zero)
+        {
+            var seconds = (int)Math.Ceiling(wait.TotalSeconds);
+            throw new ApiException(ApiErrorCategory.TooManyRequests, $"Too many sign-in attempts. Try again in {seconds} seconds.", seconds);
+        }
+
         var user = await _dbContext.Users
             .Include(u => u.Dealer)
             .Include(u => u.LocationRoles).ThenInclude(r => r.Location)
@@ -49,13 +59,17 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
             // An unknown email costs the same as a wrong password: a hash is checked either way, so the time does not say
             // which emails have an account.
             _passwordHasher.VerifyHashedPassword(_unknownUser, _unknownUserHash.Value, request.Password);
+            _signInThrottle.RecordFailure(email);
             throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
         }
 
         if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
         {
+            _signInThrottle.RecordFailure(email);
             throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
         }
+
+        _signInThrottle.RecordSuccess(email);
 
         var now = _timeProvider.GetUtcNow();
         // A sign-in starts a chain of refresh tokens: its id is the access tokens' `sid`, and its refresh tokens end after the lifetime.

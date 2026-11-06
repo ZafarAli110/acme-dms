@@ -185,4 +185,31 @@ describe("ApiClient and an expired access token", () => {
     fetchMock.mockRejectedValue(new TypeError("offline"));
     await expect(apiClient.revokeSignInAsync()).resolves.toBe(false);
   });
+
+  it("gets the next access token a minute before this one expires, and stops when the tab signs out", async () => {
+    vi.useFakeTimers();
+    try {
+      const service = fakeService({ refreshAnswer: () => json({}) });
+      vi.stubGlobal("fetch", vi.fn(service.handler));
+      const refreshes = () => service.calls.filter((call) => call.url.endsWith("/v1/tokens/refresh")).length;
+
+      apiClient.renewBefore(900);
+      await vi.advanceTimersByTimeAsync(838_000);
+      expect(refreshes()).toBe(0);
+
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(refreshes()).toBe(1);
+      expect(session.getToken()).toBe("token-2");
+
+      // The answer's own lifetime schedules the next one.
+      await vi.advanceTimersByTimeAsync(840_000);
+      expect(refreshes()).toBe(2);
+
+      session.clear();
+      await vi.advanceTimersByTimeAsync(2_000_000);
+      expect(refreshes()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
