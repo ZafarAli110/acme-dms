@@ -335,7 +335,7 @@ echoed in every response and attached to every log line.
 | -------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `docs/ARCHITECTURE.md`     | services, layers, and how they fit together                                                          |
 | `docs/standards/`          | the team's rules: handlers, errors, messaging, uploads, dealers and locations, database, web, coding |
-| `contracts/README.md`      | RabbitMQ messages and queues                                                                         |
+| `docs/contracts.md`        | what services promise each other: the health response, RabbitMQ messages and queues                  |
 | Acme Tracker               | the backlog: a separate tool, at http://localhost:4100 when it is running                            |
 | `.github/workflows/ci.yml` | CI: format, lint, typecheck and test on every pull request                                           |
 
