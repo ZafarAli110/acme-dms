@@ -1,6 +1,6 @@
 ---
 name: performance-reviewer
-description: Reviews a ticket's diff for performance problems only - work the database should do, per-row queries, lists, exports, transactions, EF Core and the web app's requests - against the data sizes this system really has. Give it the ticket key. It does not change code.
+description: Reviews a ticket's diff for performance problems only - work the database should do, N+1 queries, lists, exports, transactions, EF Core and the web app's requests - against the data sizes this system really has. Give it the ticket key. It does not change code.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -25,6 +25,9 @@ Before reading files, search the diff for the shapes that usually mean trouble, 
 - `.filter(`, `.sort(`, `.toSorted(`, `.slice(` or `.length` in a handler, after a `select`: the database's work done
   in the app;
 - `await` on `work.db`, a query helper or another service inside `for`, `forEach` or `.map(`: one query per row;
+- `Promise.all(` over `.map(`: still one query (or one request) per row, only sent at once;
+- a call inside a loop or `.map(` to a function, mapper or client method that is not obviously in memory: open it and
+  follow the calls until you know whether it reaches the database or another service;
 - `.select()` with no columns on a join, or a list handler with no `.limit(`;
 - in .NET: `.ToList()` / `.ToListAsync()` / `.AsEnumerable()` before a `.Where(`, a read with no `.AsNoTracking()`;
 - in the web app: `useEffect` that fetches, `watch()` with no field name, columns built inside a component.
@@ -66,7 +69,12 @@ location's setup (bins).
 - A page size the client sends is capped (`PageQueryDto`: `@Max(100)`); a list with no `limit` is a full read
   waiting for a big dealer.
 
-## One query for many rows, not one per row
+## No N+1: one query for many rows, not one per row
+
+An **N+1** is one query for a list, then one more query (or one call to another service) for each row in it: 25 rows
+on a page, 26 round trips; 1.6 million rows in an export, 1.6 million. It is easy to miss because each query is fast
+on its own, and because it hides in places a diff does not show: a helper, a mapper, a client method, a component.
+Look for it in every handler that reads a list, and in every place that loops over rows it read:
 
 ```ts
 // ❌ one round trip per part: 25 parts on a page, 25 queries
@@ -85,6 +93,17 @@ const thumbnails = await findThumbnailsAsync(
 The same for writes: an `update` or `insert` per row in a loop is one statement per row. Insert many rows with one
 `insert(...).values(rows)`; update many rows that take the same value with one `update ... where inArray(...)`.
 A loop of updates over a list the handler has capped (a part's photos, at most 10) is acceptable: say so and move on.
+
+The same mistake in other shapes:
+
+- **Another service per row:** a document-api or identity-api call for each part or customer. Ask for the page in one
+  request, or say the service needs a batch endpoint.
+- **The web app per row:** a component in each list row with its own `useQuery` (a thumbnail, a name, a count): 25
+  rows, 25 requests. The list's own request returns what the rows show.
+- **EF Core:** a navigation property read in a loop with no `.Include(…)` or projection (see .NET below).
+
+Severity: `blocking` when the rows grow with the business (customers, parts, documents) or the loop is in an export;
+`should-fix` when they are bounded by setup (bins, locations).
 
 ## Read only what the screen or the file uses
 
@@ -163,6 +182,9 @@ On the seeded data (`bun run seed:bulk` for 1.6 million customers), when the sys
   the finding.
 - **An endpoint:** `bun run api as <user> …`, a few calls before and after; a gap smaller than the spread between
   calls is noise, not a finding.
+- **An N+1:** call the list endpoint with a small page and a big one (`pageSize=5`, then `pageSize=50`), then
+  `bun run traces dealership-api`: the **Spans** column counts the database queries and calls each request made. A
+  count that grows with the page size is an N+1; quote both counts.
 
 A measured finding is `— checked`; a reasoned one is `— inferred`. Mark `introduced` only when this diff added the
 cost: a full scan that was there before the change is `already there`, even if the diff touches the query.
