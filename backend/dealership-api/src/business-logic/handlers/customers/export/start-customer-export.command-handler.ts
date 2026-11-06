@@ -6,7 +6,7 @@ import type { IStartCustomerExportCommandHandler } from "#business-logic-abstrac
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
-import { customers } from "#persistence/schema/index";
+import { customers } from "#persistence/schema/customers";
 import { ExportJobRunner } from "../../../exports/export-job-runner";
 import type { ExportSource } from "../../../exports/export-source";
 import { requireLocation } from "../../../user-context/require-location";
