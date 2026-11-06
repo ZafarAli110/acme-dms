@@ -9,7 +9,9 @@ import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.inte
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { PartPhotoResponseDto } from "#dto/parts/part-photo-response.dto";
 import type { PartPhotoUploadRequestDto } from "#dto/parts/part-photo-upload-request.dto";
-import { notDeleted, partPhotos, parts } from "#persistence/schema/index";
+import { partPhotos } from "#persistence/schema/part-photos";
+import { parts } from "#persistence/schema/parts";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
