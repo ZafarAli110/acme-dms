@@ -5,7 +5,8 @@ import type { UserContext } from "#business-logic-abstractions/user-context/user
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
 import type { PageResponseDto } from "#dto/paging/page-response.dto";
-import { customers, notDeleted } from "#persistence/schema/index";
+import { customers } from "#persistence/schema/customers";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,

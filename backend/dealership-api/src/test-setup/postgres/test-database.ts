@@ -1,14 +1,13 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Client, Pool } from "pg";
 import { inject } from "vitest";
-import * as schema from "#persistence/schema/index";
 import { databaseUrl, TEMPLATE_DATABASE } from "./global-setup";
 
 /** A database of its own for one test file, cloned from the migrated template, dropped when disposed. */
 export interface TestDatabase extends AsyncDisposable {
   connectionString: string;
   /** Drizzle on the test database, for seeding and checking outside the code under test. */
-  db: NodePgDatabase<typeof schema>;
+  db: NodePgDatabase;
 }
 
 export async function createTestDatabaseAsync(): Promise<TestDatabase> {
@@ -20,7 +19,7 @@ export async function createTestDatabaseAsync(): Promise<TestDatabase> {
   const pool = new Pool({ connectionString, max: 4 });
   return {
     connectionString,
-    db: drizzle(pool, { schema }),
+    db: drizzle(pool),
     async [Symbol.asyncDispose]() {
       await pool.end();
       await runAdminAsync(adminUrl, `DROP DATABASE ${name} WITH (FORCE)`);
