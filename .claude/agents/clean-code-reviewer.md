@@ -114,6 +114,8 @@ Walk this list on every change; what code doesn't say slips past a line-by-line 
 - A REST client method (`rest-clients/`) that sends more than one request, branches on our data, or names our
   business words: that logic belongs in the handler (`business-handlers.md`, "Calling another service").
 - Dead code, a leftover debug line, a commented-out block.
+- A barrel: a new `index.ts` that only re-exports other files, or an import through one. Import from the file
+  that declares the name (`coding-standards.md`).
 - A function that does several jobs, where a reader has to hold all of them at once.
 
 ## What earlier reviews taught, and a later round
