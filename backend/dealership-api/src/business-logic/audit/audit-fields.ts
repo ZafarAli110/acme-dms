@@ -1,4 +1,4 @@
-import type { Bin } from "#persistence/schema/index";
+import type { Bin } from "#persistence/schema/bins";
 
 /** Every business table has the same audit columns (persistence/schema/columns/audit-columns.ts). */
 type AuditFields = Pick<

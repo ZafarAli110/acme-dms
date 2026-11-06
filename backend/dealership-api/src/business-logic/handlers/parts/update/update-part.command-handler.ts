@@ -10,7 +10,8 @@ import type { UserContext } from "#business-logic-abstractions/user-context/user
 import type { PartPhotoUploadRequestDto } from "#dto/parts/part-photo-upload-request.dto";
 import type { PartResponseDto } from "#dto/parts/part-response.dto";
 import type { PartUpdateRequestDto } from "#dto/parts/part-update-request.dto";
-import { type NewPartPhoto, partPhotos, parts } from "#persistence/schema/index";
+import { type NewPartPhoto, partPhotos } from "#persistence/schema/part-photos";
+import { parts } from "#persistence/schema/parts";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,

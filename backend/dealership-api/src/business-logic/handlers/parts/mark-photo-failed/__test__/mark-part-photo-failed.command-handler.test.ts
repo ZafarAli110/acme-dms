@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "#test-setup/time/fixed-clock";
 import { NORTHSIDE, NORTHWIND } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
-import { partPhotos } from "#persistence/schema/index";
+import { partPhotos } from "#persistence/schema/part-photos";
 import { MarkPartPhotoFailedCommandHandler } from "../mark-part-photo-failed.command-handler";
 
 describe("MarkPartPhotoFailedCommandHandler", () => {
