@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { IUploadPartPhotoCommandHandler } from "#business-logic-abstractions/handlers/parts/upload-photo/upload-part-photo.command-handler.interface";
@@ -54,7 +55,7 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
     validatePhotoFile(request);
     const existingCount = await this.countPhotosAsync(userContext.dealerId, partId);
     if (existingCount >= MAX_PHOTOS_PER_PART) {
-      throw new BadRequestException(`A part can have at most ${MAX_PHOTOS_PER_PART} photos.`);
+      throw new BadRequestException(localized("errors.tooManyPhotos", { max: MAX_PHOTOS_PER_PART }));
     }
 
     // Outside any transaction: another service stores the file.
@@ -93,7 +94,7 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
       .from(parts)
       .where(and(eq(parts.dealerId, dealerId), eq(parts.id, partId), notDeleted(parts)));
     if (!part) {
-      throw new NotFoundException(`Part ${partId} was not found.`);
+      throw new NotFoundException(localized("errors.partNotFound", { partId }));
     }
     return (await findPhotosAsync(work.db, dealerId, partId)).length;
   }

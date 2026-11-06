@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { ISetStockLevelCommandHandler } from "#business-logic-abstractions/handlers/stock/set-level/set-stock-level.command-handler.interface";
@@ -47,7 +48,7 @@ export class SetStockLevelCommandHandler implements ISetStockLevelCommandHandler
       .from(parts)
       .where(and(eq(parts.dealerId, userContext.dealerId), eq(parts.id, partId), notDeleted(parts)));
     if (!part) {
-      throw new NotFoundException(`Part ${partId} was not found.`);
+      throw new NotFoundException(localized("errors.partNotFound", { partId }));
     }
     const [bin] = await work.db
       .select()
@@ -61,7 +62,7 @@ export class SetStockLevelCommandHandler implements ISetStockLevelCommandHandler
         ),
       );
     if (!bin) {
-      throw new BadRequestException(`Bin ${request.binId} is not a bin of this location; pick one from GET /v1/bins.`);
+      throw new BadRequestException(localized("errors.binNotAtLocation", { binId: request.binId }));
     }
 
     const now = this._clock.now();
