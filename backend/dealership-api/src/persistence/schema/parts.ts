@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { money } from "./columns/money-column";
 
@@ -17,6 +17,11 @@ export const parts = pgTable(
     partNumber: varchar("part_number", { length: 50 }).notNull(),
     description: varchar("description", { length: 500 }).notNull(),
     unitPrice: money("unit_price").notNull(),
+    /**
+     * Goes up by one with every change. It is the record's ETag: a save says which version it started from
+     * (If-Match), and one that started from an older version is refused (412) instead of undoing someone's change.
+     */
+    version: integer("version").notNull().default(1),
     ...auditColumns(),
   },
   (table) => [

@@ -1,3 +1,4 @@
+import { ETagged } from "../../interceptors/etag.interceptor";
 import { Controller, Get, Inject, Param, ParseUUIDPipe, Query } from "@nestjs/common";
 import {
   GET_CUSTOMER_LIST_QUERY_HANDLER,
@@ -56,6 +57,7 @@ export class CustomerController {
 
   @Get(":customerId")
   @RequirePermission("customers.read")
+  @ETagged()
   public findOneAsync(
     @CurrentUser() userContext: UserContext,
     @Param("customerId", ParseUUIDPipe) customerId: string,

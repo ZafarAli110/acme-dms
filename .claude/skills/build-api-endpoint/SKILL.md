@@ -69,6 +69,9 @@ public description?: string;
   catalog key, `localized("errors.<key>", { … })`, added to `src/i18n/catalogs/en.ts` and `fr.ts`; it becomes problem
   details in the user's language (`api-errors.md`). Validate before writing anything.
 - Copy only the fields this endpoint changes into `.set(...)` / `.values(...)`; never spread the request into them.
+- A record people edit (customers, parts) has a `version`: `GET` one and every save is `@ETagged()`, a save takes
+  `@IfMatchVersion()` and updates `where … eq(table.version, expected)` with `version: sql\`${table.version} + 1\``;
+nothing updated but the record exists is `412` (`api-errors.md`).
 
 ```ts
 // ✅ create: check, then insert with the dealer, the location and the audit columns (CreateBinCommandHandler)

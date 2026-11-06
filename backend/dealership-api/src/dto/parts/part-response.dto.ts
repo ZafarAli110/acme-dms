@@ -11,4 +11,6 @@ export interface PartResponseDto {
   photos: PartPhotoResponseDto[];
   createdAt: string;
   updatedAt: string;
+  /** Goes up with every change; also the response's ETag. Send it back as If-Match to save. */
+  version: number;
 }

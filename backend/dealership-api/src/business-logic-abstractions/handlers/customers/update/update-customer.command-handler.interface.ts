@@ -7,6 +7,8 @@ export interface IUpdateCustomerCommandHandler {
     userContext: UserContext,
     customerId: string,
     request: CustomerUpdateRequestDto,
+    /** The version the save started from (If-Match), or null for any version (If-Match: *). */
+    expectedVersion: number | null,
   ): Promise<CustomerResponseDto>;
 }
 

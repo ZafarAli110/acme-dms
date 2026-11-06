@@ -20,6 +20,8 @@ export interface Customer extends CustomerListItem {
   locationId: string;
   createdAt: string;
   updatedAt: string;
+  /** Goes up with every save; sent back as If-Match, so a save from an older version is refused (412). */
+  version: number;
 }
 
 /** The customer form's values. Every text field is a string while being typed; the mapper turns an empty one into null. */

@@ -35,6 +35,8 @@ export interface Part {
   photos: PartPhoto[];
   createdAt: string;
   updatedAt: string;
+  /** Goes up with every save; sent back as If-Match, so a save from an older version is refused (412). */
+  version: number;
 }
 
 /** A new part is created at the selected location, into one of its bins. */

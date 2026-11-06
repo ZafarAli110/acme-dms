@@ -8,11 +8,11 @@ import { FormGuards } from "../../components/FormGuards";
 import { CustomerFields } from "./components/CustomerFields";
 import { toCustomerInput, toFormValues } from "./mappers/customerFormMapper";
 import { createCustomerSchema } from "./schemas/customerSchema";
-import type { CustomerFormValues, CustomerInput } from "./types/customer";
+import type { Customer, CustomerFormValues } from "./types/customer";
 
 interface CustomerFormProps {
   /** The customer as saved, or null for a new one. The edit page remounts the form when it changes. */
-  customer: CustomerInput | null;
+  customer: Customer | null;
   canEdit: boolean;
   /** What the page's clientAction returned: its error, and whether the last Save succeeded. */
   error: string | null;
@@ -40,7 +40,11 @@ export function CustomerForm({ customer, canEdit, error, saved }: CustomerFormPr
   const disabled = !canEdit || isSubmitting;
 
   const save = methods.handleSubmit((values) =>
-    submit({ ...toCustomerInput(values) }, { method: "post", encType: "application/json" }),
+    // An edit carries the version it was opened from; the page's clientAction sends it as If-Match.
+    submit(
+      customer === null ? { ...toCustomerInput(values) } : { ...toCustomerInput(values), version: customer.version },
+      { method: "post", encType: "application/json" },
+    ),
   );
 
   return (

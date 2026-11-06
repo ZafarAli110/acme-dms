@@ -43,7 +43,9 @@ export async function clientAction({ request, context, params }: ClientActionFun
     return { saved: false, error: i18n.t("errors.unexpected") };
   }
   try {
-    await customerQueries.updateCustomerAsync(customerId, (await request.json()) as CustomerInput);
+    // The version the form was opened from goes as If-Match, not in the body (the API accepts only its fields).
+    const { version, ...input } = (await request.json()) as CustomerInput & { version: number };
+    await customerQueries.updateCustomerAsync(customerId, input, version);
   } catch (error) {
     return { saved: false, error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
   }

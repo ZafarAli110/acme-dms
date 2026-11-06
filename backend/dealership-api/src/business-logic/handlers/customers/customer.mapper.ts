@@ -23,5 +23,6 @@ export function toCustomerResponseDto(customer: Customer): CustomerResponseDto {
     locationId: customer.locationId,
     createdAt: toIsoString(customer.createdAt),
     updatedAt: toIsoString(customer.updatedAt),
+    version: customer.version,
   };
 }

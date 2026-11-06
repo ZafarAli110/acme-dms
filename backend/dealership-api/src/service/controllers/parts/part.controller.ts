@@ -1,3 +1,4 @@
+import { ETagged } from "../../interceptors/etag.interceptor";
 import { Controller, Get, Inject, Param, ParseUUIDPipe, Query } from "@nestjs/common";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import {
@@ -42,6 +43,7 @@ export class PartController {
 
   @Get(":partId")
   @RequirePermission("parts.read")
+  @ETagged()
   public findOneAsync(
     @CurrentUser() userContext: UserContext,
     @Param("partId", ParseUUIDPipe) partId: string,

@@ -1,6 +1,13 @@
 import { localized } from "#i18n/messages";
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { and, eq, inArray } from "drizzle-orm";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  PreconditionFailedException,
+} from "@nestjs/common";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { IUpdatePartCommandHandler } from "#business-logic-abstractions/handlers/parts/update/update-part.command-handler.interface";
 import {
   DOCUMENT_API_CLIENT,
@@ -56,6 +63,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     partId: string,
     request: PartUpdateRequestDto,
     files: PartPhotoUploadRequestDto[],
+    expectedVersion: number | null,
   ): Promise<PartResponseDto> {
     const newPhotos = request.newPhotos ?? [];
     // PATCH: a field that was not sent (undefined) is left as it is.
@@ -70,7 +78,11 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
 
     // 1. Validate everything before writing anything.
     const locationId = requireLocation(userContext);
-    const { existing } = await this.readPartAsync(userContext.dealerId, locationId, partId);
+    const { stocked: current, existing } = await this.readPartAsync(userContext.dealerId, locationId, partId);
+    // Saved by someone else since this save's version: refused before any photo is uploaded.
+    if (expectedVersion !== null && current.part.version !== expectedVersion) {
+      throw new PreconditionFailedException(localized("errors.partChangedByOthers"));
+    }
     if (newPhotos.length !== files.length) {
       throw new BadRequestException(
         localized("errors.photoEntriesMismatch", { entries: newPhotos.length, files: files.length }),
@@ -122,14 +134,27 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
 
       // 3. The part and every photo change in one transaction.
       await using work = await this._unitOfWorkFactory.beginAsync();
-      await work.db
+      // Every save bumps the part's version, photo changes too; and only from the version it started from, in the
+      // same statement, so a save that raced past the check above is refused here (and its uploads deleted below).
+      const [saved] = await work.db
         .update(parts)
         .set({
           ...(request.description === undefined ? {} : { description: request.description }),
           ...(request.unitPrice === undefined ? {} : { unitPrice: request.unitPrice }),
+          version: sql`${parts.version} + 1`,
           ...updatedAudit(userContext.userId, now),
         })
-        .where(and(eq(parts.dealerId, userContext.dealerId), eq(parts.id, partId)));
+        .where(
+          and(
+            eq(parts.dealerId, userContext.dealerId),
+            eq(parts.id, partId),
+            ...(expectedVersion === null ? [] : [eq(parts.version, expectedVersion)]),
+          ),
+        )
+        .returning({ id: parts.id });
+      if (!saved) {
+        throw new PreconditionFailedException(localized("errors.partChangedByOthers"));
+      }
       if (removed.length > 0) {
         // Soft delete: the row stays, marked deleted, so who removed which photo and when is never lost.
         await work.db

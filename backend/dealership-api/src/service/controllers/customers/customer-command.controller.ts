@@ -1,3 +1,6 @@
+import { ApiHeader } from "@nestjs/swagger";
+import { IfMatchVersion } from "../../concurrency/record-version";
+import { ETagged } from "../../interceptors/etag.interceptor";
 import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, Put } from "@nestjs/common";
 import {
   CREATE_CUSTOMER_COMMAND_HANDLER,
@@ -43,11 +46,19 @@ export class CustomerCommandController {
 
   @Put(":customerId")
   @RequirePermission("customers.write")
+  @ETagged()
+  @ApiHeader({
+    name: "If-Match",
+    required: true,
+    description:
+      'The ETag of the version this save started from, such as "7"; 412 when it is no longer the current one.',
+  })
   public updateAsync(
     @CurrentUser() userContext: UserContext,
     @Param("customerId", ParseUUIDPipe) customerId: string,
     @Body() request: CustomerUpdateRequestDto,
+    @IfMatchVersion() expectedVersion: number | null,
   ): Promise<CustomerResponseDto> {
-    return this._updateCustomerCommandHandler.executeAsync(userContext, customerId, request);
+    return this._updateCustomerCommandHandler.executeAsync(userContext, customerId, request, expectedVersion);
   }
 }

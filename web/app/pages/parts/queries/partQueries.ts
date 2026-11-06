@@ -3,6 +3,7 @@ import { apiClient, type RequestOptions } from "../../../core/services/apiClient
 import { type ListParams, toListApiQuery } from "../../../core/paging/listParams";
 import type { Page } from "../../../core/types/page";
 import type { Bin, Part, PartInput, PartListItem } from "../types/part";
+import { ifMatch } from "../../../core/services/ifMatch";
 
 const PARTS_URL = `${API_CONFIG.dealershipUrl}/v1/parts`;
 
@@ -18,6 +19,7 @@ export const partQueries = {
    * One Save of the part page: a multipart PATCH with the changes as JSON in `payload` and the new photos as `photos`
    * files (built by mappers/partFormMapper.ts). The service saves the part and its photos together or not at all.
    */
-  updatePartAsync: (partId: string, form: FormData) => apiClient.patchFormAsync<Part>(`${PARTS_URL}/${partId}`, form),
+  updatePartAsync: (partId: string, form: FormData, version: number) =>
+    apiClient.patchFormAsync<Part>(`${PARTS_URL}/${partId}`, form, { headers: ifMatch(version) }),
   getBinsAsync: (options?: RequestOptions) => apiClient.getAsync<Bin[]>(`${API_CONFIG.dealershipUrl}/v1/bins`, options),
 };

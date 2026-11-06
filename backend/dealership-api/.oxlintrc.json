@@ -119,7 +119,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -165,7 +165,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -203,7 +203,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -245,7 +245,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
               }
             ]
           }
@@ -279,7 +279,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -321,7 +321,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -359,7 +359,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -378,7 +378,8 @@
       "files": [
         "src/service/main.ts",
         "src/service/interceptors/file-upload.interceptor.ts",
-        "src/service/__test__/translated-messages.test.ts"
+        "src/service/__test__/translated-messages.test.ts",
+        "src/service/__test__/record-version.test.ts"
       ],
       "rules": {
         "no-restricted-imports": [

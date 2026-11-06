@@ -3,6 +3,7 @@ import { apiClient, type RequestOptions } from "../../../core/services/apiClient
 import { type ListParams, toListApiQuery } from "../../../core/paging/listParams";
 import type { Page } from "../../../core/types/page";
 import type { Customer, CustomerInput, CustomerListItem } from "../types/customer";
+import { ifMatch } from "../../../core/services/ifMatch";
 
 const CUSTOMERS_URL = `${API_CONFIG.dealershipUrl}/v1/customers`;
 
@@ -16,7 +17,7 @@ export const customerQueries = {
   getCustomerAsync: (customerId: string, options?: RequestOptions) =>
     apiClient.getAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, options),
   createCustomerAsync: (input: CustomerInput) => apiClient.postAsync<Customer>(CUSTOMERS_URL, input),
-  /** PUT: every field is sent. */
-  updateCustomerAsync: (customerId: string, input: CustomerInput) =>
-    apiClient.putAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, input),
+  /** PUT: every field is sent, from `version` (If-Match): a newer version saved meanwhile answers 412. */
+  updateCustomerAsync: (customerId: string, input: CustomerInput, version: number) =>
+    apiClient.putAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, input, { headers: ifMatch(version) }),
 };

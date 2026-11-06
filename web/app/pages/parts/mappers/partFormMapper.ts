@@ -35,6 +35,8 @@ export function toUpdateFormData(values: PartFormValues, saved: Part): FormData 
 
   const form = new FormData();
   form.append("payload", JSON.stringify(payload));
+  // The version this form was opened from; the page's clientAction takes it out and sends it as If-Match.
+  form.append("version", String(saved.version));
   for (const photo of added) {
     if (photo.file) {
       form.append("photos", photo.file, photo.fileName);

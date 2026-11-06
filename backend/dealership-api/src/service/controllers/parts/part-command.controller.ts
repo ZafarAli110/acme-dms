@@ -1,3 +1,5 @@
+import { IfMatchVersion } from "../../concurrency/record-version";
+import { ETagged } from "../../interceptors/etag.interceptor";
 import { localized } from "#i18n/messages";
 import {
   BadRequestException,
@@ -14,7 +16,7 @@ import {
   UploadedFiles,
   UseInterceptors,
 } from "@nestjs/common";
-import { ApiBody, ApiConsumes } from "@nestjs/swagger";
+import { ApiBody, ApiConsumes, ApiHeader } from "@nestjs/swagger";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import {
   CREATE_PART_COMMAND_HANDLER,
@@ -83,6 +85,13 @@ export class PartCommandController {
    */
   @Patch(":partId")
   @RequirePermission("parts.write")
+  @ETagged()
+  @ApiHeader({
+    name: "If-Match",
+    required: true,
+    description:
+      'The ETag of the version this save started from, such as "7"; 412 when it is no longer the current one.',
+  })
   @UseInterceptors(MultipleFilesUpload("photos", MAX_UPLOAD_FILES, MAX_UPLOAD_BYTES))
   @ApiConsumes("multipart/form-data")
   @ApiBody({
@@ -99,6 +108,7 @@ export class PartCommandController {
     @Param("partId", ParseUUIDPipe) partId: string,
     @JsonPayload(PartUpdateRequestDto) request: PartUpdateRequestDto,
     @UploadedFiles() files: UploadedFileLike[] | undefined,
+    @IfMatchVersion() expectedVersion: number | null,
   ): Promise<PartResponseDto> {
     return this._updatePartCommandHandler.executeAsync(
       userContext,
@@ -110,6 +120,7 @@ export class PartCommandController {
         sizeBytes: file.size,
         content: new Uint8Array(file.buffer),
       })),
+      expectedVersion,
     );
   }
 

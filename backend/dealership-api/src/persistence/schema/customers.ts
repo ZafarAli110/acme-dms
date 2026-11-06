@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { plainDate } from "./columns/temporal-columns";
 
@@ -22,6 +22,11 @@ export const customers = pgTable(
     city: varchar("city", { length: 100 }),
     status: varchar("status", { length: 20 }).$type<CustomerStatus>().notNull(),
     lastContactDate: plainDate("last_contact_date"),
+    /**
+     * Goes up by one with every change. It is the record's ETag: a save says which version it started from
+     * (If-Match), and one that started from an older version is refused (412) instead of undoing someone's change.
+     */
+    version: integer("version").notNull().default(1),
     ...auditColumns(),
   },
   (table) => [index("ix_customers_location").on(table.locationId), softDeleteCheck("customers", table)],

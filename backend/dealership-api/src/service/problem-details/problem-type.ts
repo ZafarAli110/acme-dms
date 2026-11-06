@@ -7,6 +7,8 @@ export const PROBLEM_TYPE_BY_STATUS: Readonly<Record<number, string>> = {
   [HttpStatus.FORBIDDEN]: "urn:acme:error:forbidden",
   [HttpStatus.NOT_FOUND]: "urn:acme:error:not-found",
   [HttpStatus.CONFLICT]: "urn:acme:error:conflict",
+  [HttpStatus.PRECONDITION_FAILED]: "urn:acme:error:precondition-failed",
+  [HttpStatus.PRECONDITION_REQUIRED]: "urn:acme:error:precondition-required",
   [HttpStatus.TOO_MANY_REQUESTS]: "urn:acme:error:too-many-requests",
   [HttpStatus.INTERNAL_SERVER_ERROR]: "urn:acme:error:internal",
   [HttpStatus.SERVICE_UNAVAILABLE]: "urn:acme:error:service-unavailable",

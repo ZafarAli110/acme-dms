@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, PreconditionFailedException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "#test-setup/time/fixed-clock";
@@ -40,9 +40,11 @@ describe("UpdatePartCommandHandler", () => {
         newPhotos: [{ isDefault: true }],
       },
       [jpeg("new.jpg")],
+      1,
     );
 
     expect(saved.description).toBe("Ceramic pads");
+    expect(saved.version).toBe(2);
     expect(saved.photos.map((photo) => [photo.originalFileName, photo.isDefault, photo.status])).toEqual([
       ["photo.jpg", false, "ready"],
       ["photo.jpg", false, "ready"],
@@ -58,7 +60,7 @@ describe("UpdatePartCommandHandler", () => {
       database.unitOfWorkFactory,
       documents.client,
       fixedClock(),
-    ).executeAsync(AT_NORTHSIDE, part.id, { photos: [{ id: photoA.id, isDefault: true }] }, []);
+    ).executeAsync(AT_NORTHSIDE, part.id, { photos: [{ id: photoA.id, isDefault: true }] }, [], 1);
 
     const [removed] = await database.db.select().from(partPhotos).where(eq(partPhotos.id, photoB.id));
     expect(saved.photos.map((photo) => photo.id)).toEqual([photoA.id]);
@@ -78,6 +80,7 @@ describe("UpdatePartCommandHandler", () => {
         // A photo of another part: refused before anything is uploaded…
         { photos: [{ id: other.photoA.id, isDefault: true }] },
         [],
+        1,
       ),
     ).rejects.toThrow(BadRequestException);
     expect(documents.uploadDocumentAsync).not.toHaveBeenCalled();
@@ -89,11 +92,56 @@ describe("UpdatePartCommandHandler", () => {
         part.id,
         { description: "x".repeat(600), newPhotos: [{ isDefault: false }] },
         [jpeg("late.jpg")],
+        1,
       ),
     ).rejects.toThrow();
     const uploaded = await documents.uploadDocumentAsync.mock.results[0]?.value;
     expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(AT_NORTHSIDE, uploaded.id);
     const [unchanged] = await database.db.select().from(parts).where(eq(parts.id, part.id));
     expect(unchanged?.description).toBe("Part UPD-003");
+  });
+
+  it("refuses a save from an older version before uploading anything", async () => {
+    const { part } = await partWithTwoPhotosAsync("UPD-005");
+    const documents = fakeDocumentApi();
+    const handler = new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock());
+    await handler.executeAsync(AT_NORTHSIDE, part.id, { description: "First save" }, [], 1);
+
+    await expect(
+      handler.executeAsync(
+        AT_NORTHSIDE,
+        part.id,
+        { description: "Second", newPhotos: [{ isDefault: false }] },
+        [jpeg("b.jpg")],
+        1,
+      ),
+    ).rejects.toThrow(PreconditionFailedException);
+    expect(documents.uploadDocumentAsync).not.toHaveBeenCalled();
+    const [stored] = await database.db.select().from(parts).where(eq(parts.id, part.id));
+    expect(stored).toMatchObject({ description: "First save", version: 2 });
+  });
+
+  it("refuses a save another one overtook while its photos uploaded, and deletes what it uploaded", async () => {
+    const { part } = await partWithTwoPhotosAsync("UPD-006");
+    const documents = fakeDocumentApi();
+    // Someone else saves the part while this save's photo is on its way to document-api.
+    documents.uploadDocumentAsync.mockImplementationOnce(async () => {
+      await database.db.update(parts).set({ version: 2 }).where(eq(parts.id, part.id));
+      return { id: crypto.randomUUID(), status: "Pending" };
+    });
+
+    await expect(
+      new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()).executeAsync(
+        AT_NORTHSIDE,
+        part.id,
+        { description: "Mine", newPhotos: [{ isDefault: false }] },
+        [jpeg("race.jpg")],
+        1,
+      ),
+    ).rejects.toThrow(PreconditionFailedException);
+    const uploaded = await documents.uploadDocumentAsync.mock.results[0]?.value;
+    expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(AT_NORTHSIDE, uploaded.id);
+    const [stored] = await database.db.select().from(parts).where(eq(parts.id, part.id));
+    expect(stored?.description).not.toBe("Mine");
   });
 });

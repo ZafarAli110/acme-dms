@@ -1,6 +1,6 @@
 import { localized } from "#i18n/messages";
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { and, eq } from "drizzle-orm";
+import { Inject, Injectable, NotFoundException, PreconditionFailedException } from "@nestjs/common";
+import { and, eq, sql } from "drizzle-orm";
 import type { IUpdateCustomerCommandHandler } from "#business-logic-abstractions/handlers/customers/update/update-customer.command-handler.interface";
 import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
@@ -34,10 +34,18 @@ export class UpdateCustomerCommandHandler implements IUpdateCustomerCommandHandl
     userContext: UserContext,
     customerId: string,
     request: CustomerUpdateRequestDto,
+    expectedVersion: number | null,
   ): Promise<CustomerResponseDto> {
     const locationId = requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync();
-    // PUT: every field comes from the request; identity, location and creation stay as they were.
+    const isThisCustomer = and(
+      eq(customers.id, customerId),
+      eq(customers.dealerId, userContext.dealerId),
+      eq(customers.locationId, locationId),
+      notDeleted(customers),
+    );
+    // PUT: every field comes from the request; identity, location and creation stay as they were. Only from the
+    // version the save started from, in the same statement, so two saves can never both win.
     const [updated] = await work.db
       .update(customers)
       .set({
@@ -49,19 +57,17 @@ export class UpdateCustomerCommandHandler implements IUpdateCustomerCommandHandl
         city: request.city,
         status: request.status,
         lastContactDate: request.lastContactDate === null ? null : Temporal.PlainDate.from(request.lastContactDate),
+        version: sql`${customers.version} + 1`,
         ...updatedAudit(userContext.userId, this._clock.now()),
       })
-      .where(
-        and(
-          eq(customers.id, customerId),
-          eq(customers.dealerId, userContext.dealerId),
-          eq(customers.locationId, locationId),
-          notDeleted(customers),
-        ),
-      )
+      .where(and(isThisCustomer, ...(expectedVersion === null ? [] : [eq(customers.version, expectedVersion)])))
       .returning();
     if (!updated) {
-      throw new NotFoundException(localized("errors.customerNotFound", { customerId }));
+      // Nothing changed: either there is no such customer here, or someone saved a newer version first.
+      const [current] = await work.db.select({ id: customers.id }).from(customers).where(isThisCustomer);
+      throw current
+        ? new PreconditionFailedException(localized("errors.customerChangedByOthers"))
+        : new NotFoundException(localized("errors.customerNotFound", { customerId }));
     }
     await work.commitAsync();
     return toCustomerResponseDto(updated);

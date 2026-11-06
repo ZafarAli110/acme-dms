@@ -26,6 +26,8 @@
   a PATCH request body: it carries only the fields to change, and a field left out keeps its value.
 - Updates: PATCH when the client changes some fields (`PATCH /v1/parts/{id}`); PUT when it sets the whole thing
   (`PUT /v1/stock/{partId}` sets quantity and reorder level together; `PUT /v1/customers/{id}` sends every field).
+  A record people edit has a `version`, and its saves need `If-Match` (`api-errors.md`, "Saving a record someone
+  else changed").
 - **A PATCH field has three states**, and the request DTO, the handler and the tests keep all three apart:
 
   | In the PATCH body      | Means           | The handler               |

@@ -32,6 +32,12 @@ export const fr: Messages = {
     photoFileMissing: "Envoyez la photo dans le champ multipart « file ».",
     payloadMissing: "Envoyez les modifications dans le champ multipart JSON « payload ».",
     payloadNotJson: "Le champ « payload » n'est pas un JSON valide.",
+    customerChangedByOthers:
+      "Quelqu'un d'autre a enregistré ce client pendant que vous le modifiiez. Rechargez pour voir ses changements, puis refaites les vôtres.",
+    partChangedByOthers:
+      "Quelqu'un d'autre a enregistré cette pièce pendant que vous la modifiiez. Rechargez pour voir ses changements, puis refaites les vôtres.",
+    ifMatchRequired: "Envoyez If-Match avec l'ETag de la version modifiée (l'en-tête ETag, ou `version`, d'un GET).",
+    ifMatchInvalid: "If-Match doit être l'ETag d'une seule version, par exemple \"7\".",
     documentStoreRefused: "{fileName} n'a pas pu être enregistré : {reason}",
     documentStoreUnavailable:
       "{fileName} n'a pas pu être enregistré. Le service des documents est indisponible. Réessayez dans un instant.",

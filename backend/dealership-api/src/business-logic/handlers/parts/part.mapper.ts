@@ -44,5 +44,6 @@ export function toPartResponseDto(
     photos: photos.map(toPartPhotoResponseDto),
     createdAt: toIsoString(part.createdAt),
     updatedAt: toIsoString(part.updatedAt),
+    version: part.version,
   };
 }

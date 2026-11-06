@@ -37,7 +37,11 @@ export async function clientAction({ request, context, params }: ClientActionFun
     return { saved: false, error: i18n.t("errors.unexpected") };
   }
   try {
-    await partQueries.updatePartAsync(partId, await request.formData());
+    const form = await request.formData();
+    // The version the form was opened from goes as If-Match, not as a multipart field the API does not know.
+    const version = Number(form.get("version"));
+    form.delete("version");
+    await partQueries.updatePartAsync(partId, form, version);
   } catch (error) {
     return { saved: false, error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
   }

@@ -34,6 +34,12 @@ export const en = {
     photoFileMissing: 'Send the photo as multipart form field "file".',
     payloadMissing: 'Send the changes as the JSON multipart field "payload".',
     payloadNotJson: 'The "payload" field is not valid JSON.',
+    customerChangedByOthers:
+      "Someone else saved this customer while you were editing it. Reload to see their changes, then make yours again.",
+    partChangedByOthers:
+      "Someone else saved this part while you were editing it. Reload to see their changes, then make yours again.",
+    ifMatchRequired: "Send If-Match with the ETag of the version you edited (the ETag header, or `version`, of a GET).",
+    ifMatchInvalid: 'If-Match must be the ETag of one version, such as "7".',
     documentStoreRefused: "{fileName} could not be stored: {reason}",
     documentStoreUnavailable:
       "{fileName} could not be stored. The documents service is unavailable. Try again shortly.",

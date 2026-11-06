@@ -33,6 +33,19 @@ exactly these fields (always present; `null` when unknown):
 - 4xx errors are logged as warnings, 5xx as errors.
 - NestJS: `service/filters/problem-details.filter.ts`. .NET: `Acme.ServiceDefaults/ProblemDetails/`.
 
+## Saving a record someone else changed: ETag, If-Match, 412 (dealership-api)
+
+A record people edit (a customer, a part) has a `version`, one more with every save. It is the record's ETag (`"7"`).
+
+- `GET` of one record, and every save, answers with `ETag`. A `GET` with `If-None-Match` naming it answers `304` with
+  no body (answers stay `Cache-Control: no-store`, so it is for clients that send it themselves).
+- A save (`PUT`, `PATCH`) sends `If-Match` with the version it started from: `428` without it, `412` when it is not
+  the current version. The handler checks the version in the same `UPDATE` (`where … version = …`, `version + 1`), so
+  two saves from one version can never both win; with files, it checks before uploading too.
+- The web app's form sends the version it was opened with, never one refetched since: the edit pages remount the form
+  when the record changes.
+- In code: `@ETagged()` on the endpoint, `@IfMatchVersion()` for the version (`service/concurrency/record-version.ts`).
+
 ## Messages in the user's language (dealership-api)
 
 `detail`, and every other message a person reads, comes in the language the request asks for (`Accept-Language`,

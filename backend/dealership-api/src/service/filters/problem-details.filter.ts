@@ -1,3 +1,4 @@
+import { NotModifiedException } from "../concurrency/record-version";
 import { isLocalizedMessage, translateMessage } from "#i18n/messages";
 import {
   type ArgumentsHost,
@@ -27,7 +28,7 @@ type ProblemRequest = {
 type ProblemResponse = {
   status(code: number): ProblemResponse;
   setHeader(name: string, value: string): void;
-  end(body: string): void;
+  end(body?: string): void;
 };
 
 /**
@@ -49,6 +50,13 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const httpContext = host.switchToHttp();
     const request = httpContext.getRequest<ProblemRequest>();
     const response = httpContext.getResponse<ProblemResponse>();
+
+    // Not an error: the client already has this version. The status and the ETag, no body, nothing to log.
+    if (exception instanceof NotModifiedException) {
+      response.setHeader("etag", exception.etag);
+      response.status(HttpStatus.NOT_MODIFIED).end();
+      return;
+    }
 
     const status = this.resolveStatus(exception);
     const problem = this.buildProblemDetails(exception, request, status);
