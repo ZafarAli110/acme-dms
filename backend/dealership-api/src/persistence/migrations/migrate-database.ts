@@ -11,7 +11,7 @@ export async function migrateDatabaseAsync(connectionString: string, migrationsF
   await client.connect();
   try {
     await refusePreDrizzleSchemaAsync(client);
-    await migrate(drizzle(client, { casing: "snake_case" }), { migrationsFolder });
+    await migrate(drizzle({ client }), { migrationsFolder });
   } finally {
     await client.end();
   }
