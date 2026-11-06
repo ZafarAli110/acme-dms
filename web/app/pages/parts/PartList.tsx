@@ -10,7 +10,7 @@ import { useSelectedLocation } from "../../core/contexts/location/useSelectedLoc
 import { useColumnVisibility } from "../../core/hooks/useColumnVisibility";
 import { useListParams } from "../../core/hooks/useListParams";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
-import { readListParams } from "../../core/paging/listParams";
+import { prefetchListPage } from "../../core/paging/prefetchListPage";
 import { queryClient } from "../../core/queries/queryClient";
 import { partColumns } from "./columns/partColumns";
 import { usePartList } from "./hooks/usePartList";
@@ -22,10 +22,9 @@ import type { PartListItem } from "./types/part";
 export async function clientLoader({ request, context }: ClientLoaderFunctionArgs) {
   const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
   if (resolved) {
-    const params = readListParams(new URL(request.url).searchParams);
-    await queryClient
-      .query({ ...partQueryOptions.list(resolved.locationId, params), staleTime: "static" })
-      .catch(() => null);
+    await prefetchListPage(request, (params) =>
+      queryClient.query({ ...partQueryOptions.list(resolved.locationId, params), staleTime: "static" }),
+    );
   }
   return null;
 }

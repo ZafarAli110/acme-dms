@@ -117,8 +117,10 @@ the page already holds in full (the Locations page) leaves it out and the grid s
 **Server lists keep their state in the URL**
 (`?search=brake&page=2&pageSize=50&sort=onHand&direction=desc&filterField=bin&filterOperator=startsWith&filterValue=A`),
 read and written with `useListParams()` (`core/hooks/useListParams.ts`), so a refresh, Back and a shared link all show
-the same rows. The route's `clientLoader` reads the same params with `readListParams(new URL(request.url).searchParams)`
-and prefetches that page; the query sends them as they are (`toListApiQuery`). Each column's `field` is the name the
+the same rows. The route's `clientLoader` is `prefetchListPage(request, (params) => queryClient.query(…))`
+(`core/paging/prefetchListPage.ts`): it reads the same params and prefetches that page, and a transient failure (no
+answer, a timeout) on page 2 or later redirects to page 1 with the same search, sort and filter; every other failure is
+shown by the page's own query. The query sends the params as they are (`toListApiQuery`). Each column's `field` is the name the
 API sorts and filters by (its list's `ListColumns`, e.g. `CUSTOMER_LIST_COLUMNS`), and `serverColumn()` limits the
 column's filter to the operators the API takes for its type. Column definitions live in the feature's `columns/`
 folder; a cell that needs more than text is a small component in `components/`, rendered by a module-level `renderX`

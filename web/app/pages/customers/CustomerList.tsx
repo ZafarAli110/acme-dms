@@ -14,7 +14,8 @@ import { useSelectedLocation } from "../../core/contexts/location/useSelectedLoc
 import { useColumnVisibility } from "../../core/hooks/useColumnVisibility";
 import { useListParams } from "../../core/hooks/useListParams";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
-import { readListParams, toListQueryBody } from "../../core/paging/listParams";
+import { toListQueryBody } from "../../core/paging/listParams";
+import { prefetchListPage } from "../../core/paging/prefetchListPage";
 import { queryClient } from "../../core/queries/queryClient";
 import { customerColumns } from "./columns/customerColumns";
 import { useCustomerList } from "./hooks/useCustomerList";
@@ -25,10 +26,9 @@ import type { CustomerListItem } from "./types/customer";
 export async function clientLoader({ request, context }: ClientLoaderFunctionArgs) {
   const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
   if (resolved) {
-    const params = readListParams(new URL(request.url).searchParams);
-    await queryClient
-      .query({ ...customerQueryOptions.list(resolved.locationId, params), staleTime: "static" })
-      .catch(() => null);
+    await prefetchListPage(request, (params) =>
+      queryClient.query({ ...customerQueryOptions.list(resolved.locationId, params), staleTime: "static" }),
+    );
   }
   return null;
 }
