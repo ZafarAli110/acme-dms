@@ -39,9 +39,10 @@ export class ETagInterceptor implements NestInterceptor {
         if (request.method === "GET") {
           // One record, one user's: the browser may keep it (`private`) but must ask before every use (`no-cache`), which
           // costs a 304 with no body when the version is the same. The server still runs the query and checks who is
-          // asking, so a copy is never trusted without it. What differs by token or location is not shared (`Vary`).
+          // asking, so a copy is never trusted without it. What differs by sign-in (a script's token, the browser's
+          // session cookie) or location is not shared (`Vary`).
           response.setHeader("cache-control", "private, no-cache");
-          response.setHeader("vary", "authorization, x-location-id");
+          response.setHeader("vary", "authorization, cookie, x-location-id");
           if (matchesIfNoneMatch(request.headers["if-none-match"], etag)) {
             throw new NotModifiedException(etag);
           }

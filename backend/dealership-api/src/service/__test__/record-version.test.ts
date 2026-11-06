@@ -79,7 +79,7 @@ describe("a versioned record over HTTP", () => {
     const read = await send("GET");
     expect(read.headers.get("cache-control")).toBe("private, no-cache");
     // The i18n module adds `Accept-Language` to what we send.
-    expect(read.headers.get("vary")).toContain("authorization, x-location-id");
+    expect(read.headers.get("vary")).toContain("authorization, cookie, x-location-id");
 
     const notModified = await send("GET", { "if-none-match": '"3"' });
     expect(notModified.headers.get("cache-control")).toBe("private, no-cache");
