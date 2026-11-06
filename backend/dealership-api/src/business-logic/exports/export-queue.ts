@@ -9,7 +9,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { and, count, desc, eq, inArray, lt, ne, or, type SQL, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, type SQL, sql } from "drizzle-orm";
 import { exhaustMap, from, type Observable, startWith, takeWhile, timer } from "rxjs";
 import { TooManyRequestsException } from "#business-logic-abstractions/errors/too-many-requests.exception";
 import type { ExportFile, IExportJobs } from "#business-logic-abstractions/exports/export-jobs.interface";
@@ -284,19 +284,12 @@ export class ExportQueue implements IExportJobs {
     if (job.status !== "queued") {
       return null;
     }
-    const [ahead] = await db
-      .select({ total: count() })
-      .from(exportJobs)
-      .where(
-        and(
-          eq(exportJobs.status, "queued"),
-          or(
-            lt(exportJobs.createdAt, job.createdAt),
-            and(eq(exportJobs.createdAt, job.createdAt), lt(exportJobs.id, job.id)),
-          ),
-        ),
-      );
-    return (ahead?.total ?? 0) + 1;
+    // A function (migration 0004), not a query: row-level security shows a request only its own exports, and the
+    // place in line counts everyone's. Only the number comes back.
+    const result = await db.execute<{ position: string }>(
+      sql`SELECT export_queue_position(${job.createdAt.toString()}::timestamptz, ${job.id}::uuid) AS position`,
+    );
+    return Number(result.rows[0]?.position ?? 1);
   }
 }
 

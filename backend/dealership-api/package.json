@@ -9,6 +9,7 @@
     "#business-logic-abstractions/*": "./src/business-logic-abstractions/*.ts",
     "#dto/*": "./src/dto/*.ts",
     "#i18n/*": "./src/i18n/*.ts",
+    "#request-scope/*": "./src/request-scope/*.ts",
     "#persistence/*": "./src/persistence/*.ts",
     "#rest-clients/*": "./src/rest-clients/*.ts",
     "#settings/*": "./src/settings/*.ts",

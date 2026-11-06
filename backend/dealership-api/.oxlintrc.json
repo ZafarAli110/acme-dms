@@ -49,6 +49,42 @@
       }
     },
     {
+      "files": ["src/request-scope/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "The request's data scope depends on nothing."
+              },
+              {
+                "group": ["#business-logic/**", "../**/business-logic/**"],
+                "message": "The request's data scope depends on nothing."
+              },
+              {
+                "group": ["#business-logic-abstractions/**", "../**/business-logic-abstractions/**"],
+                "message": "The request's data scope depends on nothing."
+              },
+              {
+                "group": ["#dto/**", "../**/dto/**"],
+                "message": "The request's data scope depends on nothing."
+              },
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "The request's data scope depends on nothing."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "The request's data scope depends on nothing."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["src/i18n/**"],
       "rules": {
         "no-restricted-imports": [
@@ -119,7 +155,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages, ETags and the data scope through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -165,7 +201,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages, ETags and the data scope through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -203,7 +239,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages, ETags and the data scope through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -245,7 +281,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages, ETags and the data scope through it know the HTTP adapter."
               }
             ]
           }
@@ -279,7 +315,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages, ETags and the data scope through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -321,7 +357,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages, ETags and the data scope through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -359,7 +395,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages and ETags through it know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages, ETags and the data scope through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -401,6 +437,36 @@
               {
                 "group": ["#persistence/unit-of-work/database-pool", "**/unit-of-work/database-pool"],
                 "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              }
+            ],
+            "paths": [
+              {
+                "name": "pg",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/service/__test__/data-scope.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Controllers go through a business handler, never straight to another service."
+              },
+              {
+                "group": ["#business-logic/handlers/**"],
+                "message": "Inject the handler's abstraction token, not the handler class."
               }
             ],
             "paths": [

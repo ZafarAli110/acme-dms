@@ -52,6 +52,9 @@ await work.db
   );
 ```
 
+- **Row-level security is the backstop, not the rule** (`multi-tenancy.md`): a new business table with no policy in
+  its migration, a request switching to the owner role, or code that drops a filter because "the database does it",
+  is a finding. A `SECURITY DEFINER` function must return only what the request may see (a count, never rows).
 - **Every query of business data**, reads, updates, deletes and joins alike, has `eq(<table>.dealerId,
 userContext.dealerId)` in its own `where`; location-scoped data also has the user's location. An insert sets
   `dealerId` from `userContext`. Another dealer's id must answer "not found", never "forbidden" (that would confirm it

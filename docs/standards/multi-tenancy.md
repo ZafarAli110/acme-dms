@@ -27,6 +27,24 @@ dealership-api has no automatic filter: the dealer and the location are both exp
   own `where`, even when it also filters by location or looks a row up by its id. An id from the URL is not proof the
   row is the caller's: `PUT /v1/stock/{partId}` with another dealer's part id must be "not found".
 
+## The database enforces it too: row-level security (dealership-api)
+
+Postgres keeps every request to its dealer, its location and, for exports, its user, so a query that forgets a filter
+returns nothing it should not, and a write for another dealer or location is refused (migration 0004).
+
+- A request's unit of work works as the `dealership_api_user` role with `app.dealer_id`, `app.location_id` and
+  `app.user_id` set from the token (`#request-scope/data-scope`, filled in by the authorization guard). Code outside a
+  request (the export worker, the message consumer, migrations, the seed) works as the tables' owner, unfiltered,
+  and filters by hand.
+- The policies, by kind of table: location-scoped (`customers`, `bins`, `part_inventories`): dealer and location;
+  `export_jobs`: dealer, location and its owner; dealer-scoped (`parts`, `part_photos`): dealer; no dealer at all
+  (`processed_messages`): none. With no location selected, location-scoped tables return nothing.
+- **Still write the filters** above in every query. The policy is the backstop, not the rule: the explicit `where` is
+  what the next reader sees, what the indexes are built for, and what keeps the worker's code right.
+- **A new business table gets its policy** in the migration that creates it, by the same kinds.
+- Something a request must count or see across dealers (an export's place in line) is a `SECURITY DEFINER` function
+  that returns only what is needed, never a reason to switch the role off.
+
 ## Location: explicit, and only for location-scoped data
 
 Some data belongs to the whole dealer and some to one location. **There is no automatic filter for locations.** Every

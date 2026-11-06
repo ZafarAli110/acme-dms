@@ -1,3 +1,4 @@
+import { setDataScope } from "#request-scope/data-scope";
 import { localized } from "#i18n/messages";
 import {
   BadRequestException,
@@ -54,6 +55,8 @@ export class AuthorizationGuard implements CanActivate {
       accessToken: request.rawAccessToken ?? "",
     };
     request.userContext = userContext;
+    // Postgres row-level security filters every query of this request by it (UnitOfWorkFactory).
+    setDataScope({ dealerId: userContext.dealerId, locationId: userContext.locationId, userId: userContext.userId });
 
     const required = this._reflector.get<string | undefined>(REQUIRED_PERMISSION, context.getHandler());
     if (!required) {
