@@ -17,4 +17,11 @@ public static class TokenSettings
     /// ended sooner by signing out, and a refresh reads the person's roles and locations again.
     /// </summary>
     public const int RefreshLifetimeSeconds = 8 * 60 * 60;
+
+    /// <summary>
+    /// A refresh token is replaced every time it is used. Presenting one that was already replaced is a stolen token, or
+    /// it is the same person's second request racing the first, whose answer had not arrived yet. Within this many seconds
+    /// it is the race and is tolerated; after them it ends the whole sign-in.
+    /// </summary>
+    public const int RefreshReuseGraceSeconds = 20;
 }

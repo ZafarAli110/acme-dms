@@ -22,20 +22,16 @@ export interface CurrentUser {
 
 /** Sign-in and the signed-in user. Used by the auth kernel, outside React. */
 export const identityQueries = {
-  /** The access token to send with requests, and the refresh token that gets a new one when it expires. */
+  /**
+   * The access token to send with requests. The refresh token that renews it is not in the answer: identity-api sets it
+   * as an httpOnly cookie, which this code never sees.
+   */
   signInAsync: (email: string, password: string) =>
-    apiClient.postAsync<{ accessToken: string; tokenType: string; expiresIn: number; refreshToken: string }>(
+    apiClient.postAsync<{ accessToken: string; tokenType: string; expiresIn: number }>(
       `${API_CONFIG.identityUrl}/v1/tokens`,
       { email, password },
     ),
-  /** Signing out: ends the refresh token on the service. Best effort: the person is signed out here either way. */
-  revokeAsync: (refreshToken: string): Promise<void> =>
-    apiClient
-      .postAsync<void>(
-        `${API_CONFIG.identityUrl}/v1/tokens/revoke`,
-        { refreshToken },
-        { signal: AbortSignal.timeout(2000) },
-      )
-      .catch(() => undefined),
+  /** Signing out: ends the sign-in on the service, which removes the cookie. Best effort: the person is signed out here either way. */
+  revokeAsync: (): Promise<void> => apiClient.revokeSignInAsync(),
   getCurrentUserAsync: () => apiClient.getAsync<CurrentUser>(`${API_CONFIG.identityUrl}/v1/users/me`),
 };

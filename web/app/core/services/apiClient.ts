@@ -24,6 +24,16 @@ export interface RequestOptions {
 /** The token endpoints answer 401 for a wrong password or a ended sign-in; that is their answer, not a reason to refresh. */
 const TOKEN_ENDPOINTS = `${API_CONFIG.identityUrl}/v1/tokens`;
 
+/** What identity-api requires of a refresh or revoke: a header only the page itself adds (a form on another site cannot). */
+const FROM_THE_PAGE = { "x-requested-with": "acme-web" };
+
+/** One refresh at a time across every open tab of the app (Web Locks), where the browser has them. */
+function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
+  return typeof navigator !== "undefined" && "locks" in navigator
+    ? navigator.locks.request("acme.refresh", work)
+    : work();
+}
+
 /**
  * The only code that calls `fetch` for the services. Sends the signed-in user's token and the selected location
  * (`x-location-id`), applies a timeout, and turns every failure into a typed error: `ApiError` with the service's
@@ -115,8 +125,8 @@ class ApiClient {
 
   /**
    * Sends the request as the signed-in person. An access token lives minutes: a 401 for a token this tab sent is the
-   * token expiring, so it is traded once for a new one (the refresh token) and the request is sent again. When the
-   * service refuses the refresh token the sign-in is over (`sessionExpiry`), and the caller gets the 401 it had.
+   * token expiring, so it is traded once for a new one (the refresh cookie) and the request is sent again. When the
+   * service refuses the cookie the sign-in is over (`sessionExpiry`), and the caller gets the 401 it had.
    */
   private async sendAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
     const response = await this.sendOnceAsync(url, init, options);
@@ -124,42 +134,64 @@ class ApiClient {
       response.status === 401 &&
       options?.anonymous !== true &&
       !url.startsWith(TOKEN_ENDPOINTS) &&
-      session.getToken() !== null &&
-      session.getRefreshToken() !== null;
-    if (!canRefresh || !(await this.refreshAsync())) {
+      session.getToken() !== null;
+    if (!canRefresh) {
+      return response;
+    }
+    let refreshed: boolean;
+    try {
+      refreshed = await this.refreshAccessTokenAsync();
+    } catch {
+      // No answer from the service: the sign-in is kept, the caller gets its 401, and the next request tries again.
+      return response;
+    }
+    if (!refreshed) {
+      sessionExpiry.expire();
       return response;
     }
     return this.sendOnceAsync(url, init, options);
   }
 
-  private refreshAsync(): Promise<boolean> {
-    this._refreshing ??= this.refreshOnceAsync().finally(() => {
+  /**
+   * Trades the refresh cookie for a new access token, kept in `session`. True when there is one; false when identity-api
+   * refused the cookie (no sign-in, ended, or used twice); throws when it cannot be reached. One at a time in this tab, and
+   * one at a time across the tabs (a lock), because each refresh replaces the cookie: a second tab asking with the cookie
+   * the first just replaced would look like a stolen one.
+   */
+  public refreshAccessTokenAsync(): Promise<boolean> {
+    this._refreshing ??= withRefreshLock(() => this.refreshOnceAsync()).finally(() => {
       this._refreshing = null;
     });
     return this._refreshing;
   }
 
-  /** True when this tab has a new access token. No answer from the service keeps the sign-in: the next 401 tries again. */
   private async refreshOnceAsync(): Promise<boolean> {
-    const refreshToken = session.getRefreshToken();
-    if (refreshToken === null) {
+    const response = await this.sendOnceAsync(
+      `${TOKEN_ENDPOINTS}/refresh`,
+      { method: "POST", headers: FROM_THE_PAGE },
+      { anonymous: true },
+    );
+    if (response.ok) {
+      const { accessToken } = (await response.json()) as { accessToken: string };
+      session.setToken(accessToken);
+      return true;
+    }
+    if (response.status === 401) {
       return false;
     }
+    throw new ServerUnreachableError();
+  }
+
+  /** Ends the sign-in on identity-api and removes the refresh cookie. Never fails: signing out here does not wait for it. */
+  public async revokeSignInAsync(): Promise<void> {
     try {
-      const response = await this.sendOnceAsync(`${TOKEN_ENDPOINTS}/refresh`, jsonInit("POST", { refreshToken }), {
-        anonymous: true,
-      });
-      if (response.ok) {
-        const { accessToken } = (await response.json()) as { accessToken: string };
-        session.setToken(accessToken);
-        return true;
-      }
-      if (response.status === 401) {
-        sessionExpiry.expire();
-      }
-      return false;
+      await this.sendOnceAsync(
+        `${TOKEN_ENDPOINTS}/revoke`,
+        { method: "POST", headers: FROM_THE_PAGE },
+        { anonymous: true, signal: AbortSignal.timeout(2000) },
+      );
     } catch {
-      return false;
+      // Nothing to do: the person is signed out in this tab either way.
     }
   }
 

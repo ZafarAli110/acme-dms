@@ -1,3 +1,4 @@
+using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens.Create;
 using Acme.Identity.BusinessLogic.Abstractions.Signing;
 using Acme.Identity.DTO.Tokens;
@@ -29,7 +30,7 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
         _timeProvider = timeProvider;
     }
 
-    public async Task<TokenCreateResponseDto> ExecuteAsync(TokenCreateRequestDto request, CancellationToken cancellationToken)
+    public async Task<IssuedTokens> ExecuteAsync(TokenCreateRequestDto request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -47,7 +48,9 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
         }
 
         var now = _timeProvider.GetUtcNow();
-        var accessToken = await _accessTokenIssuer.IssueAsync(user, now, cancellationToken);
+        // A sign-in starts a chain of refresh tokens: its id is the access tokens' `sid`, and the chain ends at this time.
+        var sessionId = Guid.CreateVersion7();
+        var accessToken = await _accessTokenIssuer.IssueAsync(user, sessionId, now, cancellationToken);
 
         // Tokens that can no longer be used are cleared as people sign in: the table stays as small as the people at work.
         await _dbContext.RefreshTokens
@@ -56,6 +59,8 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
         var refreshToken = RefreshTokenSecret.Create();
         _dbContext.RefreshTokens.Add(new RefreshToken
         {
+            Id = sessionId,
+            FamilyId = sessionId,
             UserId = user.Id,
             TokenHash = RefreshTokenSecret.Hash(refreshToken),
             CreatedAt = now,
@@ -63,6 +68,6 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
         });
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new TokenCreateResponseDto(accessToken, "Bearer", TokenSettings.LifetimeSeconds, refreshToken);
+        return new IssuedTokens(new TokenCreateResponseDto(accessToken, "Bearer", TokenSettings.LifetimeSeconds), refreshToken);
     }
 }

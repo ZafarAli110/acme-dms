@@ -24,7 +24,7 @@ app/
     middleware/          routerContext.ts, authClientMiddleware.ts
     queries/             queryClient.ts, QueryProvider.tsx, and API calls shared by features (identity, documents)
     services/            apiClient.ts: the only code that calls fetch
-    storage/             sessionStore.ts: access token, refresh token and selected location
+    storage/             sessionStore.ts: the access token (in memory) and the selected location
     types/               types shared by features (page.ts)
   components/            React components used by several features: Layout, Sidebar, TopBar, LanguageSwitcher,
                          FormGuards, PageHeader, ErrorAlert, DocumentImage; data-grid/ (AppDataGrid, its toolbar,
@@ -59,9 +59,10 @@ route modules are PascalCase (`PartList.tsx`, `PartEdit.tsx`, `PartCreate.tsx`, 
 `core/kernel/authKernel.ts` and `core/kernel/locationKernel.ts` are the single source of truth for who is signed in
 and which location is selected. They are plain classes outside React, so middleware, loaders and actions can use them:
 
-- The access token lives minutes: `apiClient` renews it with the refresh token on a 401 and sends the request again, and
-  ends the session (`sessionExpiry`, the auth kernel) when identity-api refuses the refresh token. Sign-out revokes the
-  refresh token (`docs/ARCHITECTURE.md`, "Signing in"). A page never handles an expired token.
+- The access token lives minutes, in memory only (`session`): `apiClient` renews it with the refresh cookie (httpOnly; the
+  page never sees it) on a 401 and sends the request again, and ends the session (`sessionExpiry`, the auth kernel) when
+  identity-api refuses the cookie. A new tab or a reload gets its token the same way. Sign-out revokes the sign-in
+  (`docs/ARCHITECTURE.md`, "Signing in"). A page never handles an expired token, or a token.
 - React reads them with `useAuth()` (`user`) and `useSelectedLocation()` (`location`, `locations`, `can(permission)`,
   `switchLocation`). Never read session storage or call identity-api from a page.
 - The API client sends the selected location as `x-location-id`. Switching location refreshes what is on screen.

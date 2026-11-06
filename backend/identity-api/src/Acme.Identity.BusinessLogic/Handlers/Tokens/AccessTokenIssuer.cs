@@ -24,8 +24,8 @@ internal sealed class AccessTokenIssuer
         _signingKeyProvider = signingKeyProvider;
     }
 
-    /// <summary>The user must be loaded with their dealer and their location roles (with the locations).</summary>
-    public async Task<string> IssueAsync(User user, DateTimeOffset now, CancellationToken cancellationToken)
+    /// <summary>The user must be loaded with their dealer and their location roles (with the locations). <paramref name="sessionId"/> is the sign-in's chain of refresh tokens.</summary>
+    public async Task<string> IssueAsync(User user, Guid sessionId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var signingKey = await _signingKeyProvider.GetSigningKeyAsync(cancellationToken);
         var locations = UserLocationMapper.ToUserLocationDtos(user)
@@ -44,6 +44,8 @@ internal sealed class AccessTokenIssuer
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(JwtRegisteredClaimNames.Name, user.DisplayName),
+                // The sign-in this token belongs to: services ask identity-api whether it is still open (sessions/current).
+                new Claim(JwtRegisteredClaimNames.Sid, sessionId.ToString()),
                 new Claim("dealer_id", user.DealerId.ToString()),
                 new Claim("dealer_name", user.Dealer?.Name ?? string.Empty),
             ]),

@@ -52,29 +52,44 @@ follows.
 
 ## Signing in: an access token and a refresh token
 
-`POST /v1/tokens` (identity-api) checks the password and answers with two tokens:
+`POST /v1/tokens` (identity-api) checks the password and answers with:
 
-- **The access token** (a signed JWT) is what every request sends. It lives **15 minutes** (`TokenSettings.LifetimeSeconds`):
-  a copied one stops working soon, and the services still need nothing but identity-api's public keys to check it.
-- **The refresh token** is 256 random bits. identity-api keeps only its SHA-256 (`refresh_tokens`), so a copy of the table
-  signs no one in. It lasts **at most 8 hours from signing in** (`RefreshLifetimeSeconds`).
+- **The access token** in the body: a signed JWT, what every request sends. It lives **15 minutes**
+  (`TokenSettings.LifetimeSeconds`), and it carries `sid`, the id of this sign-in. The web app keeps it **in memory only**:
+  nothing in `localStorage` or `sessionStorage` can sign anyone in.
+- **The refresh token** in an **httpOnly cookie** (`acme_refresh`): 256 random bits, out of reach of the page's scripts,
+  sent only to `/api/identity/v1/tokens/*` (`Path`) and only from this site (`SameSite=Strict`; `Secure` everywhere but
+  local development). identity-api keeps only its SHA-256 (`refresh_tokens`), so a copy of the table signs no one in. The
+  sign-in lasts **at most 8 hours** (`RefreshLifetimeSeconds`) however often it is renewed. A refresh and a sign-out also
+  need the header `X-Requested-With: acme-web`, which a form on another site cannot add.
 
-The web app's API client does the rest. A 401 for a token it sent means the token expired: it posts the refresh token to
-`POST /v1/tokens/refresh`, gets a new access token, and sends the request again, once, for all requests that found it
-expired together. A refresh **reads the person's roles and locations again**, so a change Maria makes on the Locations
-page reaches a signed-in person within 15 minutes, and a person who was deleted cannot refresh. When identity-api refuses
-the refresh token, the sign-in is over: the app clears the session and shows the sign-in page.
+**Renewing.** The web app's API client gets a 401 for a token it sent and posts to `POST /v1/tokens/refresh`; the cookie
+goes with it. identity-api answers with a new access token **and replaces the refresh token** (a new cookie). The request
+is then sent again, once, however many requests found the token expired together. A new tab or a reload has no access
+token yet and gets one the same way. A refresh **reads the person's roles and locations again**, so a change Maria makes
+on the Locations page reaches a signed-in person within 15 minutes, and a person who was deleted cannot refresh.
 
-Signing out calls `POST /v1/tokens/revoke`: the refresh token is never accepted again, so the access token it made is the
-last, and it ends within 15 minutes. The service answers 204 for any token, so signing out cannot fail.
+**Rotation and reuse.** Every use replaces the refresh token, and the tokens of one sign-in form a chain (`family_id`, the
+`sid`). A token that was already replaced and is shown again is a copy in another hand: after a short grace period
+(`RefreshReuseGraceSeconds`, 20 s, for the same person's second request racing the first) **the whole chain is revoked**,
+the owner's newest token with it. Across tabs one refresh runs at a time (the Web Locks API), because each refresh replaces
+the cookie every tab shares.
+
+**Signing out and recall.** `POST /v1/tokens/revoke` revokes the whole chain and removes the cookie; it answers 204 for any
+token, so signing out cannot fail. The access token that is left does not live out its 15 minutes: every service asks
+identity-api whether a token's sign-in is still open (`GET /v1/sessions/current`, with the token; 401 when it was ended)
+and remembers an open answer for **10 seconds**, so a sign-out reaches every service within 10 seconds. dealership-api does
+this in its authentication guard (`SessionStatusChecker`); document-api and identity-api in the shared JWT validation
+(`Acme.ServiceDefaults`, `ISessionStatusChecker`; identity-api answers from its own database). An ended sign-in is
+remembered until its token would have expired.
 
 What this does not do, on purpose:
 
-- **No rotation.** The refresh token is not replaced at each use. The app's tabs share one sign-in (`sessionStore.ts`),
-  and rotating a token several tabs hold needs a lock across them; without it, two tabs refreshing at once would look like
-  a stolen token. The cost: a leaked refresh token works until it is revoked or its 8 hours end. Add rotation with reuse
-  detection together with a cross-tab lock (the Web Locks API) when that matters.
-- **Both tokens are in `sessionStorage`**, readable by a script on the page, as the access token always was. A production
-  deployment would keep the refresh token in an `httpOnly` cookie set by identity-api.
-- **An access token cannot be taken back.** Revoking ends the sign-in, not the token already issued: that one works until
-  it expires, at most 15 minutes.
+- **A service cannot check while identity-api is down.** The token, already verified and at most 15 minutes old, is
+  accepted until identity-api answers again; revocation resumes with it. A service does not stop serving because the
+  sign-in authority restarts.
+- **Up to 10 seconds, not instantly.** Each service remembers "open" for 10 seconds.
+- **Script on the page can still call the API while the page is open**, as the person, for as long as it runs: it cannot
+  take a token away to use elsewhere (the refresh token is unreachable, the access token is in memory), but httpOnly does
+  not stop code running in the page from making requests.
+- **Tokens issued before a sign-in had an id** (no `sid`) are checked by expiry alone, until they expire.

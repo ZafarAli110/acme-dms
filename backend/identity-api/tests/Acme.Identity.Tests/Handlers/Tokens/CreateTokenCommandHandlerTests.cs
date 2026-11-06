@@ -29,7 +29,7 @@ public sealed class CreateTokenCommandHandlerTests
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
         var handler = CreateHandler(dbContext);
 
-        var response = await handler.ExecuteAsync(new TokenCreateRequestDto("rita@northwind.test", DemoData.Password), TestContext.CancellationToken);
+        var response = (await handler.ExecuteAsync(new TokenCreateRequestDto("rita@northwind.test", DemoData.Password), TestContext.CancellationToken)).Response;
 
         var token = new JsonWebToken(response.AccessToken);
         Assert.AreEqual(DemoData.NorthwindMotors.ToString(), token.GetClaim("dealer_id").Value);

@@ -91,6 +91,7 @@ public sealed class IdentityDbContext : DbContext
             // Looked up by the hash of what the app sends, and never two the same.
             token.HasIndex(t => t.TokenHash).IsUnique();
             token.HasIndex(t => t.UserId);
+            token.HasIndex(t => t.FamilyId);
             token.HasOne<User>().WithMany().HasForeignKey(t => t.UserId);
         });
 
