@@ -78,5 +78,9 @@
     "confirmTitle": "Export to Excel?",
     "confirmMessage": "{{total}} customers at {{location}}, with the search, sort, filter and columns shown now. A large export takes a few minutes; it runs in the background while you keep working.",
     "panel": "Exports"
+  },
+  "paging": {
+    "rows": "{{from}}–{{to}} of {{total}}",
+    "cappedRows": "{{from}}–{{to}} of {{total}} (the list shows the first {{max}}: search or filter to narrow it)"
   }
 }

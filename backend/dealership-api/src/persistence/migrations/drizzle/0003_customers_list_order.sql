@@ -1,0 +1,1 @@
+CREATE INDEX "ix_customers_location_name" ON "customers" USING btree ("location_id","surname","first_name","id") WHERE "customers"."is_deleted" = false;
