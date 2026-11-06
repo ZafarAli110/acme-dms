@@ -3,7 +3,6 @@ import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedExcept
 import { Reflector } from "@nestjs/core";
 import type { AccessTokenClaims } from "../authentication/access-token-claims";
 import { AccessTokenVerifier } from "../authentication/access-token.verifier";
-import { RevokedSessionsFeed } from "../authentication/revoked-sessions.feed";
 import { IS_PUBLIC } from "../authentication/public.decorator";
 
 type AuthenticatedRequest = {
@@ -12,21 +11,19 @@ type AuthenticatedRequest = {
   rawAccessToken?: string;
 };
 
-/** Every endpoint requires a valid identity-api access token unless it is marked `@Public()`. */
+/**
+ * Every endpoint requires a valid identity-api access token unless it is marked `@Public()`. A valid token is good until it
+ * expires (15 minutes), even after its sign-in ends: signing out ends the refresh token, and nothing asks identity-api per
+ * request (docs/ARCHITECTURE.md, "Signing in").
+ */
 @Injectable()
 export class AuthenticationGuard implements CanActivate {
   private readonly _reflector: Reflector;
   private readonly _accessTokenVerifier: AccessTokenVerifier;
-  private readonly _revokedSessions: RevokedSessionsFeed;
 
-  public constructor(
-    reflector: Reflector,
-    accessTokenVerifier: AccessTokenVerifier,
-    revokedSessions: RevokedSessionsFeed,
-  ) {
+  public constructor(reflector: Reflector, accessTokenVerifier: AccessTokenVerifier) {
     this._reflector = reflector;
     this._accessTokenVerifier = accessTokenVerifier;
-    this._revokedSessions = revokedSessions;
   }
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -45,11 +42,6 @@ export class AuthenticationGuard implements CanActivate {
     try {
       claims = await this._accessTokenVerifier.verifyAsync(token);
     } catch {
-      throw new UnauthorizedException(localized("errors.accessTokenInvalid"));
-    }
-    // Valid and unexpired, but its sign-in may have been ended (signed out): that is refused the same way. Every token
-    // identity-api issues has a sign-in id; one without could never be ended, so it is not accepted.
-    if (!claims.sid || this._revokedSessions.isEnded(claims.sid)) {
       throw new UnauthorizedException(localized("errors.accessTokenInvalid"));
     }
     request.accessToken = claims;
