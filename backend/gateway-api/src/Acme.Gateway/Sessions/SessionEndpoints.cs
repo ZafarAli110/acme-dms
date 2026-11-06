@@ -31,7 +31,8 @@ internal static partial class SessionEndpoints
         HttpContext context,
         IdentityClient identityClient,
         SessionStore sessions,
-        IHostEnvironment environment)
+        IHostEnvironment environment,
+        ILogger<SessionStore> logger)
     {
         if (!SessionCookie.IsFromThePage(context.Request))
         {
@@ -49,7 +50,17 @@ internal static partial class SessionEndpoints
             return;
         }
 
-        var result = await identityClient.SignInAsync(body.Email, body.Password, context, context.RequestAborted);
+        SignInResult result;
+        try
+        {
+            result = await identityClient.SignInAsync(body.Email, body.Password, context, context.RequestAborted);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException && !context.RequestAborted.IsCancellationRequested)
+        {
+            await SessionProblems.WriteAsync(context, StatusCodes.Status503ServiceUnavailable, SessionProblems.IdentityUnavailable);
+            return;
+        }
+
         if (result.Refusal is { } refusal)
         {
             using (refusal)
@@ -60,9 +71,17 @@ internal static partial class SessionEndpoints
             return;
         }
 
+        // A sign-in replaces the one this browser had: that session ends, so a copy of its cookie signs no one in afterwards.
+        var replaced = context.Request.Cookies.TryGetValue(SessionCookie.Name, out var previous) && previous.Length > 0
+            ? await sessions.EndAsync(previous, context.RequestAborted)
+            : null;
         var value = await sessions.CreateAsync(result.Tokens!, context.RequestAborted);
         SessionCookie.Set(context.Response, environment, value);
         context.Response.StatusCode = StatusCodes.Status204NoContent;
+        if (replaced is not null)
+        {
+            await RevokeQuietlyAsync(identityClient, replaced, context, logger);
+        }
     }
 
     /// <summary>
@@ -89,14 +108,19 @@ internal static partial class SessionEndpoints
         }
 
         SessionCookie.Clear(context.Response, environment);
+        // What the browser kept of this person (cached answers) goes too: a shared computer shows the next person nothing.
+        context.Response.Headers["Clear-Site-Data"] = "\"cache\"";
         context.Response.StatusCode = StatusCodes.Status204NoContent;
-        if (refreshToken is null)
+        if (refreshToken is not null)
         {
-            return;
+            await RevokeQuietlyAsync(identityClient, refreshToken, context, logger);
         }
+    }
 
-        using var wait = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
-        wait.CancelAfter(_revokeWait);
+    /// <summary>Ends a refresh token at identity-api, waiting a little at most: its session is already gone, so a failure is harmless.</summary>
+    private static async Task RevokeQuietlyAsync(IdentityClient identityClient, string refreshToken, HttpContext context, ILogger logger)
+    {
+        using var wait = new CancellationTokenSource(_revokeWait);
         try
         {
             await identityClient.RevokeAsync(refreshToken, context, wait.Token);
@@ -107,7 +131,7 @@ internal static partial class SessionEndpoints
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "identity-api could not end a refresh token after a sign-out; the session is gone")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "identity-api could not end the refresh token of an ended session; the session is gone")]
     private static partial void LogRevokeFailed(ILogger logger, Exception exception);
 
     /// <summary>identity-api's refusal, unchanged: status, body and the headers the page reads.</summary>
@@ -135,6 +159,19 @@ internal static class SessionProblems
     public const string Ended = "The sign-in has ended.";
     public const string NoCredentials = "Send the email and password as JSON.";
     public const string IdentityUnavailable = "Signing in is unavailable right now. Try again shortly.";
+
+    /// <summary>
+    /// Marks the gateway's own "the sign-in has ended" 401: the page ends its sign-in on this one only. A 401 from a service
+    /// (a token it refused while the session lives) is an error to show, not a reason to sign the person out.
+    /// </summary>
+    public const string EndedHeader = "X-Acme-Session";
+    public const string EndedHeaderValue = "ended";
+
+    public static Task WriteEndedAsync(HttpContext context)
+    {
+        context.Response.Headers[EndedHeader] = EndedHeaderValue;
+        return WriteAsync(context, StatusCodes.Status401Unauthorized, Ended);
+    }
 
     public static Task WriteAsync(HttpContext context, int status, string detail)
     {
