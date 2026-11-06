@@ -69,7 +69,8 @@ step that passes, have the **git** subagent commit it (`$ARGUMENTS: <what the st
 
 Start, in parallel, each reviewer whose area the diff touches, each with the ticket key:
 
-- **security-reviewer**: authentication, permissions, user input, file uploads, or a query built from input.
+- **security-reviewer**: always. A secret in a config, personal data in a log line or a new package is a security
+  finding in a diff that touches no endpoint.
 - **performance-reviewer**: a query, a list or an export, or anything done per row.
 - **test-reviewer**: always.
 - **clean-code-reviewer**: always.

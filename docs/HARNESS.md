@@ -53,16 +53,16 @@ anything. The ones marked **you** are started by a person (`/name`); the others 
 A subagent works in a context of its own and hands back only its report. None of them changes code, except `git`,
 which only commits and pushes. No model named: it uses the session's.
 
-| Subagent               | Model     | What it does                                                                       | Lab |
-| ---------------------- | --------- | ---------------------------------------------------------------------------------- | --- |
-| `verifier`             | session's | checks a finished change in the running system, with evidence                      | 04  |
-| `clean-code-reviewer`  | session's | reviews a diff against `docs/standards/` and `CLAUDE.md`                           | 04  |
-| `architect`            | Opus      | reviews a plan before any code; the technical plan only, never a product question  | 08  |
-| `qa`                   | session's | tests a finished ticket like a tester, from the ticket, and files bugs             | 09  |
-| `security-reviewer`    | Sonnet    | the diff by the OWASP Top 10: other dealers' data, permissions, injection, uploads | 10  |
-| `performance-reviewer` | Sonnet    | the diff against real data sizes; backs a query finding with its plan              | 10  |
-| `test-reviewer`        | Sonnet    | whether the tests would catch the bug they are meant to catch                      | 10  |
-| `git`                  | Haiku     | commits, pushes, opens the pull request; never resolves a conflict                 | 10  |
+| Subagent               | Model     | What it does                                                                         | Lab |
+| ---------------------- | --------- | ------------------------------------------------------------------------------------ | --- |
+| `verifier`             | session's | checks a finished change in the running system, with evidence                        | 04  |
+| `clean-code-reviewer`  | session's | reviews a diff against `docs/standards/` and `CLAUDE.md`                             | 04  |
+| `architect`            | Opus      | reviews a plan before any code; the technical plan only, never a product question    | 08  |
+| `qa`                   | session's | tests a finished ticket like a tester, from the ticket, and files bugs               | 09  |
+| `security-reviewer`    | Sonnet    | every diff, all ten OWASP Top 10 categories, every file type; says what each came to | 10  |
+| `performance-reviewer` | Sonnet    | the diff against real data sizes; backs a query finding with its plan                | 10  |
+| `test-reviewer`        | Sonnet    | whether the tests would catch the bug they are meant to catch                        | 10  |
+| `git`                  | Haiku     | commits, pushes, opens the pull request; never resolves a conflict                   | 10  |
 
 ## Hooks
 

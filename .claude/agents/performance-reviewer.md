@@ -115,12 +115,33 @@ await work.db.select().from(partInventories).innerJoin(bins, …);
 await work.db.select({ id: bins.id, code: bins.code }).from(bins).where(…);
 ```
 
-## A new filter or sort on a growing table has an index
+## The indexes fit the queries
 
-When the change filters, joins or sorts on a column of a table that grows, open its schema
-(`persistence/schema/<table>.ts`) and look for an `index(...)` on it, led by the columns every query has
-(`dealer_id`, `location_id`). No index: `should-fix`, with the migration that adds it. A user-chosen sort on any
-column cannot have an index for each: that is why an export reads one sorted query, not pages (ACME-108, L2).
+For every query the change adds or changes on a table that grows, open the table's schema
+(`persistence/schema/<table>.ts`, or the EF Core configuration) and check its indexes against the query, then prove it
+with `bun run sql:explain` on the seeded data:
+
+- **Led by what every query filters by.** An index serves a query when its first columns are the ones the `where`
+  compares with `=` (`dealer_id`, `location_id`), then the column it sorts or ranges on. An index on `surname` alone
+  does nothing for `where dealer_id = … and location_id = … order by surname`; `(dealer_id, location_id, surname, id)`
+  does. No fitting index: `should-fix`, with the migration that adds it.
+- **Foreign keys used in a join or a delete have an index.** Postgres indexes a primary key and a unique constraint,
+  never the referencing column: a join on, or a delete of the parent of, `part_photos.part_id` with no index reads the
+  whole table.
+- **A search that cannot use an index.** `ilike '%text%'` (a match anywhere) never uses an ordinary index; a prefix
+  match (`'text%'`) can. On a growing table say which the ticket needs: a prefix search, or a trigram index
+  (`pg_trgm`, `gin`), which is a decision for the team, not a quiet change.
+- **No index for its own sake.** An index that repeats the first columns of another one, or that no query uses, slows
+  every insert and update for nothing: `should-fix`.
+- **Building it on a big table.** A plain `CREATE INDEX` blocks writes to the table until it is built: say so when the
+  table is large in production, and that it wants `CREATE INDEX CONCURRENTLY` in a migration of its own (it cannot run
+  inside a transaction).
+- **The plan, not a guess.** `Index Scan` or `Index Only Scan` on the new index is the proof; `Seq Scan` on a table of
+  a few rows is normal and not a finding. Quote the plan line and the time.
+
+A user-chosen sort on any column cannot have an index for each: that is why an export reads one sorted query, not
+pages (ACME-108, L2). An index that was missing before the change is `already there`: report it, but don't hold this
+change for it.
 
 ## Big results are streamed
 
