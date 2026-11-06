@@ -1,3 +1,4 @@
+import { UnprocessableEntityException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { TooManyRequestsException } from "#business-logic-abstractions/errors/too-many-requests.exception";
@@ -5,6 +6,7 @@ import type { UserContext } from "#business-logic-abstractions/user-context/user
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
 import { exportJobs } from "#persistence/schema/export-jobs";
 import { readSettings } from "#settings/settings";
+import { inRequest } from "#test-setup/postgres/as-request";
 import { NORTHSIDE, RIVERSIDE, SEEDED_AT } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { fixedClock, TEST_NOW } from "#test-setup/time/fixed-clock";
@@ -28,14 +30,20 @@ describe("ExportQueue", () => {
   });
 
   const enqueueAsync = (user: UserContext, key: string | null, request: ExportRequestDto = REQUEST) =>
-    queue.enqueueAsync(
-      user,
-      {
-        kind: "customers",
-        request,
-        source: customerExportSource({ dealerId: user.dealerId, locationId: NORTHSIDE }, request, TEST_NOW),
-      },
-      key,
+    inRequest(user, () =>
+      queue.enqueueAsync(
+        user,
+        {
+          kind: "customers",
+          request,
+          source: customerExportSource(
+            { dealerId: user.dealerId, locationId: user.locationId ?? NORTHSIDE },
+            request,
+            TEST_NOW,
+          ),
+        },
+        key,
+      ),
     );
 
   it("refuses a third export while a user has two running or waiting: 429, saying why and when to retry", async () => {
@@ -59,7 +67,7 @@ describe("ExportQueue", () => {
     const user = newUserAt("30000000-0000-0000-0000-0000000000c2");
     const first = await enqueueAsync(user, null);
     await enqueueAsync(user, null);
-    await queue.cancelAsync(user, first.id);
+    await inRequest(user, () => queue.cancelAsync(user, first.id));
 
     await expect(enqueueAsync(user, null)).resolves.toMatchObject({ status: "queued" });
   });
@@ -88,10 +96,10 @@ describe("ExportQueue", () => {
       heartbeatAt: SEEDED_AT,
     });
 
-    await queue.cancelAsync(user, waiting.id);
-    await queue.cancelAsync(user, running.id);
+    await inRequest(user, () => queue.cancelAsync(user, waiting.id));
+    await inRequest(user, () => queue.cancelAsync(user, running.id));
 
-    await expect(queue.getAsync(user, waiting.id)).resolves.toMatchObject({
+    await expect(inRequest(user, () => queue.getAsync(user, waiting.id))).resolves.toMatchObject({
       status: "cancelled",
       error: "Cancelled before it started.",
     });
@@ -113,8 +121,27 @@ describe("ExportQueue", () => {
     await database.seed.addExportJobAsync({ locationId: RIVERSIDE, ownerId: user.userId });
     await database.seed.addExportJobAsync({ locationId: NORTHSIDE });
 
-    const listed = await queue.listAsync(user);
+    const listed = await inRequest(user, () => queue.listAsync(user));
 
     expect(listed.map((job) => job.id)).toEqual([newer.id, older.id]);
+  });
+
+  it("refuses a key already used at another location: 422, not a database error", async () => {
+    const user = newUserAt("30000000-0000-0000-0000-0000000000c6");
+    await enqueueAsync(user, "one-key");
+
+    const refused = await enqueueAsync({ ...user, locationId: RIVERSIDE }, "one-key").catch((error: unknown) => error);
+
+    expect(refused).toBeInstanceOf(UnprocessableEntityException);
+  });
+
+  it("counts the limit across the user's locations", async () => {
+    const user = newUserAt("30000000-0000-0000-0000-0000000000c7");
+    await enqueueAsync(user, null);
+    await enqueueAsync(user, null);
+
+    const refused = await enqueueAsync({ ...user, locationId: RIVERSIDE }, null).catch((error: unknown) => error);
+
+    expect(refused).toBeInstanceOf(TooManyRequestsException);
   });
 });

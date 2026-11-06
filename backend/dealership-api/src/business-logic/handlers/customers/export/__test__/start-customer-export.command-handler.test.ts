@@ -2,10 +2,12 @@ import { runWithDataScope } from "#request-scope/data-scope";
 import { BadRequestException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
+import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
 import { exportJobs } from "#persistence/schema/export-jobs";
 import { readSettings } from "#settings/settings";
+import { inRequest } from "#test-setup/postgres/as-request";
 import { NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { fixedClock } from "#test-setup/time/fixed-clock";
@@ -42,9 +44,12 @@ describe("StartCustomerExportCommandHandler", () => {
   });
 
   /** Lets the worker run everything waiting (as its own process would), then reads the export as its owner. */
-  const finishedAsync = async (job: ExportJobResponseDto): Promise<ExportJobResponseDto> => {
+  const finishedAsync = async (
+    job: ExportJobResponseDto,
+    owner: UserContext = AT_NORTHSIDE,
+  ): Promise<ExportJobResponseDto> => {
     await worker.runUntilIdleAsync();
-    return queue.getAsync(AT_NORTHSIDE, job.id);
+    return inRequest(owner, () => queue.getAsync(owner, job.id));
   };
 
   const fileOfAsync = async (job: ExportJobResponseDto) => {
@@ -148,19 +153,26 @@ describe("StartCustomerExportCommandHandler", () => {
     expect(await database.db.select().from(exportJobs)).toHaveLength(before.length);
   });
 
-  it("keeps someone else's export to them: another user's lookup is not found", async () => {
+  it("keeps an export to its owner at its location: another user, or the same user elsewhere, finds nothing", async () => {
     const job = await handler.executeAsync(AT_RIVERSIDE, request(), null);
 
-    await expect(queue.getAsync(userAt(NORTHSIDE), job.id)).resolves.toMatchObject({ id: job.id });
+    await expect(inRequest(AT_RIVERSIDE, () => queue.getAsync(AT_RIVERSIDE, job.id))).resolves.toMatchObject({
+      id: job.id,
+    });
+    await expect(inRequest(userAt(NORTHSIDE), () => queue.getAsync(userAt(NORTHSIDE), job.id))).rejects.toThrow(
+      NotFoundException,
+    );
     await expect(
-      queue.getAsync({ ...AT_RIVERSIDE, userId: "30000000-0000-0000-0000-0000000000bb" }, job.id),
+      inRequest({ ...AT_RIVERSIDE, userId: "30000000-0000-0000-0000-0000000000bb" }, () =>
+        queue.getAsync({ ...AT_RIVERSIDE, userId: "30000000-0000-0000-0000-0000000000bb" }, job.id),
+      ),
     ).rejects.toThrow(NotFoundException);
-    await finishedAsync(job);
+    await finishedAsync(job, AT_RIVERSIDE);
   });
 
   it("cancels a waiting export: the worker never writes it", async () => {
     const job = await handler.executeAsync(AT_NORTHSIDE, request(), null);
-    await queue.cancelAsync(AT_NORTHSIDE, job.id);
+    await inRequest(AT_NORTHSIDE, () => queue.cancelAsync(AT_NORTHSIDE, job.id));
 
     const finished = await finishedAsync(job);
     const [row] = await database.db.select().from(exportJobs).where(eq(exportJobs.id, job.id));

@@ -86,11 +86,12 @@ are.** No repository layer: handlers keep querying with Drizzle through the unit
   wrapper.
 - **Ids stay looked up in the handler** (a part, a bin): a foreign key ignores row-level security, so the policy-filtered
   lookup is what refuses another dealer's id.
-- **Not changed, found by the review:** `ExportQueue.enqueueAsync` already runs under the `export_jobs` policy (dealer,
-  location, owner), which `0004` added. Its hand filters are dealer and owner, so an idempotency key reused at another
-  location is not found (the insert then hits `uq_export_jobs_owner_idempotency_key`: a 500, not the 422), and the
-  per-user active limit is counted per location. Follow-up: a `SECURITY DEFINER` check, or document "per location" and
-  turn the unique violation into a 422.
+- **Found by the review, fixed in migration `0006`:** `ExportQueue.enqueueAsync` ran under the `export_jobs` policy (dealer,
+  location, owner) while its hand filters were dealer and owner, so a key reused at another location gave a 500 (the
+  unique index) instead of a 422, and the per-user limit was counted per location. The key and the limit are the
+  user's across locations, so two `SECURITY DEFINER` functions (`export_key_in_use`, `export_active_count`) answer
+  them from the request's own settings (no argument names a dealer or a user). The queue's other lookups (get, cancel,
+  list) now rely on the policy too; an export is seen at the location it was started from, as the policy always said.
 
 ## Not in this change
 

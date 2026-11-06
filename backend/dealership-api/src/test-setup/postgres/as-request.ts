@@ -28,3 +28,15 @@ export function asRequest<THandler extends RequestHandler>(handler: THandler): T
     },
   });
 }
+
+/** Runs `work` as a request of this user does, in their data scope, for code that is not a handler (a service). */
+export function inRequest<T>(userContext: UserContext, work: () => Promise<T>): Promise<T> {
+  return runWithDataScope(() => {
+    setDataScope({
+      dealerId: userContext.dealerId,
+      locationId: userContext.locationId,
+      userId: userContext.userId,
+    });
+    return work();
+  });
+}

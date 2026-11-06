@@ -9,7 +9,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { and, count, desc, eq, inArray, ne, type SQL, sql } from "drizzle-orm";
+import { desc, eq, ne, type SQL, sql } from "drizzle-orm";
 import { exhaustMap, from, type Observable, startWith, takeWhile, timer } from "rxjs";
 import { TooManyRequestsException } from "#business-logic-abstractions/errors/too-many-requests.exception";
 import type { ExportFile, IExportJobs } from "#business-logic-abstractions/exports/export-jobs.interface";
@@ -97,36 +97,32 @@ export class ExportQueue implements IExportJobs {
     await work.db.execute(sql`select pg_advisory_xact_lock(hashtextextended(${userContext.userId}, 0))`);
 
     if (idempotencyKey !== null) {
-      const [existing] = await work.db
-        .select()
-        .from(exportJobs)
-        .where(
-          and(
-            eq(exportJobs.dealerId, userContext.dealerId),
-            eq(exportJobs.ownerId, userContext.userId),
-            eq(exportJobs.idempotencyKey, idempotencyKey),
-          ),
-        );
+      // The policy shows this request its location's exports. The key is the user's across locations, so a key
+      // already used at another location is asked of the database (export_key_in_use, migration 0006): a refusal.
+      const [existing] = await work.db.select().from(exportJobs).where(eq(exportJobs.idempotencyKey, idempotencyKey));
       if (existing) {
-        if (existing.fingerprint !== enqueue.source.fingerprint || existing.locationId !== locationId) {
+        if (existing.fingerprint !== enqueue.source.fingerprint) {
           throw new UnprocessableEntityException(localized("exports.idempotencyKeyReused"));
         }
         return toExportJobResponseDto(existing, await this.queuePositionAsync(work.db, existing), now);
       }
+      const taken = await work.db.execute<{ taken: boolean }>(
+        sql`SELECT export_key_in_use(${idempotencyKey}) AS taken`,
+      );
+      if (taken.rows[0]?.taken) {
+        throw new UnprocessableEntityException(localized("exports.idempotencyKeyReused"));
+      }
     }
 
-    const [active] = await work.db
-      .select({ total: count() })
-      .from(exportJobs)
-      .where(
-        and(
-          eq(exportJobs.dealerId, userContext.dealerId),
-          eq(exportJobs.ownerId, userContext.userId),
-          inArray(exportJobs.status, ACTIVE_STATUSES),
-        ),
-      );
+    // The limit is per user, not per location: counted by a function that sees all the user's exports (0006).
+    const active = await work.db.execute<{ total: string }>(
+      sql`SELECT export_active_count(ARRAY[${sql.join(
+        ACTIVE_STATUSES.map((status) => sql`${status}`),
+        sql`, `,
+      )}]::text[]) AS total`,
+    );
     const limit = this._settings.exportMaxPerUser;
-    if ((active?.total ?? 0) >= limit) {
+    if (Number(active.rows[0]?.total ?? 0) >= limit) {
       throw new TooManyRequestsException(localized("exports.tooManyRunning", { limit }), RETRY_AFTER_SECONDS);
     }
 
@@ -156,19 +152,12 @@ export class ExportQueue implements IExportJobs {
 
   /** The user's exports at the selected location that still mean something (not expired), newest first. */
   public async listAsync(userContext: UserContext): Promise<ExportJobResponseDto[]> {
-    const locationId = requireLocation(userContext);
+    requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const jobs = await work.db
       .select()
       .from(exportJobs)
-      .where(
-        and(
-          eq(exportJobs.dealerId, userContext.dealerId),
-          eq(exportJobs.locationId, locationId),
-          eq(exportJobs.ownerId, userContext.userId),
-          ne(exportJobs.status, "expired"),
-        ),
-      )
+      .where(ne(exportJobs.status, "expired"))
       .orderBy(desc(exportJobs.createdAt), desc(exportJobs.id));
     const now = this._clock.now();
     const listed: ExportJobResponseDto[] = [];
@@ -203,7 +192,7 @@ export class ExportQueue implements IExportJobs {
     await using work = await this._unitOfWorkFactory.beginAsync();
     // Locked, so a worker cannot claim it between this read and the update below (it skips locked rows).
     const job = await this.ownJobAsync(work.db, userContext, jobId, { lock: true });
-    const own = this.ownJobWhere(userContext, jobId);
+    const own = this.ownJobWhere(jobId);
     if (job.status === "queued") {
       await work.db
         .update(exportJobs)
@@ -261,7 +250,7 @@ export class ExportQueue implements IExportJobs {
     jobId: string,
     options: { lock: boolean } = { lock: false },
   ): Promise<ExportJobRow> {
-    const query = db.select().from(exportJobs).where(this.ownJobWhere(userContext, jobId));
+    const query = db.select().from(exportJobs).where(this.ownJobWhere(jobId));
     const [job] = options.lock ? await query.for("update") : await query;
     if (!job) {
       throw new NotFoundException(localized("exports.notFound"));
@@ -269,12 +258,9 @@ export class ExportQueue implements IExportJobs {
     return job;
   }
 
-  private ownJobWhere(userContext: UserContext, jobId: string): SQL | undefined {
-    return and(
-      eq(exportJobs.id, jobId),
-      eq(exportJobs.dealerId, userContext.dealerId),
-      eq(exportJobs.ownerId, userContext.userId),
-    );
+  private ownJobWhere(jobId: string): SQL {
+    // Whose export it is (dealer, location, owner) is the export_jobs policy's business, not this query's.
+    return eq(exportJobs.id, jobId);
   }
 
   /**

@@ -43,6 +43,13 @@
       "when": 1793979683692,
       "tag": "0005_customers_list_order",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793985356020,
+      "tag": "0006_export_user_scope",
+      "breakpoints": true
     }
   ]
 }
