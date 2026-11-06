@@ -10,8 +10,8 @@ runs, who starts it, and the lab that added it. Nothing here is loaded into Clau
   → plan in .ai-plans/ → one architect round → questions on the ticket, if any
   → build, one step and its check at a time (hooks format each file; the gate runs when Claude stops)
   → /verify-ticket → docs/evidence/<KEY>.md
-  → pull request → specialist reviewers → /resolve-pr-comments
-  → /qa-ticket: In QA, test plan on the ticket, a browser you can watch, screenshots, then Done or back
+  → pull request → specialist reviewers (or /review-pr on someone else's) → /resolve-pr-comments
+  → /qa-ticket: In QA, test plan on the ticket, a visible browser, screenshots, then Done or back
   → a person merges
   → /write-retro → /learn-from-lessons
 ```
@@ -42,10 +42,11 @@ anything. The ones marked **you** are started by a person (`/name`); the others 
 | `/implement-ticket <KEY>`  | you        | ticket to verified change, through a plan file that survives a restart            | 08  |
 | `/write-handoff`           | you        | a short note of where you stopped, in `.claude/handoff.md` (not committed)        | 08  |
 | `/resume-handoff`          | you        | a fresh session reads the note, checks it, and waits for your go-ahead            | 08  |
-| `/qa-ticket <KEY>`         | you        | In QA, a test plan on the ticket, a watched browser, screenshots; Done or back    | 09  |
+| `/qa-ticket <KEY>`         | you        | In QA, a test plan on the ticket, a visible browser, screenshots; Done or back    | 09  |
 | `/write-retro <KEY>`       | you        | what the ticket taught, as lessons with evidence, in `docs/lessons/`              | 09  |
 | `/learn-from-lessons`      | you        | proven lessons become skills; reviewers' mistakes become their instructions       | 09  |
 | `/ticket-to-pr <KEY>`      | you        | the whole loop with agents, from the board to a reviewed pull request             | 10  |
+| `/review-pr <n>`           | you        | the four reviewers on any pull request, one review round posted; changes no code  | 10  |
 | `/resolve-pr-comments <n>` | you        | judges each review comment, fixes the real ones, answers the rest                 | 10  |
 
 ## Subagents
