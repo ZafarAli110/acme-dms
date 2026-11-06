@@ -4,7 +4,7 @@ import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.inte
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerCreateRequestDto } from "#dto/customers/customer-create-request.dto";
 import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
-import { customers } from "#persistence/schema/index";
+import { customers } from "#persistence/schema/customers";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,

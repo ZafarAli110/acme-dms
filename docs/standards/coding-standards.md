@@ -3,6 +3,9 @@
 ## Both stacks
 
 - Folders and projects are named for what they hold. No `common`, `utils`, `helpers` or `misc`.
+- Import from the file that declares the thing (`#persistence/schema/customers`), never through a barrel: an
+  `index.ts` that only re-exports others. A barrel makes every import of one name load, parse and type-check
+  everything it re-exports, in the build, the type checker and every test file that touches it.
 - Packages are pinned to an exact version (`5.2.2`, never `^5`), and never one published less than 7 days ago
   (`bunfig.toml`: `exact`, `minimumReleaseAge`), so a compromised release cannot reach us before it is caught. A
   security fix may come sooner: list the package in `minimumReleaseAgeExcludes` in the same commit and say why. .NET

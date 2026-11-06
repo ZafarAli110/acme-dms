@@ -3,7 +3,7 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestDatabaseAsync, type TestDatabase } from "#test-setup/postgres/test-database";
 import { NORTHSIDE, NORTHWIND, SEEDED_AT, TEST_USER_ID } from "#test-setup/postgres/seed-kit";
-import { bins } from "../../schema";
+import { bins } from "#persistence/schema/bins";
 import { createDatabasePool } from "../database-pool";
 import { UnitOfWorkFactory } from "../unit-of-work.factory";
 
