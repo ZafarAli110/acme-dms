@@ -7,13 +7,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Acme.Identity.Tests.Support;
 
-/// <summary>An in-memory identity database holding the demo dealer, locations and users, one per test.</summary>
+/// <summary>A real identity database (<see cref="TestPostgres"/>) holding the demo dealers, locations and users, one per test.</summary>
 internal static class DemoDatabase
 {
     /// <summary>The demo data; read through <paramref name="actor"/>'s eyes when given (its dealer filters every query).</summary>
     public static async Task<IdentityDbContext> CreateAsync(CancellationToken cancellationToken, ICurrentActor? actor = null)
     {
-        var options = new DbContextOptionsBuilder<IdentityDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var options = await TestPostgres.NewDatabaseAsync(cancellationToken);
         var dbContext = new IdentityDbContext(options);
         var hasher = new PasswordHasher<User>();
         foreach (var (id, name) in DemoData.Dealers)
