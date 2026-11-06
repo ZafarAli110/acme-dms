@@ -3,6 +3,10 @@
 ## Both stacks
 
 - Folders and projects are named for what they hold. No `common`, `utils`, `helpers` or `misc`.
+- Packages are pinned to an exact version (`5.2.2`, never `^5`), and never one published less than 7 days ago
+  (`bunfig.toml`: `exact`, `minimumReleaseAge`), so a compromised release cannot reach us before it is caught. A
+  security fix may come sooner: list the package in `minimumReleaseAgeExcludes` in the same commit and say why. .NET
+  packages are pinned in `Directory.Packages.props`.
 - Request-pipeline classes live in folders by kind: `middleware/`, `guards/`, `filters/`, `interceptors/` in NestJS
   (`service/…`), `Middleware/` in .NET (`Acme.ServiceDefaults`). What they use (decorators, settings, DTOs) stays with
   its concern: `authentication/`, `authorization/`, `problem-details/`.
