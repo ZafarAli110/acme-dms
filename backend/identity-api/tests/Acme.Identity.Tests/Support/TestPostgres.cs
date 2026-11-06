@@ -55,6 +55,18 @@ public static class TestPostgres
         return OptionsFor(name);
     }
 
+    /// <summary>Another connection to the database <paramref name="existing"/> uses: what a second request of the service would have.</summary>
+    public static IdentityDbContext Reopen(IdentityDbContext existing)
+    {
+        ArgumentNullException.ThrowIfNull(existing);
+        return new IdentityDbContext(
+            new DbContextOptionsBuilder<IdentityDbContext>()
+                .UseNpgsql(existing.Database.GetConnectionString())
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(new AuditingInterceptor(new TestActor(), TimeProvider.System))
+                .Options);
+    }
+
     /// <summary>The app's options (snake case, the auditing interceptor) on one database of the container.</summary>
     private static DbContextOptions<IdentityDbContext> OptionsFor(string database) =>
         new DbContextOptionsBuilder<IdentityDbContext>()
