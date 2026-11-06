@@ -11,9 +11,10 @@ import {
   UPDATE_CUSTOMER_COMMAND_HANDLER,
 } from "#business-logic-abstractions/handlers/customers/update/update-customer.command-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
-import { CustomerCreateRequestDto } from "#dto/customers/customer-create-request.dto";
+import type { CustomerCreateRequestDto } from "#dto/customers/customer-create-request.dto";
+import { CustomerRequestSchema } from "#dto/customers/customer-request.schema";
 import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
-import { CustomerUpdateRequestDto } from "#dto/customers/customer-update-request.dto";
+import type { CustomerUpdateRequestDto } from "#dto/customers/customer-update-request.dto";
 import { CurrentUser } from "../../authorization/current-user.decorator";
 import { RequirePermission } from "../../authorization/require-permission.decorator";
 import { Timeout } from "@nestjs/resilience";
@@ -39,7 +40,7 @@ export class CustomerCommandController {
   @RequirePermission("customers.write")
   public createAsync(
     @CurrentUser() userContext: UserContext,
-    @Body() request: CustomerCreateRequestDto,
+    @Body({ schema: CustomerRequestSchema }) request: CustomerCreateRequestDto,
   ): Promise<CustomerResponseDto> {
     return this._createCustomerCommandHandler.executeAsync(userContext, request);
   }
@@ -56,7 +57,7 @@ export class CustomerCommandController {
   public updateAsync(
     @CurrentUser() userContext: UserContext,
     @Param("customerId", ParseUUIDPipe) customerId: string,
-    @Body() request: CustomerUpdateRequestDto,
+    @Body({ schema: CustomerRequestSchema }) request: CustomerUpdateRequestDto,
     @IfMatchVersion() expectedVersion: number | null,
   ): Promise<CustomerResponseDto> {
     return this._updateCustomerCommandHandler.executeAsync(userContext, customerId, request, expectedVersion);

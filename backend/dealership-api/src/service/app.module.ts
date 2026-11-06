@@ -1,6 +1,7 @@
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from "@nestjs/core";
-import { I18nModule, I18nValidationPipe } from "@nestjs/i18n";
+import { ValibotValidationPipe } from "./validation/valibot-pipe";
+import { I18nModule } from "@nestjs/i18n";
 import { LoggerModule } from "nestjs-pino";
 import { i18nOptions } from "#i18n/messages";
 import { BusinessLogicModule } from "#business-logic/business-logic.module";
@@ -70,12 +71,10 @@ import { ProblemDetailsFilter } from "./filters/problem-details.filter";
     { provide: APP_GUARD, useClass: AuthorizationGuard },
     { provide: APP_INTERCEPTOR, useClass: TraceRouteInterceptor },
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },
-    // Request DTOs are validated (class-validator); unknown properties are rejected.
-    {
-      provide: APP_PIPE,
-      // ValidationPipe whose messages come from the catalogs (`validation.*`), in the request's language.
-      useValue: new I18nValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
-    },
+    // Requests are validated against the Valibot schema of each parameter (`@Body({ schema })`), and unknown
+    // properties are refused (a `strictObject`); the messages come from the catalogs (`validation.*`), in the
+    // request's language. A test fails for a `@Body()` or `@Query()` that names no schema.
+    { provide: APP_PIPE, useValue: new ValibotValidationPipe() },
   ],
 })
 export class AppModule implements NestModule {

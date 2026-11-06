@@ -105,8 +105,8 @@ await work.db
   .where(ilike(customers.surname, `%${search}%`));
 ```
 
-- **Input that skips validation:** a controller that takes `@Body() body: any`, a plain object type, or a DTO class
-  with no `class-validator` decorators; the global `ValidationPipe` checks nothing on it. In .NET, a request model
+- **Input that skips validation:** a controller that takes `@Body() body: any`, a plain object type, or a `@Body()`
+  or `@Query()` with no `{ schema }`; the global pipe checks nothing on it (a test refuses the last). In .NET, a request model
   with no validation where the handler trusts its values.
 - `eval(…)` or `new Function(…)` on anything that came from outside: `blocking`.
 - `sql.raw(…)` with anything from a request is `blocking`. In .NET, `FromSqlRaw` with interpolation likewise; use

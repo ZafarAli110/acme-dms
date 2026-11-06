@@ -36,8 +36,8 @@
   | `null`                 | clear the value | sets the column to `null` |
   | a value                | set the value   | sets the column           |
 
-  A required field has only two states: `@ValidateIf((_request, value) => value !== undefined)` then `@IsNotEmpty()`
-  lets it be left out but rejects `null` (`PartUpdateRequestDto.description`). Test each state of each optional field:
+  A required field has only two states: `v.optional(v.pipe(v.string(), v.nonEmpty()))` lets it be left out but
+  rejects `null` (`PartUpdateRequestSchema.description`); `v.nullable(…)` is for a value that may be cleared. Test each state of each optional field:
   one test that leaves it out, one that sends `null`, one that sends a value.
 
   ```ts
@@ -79,7 +79,10 @@
 - A new row or DTO is a typed object literal (`const photo: NewPartPhoto = {…}`): the compiler then requires every
   field and refuses unknown ones. Never `Object.assign(new PartPhoto(), {…})`, which checks nothing. A change to an
   existing one is a typed spread (`const updated: Customer = {...customer, firstName: …}`).
-- Response DTOs are `interface`s. Request DTOs are classes validated with `class-validator`.
+- Response DTOs are `interface`s. Request DTOs are Valibot schemas (`v.strictObject({…})`) with their type taken from the schema
+  (`export type PartCreateRequestDto = v.InferOutput<typeof PartCreateRequestSchema>`): the rules and the type are one
+  declaration, and a field the schema does not have is refused. A controller gives the schema to its parameter
+  (`@Body({ schema: PartCreateRequestSchema })`, `@Query({ schema: ListQuerySchema })`).
 - Tests live in `__test__/` next to the code they test, and a `__test__/` folder holds only tests (`*.test.ts`);
   Vitest. What several tests share (the Testcontainers Postgres and `useTestDatabase()`, the seed kit, test users, a
   fixed clock, fakes of other services) is in `src/test-setup/`, imported as `#test-setup/...`. Production code never

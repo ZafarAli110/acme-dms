@@ -41,8 +41,8 @@ Don't ask for a React component test; do ask for an end-to-end test when a scree
 - A save with files and no test of the failure paths (`file-uploads.md`): an invalid record stores no document; a
   failure after an upload deletes it.
 - **Bad input:** a request DTO that gains a rule (required, a length, a range, an enum) with no test that a value
-  breaking it is refused. Validate the DTO as the `ValidationPipe` does (`plainToInstance` then `validate`, from
-  `class-transformer` and `class-validator`) and assert which property failed.
+  breaking it is refused. Parse it with the schema (`v.safeParse`) and assert the message (see
+  `request-schemas.test.ts`).
 - **The edges of a list:** no rows, exactly one page, the last page, and two rows with the same sort value (they must
   not swap between pages, so the order ends with the id).
 - **The edges of a number:** a price, a quantity or a count at `0`, at its limit and past it, and anything rounded.

@@ -20,7 +20,8 @@ React web app, run together by Aspire. `README.md` explains the business, the de
   ones that must not (another dealer's, another location's, a deleted one).
 - **Check permissions, never role names.**
 - **DTOs are contracts:** every field always present, `null` for no value. A `PUT` sends every field; a `PATCH` only
-  what changed.
+  what changed. A request DTO is a Valibot schema,
+  its type taken from it; a controller gives it to the parameter (`@Body({ schema })`).
 - **Errors are problem details** (`docs/standards/api-errors.md`). A field's error (a duplicate, `409`) is shown on
   that field.
 - **A record and its files are saved as one unit**, or not at all. `docs/standards/file-uploads.md`.

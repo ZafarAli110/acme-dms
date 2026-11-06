@@ -4,7 +4,7 @@ import {
   GET_STOCK_LIST_QUERY_HANDLER,
   type IGetStockListQueryHandler,
 } from "#business-logic-abstractions/handlers/stock/get-list/get-stock-list.query-handler.interface";
-import { ListQueryDto } from "#dto/paging/list-query.dto";
+import { ListQuerySchema, type ListQueryDto } from "#dto/paging/list-query.dto";
 import type { PageResponseDto } from "#dto/paging/page-response.dto";
 import type { StockListItemDto } from "#dto/stock/stock-list-item.dto";
 import { CurrentUser } from "../../authorization/current-user.decorator";
@@ -25,7 +25,7 @@ export class StockController {
   @RequirePermission("stock.read")
   public findAllAsync(
     @CurrentUser() userContext: UserContext,
-    @Query() query: ListQueryDto,
+    @Query({ schema: ListQuerySchema }) query: ListQueryDto,
   ): Promise<PageResponseDto<StockListItemDto>> {
     return this._getStockListQueryHandler.executeAsync(userContext, query);
   }

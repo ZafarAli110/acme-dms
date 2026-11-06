@@ -1,18 +1,8 @@
-import { i18nValidationMessage } from "@nestjs/i18n";
-import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsString, Matches, MaxLength } from "class-validator";
+import * as v from "valibot";
 
 /** A new bin of the selected location. */
-export class BinCreateRequestDto {
-  @ApiProperty({ example: "A-12" })
-  @IsString()
-  @MaxLength(20)
-  @Matches(/^[A-Z0-9-]+$/, { message: i18nValidationMessage("validation.codeFormat") })
-  public code: string;
-
-  @ApiProperty({ example: "Brakes, aisle A" })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  public description: string;
-}
+export const BinCreateRequestSchema = v.strictObject({
+  code: v.pipe(v.string(), v.maxLength(20), v.regex(/^[A-Z0-9-]+$/), v.metadata({ example: "A-12" })),
+  description: v.pipe(v.string(), v.nonEmpty(), v.maxLength(100), v.metadata({ example: "Brakes, aisle A" })),
+});
+export type BinCreateRequestDto = v.InferOutput<typeof BinCreateRequestSchema>;

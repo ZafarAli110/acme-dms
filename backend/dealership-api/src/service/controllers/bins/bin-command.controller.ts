@@ -4,7 +4,7 @@ import {
   type ICreateBinCommandHandler,
 } from "#business-logic-abstractions/handlers/bins/create/create-bin.command-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
-import { BinCreateRequestDto } from "#dto/bins/bin-create-request.dto";
+import { BinCreateRequestSchema, type BinCreateRequestDto } from "#dto/bins/bin-create-request.dto";
 import type { BinResponseDto } from "#dto/bins/bin-response.dto";
 import { CurrentUser } from "../../authorization/current-user.decorator";
 import { RequirePermission } from "../../authorization/require-permission.decorator";
@@ -25,7 +25,7 @@ export class BinCommandController {
   @RequirePermission("parts.write")
   public createAsync(
     @CurrentUser() userContext: UserContext,
-    @Body() request: BinCreateRequestDto,
+    @Body({ schema: BinCreateRequestSchema }) request: BinCreateRequestDto,
   ): Promise<BinResponseDto> {
     return this._createBinCommandHandler.executeAsync(userContext, request);
   }

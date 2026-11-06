@@ -44,17 +44,14 @@ dealer itself.
 ## 2. The DTOs (`dto/<area>/`)
 
 - **A response** is an `interface` with every field present: `null` for no value, never left out.
-- **A request** is a class validated with `class-validator`. It holds only what the user may set: never `dealerId`,
+- **A request** is a Valibot `v.strictObject` schema, its type taken from it (`v.InferOutput`), given to the parameter
+  (`@Body({ schema: PartCreateRequestSchema })`). It holds only what the user may set: never `dealerId`,
   `locationId`, `id` or audit fields.
 - **A PATCH request** keeps three states apart for each optional field (`coding-standards.md`):
 
 ```ts
-// the DTO: may be left out; when sent, must be valid; a required field also refuses null
-@ValidateIf((_request, value) => value !== undefined)
-@IsString()
-@IsNotEmpty()
-@MaxLength(500)
-public description?: string;
+// the schema: may be left out; when sent, must be valid; a required field also refuses null
+description: v.optional(v.pipe(v.string(), v.nonEmpty(), v.maxLength(500))),
 
 // the handler: left out keeps, null clears, a value sets
 .set({ ...(request.description === undefined ? {} : { description: request.description }) })

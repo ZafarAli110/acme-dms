@@ -30,10 +30,10 @@ import {
   type IUploadPartPhotoCommandHandler,
   UPLOAD_PART_PHOTO_COMMAND_HANDLER,
 } from "#business-logic-abstractions/handlers/parts/upload-photo/upload-part-photo.command-handler.interface";
-import { PartCreateRequestDto } from "#dto/parts/part-create-request.dto";
+import { PartCreateRequestSchema, type PartCreateRequestDto } from "#dto/parts/part-create-request.dto";
 import type { PartPhotoResponseDto } from "#dto/parts/part-photo-response.dto";
 import type { PartResponseDto } from "#dto/parts/part-response.dto";
-import { PartUpdateRequestDto } from "#dto/parts/part-update-request.dto";
+import { PartUpdateRequestSchema, type PartUpdateRequestDto } from "#dto/parts/part-update-request.dto";
 import { CurrentUser } from "../../authorization/current-user.decorator";
 import { RequirePermission } from "../../authorization/require-permission.decorator";
 import {
@@ -73,7 +73,7 @@ export class PartCommandController {
   @RequirePermission("parts.write")
   public createAsync(
     @CurrentUser() userContext: UserContext,
-    @Body() request: PartCreateRequestDto,
+    @Body({ schema: PartCreateRequestSchema }) request: PartCreateRequestDto,
   ): Promise<PartResponseDto> {
     return this._createPartCommandHandler.executeAsync(userContext, request);
   }
@@ -98,7 +98,7 @@ export class PartCommandController {
     schema: {
       type: "object",
       properties: {
-        payload: { type: "string", description: "PartUpdateRequestDto as JSON" },
+        payload: { type: "string", description: "the part update as JSON (PartUpdateRequestSchema)" },
         photos: { type: "array", items: { type: "string", format: "binary" } },
       },
     },
@@ -106,7 +106,7 @@ export class PartCommandController {
   public updateAsync(
     @CurrentUser() userContext: UserContext,
     @Param("partId", ParseUUIDPipe) partId: string,
-    @JsonPayload(PartUpdateRequestDto) request: PartUpdateRequestDto,
+    @JsonPayload(PartUpdateRequestSchema) request: PartUpdateRequestDto,
     @UploadedFiles() files: UploadedFileLike[] | undefined,
     @IfMatchVersion() expectedVersion: number | null,
   ): Promise<PartResponseDto> {

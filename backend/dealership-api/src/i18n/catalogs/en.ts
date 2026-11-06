@@ -80,7 +80,7 @@ export const en = {
     binCodeExists: "A bin with this code already exists at this location.",
     partAlreadyStocked: "This part is already stocked at this location.",
   },
-  /** class-validator's rules, by their constraint names: what `I18nValidationPipe` looks up. */
+  /** The rules a request is validated by, named as class-validator named them: `toValidationMessage` (valibot-pipe.ts) maps Valibot's rules to these. */
   validation: {
     isNotEmpty: "{property} is required.",
     isString: "{property} must be text.",

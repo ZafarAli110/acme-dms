@@ -4,7 +4,7 @@ import {
   type ISetStockLevelCommandHandler,
   SET_STOCK_LEVEL_COMMAND_HANDLER,
 } from "#business-logic-abstractions/handlers/stock/set-level/set-stock-level.command-handler.interface";
-import { StockLevelSetRequestDto } from "#dto/stock/stock-level-set-request.dto";
+import { StockLevelSetRequestSchema, type StockLevelSetRequestDto } from "#dto/stock/stock-level-set-request.dto";
 import type { StockListItemDto } from "#dto/stock/stock-list-item.dto";
 import { CurrentUser } from "../../authorization/current-user.decorator";
 import { RequirePermission } from "../../authorization/require-permission.decorator";
@@ -28,7 +28,7 @@ export class StockCommandController {
   public updateAsync(
     @CurrentUser() userContext: UserContext,
     @Param("partId", ParseUUIDPipe) partId: string,
-    @Body() request: StockLevelSetRequestDto,
+    @Body({ schema: StockLevelSetRequestSchema }) request: StockLevelSetRequestDto,
   ): Promise<StockListItemDto> {
     return this._setStockLevelCommandHandler.executeAsync(userContext, partId, request);
   }

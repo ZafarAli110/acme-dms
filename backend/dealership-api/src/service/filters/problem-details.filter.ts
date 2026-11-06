@@ -1,3 +1,4 @@
+import type { LocalizedMessageList } from "../validation/valibot-pipe";
 import { NotModifiedException } from "../concurrency/record-version";
 import { isLocalizedMessage, translateMessage } from "#i18n/messages";
 import {
@@ -37,6 +38,11 @@ type ProblemResponse = {
  * database rule (a unique index, a foreign key, a lock timeout) gets its own status and a safe message
  * (`database-error.ts`). Nothing else leaks internals: the log line has the whole error and its `cause` chain.
  */
+/** A validation failure with one message per problem, each translated (valibot-pipe.ts). */
+function isLocalizedMessageList(value: unknown): value is LocalizedMessageList {
+  return typeof value === "object" && value !== null && "i18nList" in value;
+}
+
 @Catch()
 export class ProblemDetailsFilter implements ExceptionFilter {
   private readonly _logger = new Logger(ProblemDetailsFilter.name);
@@ -113,6 +119,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     }
     if (typeof body === "string") {
       return body;
+    }
+    if (isLocalizedMessageList(body)) {
+      return body.i18nList.map((entry) => translateMessage(entry.key, entry.args)).join("; ");
     }
     const { message, error } = body as { message?: string | string[]; error?: string };
     if (Array.isArray(message)) {

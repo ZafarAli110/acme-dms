@@ -15,7 +15,7 @@ import {
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
 import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
-import { ListQueryDto } from "#dto/paging/list-query.dto";
+import { ListQuerySchema, type ListQueryDto } from "#dto/paging/list-query.dto";
 import type { PageResponseDto } from "#dto/paging/page-response.dto";
 import { CurrentUser } from "../../authorization/current-user.decorator";
 import { RequirePermission } from "../../authorization/require-permission.decorator";
@@ -43,7 +43,7 @@ export class CustomerController {
   @RequirePermission("customers.read")
   public findAllAsync(
     @CurrentUser() userContext: UserContext,
-    @Query() query: ListQueryDto,
+    @Query({ schema: ListQuerySchema }) query: ListQueryDto,
   ): Promise<PageResponseDto<CustomerListItemDto>> {
     return this._getCustomerListQueryHandler.executeAsync(userContext, query);
   }

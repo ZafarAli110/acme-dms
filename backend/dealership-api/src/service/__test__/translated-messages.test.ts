@@ -1,19 +1,16 @@
 import { Body, Controller, Get, Module, NotFoundException, Post } from "@nestjs/common";
-import { APP_FILTER, NestFactory } from "@nestjs/core";
-import { I18nModule, I18nValidationPipe } from "@nestjs/i18n";
+import { APP_FILTER, APP_PIPE, NestFactory } from "@nestjs/core";
+import { I18nModule } from "@nestjs/i18n";
 import { NodeAdapter, type NestNodeApplication } from "@nestjs/platform-node";
-import { IsNotEmpty, IsString, MaxLength } from "class-validator";
+import * as v from "valibot";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { i18nOptions, localized } from "#i18n/messages";
 import { fixedClock } from "#test-setup/time/fixed-clock";
 import { ProblemDetailsFilter } from "../filters/problem-details.filter";
+import { ValibotValidationPipe } from "../validation/valibot-pipe";
 
-class NameRequestDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(5)
-  public surname!: string;
-}
+const NameRequestSchema = v.strictObject({ surname: v.pipe(v.string(), v.nonEmpty(), v.maxLength(5)) });
+type NameRequest = v.InferOutput<typeof NameRequestSchema>;
 
 @Controller()
 class MessagesController {
@@ -23,10 +20,7 @@ class MessagesController {
   }
 
   @Post("name")
-  public saveName(
-    @Body(new I18nValidationPipe({ whitelist: true, forbidNonWhitelisted: true, expectedType: NameRequestDto }))
-    body: NameRequestDto,
-  ): NameRequestDto {
+  public saveName(@Body({ schema: NameRequestSchema }) body: NameRequest): NameRequest {
     return body;
   }
 }
@@ -34,7 +28,10 @@ class MessagesController {
 @Module({
   imports: [I18nModule.forRoot(i18nOptions())],
   controllers: [MessagesController],
-  providers: [{ provide: APP_FILTER, useValue: new ProblemDetailsFilter(fixedClock()) }],
+  providers: [
+    { provide: APP_FILTER, useValue: new ProblemDetailsFilter(fixedClock()) },
+    { provide: APP_PIPE, useValue: new ValibotValidationPipe() },
+  ],
 })
 class MessagesModule {}
 

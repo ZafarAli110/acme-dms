@@ -415,6 +415,7 @@
         "src/service/main.ts",
         "src/service/interceptors/file-upload.interceptor.ts",
         "src/service/__test__/translated-messages.test.ts",
+        "src/service/__test__/valibot-validation.test.ts",
         "src/service/__test__/record-version.test.ts"
       ],
       "rules": {

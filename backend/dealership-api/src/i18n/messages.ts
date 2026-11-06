@@ -2,7 +2,7 @@ import { type I18nForRootOptions, I18nMessageFormatter, type I18nKey, InMemoryI1
 import { en, type Messages } from "./catalogs/en";
 import { fr } from "./catalogs/fr";
 
-// Every key is checked against the English catalog: `localized()`, `t()` and `i18nValidationMessage()` alike.
+// Every key is checked against the English catalog: `localized()`, `t()` and the validation messages alike.
 declare module "@nestjs/i18n" {
   interface I18nTypes {
     translations: Messages;

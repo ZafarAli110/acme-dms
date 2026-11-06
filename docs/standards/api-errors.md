@@ -57,9 +57,10 @@ customerId }))` (`#i18n/messages`). The exception's own message stays English, s
 - A new message goes into both catalogs, `src/i18n/catalogs/en.ts` and `fr.ts`, under the same key with the same
   `{placeholders}`. The types refuse a key English lacks; `i18n/__test__/catalogs.test.ts` refuses a French message
   that is missing or loses a placeholder.
-- Validation messages are the catalogs' `validation.*`, by class-validator's constraint name (`isNotEmpty`,
-  `maxLength`); a rule of your own uses `i18nValidationMessage("validation.<key>")`. `{property}` shows the field
-  under its screen name (`fields.*`); add a new field there.
+- Validation messages are the catalogs' `validation.*` (`isNotEmpty`, `maxLength`, …). Valibot's rules are mapped to
+  them in one place, `toValidationMessage` (`service/validation/valibot-pipe.ts`): a new kind of rule (a new Valibot
+  action) gets its case there and a test in `request-schemas.test.ts`. `{property}` shows the field under its screen
+  name (`fields.*`); add a new field there.
 - A message stored to be read later (an export's failure) is stored as its key and translated when it is read.
 - document-api and identity-api (.NET) still answer in English; a refusal of theirs is passed on as they wrote it.
 

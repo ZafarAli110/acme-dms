@@ -5,7 +5,7 @@ import {
 } from "#business-logic-abstractions/handlers/customers/export/start-customer-export.command-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
-import { ExportRequestDto } from "#dto/exports/export-request.dto";
+import { ExportRequestSchema, type ExportRequestDto } from "#dto/exports/export-request.dto";
 import { CurrentUser } from "../../authorization/current-user.decorator";
 import { RequirePermission } from "../../authorization/require-permission.decorator";
 
@@ -30,7 +30,7 @@ export class CustomerExportCommandController {
   @RequirePermission("customers.read")
   public async startAsync(
     @CurrentUser() userContext: UserContext,
-    @Body() request: ExportRequestDto,
+    @Body({ schema: ExportRequestSchema }) request: ExportRequestDto,
     @Headers("idempotency-key") idempotencyKey: string | undefined,
   ): Promise<ExportJobResponseDto> {
     return this._startCustomerExportCommandHandler.executeAsync(userContext, request, idempotencyKey ?? null);

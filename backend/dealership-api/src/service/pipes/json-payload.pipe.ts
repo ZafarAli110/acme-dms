@@ -1,27 +1,24 @@
 import { localized } from "#i18n/messages";
-import {
-  BadRequestException,
-  createParamDecorator,
-  type ExecutionContext,
-  type PipeTransform,
-  type Type,
-} from "@nestjs/common";
-import { plainToInstance } from "class-transformer";
-import { validate } from "class-validator";
-import { translateValidationErrors } from "@nestjs/i18n";
+import { BadRequestException, createParamDecorator, type ExecutionContext, type PipeTransform } from "@nestjs/common";
+import * as v from "valibot";
+import { validationException } from "../validation/valibot-pipe";
 
 /**
  * A multipart request carries its JSON body as a text field (`payload`) next to the files. This parses that field and
- * validates it like the global ValidationPipe validates a JSON body: the same DTO rules, and unknown properties refused.
+ * validates it like the global pipe validates a JSON body: the same schema rules, the same messages, and unknown
+ * properties refused (the schema is a `strictObject`).
  */
-export class JsonPayloadPipe<T extends object> implements PipeTransform<unknown, Promise<T>> {
-  private readonly _dtoType: Type<T>;
+export class JsonPayloadPipe<TSchema extends v.GenericSchema> implements PipeTransform<
+  unknown,
+  v.InferOutput<TSchema>
+> {
+  private readonly _schema: TSchema;
 
-  public constructor(dtoType: Type<T>) {
-    this._dtoType = dtoType;
+  public constructor(schema: TSchema) {
+    this._schema = schema;
   }
 
-  public async transform(value: unknown): Promise<T> {
+  public transform(value: unknown): v.InferOutput<TSchema> {
     if (typeof value !== "string") {
       throw new BadRequestException(localized("errors.payloadMissing"));
     }
@@ -31,27 +28,12 @@ export class JsonPayloadPipe<T extends object> implements PipeTransform<unknown,
     } catch {
       throw new BadRequestException(localized("errors.payloadNotJson"));
     }
-    const dto = plainToInstance(this._dtoType, parsed);
-    const errors = await validate(dto, { whitelist: true, forbidNonWhitelisted: true });
-    if (errors.length > 0) {
-      // In the request's language, like the global I18nValidationPipe's.
-      const translated = translateValidationErrors(errors);
-      throw new BadRequestException(translated.flatMap((error) => flattenMessages(error)));
+    const result = v.safeParse(this._schema, parsed);
+    if (!result.success) {
+      throw validationException(result.issues);
     }
-    return dto;
+    return result.output;
   }
-}
-
-function flattenMessages(error: {
-  property: string;
-  constraints?: Record<string, string>;
-  children?: unknown[];
-}): string[] {
-  const own = Object.values(error.constraints ?? {});
-  const nested = (error.children ?? []).flatMap((child) =>
-    flattenMessages(child as { property: string; constraints?: Record<string, string>; children?: unknown[] }),
-  );
-  return [...own, ...nested];
 }
 
 const multipartField = createParamDecorator((field: string, context: ExecutionContext): unknown => {
@@ -60,9 +42,9 @@ const multipartField = createParamDecorator((field: string, context: ExecutionCo
 });
 
 /**
- * The JSON `payload` field of a multipart request, parsed and validated as `dtoType`. A custom parameter decorator,
- * because the global ValidationPipe would otherwise try to validate the raw string as the DTO before this pipe runs.
+ * The JSON `payload` field of a multipart request, parsed and validated against `schema`. A custom parameter
+ * decorator: the global pipe skips custom parameters, so this pipe is the only one that reads the raw string.
  */
-export function JsonPayload<T extends object>(dtoType: Type<T>): ParameterDecorator {
-  return multipartField("payload", new JsonPayloadPipe(dtoType));
+export function JsonPayload<TSchema extends v.GenericSchema>(schema: TSchema): ParameterDecorator {
+  return multipartField("payload", new JsonPayloadPipe(schema));
 }
