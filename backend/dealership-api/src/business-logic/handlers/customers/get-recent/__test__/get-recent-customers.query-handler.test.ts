@@ -1,12 +1,24 @@
-import { describe, expect, it } from "vitest";
-import { NORTHSIDE } from "#test-setup/postgres/seed-kit";
+import { BadRequestException } from "@nestjs/common";
+import { beforeEach, describe, expect, it } from "vitest";
+import { customers } from "#persistence/schema/index";
+import { CENTRAL, CITY_MOTORS, NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
+import { AT_CENTRAL, AT_NORTHSIDE, AT_RIVERSIDE, userAt } from "#test-setup/users/test-users";
 import { GetRecentCustomersQueryHandler } from "../get-recent-customers.query-handler";
 
 describe("GetRecentCustomersQueryHandler", () => {
   const database = useTestDatabase();
 
-  it("returns the most recently contacted customers, newest first", async () => {
+  // The database is shared by the tests of this file: each starts with no customers.
+  beforeEach(async () => {
+    await database.db.delete(customers);
+  });
+
+  function handler(): GetRecentCustomersQueryHandler {
+    return new GetRecentCustomersQueryHandler(database.unitOfWorkFactory);
+  }
+
+  it("returns the selected location's most recently contacted customers, newest first", async () => {
     await database.seed.addCustomerAsync({
       locationId: NORTHSIDE,
       surname: "Doyle",
@@ -17,10 +29,107 @@ describe("GetRecentCustomersQueryHandler", () => {
       surname: "Byrne",
       lastContactDate: Temporal.PlainDate.from("2026-10-26"),
     });
-    await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Never" });
 
-    const recent = await new GetRecentCustomersQueryHandler(database.unitOfWorkFactory).executeAsync();
+    const recent = await handler().executeAsync(AT_NORTHSIDE);
 
     expect(recent.map((customer) => customer.surname)).toEqual(["Byrne", "Doyle"]);
+  });
+
+  it("returns only the selected location's customers, not another location's of the same dealer", async () => {
+    await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      surname: "Northsider",
+      lastContactDate: Temporal.PlainDate.from("2026-10-20"),
+    });
+    await database.seed.addCustomerAsync({
+      locationId: RIVERSIDE,
+      surname: "Riversider",
+      lastContactDate: Temporal.PlainDate.from("2026-10-30"),
+    });
+
+    const northside = await handler().executeAsync(AT_NORTHSIDE);
+    const riverside = await handler().executeAsync(AT_RIVERSIDE);
+
+    expect(northside.map((customer) => customer.surname)).toEqual(["Northsider"]);
+    expect(riverside.map((customer) => customer.surname)).toEqual(["Riversider"]);
+  });
+
+  it("returns the selected location's 5 newest even when another location has newer contacts", async () => {
+    for (let day = 1; day <= 6; day++) {
+      await database.seed.addCustomerAsync({
+        locationId: NORTHSIDE,
+        surname: `North${day}`,
+        lastContactDate: Temporal.PlainDate.from(`2026-10-0${day}`),
+      });
+      await database.seed.addCustomerAsync({
+        locationId: RIVERSIDE,
+        surname: `River${day}`,
+        lastContactDate: Temporal.PlainDate.from(`2026-10-2${day}`),
+      });
+    }
+
+    const recent = await handler().executeAsync(AT_NORTHSIDE);
+
+    expect(recent.map((customer) => customer.surname)).toEqual(["North6", "North5", "North4", "North3", "North2"]);
+  });
+
+  it("returns none of another dealer's customers, even ones filed under the same location id", async () => {
+    await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      surname: "Ours",
+      lastContactDate: Temporal.PlainDate.from("2026-10-20"),
+    });
+    // Another dealer's row carrying Northside's location id: only the dealer filter can keep it out.
+    await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      dealerId: CITY_MOTORS,
+      surname: "Theirs",
+      lastContactDate: Temporal.PlainDate.from("2026-10-30"),
+    });
+    await database.seed.addCustomerAsync({
+      locationId: CENTRAL,
+      surname: "Central",
+      lastContactDate: Temporal.PlainDate.from("2026-10-31"),
+    });
+
+    const northwind = await handler().executeAsync(AT_NORTHSIDE);
+    const cityMotors = await handler().executeAsync(AT_CENTRAL);
+
+    expect(northwind.map((customer) => customer.surname)).toEqual(["Ours"]);
+    expect(cityMotors.map((customer) => customer.surname)).toEqual(["Central"]);
+  });
+
+  it("leaves out deleted customers and customers never contacted", async () => {
+    await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      surname: "Gone",
+      lastContactDate: Temporal.PlainDate.from("2026-10-30"),
+      deleted: true,
+    });
+    await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Never" });
+
+    await expect(handler().executeAsync(AT_NORTHSIDE)).resolves.toEqual([]);
+  });
+
+  it("returns an empty list for a location with no contacted customers, not another location's", async () => {
+    await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      surname: "Northsider",
+      lastContactDate: Temporal.PlainDate.from("2026-10-20"),
+    });
+
+    await expect(handler().executeAsync(AT_RIVERSIDE)).resolves.toEqual([]);
+  });
+
+  it("is refused when no location is selected", async () => {
+    await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      surname: "Northsider",
+      lastContactDate: Temporal.PlainDate.from("2026-10-20"),
+    });
+
+    await expect(handler().executeAsync({ ...userAt(NORTHSIDE), locationId: null })).rejects.toThrow(
+      BadRequestException,
+    );
   });
 });
