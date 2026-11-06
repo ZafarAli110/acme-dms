@@ -14,6 +14,8 @@ export const en = {
     listCannotSortBy: 'This list cannot be sorted by "{field}". It can be by: {fields}.',
     listCannotFilterBy: 'This list cannot be filtered by "{field}". It can be by: {fields}.',
     filterOperatorNotAllowed: '"{field}" cannot be filtered with "{operator}". It can with: {operators}.',
+    listPageTooDeep:
+      "A list shows its first {max} rows ({lastPage} pages at this page size). Search or filter to narrow it, or export the whole list.",
     filterNeedsValue: 'The filter "{operator}" needs a value.',
     notANumber: '"{value}" is not a number.',
     notADate: '"{value}" is not a date (YYYY-MM-DD).',

@@ -12,6 +12,8 @@ export const fr: Messages = {
     listCannotSortBy: "Cette liste ne peut pas être triée par « {field} ». Elle peut l'être par : {fields}.",
     listCannotFilterBy: "Cette liste ne peut pas être filtrée par « {field} ». Elle peut l'être par : {fields}.",
     filterOperatorNotAllowed: "« {field} » ne peut pas être filtré avec « {operator} ». Possible avec : {operators}.",
+    listPageTooDeep:
+      "Une liste affiche ses {max} premières lignes ({lastPage} pages à cette taille de page). Recherchez ou filtrez pour la réduire, ou exportez la liste entière.",
     filterNeedsValue: "Le filtre « {operator} » a besoin d'une valeur.",
     notANumber: "« {value} » n'est pas un nombre.",
     notADate: "« {value} » n'est pas une date (AAAA-MM-JJ).",

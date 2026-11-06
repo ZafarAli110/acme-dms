@@ -58,6 +58,10 @@
     "filters": "Filtres",
     "search": "Rechercher"
   },
+  "paging": {
+    "rows": "{{from}}–{{to}} sur {{total}}",
+    "cappedRows": "{{from}}–{{to}} sur {{total}} (la liste affiche les {{max}} premières : recherchez ou filtrez pour la réduire)"
+  },
   "exports": {
     "export": "Exporter vers Excel",
     "queued": "En attente d'une place : {{position}} dans la file",

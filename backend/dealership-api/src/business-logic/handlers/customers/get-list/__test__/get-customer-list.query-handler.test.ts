@@ -1,3 +1,4 @@
+import { BadRequestException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
 import { AT_NORTHSIDE } from "#test-setup/users/test-users";
 import { NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
@@ -34,5 +35,13 @@ describe("GetCustomerListQueryHandler", () => {
 
     expect(second.items.map((customer) => customer.surname)).toEqual(["Clark", "Hopper"]);
     expect(second).toMatchObject({ total: 4, page: 2, pageSize: 2 });
+  });
+
+  it("refuses a page deeper than a list can reach, before it reads anything", async () => {
+    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+
+    await expect(
+      handler.executeAsync(AT_NORTHSIDE, { page: 250_000, pageSize: 25, search: undefined }),
+    ).rejects.toThrow(BadRequestException);
   });
 });
