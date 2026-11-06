@@ -32,7 +32,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
     <!-- tests -->
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.14" />
+    <!-- 4.16.0 was 28 days old when chosen: NuGet has no minimum release age, so the 7-day rule is kept by hand. -->
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="Moq" Version="4.21.0" />
     <PackageVersion Include="MSTest" Version="4.5.2" />
   </ItemGroup>
