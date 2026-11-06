@@ -307,7 +307,8 @@ controller ──► handler interface (abstractions) ──► handler (busines
 - Layer rules are enforced: by project references in .NET, and by import rules in
   `backend/dealership-api/.oxlintrc.json` (for example, a controller may not import `persistence/`).
 
-**Who is calling.** Every request except health checks needs a bearer token from identity-api. The selected location
+**Who is calling.** Every request except health checks needs a bearer token from identity-api; for the web app the
+gateway adds it from the browser's session cookie. The selected location
 travels in the `x-location-id` header, and services refuse locations the token does not grant. Handlers receive the
 user context (user, dealer, location, permissions) explicitly. Code checks **permissions, never role names**.
 
