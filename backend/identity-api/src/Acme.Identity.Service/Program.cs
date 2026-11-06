@@ -24,9 +24,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentActor, HttpCurrentActor>();
 builder.Services.AddPersistence(connectionString);
 builder.Services.AddBusinessLogic();
-// identity-api answers "is this sign-in open" from its own database; registered before AddAcmeAuthentication, which would
-// otherwise ask identity-api over HTTP.
-builder.Services.AddScoped<Acme.ServiceDefaults.Authentication.ISessionStatusChecker, Acme.Identity.Service.Authorization.DbSessionStatusChecker>();
 builder.Services.AddControllers();
 // The gateway forwards the caller's address in X-Forwarded-For; the services are reached only through it. With one hop trusted
 // (the gateway's, the last entry), a client cannot choose its own address by sending the header itself. Do not expose identity-api
@@ -39,7 +36,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 builder.Services.AddAcmeRateLimits();
-builder.Services.AddMemoryCache();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 // After the service's own handler: Postgres failures become 409/400/503 with a meaningful message, not a 500. The
 // unique indexes get their own message (names from IdentityDbContext's HasIndex(...).IsUnique()).
