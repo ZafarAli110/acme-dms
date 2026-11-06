@@ -27,6 +27,11 @@ const TOKEN_ENDPOINTS = `${API_CONFIG.identityUrl}/v1/tokens`;
 /** What identity-api requires of a refresh or revoke: a header only the page itself adds (a form on another site cannot). */
 const FROM_THE_PAGE = { "x-requested-with": "acme-web" };
 
+/** The next access token is fetched this long before the one in use expires. */
+const RENEW_THIS_EARLY_SECONDS = 60;
+/** Never sooner than this from now, whatever the lifetime says (a very short one must not become a busy loop). */
+const MIN_RENEW_SECONDS = 5;
+
 /** One refresh at a time across every open tab of the app (Web Locks), where the browser has them. */
 function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
   return typeof navigator !== "undefined" && "locks" in navigator
@@ -42,6 +47,8 @@ function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
 class ApiClient {
   /** One refresh at a time, whatever number of requests found the token expired together. */
   private _refreshing: Promise<boolean> | null = null;
+  /** The refresh that comes before the token expires (`renewBefore`). */
+  private _renewal: ReturnType<typeof setTimeout> | null = null;
 
   public getAsync<T>(url: string, options?: RequestOptions): Promise<T> {
     return this.requestAsync<T>(url, { method: "GET" }, options);
@@ -172,14 +179,33 @@ class ApiClient {
       { anonymous: true },
     );
     if (response.ok) {
-      const { accessToken } = (await response.json()) as { accessToken: string };
+      const { accessToken, expiresIn } = (await response.json()) as { accessToken: string; expiresIn: number };
       session.setToken(accessToken);
+      this.renewBefore(expiresIn);
       return true;
     }
     if (response.status === 401) {
       return false;
     }
     throw new ServerUnreachableError();
+  }
+
+  /**
+   * Gets the next access token before this one expires, so no request has to fail with a 401 and be sent again (a
+   * multipart upload would be sent twice). Called with the lifetime of every access token this tab gets. A background tab may
+   * run it late: the 401 path above is still there for that. It stops by itself when the tab has no token (signed out).
+   */
+  public renewBefore(expiresInSeconds: number): void {
+    if (this._renewal !== null) {
+      clearTimeout(this._renewal);
+    }
+    const inSeconds = Math.max(expiresInSeconds - RENEW_THIS_EARLY_SECONDS, MIN_RENEW_SECONDS);
+    this._renewal = setTimeout(() => {
+      this._renewal = null;
+      if (session.getToken() !== null) {
+        this.refreshAccessTokenAsync().catch(() => undefined);
+      }
+    }, inSeconds * 1000);
   }
 
   /**

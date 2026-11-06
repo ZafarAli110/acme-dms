@@ -26,16 +26,21 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
   ): Promise<UnitOfWork> {
     const client = await this._pool.connect();
     try {
-      await client.query(options.readOnly ? "BEGIN READ ONLY" : "BEGIN");
+      const begin = options.readOnly ? "BEGIN READ ONLY" : "BEGIN";
       const scope = currentDataScope();
       if (!options.asOwner && (scope || isInRequest())) {
-        // For this transaction only (is_local true): the connection goes back to the pool as it came. An empty
-        // setting is NULL to the policies, which matches no row.
+        // One round trip: the transaction and its settings together. `is_local` true: the settings last for this transaction
+        // only, so the connection goes back to the pool as it came. An empty setting is NULL to the policies, which matches
+        // no row. The values are the verified token's, written as literals (a simple query takes no parameters).
+        const literal = (value: string): string => client.escapeLiteral(value);
         await client.query(
-          "SELECT set_config('role', $1, true), set_config('app.dealer_id', $2, true), " +
-            "set_config('app.location_id', $3, true), set_config('app.user_id', $4, true)",
-          [REQUEST_ROLE, scope?.dealerId ?? "", scope?.locationId ?? "", scope?.userId ?? ""],
+          `${begin}; SELECT set_config('role', ${literal(REQUEST_ROLE)}, true), ` +
+            `set_config('app.dealer_id', ${literal(scope?.dealerId ?? "")}, true), ` +
+            `set_config('app.location_id', ${literal(scope?.locationId ?? "")}, true), ` +
+            `set_config('app.user_id', ${literal(scope?.userId ?? "")}, true)`,
         );
+      } else {
+        await client.query(begin);
       }
     } catch (error) {
       client.release(error instanceof Error ? error : true);

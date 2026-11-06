@@ -92,6 +92,8 @@ public sealed class IdentityDbContext : DbContext
             token.HasIndex(t => t.TokenHash).IsUnique();
             token.HasIndex(t => t.UserId);
             token.HasIndex(t => t.FamilyId);
+            // The revoked-sessions feed asks for what ended lately: few rows, found by when.
+            token.HasIndex(t => t.RevokedAt).HasFilter("revoked_at IS NOT NULL");
             token.HasOne<User>().WithMany().HasForeignKey(t => t.UserId);
         });
 

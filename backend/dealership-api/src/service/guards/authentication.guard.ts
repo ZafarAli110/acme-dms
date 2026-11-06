@@ -3,7 +3,7 @@ import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedExcept
 import { Reflector } from "@nestjs/core";
 import type { AccessTokenClaims } from "../authentication/access-token-claims";
 import { AccessTokenVerifier } from "../authentication/access-token.verifier";
-import { SessionStatusChecker } from "../authentication/session-status.checker";
+import { RevokedSessionsFeed } from "../authentication/revoked-sessions.feed";
 import { IS_PUBLIC } from "../authentication/public.decorator";
 
 type AuthenticatedRequest = {
@@ -17,16 +17,16 @@ type AuthenticatedRequest = {
 export class AuthenticationGuard implements CanActivate {
   private readonly _reflector: Reflector;
   private readonly _accessTokenVerifier: AccessTokenVerifier;
-  private readonly _sessionStatusChecker: SessionStatusChecker;
+  private readonly _revokedSessions: RevokedSessionsFeed;
 
   public constructor(
     reflector: Reflector,
     accessTokenVerifier: AccessTokenVerifier,
-    sessionStatusChecker: SessionStatusChecker,
+    revokedSessions: RevokedSessionsFeed,
   ) {
     this._reflector = reflector;
     this._accessTokenVerifier = accessTokenVerifier;
-    this._sessionStatusChecker = sessionStatusChecker;
+    this._revokedSessions = revokedSessions;
   }
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -47,8 +47,9 @@ export class AuthenticationGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException(localized("errors.accessTokenInvalid"));
     }
-    // Valid and unexpired, but its sign-in may have been ended (signed out): that is refused the same way.
-    if (!(await this._sessionStatusChecker.isOpenAsync(token, claims))) {
+    // Valid and unexpired, but its sign-in may have been ended (signed out): that is refused the same way. Every token
+    // identity-api issues has a sign-in id; one without could never be ended, so it is not accepted.
+    if (!claims.sid || this._revokedSessions.isEnded(claims.sid)) {
       throw new UnauthorizedException(localized("errors.accessTokenInvalid"));
     }
     request.accessToken = claims;
