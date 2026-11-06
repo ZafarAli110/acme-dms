@@ -20,7 +20,7 @@ The diff is where you start, not all you read:
   `introduced` it or it was `already there`. Report both.
 - When you are not sure, say so in the finding (`— inferred`): don't drop it, and don't state it as fact.
 
-If the repository has skills (`.claude/skills/`), load the one for the kind of file the diff touches (a form page, an
+If the repository has skills (`SKILL.md` files under `.claude`), load the one for the kind of file the diff touches (a form page, an
 upload, an endpoint) and check the change against it too: a skill is the team's procedure for that kind of change.
 
 **Check before you flag.** Read the rule in `docs/standards/` rather than quoting it from memory; read a parent class
