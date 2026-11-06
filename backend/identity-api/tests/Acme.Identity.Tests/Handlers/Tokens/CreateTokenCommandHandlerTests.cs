@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Acme.Identity.BusinessLogic.Abstractions.Signing;
+using Acme.Identity.BusinessLogic.Handlers.Tokens;
 using Acme.Identity.BusinessLogic.Handlers.Tokens.Create;
 using Acme.Identity.BusinessLogic.Seeding;
 using Acme.Identity.DTO.Tokens;
@@ -57,6 +58,6 @@ public sealed class CreateTokenCommandHandlerTests
     {
         var keyProvider = new Mock<ISigningKeyProvider>();
         keyProvider.Setup(p => p.GetSigningKeyAsync(It.IsAny<CancellationToken>())).ReturnsAsync(_signingKey);
-        return new CreateTokenCommandHandler(dbContext, keyProvider.Object, new PasswordHasher<User>(), TimeProvider.System);
+        return new CreateTokenCommandHandler(dbContext, new AccessTokenIssuer(keyProvider.Object), new PasswordHasher<User>(), TimeProvider.System);
     }
 }

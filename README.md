@@ -39,14 +39,14 @@ Demo users, all with the password **`Acme123!`**:
 | `maria@northwind.test` | Northwind Motors | Northside + Riverside + Westgate: Service Manager |
 | `tom@citymotors.test`  | City Motors      | Central: Service Manager                          |
 
-Maria assigns people to locations on the **Locations** page; a change shows after that person's next sign-in.
+Maria assigns people to locations on the **Locations** page; a change shows within 15 minutes (the next token refresh), or at that person's next sign-in.
 `bun run reset` puts everyone back on the locations above.
 
 ## What it does
 
 | Area                         | API (through the gateway)                                                                     | Web                                                    |
 | ---------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Sign-in                      | `POST /api/identity/v1/tokens`, `GET /api/identity/v1/users/me`                               | sign-in page, location switcher                        |
+| Sign-in                      | `POST /api/identity/v1/tokens` (+ `/refresh`, `/revoke`), `GET /api/identity/v1/users/me`     | sign-in page, location switcher                        |
 | Parts (stocked per location) | `GET/POST /api/dealership/v1/parts`, `GET/PATCH /api/dealership/v1/parts/{id}`                | list, search, create (with bin), edit page             |
 | Bins (per location)          | `GET/POST /api/dealership/v1/bins`                                                            | bin picker when creating a part                        |
 | Part photos                  | saved with the part (`PATCH …/parts/{id}`, multipart); `POST …/parts/{id}/photos` adds one    | on the edit page: add, remove, default; processing     |

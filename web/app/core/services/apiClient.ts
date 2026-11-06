@@ -8,6 +8,7 @@ import {
   ServerUnreachableError,
 } from "../config/apiErrors";
 import { session } from "../storage/sessionStore";
+import { sessionExpiry } from "./sessionExpiry";
 
 export interface RequestOptions {
   /** Cancels the request, e.g. TanStack Query's `signal` when a query is no longer needed. */
@@ -16,7 +17,12 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** False for a request that lasts as long as the work it follows (server-sent events): no timeout. */
   timeout?: boolean;
+  /** True for a request that is not made as the signed-in person (the token endpoints): no token, no refresh and retry. */
+  anonymous?: boolean;
 }
+
+/** The token endpoints answer 401 for a wrong password or a ended sign-in; that is their answer, not a reason to refresh. */
+const TOKEN_ENDPOINTS = `${API_CONFIG.identityUrl}/v1/tokens`;
 
 /**
  * The only code that calls `fetch` for the services. Sends the signed-in user's token and the selected location
@@ -24,6 +30,9 @@ export interface RequestOptions {
  * problem details, `ServerUnreachableError` or `RequestTimeoutError`.
  */
 class ApiClient {
+  /** One refresh at a time, whatever number of requests found the token expired together. */
+  private _refreshing: Promise<boolean> | null = null;
+
   public getAsync<T>(url: string, options?: RequestOptions): Promise<T> {
     return this.requestAsync<T>(url, { method: "GET" }, options);
   }
@@ -104,14 +113,64 @@ class ApiClient {
     return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
   }
 
+  /**
+   * Sends the request as the signed-in person. An access token lives minutes: a 401 for a token this tab sent is the
+   * token expiring, so it is traded once for a new one (the refresh token) and the request is sent again. When the
+   * service refuses the refresh token the sign-in is over (`sessionExpiry`), and the caller gets the 401 it had.
+   */
   private async sendAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
+    const response = await this.sendOnceAsync(url, init, options);
+    const canRefresh =
+      response.status === 401 &&
+      options?.anonymous !== true &&
+      !url.startsWith(TOKEN_ENDPOINTS) &&
+      session.getToken() !== null &&
+      session.getRefreshToken() !== null;
+    if (!canRefresh || !(await this.refreshAsync())) {
+      return response;
+    }
+    return this.sendOnceAsync(url, init, options);
+  }
+
+  private refreshAsync(): Promise<boolean> {
+    this._refreshing ??= this.refreshOnceAsync().finally(() => {
+      this._refreshing = null;
+    });
+    return this._refreshing;
+  }
+
+  /** True when this tab has a new access token. No answer from the service keeps the sign-in: the next 401 tries again. */
+  private async refreshOnceAsync(): Promise<boolean> {
+    const refreshToken = session.getRefreshToken();
+    if (refreshToken === null) {
+      return false;
+    }
+    try {
+      const response = await this.sendOnceAsync(`${TOKEN_ENDPOINTS}/refresh`, jsonInit("POST", { refreshToken }), {
+        anonymous: true,
+      });
+      if (response.ok) {
+        const { accessToken } = (await response.json()) as { accessToken: string };
+        session.setToken(accessToken);
+        return true;
+      }
+      if (response.status === 401) {
+        sessionExpiry.expire();
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  private async sendOnceAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
     // Stops at the timeout or when the caller cancels (TanStack Query, when a query is no longer needed).
     const timeout = options?.timeout === false ? null : AbortSignal.timeout(API_CONFIG.timeoutMs);
     const signals = [options?.signal, timeout].filter((candidate) => candidate instanceof AbortSignal);
     const signal = signals.length > 0 ? AbortSignal.any(signals) : null;
 
-    const token = session.getToken();
-    const locationId = session.getLocationId();
+    const token = options?.anonymous === true ? null : session.getToken();
+    const locationId = options?.anonymous === true ? null : session.getLocationId();
     // The caller's headers (a JSON body's content type) plus who is asking and where. A FormData body gets its
     // multipart content type, with the boundary, from fetch itself.
     const headers = new Headers(init.headers);

@@ -1,4 +1,5 @@
 const TOKEN_KEY = "acme.accessToken";
+const REFRESH_KEY = "acme.refreshToken";
 const LOCATION_KEY = "acme.locationId";
 const CHANNEL_NAME = "acme.session";
 /** How long a new tab waits for an open tab to share its sign-in. An open tab answers within milliseconds. */
@@ -6,10 +7,19 @@ const ASK_TIMEOUT_MS = 300;
 
 /** What tabs of the app tell each other about the sign-in. A tab never receives its own messages. */
 type SessionMessage =
-  { kind: "ask" } | { kind: "answer"; token: string } | { kind: "signed-in"; token: string } | { kind: "signed-out" };
+  | { kind: "ask" }
+  | { kind: "answer"; token: string; refreshToken: string | null }
+  | { kind: "signed-in"; token: string; refreshToken: string }
+  | { kind: "signed-out" };
 
 /** A sign-in or sign-out in another tab, for this tab to follow. */
-export type OtherTabChange = { kind: "signed-in"; token: string } | { kind: "signed-out" };
+export type OtherTabChange = { kind: "signed-in"; token: string; refreshToken: string } | { kind: "signed-out" };
+
+/** What an open tab hands a new tab: the access token and the refresh token that renews it. */
+export interface SharedSession {
+  token: string;
+  refreshToken: string | null;
+}
 
 /** Null outside a browser: React Router renders the app shell once at build time, where there is no window. */
 function tabStorage(): Storage | null {
@@ -33,7 +43,7 @@ function sessionChannel(): BroadcastChannel | null {
 function answerAsk(event: MessageEvent<SessionMessage>): void {
   const token = session.getToken();
   if (event.data.kind === "ask" && token !== null) {
-    post({ kind: "answer", token });
+    post({ kind: "answer", token, refreshToken: session.getRefreshToken() });
   }
 }
 
@@ -53,16 +63,20 @@ function post(message: SessionMessage): void {
 export const session = {
   getToken: (): string | null => tabStorage()?.getItem(TOKEN_KEY) ?? null,
   setToken: (token: string): void => tabStorage()?.setItem(TOKEN_KEY, token),
+  /** What trades for a new access token when this one expires; lasts at most as long as the sign-in. */
+  getRefreshToken: (): string | null => tabStorage()?.getItem(REFRESH_KEY) ?? null,
+  setRefreshToken: (refreshToken: string): void => tabStorage()?.setItem(REFRESH_KEY, refreshToken),
   getLocationId: (): string | null => tabStorage()?.getItem(LOCATION_KEY) ?? null,
   setLocationId: (locationId: string): void => tabStorage()?.setItem(LOCATION_KEY, locationId),
   /** Forgets this tab's token and location. Other tabs are told separately (`announce`). */
   clear: (): void => {
     tabStorage()?.removeItem(TOKEN_KEY);
+    tabStorage()?.removeItem(REFRESH_KEY);
     tabStorage()?.removeItem(LOCATION_KEY);
   },
 
-  /** Asks the other open tabs for their token: the first answer, or null when no tab answers in time. */
-  askOtherTabsAsync: (): Promise<string | null> => {
+  /** Asks the other open tabs for their sign-in: the first answer, or null when no tab answers in time. */
+  askOtherTabsAsync: (): Promise<SharedSession | null> => {
     const shared = sessionChannel();
     if (shared === null) {
       return Promise.resolve(null);
@@ -70,14 +84,14 @@ export const session = {
     return new Promise((resolve) => {
       const onMessage = (event: MessageEvent<SessionMessage>): void => {
         if (event.data.kind === "answer") {
-          finish(event.data.token);
+          finish({ token: event.data.token, refreshToken: event.data.refreshToken });
         }
       };
       const timer = setTimeout(() => finish(null), ASK_TIMEOUT_MS);
-      const finish = (token: string | null): void => {
+      const finish = (answer: SharedSession | null): void => {
         clearTimeout(timer);
         shared.removeEventListener("message", onMessage);
-        resolve(token);
+        resolve(answer);
       };
       shared.addEventListener("message", onMessage);
       post({ kind: "ask" });

@@ -33,6 +33,8 @@ public sealed class IdentityDbContext : DbContext
 
     public DbSet<SigningKey> SigningKeys => Set<SigningKey>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -82,6 +84,15 @@ public sealed class IdentityDbContext : DbContext
         });
 
         modelBuilder.Entity<SigningKey>(key => key.Property(k => k.Id).HasMaxLength(64));
+
+        modelBuilder.Entity<RefreshToken>(token =>
+        {
+            token.Property(t => t.TokenHash).HasMaxLength(64);
+            // Looked up by the hash of what the app sends, and never two the same.
+            token.HasIndex(t => t.TokenHash).IsUnique();
+            token.HasIndex(t => t.UserId);
+            token.HasOne<User>().WithMany().HasForeignKey(t => t.UserId);
+        });
 
         modelBuilder.UseDatabaseGeneratedUuidV7Keys();
     }

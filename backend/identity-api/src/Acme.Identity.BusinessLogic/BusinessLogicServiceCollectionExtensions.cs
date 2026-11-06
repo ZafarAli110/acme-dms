@@ -1,6 +1,8 @@
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Locations.GetList;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.System.GetHealth;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens.Create;
+using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens.Refresh;
+using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens.Revoke;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Users.AssignLocation;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Users.GetCurrent;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Users.GetList;
@@ -9,7 +11,10 @@ using Acme.Identity.BusinessLogic.Abstractions.Handlers.WellKnown.GetJsonWebKeyS
 using Acme.Identity.BusinessLogic.Abstractions.Signing;
 using Acme.Identity.BusinessLogic.Handlers.Locations.GetList;
 using Acme.Identity.BusinessLogic.Handlers.System.GetHealth;
+using Acme.Identity.BusinessLogic.Handlers.Tokens;
 using Acme.Identity.BusinessLogic.Handlers.Tokens.Create;
+using Acme.Identity.BusinessLogic.Handlers.Tokens.Refresh;
+using Acme.Identity.BusinessLogic.Handlers.Tokens.Revoke;
 using Acme.Identity.BusinessLogic.Handlers.Users.AssignLocation;
 using Acme.Identity.BusinessLogic.Handlers.Users.GetCurrent;
 using Acme.Identity.BusinessLogic.Handlers.Users.GetList;
@@ -34,7 +39,10 @@ public static class BusinessLogicServiceCollectionExtensions
         services.AddScoped<IdentitySeeder>();
 
         services.AddScoped<IGetHealthQueryHandler, GetHealthQueryHandler>();
+        services.AddSingleton<AccessTokenIssuer>();
         services.AddScoped<ICreateTokenCommandHandler, CreateTokenCommandHandler>();
+        services.AddScoped<IRefreshTokenCommandHandler, RefreshTokenCommandHandler>();
+        services.AddScoped<IRevokeTokenCommandHandler, RevokeTokenCommandHandler>();
         services.AddScoped<IGetCurrentUserQueryHandler, GetCurrentUserQueryHandler>();
         services.AddScoped<IGetJsonWebKeySetQueryHandler, GetJsonWebKeySetQueryHandler>();
         services.AddScoped<IGetUsersQueryHandler, GetUsersQueryHandler>();
