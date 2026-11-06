@@ -3,13 +3,12 @@ import { APP_FILTER, APP_PIPE, NestFactory } from "@nestjs/core";
 import { I18nModule } from "@nestjs/i18n";
 import { NodeAdapter, type NestNodeApplication } from "@nestjs/platform-node";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { toJsonSchema } from "@valibot/to-json-schema";
-import type { GenericSchema } from "valibot";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type CustomerRequest, CustomerRequestSchema } from "#dto/customers/customer-request.schema";
 import { i18nOptions } from "#i18n/messages";
 import { fixedClock } from "#test-setup/time/fixed-clock";
 import { ProblemDetailsFilter } from "../filters/problem-details.filter";
+import { valibotToOpenApi } from "../swagger/valibot-openapi";
 import { ValibotValidationPipe } from "../validation/valibot-pipe";
 
 @Controller()
@@ -112,7 +111,7 @@ describe("Valibot request validation", () => {
 
   it("describes the request in OpenAPI from the same schema", () => {
     const document = SwaggerModule.createDocument(app, new DocumentBuilder().build(), {
-      standardSchemaConverter: (schema) => ({ schema: toJsonSchema(schema as GenericSchema, { errorMode: "ignore" }) }),
+      standardSchemaConverter: valibotToOpenApi,
     });
     const body = document.paths["/customers"]?.post?.requestBody as
       { content: Record<string, { schema: BodySchema }> } | undefined;

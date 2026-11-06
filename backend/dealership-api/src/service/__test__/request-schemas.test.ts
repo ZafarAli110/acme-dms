@@ -8,7 +8,9 @@ import { ListQuerySchema } from "#dto/paging/list-query.dto";
 import { PartCreateRequestSchema } from "#dto/parts/part-create-request.dto";
 import { PartUpdateRequestSchema } from "#dto/parts/part-update-request.dto";
 import { StockLevelSetRequestSchema } from "#dto/stock/stock-level-set-request.dto";
+import { CustomerRequestSchema } from "#dto/customers/customer-request.schema";
 import { englishMessage } from "#i18n/messages";
+import { valibotToOpenApi } from "../swagger/valibot-openapi";
 import { toValidationMessage, type ValibotIssue } from "../validation/valibot-pipe";
 
 /** The English messages a schema gives for a request, as the problem-details filter would answer them. */
@@ -119,5 +121,40 @@ describe("controllers", () => {
 
     expect(files.length).toBeGreaterThan(5);
     expect(unvalidated).toEqual([]);
+  });
+});
+
+/** What Swagger shows for a schema: what a client may send, in OpenAPI's words. */
+describe("the OpenAPI schemas", () => {
+  const openApi = (schema: v.GenericSchema) =>
+    valibotToOpenApi(schema).schema as { properties: Record<string, Record<string, unknown>>; required?: string[] };
+
+  it("say a price has at most two decimals", () => {
+    const { properties } = openApi(PartCreateRequestSchema);
+
+    expect(properties["unitPrice"]).toEqual({
+      type: "number",
+      minimum: 0,
+      multipleOf: 0.01,
+      description: "In pounds, at most two decimals",
+      example: 49.99,
+    });
+  });
+
+  it("show a field that may be left out as that field, and a page as a number", () => {
+    const { properties, required } = openApi(ListQuerySchema);
+
+    expect(properties["page"]).toEqual({ type: "integer", minimum: 1, description: "From 1; the default is 1" });
+    expect(properties["pageSize"]).toMatchObject({ type: "integer", minimum: 1, maximum: 100 });
+    expect(properties["direction"]).toEqual({ enum: ["asc", "desc"], type: "string" });
+    expect(properties["search"]).toMatchObject({ type: "string", maxLength: 100 });
+    expect(required ?? []).toEqual([]);
+  });
+
+  it("still show a value that may be cleared as nullable", () => {
+    const { properties, required } = openApi(CustomerRequestSchema);
+
+    expect(properties["companyName"]).toEqual({ anyOf: [{ type: "string", maxLength: 200 }, { type: "null" }] });
+    expect(required).toContain("companyName");
   });
 });

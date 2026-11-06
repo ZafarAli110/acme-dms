@@ -7,7 +7,9 @@ export const unitPrice = v.pipe(
   v.number(),
   v.minValue(0),
   v.check((price) => Math.abs(price * 100 - Math.round(price * 100)) < 1e-6),
-  v.metadata({ example: 49.99 }),
+  v.description("In pounds, at most two decimals"),
+  // `check` is a function and cannot be written as JSON; `multipleOf` says the same to Swagger.
+  v.metadata({ example: 49.99, multipleOf: 0.01 }),
 );
 
 /**

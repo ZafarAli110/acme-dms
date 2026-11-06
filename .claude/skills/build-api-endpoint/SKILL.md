@@ -51,6 +51,9 @@ dealer itself.
   maps each Valibot action to one. A new kind of action gets its case there, and a case in `request-schemas.test.ts`.
   A new field name goes into `fields.*` of both catalogs. A `@Body()` or `@Query()` with no `{ schema }` is checked by
   nothing: a test refuses it.
+- **Swagger reads the schema** (`service/swagger/valibot-openapi.ts`): lengths, ranges, formats and enums show by
+  themselves. Say the rest with `v.description(…)` and `v.metadata({ example, … })`; a `v.check(fn)` is a function and
+  does not show, so give it a description (a price: `multipleOf: 0.01` too).
 - **A PATCH request** keeps three states apart for each optional field (`coding-standards.md`):
 
 ```ts
