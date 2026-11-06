@@ -15,6 +15,13 @@
       "when": 1793529576466,
       "tag": "0001_dealers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793986783130,
+      "tag": "0002_customers_list_order",
+      "breakpoints": true
     }
   ]
 }
