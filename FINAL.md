@@ -28,5 +28,11 @@ the board to a reviewed pull request, then `/qa-ticket`, then a person merges in
 ## Build the next one
 
 1. `git switch final`, `git pull`, `bun install`, `bun run reset`, then `bun run dev`. The tracker running.
-2. In Claude: `/clear`, `/show-meter reset`, then `/ticket-to-pr ACME-1xx`. Answer its questions on the ticket.
-3. When the pull request is reviewed and `/qa-ticket` passes, merge it into `final` and mark the ticket built above.
+2. **Load the real sizes: `bun run seed:bulk`** (once `bun run dev` shows everything Healthy). It adds the merged dealer
+   group's customer book in seconds: 1.6 million customers at Northside, 400,000 at Riverside, 250,000 at Westgate.
+   Build and test against these, not the few sample rows: a query with no fitting index, a page that reads every row, an
+   export that holds rows in memory all look fine on 10 customers and fail on 1.6 million (ACME-108, ACME-110).
+   `bun run reset` removes them, so run it again after every reset; `bun run seed:bulk 50000 20000 10000` is a
+   smaller set for a quick look.
+3. In Claude: `/clear`, `/show-meter reset`, then `/ticket-to-pr ACME-1xx`. Answer its questions on the ticket.
+4. When the pull request is reviewed and `/qa-ticket` passes, merge it into `final` and mark the ticket built above.
