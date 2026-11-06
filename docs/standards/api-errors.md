@@ -38,7 +38,10 @@ exactly these fields (always present; `null` when unknown):
 A record people edit (a customer, a part) has a `version`, one more with every save. It is the record's ETag (`"7"`).
 
 - `GET` of one record, and every save, answers with `ETag`. A `GET` with `If-None-Match` naming it answers `304` with
-  no body (answers stay `Cache-Control: no-store`, so it is for clients that send it themselves).
+  no body. That `GET` is the one answer a browser may keep, and only to ask again: `Cache-Control: private, no-cache`
+  (`Vary: authorization, x-location-id`), so the browser sends `If-None-Match` itself. The server still runs the query
+  and checks who is asking before it says 304: this saves the body, not the work. Every other answer, saves included,
+  stays `Cache-Control: no-store` (one dealer's data, one user's: nothing is kept).
 - A save (`PUT`, `PATCH`) sends `If-Match` with the version it started from: `428` without it, `412` when it is not
   the current version. The handler checks the version in the same `UPDATE` (`where … version = …`, `version + 1`), so
   two saves from one version can never both win; with files, it checks before uploading too.

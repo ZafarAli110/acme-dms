@@ -3,8 +3,8 @@ import { Injectable, type NestMiddleware } from "@nestjs/common";
 type Response = { setHeader(name: string, value: string): void };
 
 /**
- * Every answer is one dealer's data, for one signed-in user: no browser, proxy or CDN may keep a copy. An endpoint that
- * can be cached sets its own Cache-Control after this.
+ * Every answer is one dealer's data, for one signed-in user: no browser, proxy or CDN may keep a copy. The one
+ * answer that may be kept, to be revalidated, is a versioned record's GET (`@ETagged()`), which sets its own after this.
  */
 @Injectable()
 export class CacheControlMiddleware implements NestMiddleware {

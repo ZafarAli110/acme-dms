@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Module, Put } from "@nestjs/common";
+import { Body, Controller, Get, type MiddlewareConsumer, Module, type NestModule, Put } from "@nestjs/common";
 import { APP_FILTER, NestFactory } from "@nestjs/core";
 import { I18nModule } from "@nestjs/i18n";
 import { NodeAdapter, type NestNodeApplication } from "@nestjs/platform-node";
@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { i18nOptions } from "#i18n/messages";
 import { fixedClock } from "#test-setup/time/fixed-clock";
 import { IfMatchVersion } from "../concurrency/record-version";
+import { CacheControlMiddleware } from "../middleware/cache-control.middleware";
 import { ProblemDetailsFilter } from "../filters/problem-details.filter";
 import { ETagged } from "../interceptors/etag.interceptor";
 
@@ -32,7 +33,12 @@ class RecordController {
   controllers: [RecordController],
   providers: [{ provide: APP_FILTER, useValue: new ProblemDetailsFilter(fixedClock()) }],
 })
-class RecordModule {}
+class RecordModule implements NestModule {
+  public configure(consumer: MiddlewareConsumer): void {
+    // As app.module.ts: every answer is `no-store` unless the endpoint says otherwise.
+    consumer.apply(CacheControlMiddleware).forRoutes("*");
+  }
+}
 
 /** ETag, If-None-Match and If-Match on Node's HTTP adapter, as the service runs them. */
 describe("a versioned record over HTTP", () => {
@@ -67,6 +73,19 @@ describe("a versioned record over HTTP", () => {
     expect(await same.text()).toBe("");
 
     expect((await send("GET", { "if-none-match": '"2"' })).status).toBe(200);
+  });
+
+  it("lets a browser keep a record only to ask again; every other answer is not kept at all", async () => {
+    const read = await send("GET");
+    expect(read.headers.get("cache-control")).toBe("private, no-cache");
+    // The i18n module adds `Accept-Language` to what we send.
+    expect(read.headers.get("vary")).toContain("authorization, x-location-id");
+
+    const notModified = await send("GET", { "if-none-match": '"3"' });
+    expect(notModified.headers.get("cache-control")).toBe("private, no-cache");
+
+    expect((await send("PUT", { "if-match": '"3"' })).headers.get("cache-control")).toBe("no-store");
+    expect((await send("PUT")).headers.get("cache-control")).toBe("no-store");
   });
 
   it("requires If-Match on a save: 428 without it, 412 when it is not one version, the version when it is", async () => {

@@ -79,7 +79,8 @@ description: v.optional(v.pipe(v.string(), v.nonEmpty(), v.maxLength(500))),
 - Copy only the fields this endpoint changes into `.set(...)` / `.values(...)`; never spread the request into them.
 - A record people edit (customers, parts) has a `version`: `GET` one and every save is `@ETagged()`, a save takes
   `@IfMatchVersion()` and updates `where … eq(table.version, expected)` with `version: sql\`${table.version} + 1\``;
-nothing updated but the record exists is `412` (`api-errors.md`).
+nothing updated but the record exists is `412` (`api-errors.md`). `@ETagged()`also makes that`GET`
+`Cache-Control: private, no-cache`(the browser revalidates with`If-None-Match`); every other answer is `no-store`.
 
 ```ts
 // ✅ create: check, then insert with the dealer, the location and the audit columns (CreateBinCommandHandler)
