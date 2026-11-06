@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { IGetPartQueryHandler } from "#business-logic-abstractions/handlers/parts/get/get-part.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
@@ -24,7 +25,7 @@ export class GetPartQueryHandler implements IGetPartQueryHandler {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const stocked = await findStockedPartAsync(work.db, userContext.dealerId, locationId, partId);
     if (!stocked) {
-      throw new NotFoundException(`Part ${partId} is not stocked at this location.`);
+      throw new NotFoundException(localized("errors.partNotStocked", { partId }));
     }
     const photos = await findPhotosAsync(work.db, userContext.dealerId, partId);
     return toPartResponseDto(stocked.part, stocked.inventory, stocked.bin, photos);

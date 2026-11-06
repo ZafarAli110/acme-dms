@@ -1,3 +1,4 @@
+import { englishMessage, type MessageKey } from "#i18n/messages";
 import { HttpStatus } from "@nestjs/common";
 
 /**
@@ -31,32 +32,25 @@ export const POSTGRES_ERROR = {
   CANNOT_CONNECT_NOW: "57P03",
 } as const;
 
-/** What the client is told. Never SQL, table or constraint names: those are in the log and the trace. */
+/**
+ * What the client is told. Never SQL, table or constraint names: those are in the log and the trace. `detail` is the
+ * English text (for the log); the problem-details filter sends `key` in the request's language.
+ */
 export interface DatabaseProblem {
   status: number;
+  key: MessageKey;
   detail: string;
 }
 
-const ALREADY_EXISTS: DatabaseProblem = {
-  status: HttpStatus.CONFLICT,
-  detail: "A record with the same value already exists.",
-};
-const REFERENCE_PROBLEM: DatabaseProblem = {
-  status: HttpStatus.CONFLICT,
-  detail: "This refers to a record that does not exist, or the record is still in use.",
-};
-const INVALID_VALUE: DatabaseProblem = {
-  status: HttpStatus.BAD_REQUEST,
-  detail: "A value is missing or not allowed.",
-};
-const CHANGED_CONCURRENTLY: DatabaseProblem = {
-  status: HttpStatus.CONFLICT,
-  detail: "The record was changed at the same time by someone else. Try again.",
-};
-const DATABASE_UNAVAILABLE: DatabaseProblem = {
-  status: HttpStatus.SERVICE_UNAVAILABLE,
-  detail: "The database is busy or unavailable. Try again shortly.",
-};
+function problem(status: number, key: MessageKey): DatabaseProblem {
+  return { status, key, detail: englishMessage(key) };
+}
+
+const ALREADY_EXISTS = problem(HttpStatus.CONFLICT, "database.alreadyExists");
+const REFERENCE_PROBLEM = problem(HttpStatus.CONFLICT, "database.referenceProblem");
+const INVALID_VALUE = problem(HttpStatus.BAD_REQUEST, "database.invalidValue");
+const CHANGED_CONCURRENTLY = problem(HttpStatus.CONFLICT, "database.changedConcurrently");
+const DATABASE_UNAVAILABLE = problem(HttpStatus.SERVICE_UNAVAILABLE, "database.unavailable");
 
 const PROBLEM_BY_CODE: Readonly<Record<string, DatabaseProblem>> = {
   [POSTGRES_ERROR.UNIQUE_VIOLATION]: ALREADY_EXISTS,
@@ -78,10 +72,10 @@ const PROBLEM_BY_CODE: Readonly<Record<string, DatabaseProblem>> = {
  * A unique rule the user can break, by its index or constraint name (see the migrations), and what to tell them. The
  * handlers check these first for a friendlier message; this is the answer when two requests race past that check.
  */
-const UNIQUE_RULES: Readonly<Record<string, string>> = {
-  uq_parts_dealer_part_number: "A part with this part number already exists in your catalogue.",
-  uq_bins_location_code: "A bin with this code already exists at this location.",
-  uq_part_inventories_location_part: "This part is already stocked at this location.",
+const UNIQUE_RULES: Readonly<Record<string, MessageKey>> = {
+  uq_parts_dealer_part_number: "database.partNumberExists",
+  uq_bins_location_code: "database.binCodeExists",
+  uq_part_inventories_location_part: "database.partAlreadyStocked",
 };
 
 /** Connection exceptions (`08xxx`): the database could not be reached at all. */
@@ -102,9 +96,9 @@ export function resolveDatabaseProblem(exception: unknown): DatabaseProblem | nu
   }
   const code = postgresError.code ?? "";
   if (code === POSTGRES_ERROR.UNIQUE_VIOLATION && postgresError.constraint) {
-    const detail = UNIQUE_RULES[postgresError.constraint];
-    if (detail) {
-      return { status: HttpStatus.CONFLICT, detail };
+    const key = UNIQUE_RULES[postgresError.constraint];
+    if (key) {
+      return problem(HttpStatus.CONFLICT, key);
     }
   }
   if (code.startsWith(CONNECTION_EXCEPTION_CLASS)) {
