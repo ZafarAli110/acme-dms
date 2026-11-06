@@ -257,6 +257,7 @@ Every project, in either language, has the same targets, run through [Nx](https:
 | `bun run format`                  | Format TypeScript, JSON and Markdown                                                       |
 | `bun run format:check`            | Check the formatting without changing any file (what CI runs)                              |
 | `bun run gate:fast`               | Format check, lint, typecheck and tests for the projects changed since your branch started |
+| `bun run docs:check`              | The docs still match the repository: every command listed, every path and link real        |
 | `bun run gate:slow`               | End-to-end tests of the web app (Playwright, installed Chrome), against the running system |
 | `bunx nx test @acme/identity-api` | One target for one project                                                                 |
 
