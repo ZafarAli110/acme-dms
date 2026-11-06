@@ -18,9 +18,6 @@
       },
       "lint": {
         "parallelism": false
-      },
-      "format": {
-        "parallelism": false
       }
     }
   }
