@@ -86,6 +86,9 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
 
     public string ConnectionString { get; }
 
+    /// <summary>The gateway's services, to call its parts directly.</summary>
+    public IServiceProvider Services => _factory.Services;
+
     /// <summary>Where every request comes from: the in-memory server has no network, so it is set here as Kestrel would.</summary>
     public const string BrowserAddress = "203.0.113.7";
 
@@ -164,6 +167,14 @@ internal sealed class FakeIdentity : HttpMessageHandler
 
     public int Refreshes;
 
+    /// <summary>identity-api is not answering: every call fails as a refused connection does.</summary>
+    public bool IsDown { get; set; }
+
+    /// <summary>When set, a refresh waits for it after identity-api has replaced the token (and says so on <see cref="RefreshReplaced"/>).</summary>
+    public TaskCompletionSource? HoldRefreshAnswer { get; set; }
+
+    public TaskCompletionSource RefreshReplaced { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public ConcurrentQueue<string> Revoked { get; } = new();
 
     public ConcurrentQueue<string?> ForwardedFor { get; } = new();
@@ -173,6 +184,11 @@ internal sealed class FakeIdentity : HttpMessageHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        if (IsDown)
+        {
+            throw new HttpRequestException("Connection refused (identity.test)");
+        }
+
         ForwardedFor.Enqueue(request.Headers.TryGetValues("X-Forwarded-For", out var forwarded) ? forwarded.Single() : null);
         var path = request.RequestUri!.AbsolutePath;
         if (path == "/v1/tokens")
@@ -190,7 +206,20 @@ internal sealed class FakeIdentity : HttpMessageHandler
         }
 
         Interlocked.Increment(ref Refreshes);
-        return _liveRefreshTokens.TryRemove(presented, out _) ? Issue() : Problem(HttpStatusCode.Unauthorized, "The sign-in has ended.");
+        if (!_liveRefreshTokens.TryRemove(presented, out _))
+        {
+            return Problem(HttpStatusCode.Unauthorized, "The sign-in has ended.");
+        }
+
+        var issued = Issue();
+        if (HoldRefreshAnswer is { } hold)
+        {
+            // Replaced at identity-api and committed; the answer is not back at the gateway yet.
+            RefreshReplaced.TrySetResult();
+            await hold.Task;
+        }
+
+        return issued;
     }
 
     private HttpResponseMessage Issue()
@@ -224,9 +253,12 @@ internal sealed class FakeService : HttpMessageHandler
 {
     public ConcurrentQueue<string?> Authorizations { get; } = new();
 
+    public ConcurrentQueue<string?> Cookies { get; } = new();
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Authorizations.Enqueue(request.Headers.Authorization?.ToString());
+        Cookies.Enqueue(request.Headers.TryGetValues("Cookie", out var cookies) ? string.Join("; ", cookies) : null);
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { ok = true }) });
     }
 }
