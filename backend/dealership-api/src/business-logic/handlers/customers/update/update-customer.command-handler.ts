@@ -5,7 +5,8 @@ import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.inte
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
 import type { CustomerUpdateRequestDto } from "#dto/customers/customer-update-request.dto";
-import { customers, notDeleted } from "#persistence/schema/index";
+import { customers } from "#persistence/schema/customers";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
