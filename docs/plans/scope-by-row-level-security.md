@@ -98,10 +98,14 @@ are.** No repository layer: handlers keep querying with Drizzle through the unit
 `notDeleted(…)` was the one filter still repeated in every handler, and a missed one shows a deleted row. A restrictive
 `FOR SELECT` policy per soft-delete table (`<table>_not_deleted`) is ANDed with the dealer and location policies, so
 every read and join of a request leaves deleted rows out. Postgres also checks the changed row of an `UPDATE` against it,
-so marking a row deleted would be refused: `softDeleteAsync` (`business-logic/audit/soft-delete.ts`) sets
-`app.soft_deleting` for that one statement and writes the audit columns, and is the only way a handler deletes. The same
-setting is the extension point for a "restore" or an audit view. Code outside a request keeps `notDeleted(…)`
-(the customer export). Tests: deleted rows are hidden from a request and visible to the owner; every table with
+so marking a row deleted would be refused: `softDeleteAsync` (`business-logic/audit/soft-delete.ts`) runs that one
+statement outside the request role, naming the request's dealer (and location) itself, and writes the audit columns; it is
+the only way a handler deletes. The policy is a plain `NOT is_deleted`: the first version let the statement through with an
+`OR current_setting('app.soft_deleting') = 'on'`, which a review showed makes the planner unable to prove the policy implies
+a partial index's `WHERE`, so under the request role the customers list sorted a whole location (56 ms for 200,000 rows,
+against 0.06 ms; measured with `EXPLAIN` as the request role) and the part-number check scanned every dealer's parts. The
+`soft_delete_plain_policy` migration replaced it. A policy test pins the policy text. Code outside a request keeps
+`notDeleted(…)` (the customer export). Tests: deleted rows are hidden from a request and visible to the owner; every table with
 `is_deleted` must have the policy (both verified to fail without it).
 
 ## Not in this change

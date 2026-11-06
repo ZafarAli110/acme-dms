@@ -41,7 +41,8 @@ location is refused (the `row_level_security` migration). This is the rule, not 
   request (the export worker, the message consumer, migrations, the seed) works as the tables' owner, unfiltered,
   and **filters by hand**: the customer export names the dealer and the location itself. A request whose scope was
   never set (a route that is public, a guard that did not run) works as the same role with no scope and sees nothing.
-  The one exception is the signed export download: no token, so it asks for `beginAsync({ asOwner: true })`.
+  The one exception is the signed export download: no token, so it asks for `beginAsync({ asOwner: true })`. (`softDeleteAsync`
+  also runs one statement outside the role, naming the dealer and location itself: `database.md`, "Soft delete".)
 - The policies, by kind of table: location-scoped (`customers`, `bins`, `part_inventories`): dealer and location;
   `export_jobs`: dealer, location and its owner; dealer-scoped (`parts`, `part_photos`): dealer; no dealer at all
   (`processed_messages`): none. With no location selected, location-scoped tables return nothing.

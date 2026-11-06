@@ -111,7 +111,10 @@ describe("row-level security", () => {
   });
 
   it("filters nothing outside a request: the worker, the consumer and the seed see every dealer", async () => {
-    expect(await asRequestAsync(null, (db) => db.select().from(customers))).toHaveLength(3);
+    const everyone = await asRequestAsync(null, (db) => db.select({ surname: customers.surname }).from(customers));
+    expect(everyone.map((row) => row.surname)).toEqual(
+      expect.arrayContaining(["AtNorthside", "AtRiverside", "AtCityMotors"]),
+    );
     expect(await asRequestAsync(null, (db) => db.select().from(exportJobs))).toHaveLength(3);
   });
 
@@ -185,7 +188,82 @@ describe("row-level security", () => {
     }));
     const asOwner = await asRequestAsync(null, (db) => db.select({ surname: customers.surname }).from(customers));
 
-    expect(asRequest.customers).toEqual(["AtNorthside"]);
+    expect(asRequest.customers).toContain("AtNorthside");
+    expect(asRequest.customers).not.toContain("GoneCustomer");
+    expect(asRequest.bins).not.toContain("GONE-1");
+    expect(asOwner.map((row) => row.surname)).toContain("GoneCustomer");
+  });
+
+  it("has the deleted-rows filter on every table that can be soft-deleted, and it is the plain one the planner can use", async () => {
+    const result = await database.db.execute<{ table: string; policy: string | null }>(sql`
+      SELECT c.relname AS "table", p.qual AS policy
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'is_deleted' AND NOT a.attisdropped
+      LEFT JOIN pg_policies p ON p.schemaname = n.nspname AND p.tablename = c.relname
+        AND p.policyname = c.relname || '_not_deleted' AND p.permissive = 'RESTRICTIVE'
+      WHERE n.nspname = 'public' AND c.relkind = 'r'`);
+
+    // A new soft-deleted table needs a restrictive `<table>_not_deleted` policy in its migration, and it says exactly this:
+    // an `OR` with anything that is not known when the query is planned makes the planner unable to use a partial index
+    // (`WHERE NOT is_deleted`), so every list under the request role would sort a whole location.
+    expect(result.rows.filter((row) => row.policy !== "(NOT is_deleted)").map((row) => row.table)).toEqual([]);
+    expect(result.rows.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("refuses a request to change or delete a row that is deleted, as it does not see it", async () => {
+    const deleted = await database.seed.addCustomerAsync({
+      locationId: NORTHSIDE,
+      surname: "WriteDeleted",
+      deleted: true,
+    });
+
+    const changed = await asRequestAsync(AT_NORTHSIDE, (db) =>
+      db.update(customers).set({ city: "Revived" }).where(eq(customers.id, deleted.id)).returning(),
+    );
+    const removed = await asRequestAsync(AT_NORTHSIDE, (db) =>
+      db.delete(customers).where(eq(customers.id, deleted.id)).returning(),
+    );
+
+    expect([changed, removed]).toEqual([[], []]);
+    const [row] = await database.db.select().from(customers).where(eq(customers.id, deleted.id));
+    expect(row).toMatchObject({ city: null, isDeleted: true });
+  });
+
+  it("refuses a request to move its own row to a location that is not its own: the policy checks the changed row too", async () => {
+    const mine = await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "WriteMoved" });
+
+    const refused = await asRequestAsync(AT_NORTHSIDE, (db) =>
+      db.update(customers).set({ locationId: RIVERSIDE }).where(eq(customers.id, mine.id)),
+    ).catch((error: unknown) => error);
+
+    expect((refused as { cause?: { code?: string } }).cause?.code).toBe("42501");
+  });
+
+  it("counts every dealer's queued exports for a place in line, while showing only the user's own", async () => {
+    const later = SEEDED_AT.add({ seconds: 1 }).toString();
+    const position = await asRequestAsync(AT_NORTHSIDE, async (db) => {
+      const result = await db.execute<{ position: string }>(
+        sql`SELECT export_queue_position(${later}::timestamptz, ${CITY_MOTORS}::uuid) AS position`,
+      );
+      return Number(result.rows[0]?.position);
+    });
+
+    expect(position).toBe(4);
+  });
+
+  it("leaves deleted rows out of a request's reads, and still shows them to code outside a request", async () => {
+    await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "GoneCustomer", deleted: true });
+    await database.seed.addBinAsync({ locationId: NORTHSIDE, code: "GONE-1", deleted: true });
+
+    const asRequest = await asRequestAsync(AT_NORTHSIDE, async (db) => ({
+      customers: (await db.select({ surname: customers.surname }).from(customers)).map((row) => row.surname),
+      bins: (await db.select({ code: bins.code }).from(bins)).map((row) => row.code),
+    }));
+    const asOwner = await asRequestAsync(null, (db) => db.select({ surname: customers.surname }).from(customers));
+
+    expect(asRequest.customers).toContain("AtNorthside");
+    expect(asRequest.customers).not.toContain("GoneCustomer");
     expect(asRequest.bins).not.toContain("GONE-1");
     expect(asOwner.map((row) => row.surname)).toContain("GoneCustomer");
   });

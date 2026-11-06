@@ -48,8 +48,9 @@ Business rows are never removed; a delete sets `is_deleted`, `deleted_at` and `d
 - **Reads leave deleted rows out by themselves**: in NestJS a restrictive row-level-security policy
   (`<table>_not_deleted`, the `soft_delete_policies` migration) hides them from every query and join of a request; in EF Core the global
   query filter does it. A handler writes no `notDeleted`, and marks a row deleted with `softDeleteAsync`
-  (`business-logic/audit/soft-delete.ts`), the one place that lifts the policy for that statement and sets the audit
-  columns. Code that works outside a request (NestJS worker and consumer, the owner role) or lifts the filters on
+  (`business-logic/audit/soft-delete.ts`): the one statement that runs outside the request role, so it names the
+  dealer (and location) itself, and sets the audit columns. The policy is a plain `NOT is_deleted`: an `OR` with anything the
+  planner cannot know (a setting) stops it using a partial index for every query under the request role, so never add one. Code that works outside a request (NestJS worker and consumer, the owner role) or lifts the filters on
   purpose (.NET background work uses `IgnoreQueryFilters()`) checks deleted rows itself:
   `notDeleted(table)` (`persistence/schema/soft-delete/not-deleted.ts`). A new soft-deleted table needs its policy; a
   test fails until it has one.
