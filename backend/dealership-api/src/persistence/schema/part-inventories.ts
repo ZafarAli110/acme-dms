@@ -8,19 +8,19 @@ import { parts } from "./parts";
 export const partInventories = pgTable(
   "part_inventories",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    dealerId: uuid("dealer_id").notNull(),
-    locationId: uuid("location_id").notNull(),
-    partId: uuid("part_id")
+    dealerId: uuid().notNull(),
+    locationId: uuid().notNull(),
+    partId: uuid()
       .notNull()
       .references(() => parts.id),
-    binId: uuid("bin_id")
+    binId: uuid()
       .notNull()
       .references(() => bins.id),
-    quantityOnHand: integer("quantity_on_hand").notNull(),
-    reorderLevel: integer("reorder_level").notNull(),
+    quantityOnHand: integer().notNull(),
+    reorderLevel: integer().notNull(),
     ...auditColumns(),
   },
   (table) => [
