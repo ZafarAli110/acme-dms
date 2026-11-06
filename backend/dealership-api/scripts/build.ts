@@ -1,4 +1,4 @@
-import { cp } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 
 // Bundles our own code (including `#layer/...` subpath imports) and leaves npm packages as runtime imports for Node.
 const watch = process.argv.includes("--watch");
@@ -28,6 +28,8 @@ async function buildAsync(): Promise<boolean> {
     ],
   });
   // The SQL migrations travel with the bundle: the service applies them at startup from dist/migrations.
+  // Cleared first: a migration from an earlier build (another branch, an older folder layout) must not be left beside these.
+  await rm("dist/migrations", { recursive: true, force: true });
   await cp("src/persistence/migrations/drizzle", "dist/migrations", { recursive: true });
   for (const log of result.logs) {
     console.error(log);
