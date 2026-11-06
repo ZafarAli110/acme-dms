@@ -1,4 +1,5 @@
-// The fast gate: format, lint, typecheck and test the projects your change touches, and nothing else.
+// The fast gate: the docs still match the repository (check-docs.ts), then format, lint, typecheck and test the projects
+// your change touches, and nothing else.
 // "Your change" is everything since the branch you started from: its upstream (origin/lab/03-hooks, origin/main), or
 // main when the branch has none. Comparing with main instead would check every project on every lab branch, since each
 // lab already differs from main.
@@ -13,6 +14,11 @@ if (check.exitCode !== 0) {
 function git(...args: string[]): string | null {
   const result = Bun.spawnSync(["git", ...args], { stderr: "ignore" });
   return result.exitCode === 0 ? result.stdout.toString().trim() : null;
+}
+
+const docs = Bun.spawnSync(["bun", "scripts/check-docs.ts"], { stdout: "inherit", stderr: "inherit" });
+if (docs.exitCode !== 0) {
+  process.exit(docs.exitCode);
 }
 
 const upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}");
