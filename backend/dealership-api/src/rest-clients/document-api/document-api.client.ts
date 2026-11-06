@@ -1,3 +1,4 @@
+import { localized, type MessageArgs, type MessageKey } from "#i18n/messages";
 import {
   BadRequestException,
   ConflictException,
@@ -20,8 +21,6 @@ type DocumentResponseDto = components["schemas"]["DocumentResponseDto"];
 
 /** The name of document-api's HTTP client and resilience preset (rest-clients.module.ts). */
 export const DOCUMENT_API = "document-api";
-
-const UNAVAILABLE = "The documents service is unavailable. Try again shortly.";
 
 /**
  * Calls document-api on behalf of the signed-in user: their access token and location travel with the request, so
@@ -63,7 +62,14 @@ export class DocumentApiClient implements IDocumentApiClient {
       );
       return { id: data.id, status: data.status };
     } catch (error) {
-      throw toServiceException(`${command.fileName} could not be stored`, error);
+      throw toServiceException(
+        {
+          refused: "errors.documentStoreRefused",
+          unavailable: "errors.documentStoreUnavailable",
+          args: { fileName: command.fileName },
+        },
+        error,
+      );
     }
   }
 
@@ -82,7 +88,14 @@ export class DocumentApiClient implements IDocumentApiClient {
       if (error instanceof HttpResponseError && error.status === 404) {
         return; // Already gone: what the caller wanted.
       }
-      throw toServiceException(`Document ${documentId} could not be deleted`, error);
+      throw toServiceException(
+        {
+          refused: "errors.documentDeleteRefused",
+          unavailable: "errors.documentDeleteUnavailable",
+          args: { documentId },
+        },
+        error,
+      );
     }
   }
 }
@@ -96,9 +109,20 @@ function headersFor(userContext: UserContext): Record<string, string | null> {
  * document-api's own reason, which is written for users; anything else (no answer, a timeout, a 5xx, an open circuit)
  * is "unavailable". The original error is the `cause`, so the log shows the whole chain.
  */
-export function toServiceException(what: string, error: unknown): HttpException {
+/** What failed, as the messages for a refusal (with document-api's `{reason}`) and for no answer. */
+export interface DocumentOperation {
+  refused: MessageKey;
+  unavailable: MessageKey;
+  args: MessageArgs;
+}
+
+export function toServiceException(operation: DocumentOperation, error: unknown): HttpException {
   if (error instanceof HttpResponseError && isRefusal(error.status)) {
-    const message = `${what}: ${problemDetail(error) ?? error.statusText}`;
+    // document-api's reason is its own text (English): only our part of the message is translated.
+    const message = localized(operation.refused, {
+      ...operation.args,
+      reason: problemDetail(error) ?? error.statusText,
+    });
     if (error.status === 401 || error.status === 403) {
       return new ForbiddenException(message, { cause: error });
     }
@@ -107,7 +131,7 @@ export function toServiceException(what: string, error: unknown): HttpException 
     }
     return new BadRequestException(message, { cause: error });
   }
-  return new ServiceUnavailableException(`${what}. ${UNAVAILABLE}`, { cause: error });
+  return new ServiceUnavailableException(localized(operation.unavailable, operation.args), { cause: error });
 }
 
 /** A 4xx other than "slow down" (408 timeout, 429 too many requests): the request itself was refused. */

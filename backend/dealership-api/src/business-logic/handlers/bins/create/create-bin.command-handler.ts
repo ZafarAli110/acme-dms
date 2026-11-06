@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { ConflictException, Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { ICreateBinCommandHandler } from "#business-logic-abstractions/handlers/bins/create/create-bin.command-handler.interface";
@@ -44,7 +45,7 @@ export class CreateBinCommandHandler implements ICreateBinCommandHandler {
         ),
       );
     if (existing) {
-      throw new ConflictException(`Bin ${request.code} already exists at this location.`);
+      throw new ConflictException(localized("errors.binExists", { code: request.code }));
     }
     const [bin] = await work.db
       .insert(bins)

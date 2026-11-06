@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { AccessTokenClaims } from "../authentication/access-token-claims";
@@ -30,14 +31,14 @@ export class AuthenticationGuard implements CanActivate {
     const header = request.headers["authorization"];
     const token = typeof header === "string" && header.startsWith("Bearer ") ? header.slice("Bearer ".length) : null;
     if (!token) {
-      throw new UnauthorizedException("A bearer access token is required.");
+      throw new UnauthorizedException(localized("errors.accessTokenRequired"));
     }
 
     try {
       request.accessToken = await this._accessTokenVerifier.verifyAsync(token);
       request.rawAccessToken = token;
     } catch {
-      throw new UnauthorizedException("The access token is invalid or has expired.");
+      throw new UnauthorizedException(localized("errors.accessTokenInvalid"));
     }
     return true;
   }
