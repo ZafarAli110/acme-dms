@@ -3,6 +3,7 @@ import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedExcept
 import { Reflector } from "@nestjs/core";
 import type { AccessTokenClaims } from "../authentication/access-token-claims";
 import { AccessTokenVerifier } from "../authentication/access-token.verifier";
+import { SessionStatusChecker } from "../authentication/session-status.checker";
 import { IS_PUBLIC } from "../authentication/public.decorator";
 
 type AuthenticatedRequest = {
@@ -16,10 +17,16 @@ type AuthenticatedRequest = {
 export class AuthenticationGuard implements CanActivate {
   private readonly _reflector: Reflector;
   private readonly _accessTokenVerifier: AccessTokenVerifier;
+  private readonly _sessionStatusChecker: SessionStatusChecker;
 
-  public constructor(reflector: Reflector, accessTokenVerifier: AccessTokenVerifier) {
+  public constructor(
+    reflector: Reflector,
+    accessTokenVerifier: AccessTokenVerifier,
+    sessionStatusChecker: SessionStatusChecker,
+  ) {
     this._reflector = reflector;
     this._accessTokenVerifier = accessTokenVerifier;
+    this._sessionStatusChecker = sessionStatusChecker;
   }
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,12 +41,18 @@ export class AuthenticationGuard implements CanActivate {
       throw new UnauthorizedException(localized("errors.accessTokenRequired"));
     }
 
+    let claims: AccessTokenClaims;
     try {
-      request.accessToken = await this._accessTokenVerifier.verifyAsync(token);
-      request.rawAccessToken = token;
+      claims = await this._accessTokenVerifier.verifyAsync(token);
     } catch {
       throw new UnauthorizedException(localized("errors.accessTokenInvalid"));
     }
+    // Valid and unexpired, but its sign-in may have been ended (signed out): that is refused the same way.
+    if (!(await this._sessionStatusChecker.isOpenAsync(token, claims))) {
+      throw new UnauthorizedException(localized("errors.accessTokenInvalid"));
+    }
+    request.accessToken = claims;
+    request.rawAccessToken = token;
     return true;
   }
 }
