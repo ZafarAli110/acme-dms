@@ -17,7 +17,7 @@ export interface RequestOptions {
   anonymous?: boolean;
 }
 
-/** The token endpoints answer 401 for a wrong password or a ended sign-in; that is their answer, not a reason to refresh. */
+/** The token endpoints answer 401 for a wrong password or an ended sign-in; that is their answer, not a reason to refresh. */
 const TOKEN_ENDPOINTS = `${API_CONFIG.identityUrl}/v1/tokens`;
 
 /** What identity-api requires of a refresh or revoke: a header only the page itself adds (a form on another site cannot). */
@@ -64,7 +64,7 @@ class ApiClient {
     return this.requestAsync<T>(url, { method: "POST", body: formData }, options);
   }
 
-  /** Multipart: a record and its files in one request. */
+  /** Multipart PATCH: the changed fields of a record and its photos, in one request. */
   public patchFormAsync<T>(url: string, formData: FormData, options?: RequestOptions): Promise<T> {
     return this.requestAsync<T>(url, { method: "PATCH", body: formData }, options);
   }
@@ -145,16 +145,23 @@ class ApiClient {
     throw new ServerUnreachableError();
   }
 
-  /** Ends the sign-in on identity-api and removes the refresh cookie. Never fails: signing out here does not wait for it. */
-  public async revokeSignInAsync(): Promise<void> {
+  /**
+   * Ends the sign-in on identity-api, which removes the refresh cookie. True when the service answered; false when it could
+   * not be reached in time, in which case the cookie is still good and the caller must try again (`session.setRevokePending`).
+   * Behind a refresh that is running (the same lock), so that refresh's new cookie is the one this removes.
+   */
+  public async revokeSignInAsync(): Promise<boolean> {
     try {
-      await this.sendOnceAsync(
-        `${TOKEN_ENDPOINTS}/revoke`,
-        { method: "POST", headers: FROM_THE_PAGE },
-        { anonymous: true, signal: AbortSignal.timeout(2000) },
+      const response = await withRefreshLock(() =>
+        this.sendOnceAsync(
+          `${TOKEN_ENDPOINTS}/revoke`,
+          { method: "POST", headers: FROM_THE_PAGE },
+          { anonymous: true, signal: AbortSignal.timeout(API_CONFIG.signOutWaitMs) },
+        ),
       );
+      return response.ok;
     } catch {
-      // Nothing to do: the person is signed out in this tab either way.
+      return false;
     }
   }
 

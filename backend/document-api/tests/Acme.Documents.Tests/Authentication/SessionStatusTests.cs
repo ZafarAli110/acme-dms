@@ -1,5 +1,11 @@
 using System.Net;
+using System.Security.Claims;
 using Acme.ServiceDefaults.Authentication;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -57,11 +63,71 @@ public sealed class SessionStatusTests
     }
 
     [TestMethod]
-    public async Task IdentityApi_ThatSays401_EndsTheSignIn_AndOneThatSays204OrIsDown_DoesNot()
+    public async Task IdentityApi_ThatSays401_EndsTheSignIn_AndAnyOtherAnswerOrNoAnswerDoesNot()
     {
         Assert.IsFalse(await CheckAsync(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)));
         Assert.IsTrue(await CheckAsync(_ => new HttpResponseMessage(HttpStatusCode.NoContent)));
+        // A service does not stop serving because the sign-in authority is failing or restarting.
+        Assert.IsTrue(await CheckAsync(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)));
+        Assert.IsTrue(await CheckAsync(_ => new HttpResponseMessage(HttpStatusCode.Forbidden)));
         Assert.IsTrue(await CheckAsync(_ => throw new HttpRequestException("identity-api is restarting")));
+    }
+
+    [TestMethod]
+    public async Task RequestsThatFindNothingRememberedTogether_ShareOneQuestion()
+    {
+        var clock = new TestClock();
+        var cache = new SessionStatusCache(new MemoryCache(new MemoryCacheOptions()), clock);
+        var session = NewSession(clock);
+        var asked = 0;
+        var release = new TaskCompletionSource();
+
+        async Task<bool> Ask(CancellationToken _)
+        {
+            Interlocked.Increment(ref asked);
+            await release.Task;
+            return true;
+        }
+
+        var together = Enumerable.Range(0, 6).Select(_ => cache.IsActiveAsync(session, Ask, TestContext.CancellationToken)).ToList();
+        release.SetResult();
+        var answers = await Task.WhenAll(together);
+
+        Assert.AreEqual(1, asked);
+        Assert.IsTrue(answers.All(answer => answer));
+    }
+
+    [TestMethod]
+    public async Task AnEndedSignIn_IsAskedAgainOnceItsAccessTokenCouldNoLongerBeShown()
+    {
+        var clock = new TestClock();
+        var cache = new SessionStatusCache(new MemoryCache(new MemoryCacheOptions { Clock = clock.AsSystemClock() }), clock);
+        var session = NewSession(clock);
+        var asked = 0;
+
+        Task<bool> Ask(CancellationToken _)
+        {
+            asked++;
+            return Task.FromResult(false);
+        }
+
+        await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken);
+        clock.Advance(TimeSpan.FromMinutes(16));
+        await cache.IsActiveAsync(session, Ask, TestContext.CancellationToken);
+
+        Assert.AreEqual(2, asked);
+    }
+
+    [TestMethod]
+    public async Task TheTokenHook_RefusesAnEndedSignIn_AcceptsAnOpenOne_AndLeavesTokensWithoutASignInIdToTheirExpiry()
+    {
+        var ended = await ValidateAsync(sessionIsActive: false, claims: [new Claim("sid", Guid.NewGuid().ToString())]);
+        var open = await ValidateAsync(sessionIsActive: true, claims: [new Claim("sid", Guid.NewGuid().ToString())]);
+        var noSid = await ValidateAsync(sessionIsActive: false, claims: []);
+
+        Assert.IsNotNull(ended.Result?.Failure, "a token whose sign-in ended must be refused");
+        Assert.IsNull(open.Result);
+        Assert.IsNull(noSid.Result);
     }
 
     [TestMethod]
@@ -89,6 +155,30 @@ public sealed class SessionStatusTests
             .Build();
         var checker = new HttpSessionStatusChecker(new HttpClient(new FakeHandler(answer)), cache, configuration, NullLogger<HttpSessionStatusChecker>.Instance);
         return await checker.IsActiveAsync(NewSession(clock), TestContext.CancellationToken);
+    }
+
+    private async Task<TokenValidatedContext> ValidateAsync(bool sessionIsActive, IEnumerable<Claim> claims)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISessionStatusChecker>(new FixedChecker(sessionIsActive));
+        var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        var token = new JsonWebToken(new JsonWebTokenHandler().CreateToken(new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddMinutes(15),
+        }));
+        var context = new TokenValidatedContext(httpContext, new AuthenticationScheme("Bearer", null, typeof(JwtBearerHandler)), new JwtBearerOptions())
+        {
+            Principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer")),
+            SecurityToken = token,
+        };
+        await Acme.ServiceDefaults.Authentication.AuthenticationServiceCollectionExtensions.EndedSessionsAreRefusedAsync(context);
+        return context;
+    }
+
+    private sealed class FixedChecker(bool active) : ISessionStatusChecker
+    {
+        public Task<bool> IsActiveAsync(AccessTokenSession session, CancellationToken cancellationToken) => Task.FromResult(active);
     }
 
     private static AccessTokenSession NewSession(TimeProvider clock) =>

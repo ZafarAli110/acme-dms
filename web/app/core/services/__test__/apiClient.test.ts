@@ -52,6 +52,9 @@ function fakeService(options: { refreshAnswer: () => Response | Promise<Response
       authorization: headers.get("authorization"),
       fromThePage: headers.get("x-requested-with"),
     });
+    if (address.endsWith("/v1/tokens/revoke")) {
+      return new Response(null, { status: 204 });
+    }
     if (address.endsWith("/v1/tokens/refresh")) {
       const answer = await options.refreshAnswer();
       if (answer.ok) {
@@ -167,12 +170,12 @@ describe("ApiClient and an expired access token", () => {
     await expect(apiClient.refreshAccessTokenAsync()).rejects.toThrow();
   });
 
-  it("signs out on the service as the page, and never fails", async () => {
+  it("signs out on the service as the page: true when it answered, false when it could not be reached", async () => {
     const service = fakeService({ refreshAnswer: () => json({}) });
     const fetchMock = vi.fn(service.handler);
     vi.stubGlobal("fetch", fetchMock);
 
-    await apiClient.revokeSignInAsync();
+    await expect(apiClient.revokeSignInAsync()).resolves.toBe(true);
     expect(service.calls[0]).toMatchObject({
       url: "/api/identity/v1/tokens/revoke",
       authorization: null,
@@ -180,6 +183,6 @@ describe("ApiClient and an expired access token", () => {
     });
 
     fetchMock.mockRejectedValue(new TypeError("offline"));
-    await expect(apiClient.revokeSignInAsync()).resolves.toBeUndefined();
+    await expect(apiClient.revokeSignInAsync()).resolves.toBe(false);
   });
 });

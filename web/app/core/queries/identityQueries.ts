@@ -31,7 +31,7 @@ export const identityQueries = {
       `${API_CONFIG.identityUrl}/v1/tokens`,
       { email, password },
     ),
-  /** Signing out: ends the sign-in on the service, which removes the cookie. Best effort: the person is signed out here either way. */
-  revokeAsync: (): Promise<void> => apiClient.revokeSignInAsync(),
+  /** Signing out: ends the sign-in on the service, which removes the cookie. True when the service answered. */
+  revokeAsync: (): Promise<boolean> => apiClient.revokeSignInAsync(),
   getCurrentUserAsync: () => apiClient.getAsync<CurrentUser>(`${API_CONFIG.identityUrl}/v1/users/me`),
 };

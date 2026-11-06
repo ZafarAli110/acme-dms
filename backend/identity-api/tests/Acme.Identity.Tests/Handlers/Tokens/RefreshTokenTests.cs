@@ -43,7 +43,7 @@ public sealed class RefreshTokenTests
         Assert.AreEqual(15 * 60, signedIn.Response.ExpiresIn);
         Assert.AreEqual(TimeSpan.FromMinutes(15), access.ValidTo - access.ValidFrom);
         var stored = await dbContext.RefreshTokens.SingleAsync(TestContext.CancellationToken);
-        Assert.AreEqual(RefreshTokenSecret.Hash(signedIn.RefreshToken), stored.TokenHash);
+        Assert.AreEqual(RefreshTokenSecret.Hash(signedIn.RefreshToken!), stored.TokenHash);
         Assert.AreNotEqual(signedIn.RefreshToken, stored.TokenHash);
         Assert.AreEqual(TimeSpan.FromHours(8), stored.ExpiresAt - stored.CreatedAt);
         // The sign-in's id is in every access token it makes.
@@ -58,7 +58,7 @@ public sealed class RefreshTokenTests
         var signedIn = await SignInAsync(dbContext, clock);
         clock.Advance(TimeSpan.FromMinutes(14));
 
-        var refreshed = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken, TestContext.CancellationToken);
+        var refreshed = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
 
         var before = new JsonWebToken(signedIn.Response.AccessToken);
         var after = new JsonWebToken(refreshed.Response.AccessToken);
@@ -87,7 +87,7 @@ public sealed class RefreshTokenTests
                 .SetProperty(r => r.DeletedAt, DateTimeOffset.UtcNow)
                 .SetProperty(r => r.DeletedBy, Guid.NewGuid()), TestContext.CancellationToken);
 
-        var refreshed = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken, TestContext.CancellationToken);
+        var refreshed = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
 
         var locations = new JsonWebToken(refreshed.Response.AccessToken).Claims.Where(c => c.Type == "locations").Select(c => c.Value).ToList();
         Assert.HasCount(1, locations);
@@ -100,13 +100,13 @@ public sealed class RefreshTokenTests
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
         var clock = new TestClock();
         var signedIn = await SignInAsync(dbContext, clock);
-        var first = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken, TestContext.CancellationToken);
+        var first = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
         var sessionId = (await dbContext.RefreshTokens.FirstAsync(TestContext.CancellationToken)).FamilyId;
         clock.Advance(TimeSpan.FromMinutes(1));
 
         // A second holder presents the first token; the person's own, newer token is refused with it.
         await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken, TestContext.CancellationToken));
+            Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
         await Assert.ThrowsExactlyAsync<ApiException>(() =>
             Refresh(dbContext, clock).ExecuteAsync(first.RefreshToken, TestContext.CancellationToken));
 
@@ -114,19 +114,99 @@ public sealed class RefreshTokenTests
     }
 
     [TestMethod]
-    public async Task Refresh_ARefreshTokenShownAgainWithinTheGracePeriod_IsTheSamePersonsSecondRequest()
+    public async Task Refresh_ARefreshTokenShownAgainWithinTheGracePeriod_GetsAnAccessTokenAndNoNewRefreshToken()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
         var clock = new TestClock();
         var signedIn = await SignInAsync(dbContext, clock);
-        await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken, TestContext.CancellationToken);
-        clock.Advance(TimeSpan.FromSeconds(TokenSettings.RefreshReuseGraceSeconds - 1));
+        await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
+        // Exactly at the end of the grace period is still inside it.
+        clock.Advance(TimeSpan.FromSeconds(TokenSettings.RefreshReuseGraceSeconds));
 
-        var second = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken, TestContext.CancellationToken);
+        var second = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
 
         Assert.IsFalse(string.IsNullOrEmpty(second.Response.AccessToken));
+        // A copy used inside the window gets minutes, not a second chain that lasts hours.
+        Assert.IsNull(second.RefreshToken);
+        Assert.AreEqual(2, await dbContext.RefreshTokens.CountAsync(TestContext.CancellationToken));
         var sessionId = (await dbContext.RefreshTokens.FirstAsync(TestContext.CancellationToken)).FamilyId;
         Assert.IsTrue(await new SessionActiveQuery(dbContext, clock).ExecuteAsync(sessionId, TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task Refresh_ARefreshTokenShownAgainJustAfterTheGracePeriod_EndsTheSignIn()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        var clock = new TestClock();
+        var signedIn = await SignInAsync(dbContext, clock);
+        await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
+        clock.Advance(TimeSpan.FromSeconds(TokenSettings.RefreshReuseGraceSeconds) + TimeSpan.FromMilliseconds(1));
+
+        await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
+
+        var sessionId = (await dbContext.RefreshTokens.AsNoTracking().FirstAsync(TestContext.CancellationToken)).FamilyId;
+        Assert.IsFalse(await new SessionActiveQuery(dbContext, clock).ExecuteAsync(sessionId, TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task Refresh_ATokenAtTheEndOfItsLifetime_IsRefused()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        var clock = new TestClock();
+        var signedIn = await SignInAsync(dbContext, clock);
+        clock.Advance(TimeSpan.FromSeconds(TokenSettings.RefreshLifetimeSeconds) - TimeSpan.FromMilliseconds(1));
+        await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
+        clock.Advance(TimeSpan.FromMilliseconds(1));
+
+        // `ExpiresAt` is the first moment it no longer works, however often it was renewed.
+        var newest = await dbContext.RefreshTokens.AsNoTracking().OrderByDescending(t => t.CreatedAt).FirstAsync(TestContext.CancellationToken);
+        await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
+        Assert.AreEqual(newest.ExpiresAt, clock.GetUtcNow());
+    }
+
+    [TestMethod]
+    public async Task Refresh_TwoRefreshesOfOneTokenAtOnce_BothAreAnswered_AndOnlyOneMakesTheNextToken()
+    {
+        await using var first = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        await using var second = TestPostgres.Reopen(first);
+        var clock = new TestClock();
+        var signedIn = await SignInAsync(first, clock);
+
+        var both = await Task.WhenAll(
+            Refresh(first, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken),
+            Refresh(second, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
+
+        Assert.IsTrue(both.All(issued => !string.IsNullOrEmpty(issued.Response.AccessToken)));
+        Assert.AreEqual(1, both.Count(issued => issued.RefreshToken is not null));
+        var chain = await first.RefreshTokens.AsNoTracking().ToListAsync(TestContext.CancellationToken);
+        Assert.HasCount(2, chain);
+        Assert.AreEqual(1, chain.Count(t => t.RotatedAt is null));
+        Assert.IsTrue(chain.All(t => t.RevokedAt is null));
+    }
+
+    [TestMethod]
+    public async Task SigningOutWhileARefreshRuns_LeavesNoTokenOfTheSignInLive_WhicheverIsFirst()
+    {
+        await using var first = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        await using var second = TestPostgres.Reopen(first);
+        var clock = new TestClock();
+
+        for (var round = 0; round < 8; round++)
+        {
+            var signedIn = await SignInAsync(first, clock);
+
+            var outcomes = await Task.WhenAll(
+                Attempt(() => Refresh(first, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken)),
+                Attempt(() => Revoke(second, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken)));
+
+            // The refresh may be answered or refused, depending on which came first; what may not be left is a live token.
+            Assert.IsTrue(outcomes.All(ok => ok != null));
+            var sessionId = Guid.Parse(new JsonWebToken(signedIn.Response.AccessToken).GetClaim("sid").Value);
+            var live = await first.RefreshTokens.AsNoTracking().CountAsync(t => t.FamilyId == sessionId && t.RevokedAt == null, TestContext.CancellationToken);
+            Assert.AreEqual(0, live, $"round {round}: a token of an ended sign-in is still live");
+        }
     }
 
     [TestMethod]
@@ -165,7 +245,7 @@ public sealed class RefreshTokenTests
                 .SetProperty(u => u.DeletedBy, Guid.NewGuid()), TestContext.CancellationToken);
 
         var ex = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken, TestContext.CancellationToken));
+            Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
 
         Assert.AreEqual(ApiErrorCategory.Unauthorized, ex.Category);
     }
@@ -202,7 +282,7 @@ public sealed class RefreshTokenTests
 
         Assert.IsTrue(await query.ExecuteAsync(sessionId, TestContext.CancellationToken));
         Assert.IsFalse(await query.ExecuteAsync(Guid.NewGuid(), TestContext.CancellationToken));
-        await Revoke(dbContext, clock).ExecuteAsync(signedIn.RefreshToken, TestContext.CancellationToken);
+        await Revoke(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
         Assert.IsFalse(await query.ExecuteAsync(sessionId, TestContext.CancellationToken));
 
         var another = await SignInAsync(dbContext, clock);
@@ -222,6 +302,20 @@ public sealed class RefreshTokenTests
         await SignInAsync(dbContext, clock);
 
         Assert.AreEqual(1, await dbContext.RefreshTokens.CountAsync(TestContext.CancellationToken));
+    }
+
+    /// <summary>Runs a step that may be refused (a sign-out in the way); what matters is that it finishes.</summary>
+    private static async Task<object> Attempt(Func<Task> step)
+    {
+        try
+        {
+            await step();
+        }
+        catch (ApiException)
+        {
+        }
+
+        return new object();
     }
 
     private Task<IssuedTokens> SignInAsync(IdentityDbContext dbContext, TimeProvider clock) =>

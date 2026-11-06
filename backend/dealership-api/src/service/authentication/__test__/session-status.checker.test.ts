@@ -73,4 +73,52 @@ describe("SessionStatusChecker", () => {
 
     expect(identity).not.toHaveBeenCalled();
   });
+
+  it("asks again once an ended sign-in's token could no longer be shown", async () => {
+    identity.mockImplementation(async () => new Response(null, { status: 401 }));
+
+    await checker.isOpenAsync("t", claims(), NOW);
+    await checker.isOpenAsync("t", claims(), NOW + 16 * 60_000);
+
+    expect(identity).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts the token when identity-api answers with an error of its own (not 401): it is failing, not ending sign-ins", async () => {
+    for (const status of [500, 403, 503]) {
+      identity.mockImplementationOnce(async () => new Response(null, { status }));
+      await expect(
+        new SessionStatusChecker(readSettings({ "services__identity-api__http__0": "http://identity" })).isOpenAsync(
+          "t",
+          claims(),
+          NOW,
+        ),
+      ).resolves.toBe(true);
+    }
+  });
+
+  it("shares one question among requests that find nothing remembered at the same moment", async () => {
+    let release: () => void = () => undefined;
+    identity.mockImplementation(
+      () => new Promise<Response>((resolve) => (release = () => resolve(new Response(null, { status: 204 })))),
+    );
+
+    const together = [1, 2, 3, 4, 5].map(() => checker.isOpenAsync("t", claims(), NOW));
+    release();
+
+    await expect(Promise.all(together)).resolves.toEqual([true, true, true, true, true]);
+    expect(identity).toHaveBeenCalledTimes(1);
+  });
+
+  it("remembers a bounded number of sign-ins", async () => {
+    for (let index = 0; index < 10_050; index += 1) {
+      await checker.isOpenAsync("t", claims({ sid: `sign-in-${index}` }), NOW);
+    }
+
+    const remembered = (checker as unknown as { _remembered: Map<string, unknown> })._remembered;
+    expect(remembered.size).toBeLessThanOrEqual(10_000);
+    // The newest are kept: asking about the last one again is answered from memory.
+    identity.mockClear();
+    await checker.isOpenAsync("t", claims({ sid: "sign-in-10049" }), NOW + 1);
+    expect(identity).not.toHaveBeenCalled();
+  });
 });

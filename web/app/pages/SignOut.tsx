@@ -1,9 +1,9 @@
 import { redirect } from "react-router";
 import { authKernel } from "../core/kernel/authKernel";
 
-/** Posted by the top bar's sign-out confirmation. Clears the session and the cache, then shows the sign-in page. */
+/** Posted by the top bar's sign-out confirmation. Clears the session and the cache, ends the sign-in on the service, then shows the sign-in page. */
 export async function clientAction() {
-  authKernel.signOut();
+  await authKernel.signOutAsync();
   return redirect("/sign-in");
 }
 
