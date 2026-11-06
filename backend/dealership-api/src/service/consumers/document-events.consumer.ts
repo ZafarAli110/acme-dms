@@ -22,11 +22,16 @@ const EXCHANGE = "acme.documents";
 const DEAD_LETTER_EXCHANGE = "acme.documents.dlx";
 const QUEUE = "dealership-api.document-events";
 const DEAD_LETTER_QUEUE = "dealership-api.document-events.dlq";
+/** How long to wait before connecting again after RabbitMQ dropped the connection. */
+const RECONNECT_MS = 5_000;
 
 /**
  * Consumes document-api's events: an inbound adapter, like a controller, that hands each message to a business
  * handler. A message that cannot be handled (unknown type or owner, or a handler error) is dead-lettered, not
  * retried forever; inspect it in RabbitMQ's management UI.
+ *
+ * A dropped connection (a heartbeat missed while the computer slept, RabbitMQ restarting) is logged and connected
+ * again every RECONNECT_MS: without its error listener, amqplib throws it and the whole API stops.
  */
 @Injectable()
 export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -35,6 +40,8 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
   private readonly _markPartPhotoFailed: IMarkPartPhotoFailedCommandHandler;
   private readonly _settings: Settings;
   private _connection: ChannelModel | null = null;
+  private _reconnect: NodeJS.Timeout | null = null;
+  private _isStopping = false;
 
   public constructor(
     @Inject(MARK_PART_PHOTO_READY_COMMAND_HANDLER) markPartPhotoReady: IMarkPartPhotoReadyCommandHandler,
@@ -47,17 +54,50 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
   }
 
   public async onApplicationBootstrap(): Promise<void> {
+    await this.connectAsync();
+  }
+
+  public async onApplicationShutdown(): Promise<void> {
+    this._isStopping = true;
+    if (this._reconnect) {
+      clearTimeout(this._reconnect);
+    }
+    await this._connection?.close();
+  }
+
+  private async connectAsync(): Promise<void> {
     const url = requireSetting(this._settings.rabbitmq, "ConnectionStrings__rabbitmq");
-    this._connection = await connect(url, { clientProperties: { connection_name: "dealership-api" } });
-    const channel = await this._connection.createChannel();
+    const connection = await connect(url, { clientProperties: { connection_name: "dealership-api" } });
+    connection.on("error", (error: unknown) => this._logger.warn({ err: error }, "RabbitMQ connection error"));
+    connection.on("close", () => this.reconnectLater());
+    this._connection = connection;
+    const channel = await connection.createChannel();
+    channel.on("error", (error: unknown) => this._logger.warn({ err: error }, "RabbitMQ channel error"));
+    // A channel that closes on its own stops the consuming: close the connection too, so it all starts again.
+    channel.on("close", () => {
+      if (!this._isStopping) {
+        void connection.close().catch(() => undefined);
+      }
+    });
     await this.declareTopologyAsync(channel);
     await channel.prefetch(10);
     await channel.consume(QUEUE, (message) => void this.handleAsync(channel, message));
     this._logger.log(`Consuming ${QUEUE}`);
   }
 
-  public async onApplicationShutdown(): Promise<void> {
-    await this._connection?.close();
+  private reconnectLater(): void {
+    this._connection = null;
+    if (this._isStopping || this._reconnect) {
+      return;
+    }
+    this._logger.warn(`RabbitMQ connection closed: connecting again in ${RECONNECT_MS / 1000} seconds`);
+    this._reconnect = setTimeout(() => {
+      this._reconnect = null;
+      this.connectAsync().catch((error: unknown) => {
+        this._logger.warn({ err: error }, "RabbitMQ is not back yet");
+        this.reconnectLater();
+      });
+    }, RECONNECT_MS);
   }
 
   private async declareTopologyAsync(channel: Channel): Promise<void> {
