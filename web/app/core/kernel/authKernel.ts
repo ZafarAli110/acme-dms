@@ -1,7 +1,6 @@
 import { i18n } from "../../i18n";
 import { ApiError } from "../config/apiErrors";
 import { type CurrentUser, identityQueries } from "../queries/identityQueries";
-import { apiClient } from "../services/apiClient";
 import { queryClient } from "../queries/queryClient";
 import { sessionExpiry } from "../services/sessionExpiry";
 import { type OtherTabChange, session } from "../storage/sessionStore";
@@ -19,11 +18,11 @@ const RESOLVING: AuthSnapshot = { status: "resolving", user: null };
 /**
  * The single source of truth for who is signed in, outside React. The router middleware waits on it before any
  * protected loader runs; React reads it through `useAuth()` (useSyncExternalStore). Same role as IDS's authKernel,
- * without Logto: the token comes from identity-api and lives in session storage, shared with the app's other open
- * tabs on request (`sessionStore.ts`).
+ * without Logto: the sign-in is the gateway's session, which every open tab shares through its httpOnly cookie
+ * (`sessionStore.ts`).
  */
 export class AuthKernel {
-  // A browser tab starts by finding its sign-in: its own token, or one another open tab shares.
+  // A browser tab starts by finding its sign-in: the session cookie every tab shares, if there is one.
   private _snapshot: AuthSnapshot = typeof window === "undefined" ? SIGNED_OUT : RESOLVING;
   private _resolving: Promise<void> | null = null;
   /** Counts sign-ins and sign-outs, so a check started for an earlier one never commits over a later one. */
@@ -45,8 +44,8 @@ export class AuthKernel {
   }
 
   /**
-   * Resolves once this tab's sign-in is known: its token, or one another open tab shares, checked against identity-api
-   * (at most once per sign-in). Throws when identity-api cannot be reached, keeping the token for the next try.
+   * Resolves once this tab's sign-in is known: the session cookie's person, asked of identity-api through the gateway (at
+   * most once per sign-in). Throws when they cannot be reached, so the next try asks again.
    */
   public async waitForResolvedAuthAsync(): Promise<AuthSnapshot> {
     if (this._snapshot.status === "resolving") {
@@ -58,15 +57,13 @@ export class AuthKernel {
 
   /** Throws the identity-api problem (for example 401) when the email or password is wrong. */
   public async signInAsync(email: string, password: string): Promise<void> {
-    const { accessToken, expiresIn } = await identityQueries.signInAsync(email, password);
-    // Start from a clean session: a location left by an earlier user must never be sent with the new token.
+    await identityQueries.signInAsync(email, password);
+    // Start from a clean session: a location left by an earlier user must never be sent with the new sign-in.
     session.clear();
     queryClient.clear();
     this._generation += 1;
-    // The sign-in made a new cookie: a sign-out that could not end the old one is moot.
+    // The sign-in replaced the cookie: a sign-out that could not end the old one is moot.
     session.setRevokePending(false);
-    session.setToken(accessToken);
-    apiClient.renewBefore(expiresIn);
     this.commit(RESOLVING);
     this._resolving = this.resolveUserAsync();
     await this._resolving;
@@ -77,10 +74,10 @@ export class AuthKernel {
   }
 
   /**
-   * Signs out this tab and every other open tab of the app, and ends the sign-in on the service, which removes the refresh
-   * cookie: the services refuse this sign-in's access token from then on, within seconds. The person is signed out here
-   * first and always. If the service cannot be reached the cookie is still good, so the sign-out is remembered
-   * (`setRevokePending`) and the next load ends the sign-in before anything can use the cookie.
+   * Signs out this tab and every other open tab of the app, and ends the sign-in at the gateway, which deletes the session:
+   * its cookie signs no one in from then on, at once. The person is signed out here first and always. If the gateway cannot
+   * be reached the cookie is still good, so the sign-out is remembered (`setRevokePending`) and the next load ends the
+   * sign-in before anything can use the cookie.
    */
   public async signOutAsync(): Promise<void> {
     this.forget();
@@ -89,7 +86,7 @@ export class AuthKernel {
     session.setRevokePending(!(await identityQueries.revokeAsync()));
   }
 
-  /** The service refused the refresh token (`sessionExpiry`): the sign-in is over, here and in the other tabs. */
+  /** A request of this signed-in tab got a 401 (`sessionExpiry`): the sign-in is over, here and in the other tabs. */
   private expire(): void {
     this.forget();
     this.commit(SIGNED_OUT);
@@ -102,7 +99,7 @@ export class AuthKernel {
 
   /**
    * Another tab signed out, or signed in, perhaps as someone else: this tab follows, so it never shows one user's
-   * screens with another user's token. Its cached data and location belonged to the old sign-in.
+   * screens with another user's sign-in. Its cached data and location belonged to the old sign-in.
    */
   private followOtherTab(change: OtherTabChange): void {
     this.forget();
@@ -110,7 +107,7 @@ export class AuthKernel {
       this.commit(SIGNED_OUT);
       return;
     }
-    // The other tab signed in as someone: the refresh cookie is theirs now, shared by every tab, so this tab gets its token.
+    // The other tab signed in as someone: the session cookie is theirs now, shared by every tab, so this tab follows it.
     this.commit(RESOLVING);
     // Nobody awaits this one: when identity-api cannot be reached, the tab stays resolving and the next navigation
     // (waitForResolvedAuthAsync) tries again and shows the error.
@@ -139,30 +136,21 @@ export class AuthKernel {
         this.commit(SIGNED_OUT);
         return;
       }
-      // A new tab or a reload has no access token yet: the refresh cookie, if there is one, gets it.
-      if (session.getToken() === null) {
-        const refreshed = await apiClient.refreshAccessTokenAsync();
-        if (!isCurrent()) {
-          return;
-        }
-        if (!refreshed) {
-          this.commit(SIGNED_OUT);
-          return;
-        }
-      }
+      // A new tab or a reload is signed in by the session cookie, if there is one: the gateway answers 401 when there is not.
       const user = await identityQueries.getCurrentUserAsync();
       if (isCurrent()) {
+        session.setSignedIn(true);
         this.commit({ status: "signed-in", user });
       }
     } catch (error) {
       if (!isCurrent()) {
         return;
       }
-      if (!isRejectedToken(error)) {
-        // identity-api is down or slow: keep the token; the error page says so and the next navigation tries again.
+      if (!isSignedOut(error)) {
+        // identity-api or the gateway is down or slow: the error page says so and the next navigation tries again.
         throw error;
       }
-      // An expired or unknown token: back to the sign-in page, in this tab only.
+      // No sign-in, or one that ended: back to the sign-in page, in this tab only.
       session.clear();
       this.commit(SIGNED_OUT);
     } finally {
@@ -182,7 +170,7 @@ export class AuthKernel {
 
 export const authKernel = new AuthKernel();
 
-/** identity-api refused the token itself (expired, unknown, or for a user who no longer exists). */
-function isRejectedToken(error: unknown): boolean {
+/** No sign-in: no session cookie, one whose session ended, or a user who no longer exists. */
+function isSignedOut(error: unknown): boolean {
   return error instanceof ApiError && (error.problem.status === 401 || error.problem.status === 403);
 }

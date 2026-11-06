@@ -3,6 +3,8 @@ export const API_CONFIG = {
   identityUrl: "/api/identity",
   dealershipUrl: "/api/dealership",
   documentsUrl: "/api/documents",
+  /** Signing in (POST) and out (DELETE): the gateway keeps the sign-in, and the browser only its cookie. */
+  sessionUrl: "/api/session",
   /** A request with no answer after this long fails with RequestTimeoutError. */
   timeoutMs: 15_000,
   /** Signing out waits this long for each service call it makes: it must never hang because a service is down. */
