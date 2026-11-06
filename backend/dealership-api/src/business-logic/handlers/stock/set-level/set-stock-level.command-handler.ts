@@ -5,7 +5,10 @@ import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.inte
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { StockLevelSetRequestDto } from "#dto/stock/stock-level-set-request.dto";
 import type { StockListItemDto } from "#dto/stock/stock-list-item.dto";
-import { bins, notDeleted, partInventories, parts } from "#persistence/schema/index";
+import { bins } from "#persistence/schema/bins";
+import { partInventories } from "#persistence/schema/part-inventories";
+import { parts } from "#persistence/schema/parts";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,

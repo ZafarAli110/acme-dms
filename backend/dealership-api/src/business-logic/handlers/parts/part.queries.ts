@@ -1,15 +1,9 @@
 import { and, asc, count, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
-import {
-  bins,
-  type Bin,
-  notDeleted,
-  partInventories,
-  type PartInventory,
-  partPhotos,
-  type PartPhoto,
-  parts,
-  type Part,
-} from "#persistence/schema/index";
+import { bins, type Bin } from "#persistence/schema/bins";
+import { partInventories, type PartInventory } from "#persistence/schema/part-inventories";
+import { partPhotos, type PartPhoto } from "#persistence/schema/part-photos";
+import { parts, type Part } from "#persistence/schema/parts";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
 import { listFilter, listOrderBy, type ListColumns } from "../../list-query/list-columns";

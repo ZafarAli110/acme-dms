@@ -1,5 +1,5 @@
 import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
-import type { ExportJobRow } from "#persistence/schema/index";
+import type { ExportJobRow } from "#persistence/schema/export-jobs";
 import { toIsoString } from "#business-logic-abstractions/time/to-iso-string";
 import { signedDownloadPath } from "./download-link";
 

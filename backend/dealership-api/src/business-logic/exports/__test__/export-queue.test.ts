@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { TooManyRequestsException } from "#business-logic-abstractions/errors/too-many-requests.exception";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
-import { exportJobs } from "#persistence/schema/index";
+import { exportJobs } from "#persistence/schema/export-jobs";
 import { readSettings } from "#settings/settings";
 import { NORTHSIDE, RIVERSIDE, SEEDED_AT } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";

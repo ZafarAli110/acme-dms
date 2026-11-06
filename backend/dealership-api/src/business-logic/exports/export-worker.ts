@@ -14,7 +14,7 @@ import {
 } from "@nestjs/common";
 import { and, eq, inArray, isNotNull, isNull, lt, type SQL, sql } from "drizzle-orm";
 import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
-import { type ExportJobRow, exportJobs } from "#persistence/schema/index";
+import { type ExportJobRow, exportJobs } from "#persistence/schema/export-jobs";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
