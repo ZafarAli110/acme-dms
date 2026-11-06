@@ -9,7 +9,6 @@ import { SETTINGS, type Settings } from "#settings/settings";
 import { SettingsModule } from "#settings/settings.module";
 import { ResilienceModule } from "@nestjs/resilience";
 import { AccessTokenVerifier } from "./authentication/access-token.verifier";
-import { RevokedSessionsFeed } from "./authentication/revoked-sessions.feed";
 import { AuthenticationGuard } from "./guards/authentication.guard";
 import { AuthorizationGuard } from "./guards/authorization.guard";
 import { DocumentEventsConsumer } from "./consumers/document-events.consumer";
@@ -60,7 +59,6 @@ import { ProblemDetailsFilter } from "./filters/problem-details.filter";
   ],
   providers: [
     AccessTokenVerifier,
-    RevokedSessionsFeed,
     DocumentEventsConsumer,
     // Guards run in this order: who is calling, then what they may do.
     { provide: APP_GUARD, useClass: AuthenticationGuard },
