@@ -16,7 +16,7 @@ import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.inte
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { ExportJobResponseDto, ExportJobStatus, ExportKind } from "#dto/exports/export-job-response.dto";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
-import { type ExportJobRow, exportJobs, type NewExportJobRow } from "#persistence/schema/index";
+import { type ExportJobRow, exportJobs, type NewExportJobRow } from "#persistence/schema/export-jobs";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
 import {
   type IUnitOfWorkFactory,

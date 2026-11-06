@@ -1,19 +1,10 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import * as schema from "#persistence/schema/index";
-import {
-  bins,
-  type Bin,
-  customers,
-  type Customer,
-  type ExportJobRow,
-  exportJobs,
-  type NewExportJobRow,
-  parts,
-  type Part,
-  partInventories,
-  partPhotos,
-  type PartPhoto,
-} from "#persistence/schema/index";
+import { bins, type Bin } from "#persistence/schema/bins";
+import { customers, type Customer } from "#persistence/schema/customers";
+import { type ExportJobRow, exportJobs, type NewExportJobRow } from "#persistence/schema/export-jobs";
+import { partInventories } from "#persistence/schema/part-inventories";
+import { partPhotos, type PartPhoto } from "#persistence/schema/part-photos";
+import { parts, type Part } from "#persistence/schema/parts";
 
 /** The two dealers and the rooftops tests use, with the ids the identity seed gives them. */
 export const NORTHWIND = "10000000-0000-0000-0000-000000000001";
@@ -35,7 +26,7 @@ const SEEDED_AUDIT = { createdAt: SEEDED_AT, createdBy: TEST_USER_ID, updatedAt:
 const DELETED_AUDIT = { isDeleted: true, deletedAt: SEEDED_AT, deletedBy: TEST_USER_ID };
 
 /** Adds the rows a test needs straight through the schema, with audit columns filled in. */
-export function seedKit(db: NodePgDatabase<typeof schema>) {
+export function seedKit(db: NodePgDatabase) {
   async function addBinAsync(bin: Pick<Bin, "locationId" | "code"> & { deleted?: boolean }): Promise<Bin> {
     const { deleted, ...values } = bin;
     const [row] = await db

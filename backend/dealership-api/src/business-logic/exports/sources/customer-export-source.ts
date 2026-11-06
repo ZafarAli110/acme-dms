@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { BadRequestException } from "@nestjs/common";
 import { count } from "drizzle-orm";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
-import { customers } from "#persistence/schema/index";
+import { customers } from "#persistence/schema/customers";
 import { CUSTOMER_EXPORT_COLUMNS } from "../../handlers/customers/export/customer-export-columns";
 import {
   customerListOrderBy,

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { ExportJobResponseDto } from "#dto/exports/export-job-response.dto";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
-import { exportJobs } from "#persistence/schema/index";
+import { exportJobs } from "#persistence/schema/export-jobs";
 import { readSettings } from "#settings/settings";
 import { NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";

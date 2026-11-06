@@ -2,7 +2,7 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
-import { exportJobs } from "#persistence/schema/index";
+import { exportJobs } from "#persistence/schema/export-jobs";
 import { readSettings, type Settings } from "#settings/settings";
 import { CENTRAL, NORTHSIDE, SEEDED_AT } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
-import { customers } from "#persistence/schema/index";
+import { customers } from "#persistence/schema/customers";
 import type { XlsxCellKind } from "../../../exports/xlsx/xlsx-workbook-writer";
 
 /**
