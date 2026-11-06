@@ -38,16 +38,16 @@ describe("session", () => {
     session.clear();
   });
 
-  it("keeps the access token in memory only: nothing that can sign anyone in is in storage", () => {
-    session.setToken("secret-access-token");
+  it("knows whether this tab is signed in, keeps nothing of it in storage, and forgets it on clear", () => {
+    session.setSignedIn(true);
 
-    expect(session.getToken()).toBe("secret-access-token");
+    expect(session.isSignedIn()).toBe(true);
     expect([
       ...Array.from({ length: local.length }, (_, i) => local.key(i)),
       ...Array.from({ length: tab.length }, (_, i) => tab.key(i)),
     ]).toEqual([]);
     session.clear();
-    expect(session.getToken()).toBeNull();
+    expect(session.isSignedIn()).toBe(false);
   });
 
   it("keeps the selected location in this tab only, and forgets it on clear", () => {
