@@ -1,6 +1,4 @@
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Locations.GetList;
-using Acme.Identity.BusinessLogic.Abstractions.Handlers.Sessions.GetRevoked;
-using Acme.Identity.BusinessLogic.Abstractions.Handlers.Sessions.IsActive;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.System.GetHealth;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens.Create;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens.Refresh;
@@ -12,8 +10,6 @@ using Acme.Identity.BusinessLogic.Abstractions.Handlers.Users.UnassignLocation;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.WellKnown.GetJsonWebKeySet;
 using Acme.Identity.BusinessLogic.Abstractions.Signing;
 using Acme.Identity.BusinessLogic.Handlers.Locations.GetList;
-using Acme.Identity.BusinessLogic.Handlers.Sessions.GetRevoked;
-using Acme.Identity.BusinessLogic.Handlers.Sessions.IsActive;
 using Acme.Identity.BusinessLogic.Handlers.System.GetHealth;
 using Acme.Identity.BusinessLogic.Handlers.Tokens;
 using Acme.Identity.BusinessLogic.Handlers.Tokens.Create;
@@ -48,8 +44,6 @@ public static class BusinessLogicServiceCollectionExtensions
         services.AddScoped<ICreateTokenCommandHandler, CreateTokenCommandHandler>();
         services.AddScoped<IRefreshTokenCommandHandler, RefreshTokenCommandHandler>();
         services.AddScoped<IRevokeTokenCommandHandler, RevokeTokenCommandHandler>();
-        services.AddScoped<ISessionActiveQuery, SessionActiveQuery>();
-        services.AddScoped<IGetRevokedSessionsQueryHandler, GetRevokedSessionsQueryHandler>();
         services.AddScoped<IGetCurrentUserQueryHandler, GetCurrentUserQueryHandler>();
         services.AddScoped<IGetJsonWebKeySetQueryHandler, GetJsonWebKeySetQueryHandler>();
         services.AddScoped<IGetUsersQueryHandler, GetUsersQueryHandler>();

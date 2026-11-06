@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using Acme.Identity.BusinessLogic.Abstractions.Exceptions;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens;
 using Acme.Identity.BusinessLogic.Abstractions.Signing;
-using Acme.Identity.BusinessLogic.Handlers.Sessions.IsActive;
 using Acme.Identity.BusinessLogic.Handlers.Tokens;
 using Acme.Identity.BusinessLogic.Handlers.Tokens.Create;
 using Acme.Identity.BusinessLogic.Handlers.Tokens.Refresh;
@@ -110,7 +109,7 @@ public sealed class RefreshTokenTests
         await Assert.ThrowsExactlyAsync<ApiException>(() =>
             Refresh(dbContext, clock).ExecuteAsync(first.RefreshToken, TestContext.CancellationToken));
 
-        Assert.IsFalse(await new SessionActiveQuery(dbContext, clock).ExecuteAsync(sessionId, TestContext.CancellationToken));
+        Assert.IsFalse(await IsOpenAsync(dbContext, clock, sessionId));
     }
 
     [TestMethod]
@@ -130,7 +129,7 @@ public sealed class RefreshTokenTests
         Assert.IsNull(second.RefreshToken);
         Assert.AreEqual(2, await dbContext.RefreshTokens.CountAsync(TestContext.CancellationToken));
         var sessionId = (await dbContext.RefreshTokens.FirstAsync(TestContext.CancellationToken)).FamilyId;
-        Assert.IsTrue(await new SessionActiveQuery(dbContext, clock).ExecuteAsync(sessionId, TestContext.CancellationToken));
+        Assert.IsTrue(await IsOpenAsync(dbContext, clock, sessionId));
     }
 
     [TestMethod]
@@ -146,7 +145,7 @@ public sealed class RefreshTokenTests
             Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
 
         var sessionId = (await dbContext.RefreshTokens.AsNoTracking().FirstAsync(TestContext.CancellationToken)).FamilyId;
-        Assert.IsFalse(await new SessionActiveQuery(dbContext, clock).ExecuteAsync(sessionId, TestContext.CancellationToken));
+        Assert.IsFalse(await IsOpenAsync(dbContext, clock, sessionId));
     }
 
     [TestMethod]
@@ -272,26 +271,6 @@ public sealed class RefreshTokenTests
     }
 
     [TestMethod]
-    public async Task SessionActive_IsTrueWhileTheSignInIsOpen_AndFalseOnceItWasRevokedOrExpired()
-    {
-        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
-        var clock = new TestClock();
-        var query = new SessionActiveQuery(dbContext, clock);
-        var signedIn = await SignInAsync(dbContext, clock);
-        var sessionId = Guid.Parse(new JsonWebToken(signedIn.Response.AccessToken).GetClaim("sid").Value);
-
-        Assert.IsTrue(await query.ExecuteAsync(sessionId, TestContext.CancellationToken));
-        Assert.IsFalse(await query.ExecuteAsync(Guid.NewGuid(), TestContext.CancellationToken));
-        await Revoke(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
-        Assert.IsFalse(await query.ExecuteAsync(sessionId, TestContext.CancellationToken));
-
-        var another = await SignInAsync(dbContext, clock);
-        var anotherId = Guid.Parse(new JsonWebToken(another.Response.AccessToken).GetClaim("sid").Value);
-        clock.Advance(TimeSpan.FromSeconds(TokenSettings.RefreshLifetimeSeconds + 1));
-        Assert.IsFalse(await query.ExecuteAsync(anotherId, TestContext.CancellationToken));
-    }
-
-    [TestMethod]
     public async Task SignIn_ClearsTheTokensThatCanNoLongerBeUsed()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
@@ -321,6 +300,14 @@ public sealed class RefreshTokenTests
     private Task<IssuedTokens> SignInAsync(IdentityDbContext dbContext, TimeProvider clock) =>
         new CreateTokenCommandHandler(dbContext, Issuer(), new PasswordHasher<User>(), new SignInThrottle(clock), clock)
             .ExecuteAsync(new TokenCreateRequestDto("rita@northwind.test", DemoData.Password), TestContext.CancellationToken);
+
+    /// <summary>Whether the sign-in still has a refresh token that is not revoked and not past its lifetime.</summary>
+    private async Task<bool> IsOpenAsync(IdentityDbContext dbContext, TimeProvider clock, Guid sessionId)
+    {
+        var now = clock.GetUtcNow();
+        return await dbContext.RefreshTokens.AnyAsync(
+            t => t.FamilyId == sessionId && t.RevokedAt == null && t.ExpiresAt > now, TestContext.CancellationToken);
+    }
 
     private static RefreshTokenCommandHandler Refresh(IdentityDbContext dbContext, TimeProvider clock) => new(dbContext, Issuer(), clock);
 
