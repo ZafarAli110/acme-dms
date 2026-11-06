@@ -1,3 +1,4 @@
+using Acme.Identity.Tests.Support;
 using Acme.Identity.BusinessLogic.Handlers.System.GetHealth;
 using Acme.Identity.Persistence.Database;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ public sealed class GetHealthQueryHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_ReportsTheSharedHealthShape()
     {
-        var options = new DbContextOptionsBuilder<IdentityDbContext>().UseInMemoryDatabase(nameof(ExecuteAsync_ReportsTheSharedHealthShape)).Options;
+        var options = await TestPostgres.NewDatabaseAsync(TestContext.CancellationToken);
         await using var dbContext = new IdentityDbContext(options);
         var handler = new GetHealthQueryHandler(dbContext);
 

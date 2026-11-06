@@ -13,7 +13,7 @@ public sealed class DeleteDocumentCommandHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_DeletesTheDocumentAndItsContent()
     {
-        var database = new TestDatabase();
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
         var documentId = await TestDocuments.UploadPhotoAsync(database, TestContext.CancellationToken);
         await using var dbContext = database.CreateContext(TestDocuments.Northwind);
 
@@ -28,7 +28,7 @@ public sealed class DeleteDocumentCommandHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_KeepsTheDocumentRecordMarkedAsDeleted()
     {
-        var database = new TestDatabase();
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
         var documentId = await TestDocuments.UploadPhotoAsync(database, TestContext.CancellationToken);
         await using var dbContext = database.CreateContext(TestDocuments.Northwind);
 
@@ -46,7 +46,7 @@ public sealed class DeleteDocumentCommandHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_DoesNotDeleteAnotherDealersDocument()
     {
-        var database = new TestDatabase();
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
         var documentId = await TestDocuments.UploadPhotoAsync(database, TestContext.CancellationToken);
         await using var otherDealerContext = database.CreateContext(TestDocuments.OtherDealer);
         var otherDealerUser = new UserContext(Guid.NewGuid(), TestDocuments.OtherDealer, Guid.NewGuid());
