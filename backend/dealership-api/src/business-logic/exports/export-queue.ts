@@ -98,7 +98,7 @@ export class ExportQueue implements IExportJobs {
 
     if (idempotencyKey !== null) {
       // The policy shows this request its location's exports. The key is the user's across locations, so a key
-      // already used at another location is asked of the database (export_key_in_use, migration 0006): a refusal.
+      // already used at another location is asked of the database (export_key_in_use, the `export_user_scope` migration): a refusal.
       const [existing] = await work.db.select().from(exportJobs).where(eq(exportJobs.idempotencyKey, idempotencyKey));
       if (existing) {
         if (existing.fingerprint !== enqueue.source.fingerprint) {
@@ -271,7 +271,7 @@ export class ExportQueue implements IExportJobs {
     if (job.status !== "queued") {
       return null;
     }
-    // A function (migration 0004), not a query: row-level security shows a request only its own exports, and the
+    // A function (the `row_level_security` migration), not a query: row-level security shows a request only its own exports, and the
     // place in line counts everyone's. Only the number comes back.
     const result = await db.execute<{ position: string }>(
       sql`SELECT export_queue_position(${job.createdAt.toString()}::timestamptz, ${job.id}::uuid) AS position`,

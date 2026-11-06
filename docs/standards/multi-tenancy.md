@@ -34,7 +34,7 @@ dealership-api does the same with Postgres row-level security, below.
 ## The database enforces it too: row-level security (dealership-api)
 
 Postgres keeps every request to its dealer, its location and, for exports, its user, and a write for another dealer or
-location is refused (migration 0004). This is the rule, not a backstop: handlers do not repeat it in their `where`.
+location is refused (the `row_level_security` migration). This is the rule, not a backstop: handlers do not repeat it in their `where`.
 
 - A request's unit of work works as the `dealership_api_user` role with `app.dealer_id`, `app.location_id` and
   `app.user_id` set from the token (`#request-scope/data-scope`, filled in by the authorization guard). Code outside a

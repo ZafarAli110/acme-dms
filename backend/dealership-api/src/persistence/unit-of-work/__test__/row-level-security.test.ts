@@ -20,7 +20,7 @@ const OTHER_USER = "30000000-0000-0000-0000-0000000000bb";
 const AT_NORTHSIDE: DataScope = { dealerId: NORTHWIND, locationId: NORTHSIDE, userId: TEST_USER_ID };
 
 /**
- * Postgres row-level security (migration 0004), seen as a request sees it: every query below has no dealer, location
+ * Postgres row-level security (the `row_level_security` migration), seen as a request sees it: every query below has no dealer, location
  * or user filter of its own, so only the database's policies keep other dealers' rows out.
  */
 describe("row-level security", () => {

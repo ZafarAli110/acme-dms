@@ -5,7 +5,7 @@ import { updatedAudit } from "./audit-fields";
 
 /**
  * Marks the rows matching `where` deleted, by `userId` at `at`; they stay in the table and leave every read of a request.
- * Reads leave deleted rows out by themselves (a restrictive row-level security policy per table, migration 0007), and
+ * Reads leave deleted rows out by themselves (a restrictive row-level security policy per table, the `soft_delete_policies` migration), and
  * marking a row deleted would be refused for the same reason (the changed row is no longer visible), so this is the one
  * place that lifts the filter, for this one statement. A handler never sets `isDeleted` itself.
  */

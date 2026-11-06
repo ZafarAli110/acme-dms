@@ -46,7 +46,7 @@ A check constraint (`ck_<table>_deleted`) keeps the three delete columns consist
 Business rows are never removed; a delete sets `is_deleted`, `deleted_at` and `deleted_by` (and `updated_*`).
 
 - **Reads leave deleted rows out by themselves**: in NestJS a restrictive row-level-security policy
-  (`<table>_not_deleted`, migration 0007) hides them from every query and join of a request; in EF Core the global
+  (`<table>_not_deleted`, the `soft_delete_policies` migration) hides them from every query and join of a request; in EF Core the global
   query filter does it. A handler writes no `notDeleted`, and marks a row deleted with `softDeleteAsync`
   (`business-logic/audit/soft-delete.ts`), the one place that lifts the policy for that statement and sets the audit
   columns. Code that works outside a request (NestJS worker and consumer, the owner role) or lifts the filters on
@@ -63,9 +63,9 @@ Business rows are never removed; a delete sets `is_deleted`, `deleted_at` and `d
 
 - NestJS: the schema is TypeScript (`persistence/schema/`, one file per table, Drizzle). Change it, then generate the
   SQL migration from the difference with `bun run db:generate` (in `backend/dealership-api`); read the SQL before
-  committing it. A column is written by its property (`dealerId: uuid().notNull()` is the column `dealer_id`): the
-  clients and `drizzle.config.ts` set `casing: "snake_case"`, so no name is repeated. A unique constraint on a column
-  is named (`.unique("part_photos_document_id_unique")`), because Drizzle does not apply the casing to that name. Migrations live in `persistence/migrations/drizzle/`. .NET: EF Core migrations in the Persistence
+  committing it. A table is declared with `snakeCase.table(…)` (Drizzle 1.0), so a column is written by its property
+  (`dealerId: uuid().notNull()` is the column `dealer_id`) and no name is repeated. Each migration is a folder
+  `<timestamp>_<name>/` with its `migration.sql` and `snapshot.json`; never edit one that has run. Migrations live in `persistence/migrations/drizzle/`. .NET: EF Core migrations in the Persistence
   project (`dotnet ef migrations add <Name>`). Every service applies its migrations when it starts;
   `bun run db:migrate` applies dealership-api's without starting it.
 - A migration that adds a `NOT NULL` column to a table with data backfills it from data the row already has (see

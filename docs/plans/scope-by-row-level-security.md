@@ -6,7 +6,7 @@ hand, and the labs teach that.
 ## Why
 
 dealership-api filters every query by `userContext.dealerId` (and the location) in its own `where`: about 33 conditions
-in 12 files. Row-level security (migration `0004`) already makes Postgres do the same for a request, so each hand-written
+in 12 files. Row-level security (the `row_level_security` migration) already makes Postgres do the same for a request, so each hand-written
 condition repeats what the policy enforces, and a handler that forgets one is only saved by the policy. The repeats add
 noise, and they invite the next copy to drift (`customerListWhere` takes a dealer and a location as arguments).
 
@@ -86,14 +86,14 @@ are.** No repository layer: handlers keep querying with Drizzle through the unit
   wrapper.
 - **Ids stay looked up in the handler** (a part, a bin): a foreign key ignores row-level security, so the policy-filtered
   lookup is what refuses another dealer's id.
-- **Found by the review, fixed in migration `0006`:** `ExportQueue.enqueueAsync` ran under the `export_jobs` policy (dealer,
+- **Found by the review, fixed in the `export_user_scope` migration:** `ExportQueue.enqueueAsync` ran under the `export_jobs` policy (dealer,
   location, owner) while its hand filters were dealer and owner, so a key reused at another location gave a 500 (the
   unique index) instead of a 422, and the per-user limit was counted per location. The key and the limit are the
   user's across locations, so two `SECURITY DEFINER` functions (`export_key_in_use`, `export_active_count`) answer
   them from the request's own settings (no argument names a dealer or a user). The queue's other lookups (get, cancel,
   list) now rely on the policy too; an export is seen at the location it was started from, as the policy always said.
 
-## Soft delete, the same way (migration `0007`)
+## Soft delete, the same way (the `soft_delete_policies` migration)
 
 `notDeleted(…)` was the one filter still repeated in every handler, and a missed one shows a deleted row. A restrictive
 `FOR SELECT` policy per soft-delete table (`<table>_not_deleted`) is ANDed with the dealer and location policies, so

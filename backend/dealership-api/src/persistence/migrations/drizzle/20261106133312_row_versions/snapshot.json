@@ -1,0 +1,55 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "43648a6b-7aca-4edb-bd8b-d67c5a0c7b97",
+  "prevIds": ["68250898-f2f7-45e0-8bd5-df357f80225b"],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "customers", "version"],
+      "writes": ["s|col|public.customers.version", "n|col|public.customers.version", "e|col|public.customers.version"],
+      "reads": ["n|tbl|public.customers", "n|sch|public"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "parts", "version"],
+      "writes": ["s|col|public.parts.version", "n|col|public.parts.version", "e|col|public.parts.version"],
+      "reads": ["n|tbl|public.parts", "n|sch|public"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "parts",
+        "name": "version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

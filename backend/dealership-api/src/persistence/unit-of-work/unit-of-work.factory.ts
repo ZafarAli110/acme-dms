@@ -3,7 +3,7 @@ import { currentDataScope, isInRequest } from "#request-scope/data-scope";
 import { UnitOfWork } from "./unit-of-work";
 import type { IUnitOfWorkFactory } from "./unit-of-work.factory.interface";
 
-/** The database role a request works as: row-level security policies apply to it (migration 0004). */
+/** The database role a request works as: row-level security policies apply to it (the `row_level_security` migration). */
 export const REQUEST_ROLE = "dealership_api_user";
 
 /**

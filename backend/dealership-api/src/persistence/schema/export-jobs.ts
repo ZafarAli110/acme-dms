@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { bigint, index, integer, jsonb, snakeCase, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { ExportJobStatus, ExportKind } from "#dto/exports/export-job-response.dto";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
 import { instant } from "./columns/temporal-columns";
@@ -11,7 +11,7 @@ import { instant } from "./columns/temporal-columns";
  * deleted outright once its file has long expired (the worker's sweeper), and `owner_id` and `created_at` already say
  * who asked and when.
  */
-export const exportJobs = pgTable(
+export const exportJobs = snakeCase.table(
   "export_jobs",
   {
     id: uuid()
