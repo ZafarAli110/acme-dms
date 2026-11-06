@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { IUpdateCustomerCommandHandler } from "#business-logic-abstractions/handlers/customers/update/update-customer.command-handler.interface";
@@ -60,7 +61,7 @@ export class UpdateCustomerCommandHandler implements IUpdateCustomerCommandHandl
       )
       .returning();
     if (!updated) {
-      throw new NotFoundException(`Customer ${customerId} was not found at this location.`);
+      throw new NotFoundException(localized("errors.customerNotFound", { customerId }));
     }
     await work.commitAsync();
     return toCustomerResponseDto(updated);
