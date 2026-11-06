@@ -14,7 +14,7 @@ public sealed class UploadDocumentCommandHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_StoresThePendingDocumentAndQueuesProcessing()
     {
-        var database = new TestDatabase();
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
         await using var dbContext = database.CreateContext(TestDocuments.Northwind);
         var outbox = new Mock<IOutbox>();
 
@@ -33,7 +33,7 @@ public sealed class UploadDocumentCommandHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_RejectsVariantsForANonImage()
     {
-        var database = new TestDatabase();
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
         await using var dbContext = database.CreateContext(TestDocuments.Northwind);
         var request = TestDocuments.PhotoUpload() with { ContentType = "application/pdf" };
 
