@@ -2,6 +2,10 @@
 // same as the dashboard's Console logs page), and the fix for a cause we know.
 
 const LOG_LINES = 40;
+/** How far back to look for the error itself: a crash is often followed by a page of ordinary startup lines. */
+const SCAN_LINES = 2000;
+/** Ordinary JSON log lines (pino's info and debug): what buries the error. */
+const ROUTINE = /"level":(10|20|30)\b/;
 
 type Resource = { displayName: string; resourceType: string; state?: string; healthStatus?: string };
 
@@ -15,6 +19,12 @@ const KNOWN_CAUSES: { pattern: RegExp; fix: string }[] = [
   {
     pattern: /password authentication failed/,
     fix: "An old Postgres volume has another password: see Troubleshooting in the README.",
+  },
+  {
+    pattern: /Heartbeat timeout|Connection closed|ECONNRESET/,
+    fix:
+      "The connection to RabbitMQ dropped (often after the computer slept). Restart the resource from the dashboard " +
+      "(its ... menu, Restart), or stop and run `bun run dev` again.",
   },
   {
     pattern: /EADDRINUSE|address already in use/,
@@ -61,7 +71,13 @@ if (unwell.length === 0) {
 for (const resource of unwell) {
   const state = [resource.state ?? "no state", resource.healthStatus].filter(Boolean).join(", ");
   console.log(`\n== ${resource.displayName}: ${state}`);
-  const logs = aspire(["logs", resource.displayName, "--tail", String(LOG_LINES)]).trimEnd();
+  const recent = aspire(["logs", resource.displayName, "--tail", String(SCAN_LINES)]).trimEnd();
+  // The last lines that are not routine: the stack trace, the error, the warnings before it.
+  const logs = recent
+    .split("\n")
+    .filter((line) => !ROUTINE.test(line))
+    .slice(-LOG_LINES)
+    .join("\n");
   console.log(logs || "(no console output yet: it may still be waiting for a resource it depends on)");
   for (const cause of KNOWN_CAUSES) {
     if (cause.pattern.test(logs)) {
