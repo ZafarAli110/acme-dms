@@ -3,7 +3,8 @@ import { and, asc, eq } from "drizzle-orm";
 import type { IGetBinListQueryHandler } from "#business-logic-abstractions/handlers/bins/get-list/get-bin-list.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { BinResponseDto } from "#dto/bins/bin-response.dto";
-import { bins, notDeleted } from "#persistence/schema/index";
+import { bins } from "#persistence/schema/bins";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,

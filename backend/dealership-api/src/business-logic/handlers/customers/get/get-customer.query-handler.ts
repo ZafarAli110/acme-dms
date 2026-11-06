@@ -3,7 +3,8 @@ import { and, eq } from "drizzle-orm";
 import type { IGetCustomerQueryHandler } from "#business-logic-abstractions/handlers/customers/get/get-customer.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
-import { customers, notDeleted } from "#persistence/schema/index";
+import { customers } from "#persistence/schema/customers";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
