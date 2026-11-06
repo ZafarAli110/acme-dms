@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import {
   BadRequestException,
   createParamDecorator,
@@ -7,6 +8,7 @@ import {
 } from "@nestjs/common";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
+import { translateValidationErrors } from "@nestjs/i18n";
 
 /**
  * A multipart request carries its JSON body as a text field (`payload`) next to the files. This parses that field and
@@ -21,18 +23,20 @@ export class JsonPayloadPipe<T extends object> implements PipeTransform<unknown,
 
   public async transform(value: unknown): Promise<T> {
     if (typeof value !== "string") {
-      throw new BadRequestException('Send the changes as the JSON multipart field "payload".');
+      throw new BadRequestException(localized("errors.payloadMissing"));
     }
     let parsed: unknown;
     try {
       parsed = JSON.parse(value);
     } catch {
-      throw new BadRequestException('The "payload" field is not valid JSON.');
+      throw new BadRequestException(localized("errors.payloadNotJson"));
     }
     const dto = plainToInstance(this._dtoType, parsed);
     const errors = await validate(dto, { whitelist: true, forbidNonWhitelisted: true });
     if (errors.length > 0) {
-      throw new BadRequestException(errors.flatMap((error) => flattenMessages(error)));
+      // In the request's language, like the global I18nValidationPipe's.
+      const translated = translateValidationErrors(errors);
+      throw new BadRequestException(translated.flatMap((error) => flattenMessages(error)));
     }
     return dto;
   }

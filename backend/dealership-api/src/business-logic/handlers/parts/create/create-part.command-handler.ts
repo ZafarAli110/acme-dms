@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { ICreatePartCommandHandler } from "#business-logic-abstractions/handlers/parts/create/create-part.command-handler.interface";
@@ -46,7 +47,7 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
         ),
       );
     if (!bin) {
-      throw new BadRequestException(`Bin ${request.binId} is not a bin of this location; pick one from GET /v1/bins.`);
+      throw new BadRequestException(localized("errors.binNotAtLocation", { binId: request.binId }));
     }
     const [taken] = await work.db
       .select({ id: parts.id })
@@ -55,7 +56,7 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
         and(eq(parts.dealerId, userContext.dealerId), eq(parts.partNumber, request.partNumber), notDeleted(parts)),
       );
     if (taken) {
-      throw new ConflictException(`Part number ${request.partNumber} already exists in your catalogue.`);
+      throw new ConflictException(localized("errors.partNumberExists", { partNumber: request.partNumber }));
     }
 
     const audit = createdAudit(userContext.userId, this._clock.now());
