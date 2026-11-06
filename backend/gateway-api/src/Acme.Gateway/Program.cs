@@ -1,11 +1,28 @@
 using System.Reflection;
 using Acme.Gateway;
+using Acme.Gateway.Sessions;
 using Acme.ServiceDefaults;
+using Microsoft.EntityFrameworkCore;
 using Yarp.ReverseProxy.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// Aspire injects ConnectionStrings__gateway for the "gateway" database resource: the browsers' sessions.
+var connectionString = builder.Configuration.GetConnectionString("gateway")
+    ?? throw new InvalidOperationException("Connection string 'gateway' is not configured.");
+builder.Services.AddDbContext<GatewayDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<SessionStore>();
+// The gateway signs browsers in at identity-api, and renews their tokens there (see SessionEndpoints).
+builder.Services
+    .AddHttpClient<IdentityClient>(client =>
+    {
+        client.BaseAddress = new Uri("http://identity-api");
+        client.Timeout = TimeSpan.FromSeconds(5);
+    })
+    .AddServiceDiscovery();
 
 // Routes and clusters live in appsettings.json. Destinations are service names (http://identity-api),
 // resolved by service discovery from the addresses Aspire injects.
@@ -40,15 +57,24 @@ builder.Services
 
 var app = builder.Build();
 
-// The gateway only routes. Authentication and authorization happen in each service.
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    await scope.ServiceProvider.GetRequiredService<GatewayDbContext>().Database.MigrateAsync();
+}
+
+// The gateway is the browser's backend: it keeps each browser's sign-in (a session cookie) and sends its access token on
+// (SessionMiddleware). It decides nothing else: every service checks the token and what the person may do.
 app.UseServiceDefaults();
+app.UseMiddleware<SessionMiddleware>();
+app.MapSessionEndpoints();
 app.MapReverseProxy();
 app.MapServiceDefaults();
 
-// The gateway's own health, in the same shape as every service's: it has no database, so DatabaseReachable is null.
+// The gateway's own health, in the same shape as every service's, with its sessions database.
 // The version ("26.11.0") is the one Directory.Build.props gives every assembly.
 var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "unknown";
-app.MapGet("/v1/system/health", () => new HealthCheckResponse("gateway-api", "ok", version, null)).AllowAnonymous();
+app.MapGet("/v1/system/health", async (GatewayDbContext dbContext, CancellationToken cancellationToken) =>
+    new HealthCheckResponse("gateway-api", "ok", version, await dbContext.Database.CanConnectAsync(cancellationToken)));
 
 await app.RunAsync();
 
