@@ -23,6 +23,11 @@ public sealed class ApiExceptionHandler : IExceptionHandler
 
         var status = (int)apiException.Category;
         httpContext.Response.StatusCode = status;
+        if (apiException.RetryAfterSeconds is { } retryAfter)
+        {
+            httpContext.Response.Headers.RetryAfter = retryAfter.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         var problem = ProblemDetailsDtoFactory.Create(httpContext, status, apiException.Message);
         await httpContext.Response.WriteAsJsonAsync(problem, _jsonOptions, "application/problem+json", cancellationToken);
         return true;
