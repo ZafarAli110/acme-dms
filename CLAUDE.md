@@ -5,11 +5,13 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 
 ## Rules that apply to every change
 
-- **Many dealers, one database.** Northwind Motors and City Motors share every table. **Nothing filters for you**:
-  every query (reads, updates, deletes, and lookups by id) filters by `userContext.dealerId` in its own `where`, and
-  every query of location-scoped data (customers, cars, inventory, bins, appointments) also by
-  `requireLocation(userContext)`. Every insert sets `dealerId`. Read `docs/standards/multi-tenancy.md` before touching
-  any data.
+- **Many dealers, one database.** Northwind Motors and City Motors share every table. **Postgres row-level security
+  filters for you** in dealership-api: a request's queries see only its dealer's rows, and location-scoped data (customers,
+  cars, inventory, bins, appointments) only its location's. A handler does not repeat `dealerId` or `locationId` in its
+  `where`; it still calls `requireLocation(userContext)` (a request with no location is a 400, not an empty list), adds
+  `notDeleted(…)`, and sets `dealerId` and `locationId` on every insert. Code outside a request (export worker, consumer,
+  seed) is not filtered and names the dealer itself. Every new business table gets its policy in its migration. Read
+  `docs/standards/multi-tenancy.md` before touching any data.
 - **One use case, one handler.** controller → handler interface → handler → unit of work. Controllers stay thin.
   Handlers query with Drizzle through `await using work = await this._unitOfWorkFactory.beginAsync()`; no
   repositories. `docs/standards/business-handlers.md`.

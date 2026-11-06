@@ -20,22 +20,26 @@ same kind rather than starting from a blank file:
 ## 1. Decide whose data it is, first
 
 Every row belongs to one dealer, and some data to one location (`docs/standards/multi-tenancy.md`, the table).
-Nothing filters for you in dealership-api: every query says it, in its own `where`.
+In dealership-api Postgres row-level security filters for you: the request's queries see only its dealer's rows, and a
+location-scoped table only its location's. Say only what is the handler's own: a location is required, a row is not
+deleted.
 
 ```ts
-// ✅ the dealer always; the location for location-scoped data; never a deleted row
-const locationId = requireLocation(userContext);
+// ✅ the location is required (400 without one); the policy picks dealer and location; never a deleted row
+requireLocation(userContext);
+await work.db.select().from(bins).where(notDeleted(bins));
+
+// ❌ the dealer and the location by hand: repeats the policy, and drifts from it
 await work.db
   .select()
   .from(bins)
-  .where(and(eq(bins.dealerId, userContext.dealerId), eq(bins.locationId, locationId), notDeleted(bins)));
-
-// ❌ looked up by the id from the URL alone: another dealer's bin is one guess away
-await work.db.select().from(bins).where(eq(bins.id, binId));
+  .where(and(eq(bins.dealerId, userContext.dealerId), eq(bins.locationId, locationId)));
 ```
 
-The dealer and the location come from `userContext` (the token), never from the request. Another dealer's id answers
-"not found".
+The dealer and the location come from `userContext` (the token), never from the request, and an insert sets them from
+it. Another dealer's id is invisible to the policy, so it answers "not found". A new table needs its policy in its
+migration (a test fails without one). Code outside a request (a worker, a consumer) is not filtered and must name the
+dealer itself.
 
 ## 2. The DTOs (`dto/<area>/`)
 

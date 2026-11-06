@@ -5,17 +5,19 @@ Northwind Motors or City Motors, with its **locations** (rooftops: Northwind has
 City Motors has Central). Every dealer's data lives in the **same databases**, side by side, so every business row
 says whose it is.
 
-Two levels of separation, both enforced by hand in every query:
+Two levels of separation, both enforced by the database (dealership-api) or by an EF Core filter (the .NET services):
 
 - **Dealer:** one dealer never sees, changes or even learns of another dealer's data. Every business table has a
-  `dealer_id` column, and every query filters by `userContext.dealerId`.
-- **Location:** within a dealer, location-scoped data belongs to one rooftop and is filtered by the selected location.
+  `dealer_id` column, and the table's policy limits a request to `userContext.dealerId`.
+- **Location:** within a dealer, location-scoped data belongs to one rooftop and a request sees only the selected
+  location's.
 
-Getting either wrong leaks data: a missed location filter shows one rooftop another's customers; a missed dealer
-filter shows them **another company's** customers. Read this before adding any table or query.
+Getting either wrong leaks data: a missed location shows one rooftop another's customers; a missed dealer shows them
+**another company's** customers. That is why the scope is declared once, on the table, and not repeated in every query.
+Read this before adding any table or query.
 
 identity-api and document-api keep a dealer column too, with an EF Core global filter that adds it automatically.
-dealership-api has no automatic filter: the dealer and the location are both explicit.
+dealership-api does the same with Postgres row-level security, below.
 
 ## The dealer: on every row, from the token
 
@@ -23,25 +25,35 @@ dealership-api has no automatic filter: the dealer and the location are both exp
   request body, query string or header.**
 - Every business table has `dealer_id uuid NOT NULL`. Every insert sets it from `userContext.dealerId`; a message
   handler (no signed-in user) takes it from the message, which carries the dealer of the record it is about.
-- Every query of dealership data, including updates and deletes, has `eq(table.dealerId, userContext.dealerId)` in its
-  own `where`, even when it also filters by location or looks a row up by its id. An id from the URL is not proof the
-  row is the caller's: `PUT /v1/stock/{partId}` with another dealer's part id must be "not found".
+- A query of dealership data, including updates and deletes, does **not** name the dealer: the table's policy does. An id
+  from the URL is still not proof the row is the caller's, and it does not have to be: the policy hides another dealer's
+  row, so `PUT /v1/stock/{partId}` with another dealer's part id finds nothing and is "not found". Keep the lookup of
+  every id (the part, the bin) in the handler: a foreign key ignores row-level security, so the lookup, which the policy
+  filters, is what refuses another dealer's id.
 
 ## The database enforces it too: row-level security (dealership-api)
 
-Postgres keeps every request to its dealer, its location and, for exports, its user, so a query that forgets a filter
-returns nothing it should not, and a write for another dealer or location is refused (migration 0004).
+Postgres keeps every request to its dealer, its location and, for exports, its user, and a write for another dealer or
+location is refused (migration 0004). This is the rule, not a backstop: handlers do not repeat it in their `where`.
 
 - A request's unit of work works as the `dealership_api_user` role with `app.dealer_id`, `app.location_id` and
   `app.user_id` set from the token (`#request-scope/data-scope`, filled in by the authorization guard). Code outside a
   request (the export worker, the message consumer, migrations, the seed) works as the tables' owner, unfiltered,
-  and filters by hand.
+  and **filters by hand**: the customer export names the dealer and the location itself. A request whose scope was
+  never set (a route that is public, a guard that did not run) works as the same role with no scope and sees nothing.
+  The one exception is the signed export download: no token, so it asks for `beginAsync({ asOwner: true })`.
 - The policies, by kind of table: location-scoped (`customers`, `bins`, `part_inventories`): dealer and location;
   `export_jobs`: dealer, location and its owner; dealer-scoped (`parts`, `part_photos`): dealer; no dealer at all
   (`processed_messages`): none. With no location selected, location-scoped tables return nothing.
-- **Still write the filters** above in every query. The policy is the backstop, not the rule: the explicit `where` is
-  what the next reader sees, what the indexes are built for, and what keeps the worker's code right.
-- **A new business table gets its policy** in the migration that creates it, by the same kinds.
+- **Write only what is the handler's own business**: `notDeleted(…)` (a policy does not know soft delete), the id, the
+  search, the rules. The policy's conditions join the same `WHERE`, so the indexes are used as before. Inserts still
+  set `dealerId` and `locationId` from `userContext`; the policy refuses any other value.
+- **A new business table gets its policy** in the migration that creates it, by the same kinds, and a test
+  (`row-level-security.test.ts`) fails until it has one, unless it is on the short list there with its reason.
+- **How a table is shared is its policy**: a feature that shares a location, or a dealer, differently gets a different
+  policy on its table (`parts` is dealer-wide, `customers` one location's); a handler never works around one. A
+  feature that must read across locations asks for it explicitly in the unit of work and a reviewed policy, not by
+  leaving a filter out.
 - Something a request must count or see across dealers (an export's place in line) is a `SECURITY DEFINER` function
   that returns only what is needed, never a reason to switch the role off.
 - identity-api (EF Core) does the same with a named query filter, `IdentityDbContext.DealerFilter`: a signed-in
@@ -51,9 +63,8 @@ returns nothing it should not, and a write for another dealer or location is ref
 
 ## Location: explicit, and only for location-scoped data
 
-Some data belongs to the whole dealer and some to one location. **There is no automatic filter for locations.** Every
-query of location-scoped data must filter by the user's selected location (`userContext.locationId`), and every
-location-scoped table must have a `location_id` column.
+Some data belongs to the whole dealer and some to one location. A location-scoped table has a `location_id` column and a
+policy on `dealer_id` and `location_id`; a request sees only its selected location's rows (`userContext.locationId`).
 
 | Shared by all of the dealer's locations  | Belongs to one location                              |
 | ---------------------------------------- | ---------------------------------------------------- |
@@ -86,10 +97,10 @@ part inventory at that location, kept in one of that location's bins.
 
 Rules:
 
-1. The dealer comes from the token, `userContext.dealerId`, and every query filters by it. The location comes from `x-location-id`, validated against the user's token. **Never take a location id from a
+1. The dealer comes from the token, `userContext.dealerId`, and the policy filters by it. The location comes from `x-location-id`, validated against the user's token. **Never take a location id from a
    request body or query string** — it would let a user act on a location they do not work at.
-2. Every query of location-scoped data also filters by the user's location, `requireLocation(userContext)`, in its own
-   `where` (see the bins, customers and stock handlers).
+2. A handler of location-scoped data calls `requireLocation(userContext)` first (see the bins, customers and stock
+   handlers): without a location the policy would return nothing, and the caller must hear 400, not an empty list.
 3. Never cache dealership data under a key that does not include the dealer, and location-scoped data under a key that
    does not include the location.
 4. A list endpoint for location-scoped data returns 400 when no location is selected.

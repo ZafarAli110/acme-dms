@@ -9,7 +9,7 @@ describe("CreateBinCommandHandler", () => {
   const database = useTestDatabase();
 
   function handler(): CreateBinCommandHandler {
-    return new CreateBinCommandHandler(database.unitOfWorkFactory, fixedClock());
+    return database.asRequest(new CreateBinCommandHandler(database.unitOfWorkFactory, fixedClock()));
   }
 
   it("creates the bin at the selected location", async () => {

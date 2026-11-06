@@ -12,7 +12,9 @@ describe("GetCustomerQueryHandler", () => {
     const customer = await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Berg" });
 
     await expect(
-      new GetCustomerQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE, customer.id),
+      database
+        .asRequest(new GetCustomerQueryHandler(database.unitOfWorkFactory))
+        .executeAsync(AT_NORTHSIDE, customer.id),
     ).resolves.toMatchObject({ id: customer.id, surname: "Berg" });
   });
 
@@ -20,7 +22,9 @@ describe("GetCustomerQueryHandler", () => {
     const customer = await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Berg" });
 
     await expect(
-      new GetCustomerQueryHandler(database.unitOfWorkFactory).executeAsync(AT_RIVERSIDE, customer.id),
+      database
+        .asRequest(new GetCustomerQueryHandler(database.unitOfWorkFactory))
+        .executeAsync(AT_RIVERSIDE, customer.id),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -28,7 +32,9 @@ describe("GetCustomerQueryHandler", () => {
     const customer = await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Gone", deleted: true });
 
     await expect(
-      new GetCustomerQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE, customer.id),
+      database
+        .asRequest(new GetCustomerQueryHandler(database.unitOfWorkFactory))
+        .executeAsync(AT_NORTHSIDE, customer.id),
     ).rejects.toThrow(NotFoundException);
   });
 });

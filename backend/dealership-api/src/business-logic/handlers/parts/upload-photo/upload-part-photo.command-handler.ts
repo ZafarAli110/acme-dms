@@ -53,7 +53,7 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
     request: PartPhotoUploadRequestDto,
   ): Promise<PartPhotoResponseDto> {
     validatePhotoFile(request);
-    const existingCount = await this.countPhotosAsync(userContext.dealerId, partId);
+    const existingCount = await this.countPhotosAsync(partId);
     if (existingCount >= MAX_PHOTOS_PER_PART) {
       throw new BadRequestException(localized("errors.tooManyPhotos", { max: MAX_PHOTOS_PER_PART }));
     }
@@ -87,15 +87,15 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
   }
 
   /** How many photos the part has; a part that doesn't exist is not found. */
-  private async countPhotosAsync(dealerId: string, partId: string): Promise<number> {
+  private async countPhotosAsync(partId: string): Promise<number> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const [part] = await work.db
       .select({ id: parts.id })
       .from(parts)
-      .where(and(eq(parts.dealerId, dealerId), eq(parts.id, partId), notDeleted(parts)));
+      .where(and(eq(parts.id, partId), notDeleted(parts)));
     if (!part) {
       throw new NotFoundException(localized("errors.partNotFound", { partId }));
     }
-    return (await findPhotosAsync(work.db, dealerId, partId)).length;
+    return (await findPhotosAsync(work.db, partId)).length;
   }
 }

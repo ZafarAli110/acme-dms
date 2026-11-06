@@ -16,11 +16,13 @@ describe("GetStockListQueryHandler", () => {
     });
     await database.seed.addStockedPartAsync({ locationId: RIVERSIDE, partNumber: "STK-002" });
 
-    const stock = await new GetStockListQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE, {
-      page: 1,
-      pageSize: 25,
-      search: undefined,
-    });
+    const stock = await database
+      .asRequest(new GetStockListQueryHandler(database.unitOfWorkFactory))
+      .executeAsync(AT_NORTHSIDE, {
+        page: 1,
+        pageSize: 25,
+        search: undefined,
+      });
 
     expect(stock.items.map((item) => [item.partNumber, item.quantityOnHand, item.belowReorderLevel])).toEqual([
       ["STK-001", 1, true],

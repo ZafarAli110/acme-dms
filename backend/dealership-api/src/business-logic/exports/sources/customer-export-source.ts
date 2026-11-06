@@ -1,7 +1,7 @@
 import { localized } from "#i18n/messages";
 import { createHash } from "node:crypto";
 import { BadRequestException } from "@nestjs/common";
-import { count } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
 import { customers } from "#persistence/schema/customers";
 import { CUSTOMER_EXPORT_COLUMNS } from "../../handlers/customers/export/customer-export-columns";
@@ -39,7 +39,13 @@ export function customerExportSource(
     return { ...definition, field: column.field, header: column.header ?? definition.header };
   });
   // Built now, so a sort or filter the list doesn't have is refused before the export is queued.
-  const where = customerListWhere(scope.dealerId, scope.locationId, request);
+  // The worker reads as the table owner, outside a request, so row-level security does not apply: the dealer and the
+  // location are named here.
+  const where = and(
+    eq(customers.dealerId, scope.dealerId),
+    eq(customers.locationId, scope.locationId),
+    customerListWhere(request),
+  );
   const orderBy = customerListOrderBy(request);
 
   return {

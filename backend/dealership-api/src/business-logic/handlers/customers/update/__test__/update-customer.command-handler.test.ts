@@ -29,12 +29,9 @@ describe("UpdateCustomerCommandHandler", () => {
       companyName: "Hopper Logistics",
     });
 
-    const updated = await new UpdateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock()).executeAsync(
-      AT_NORTHSIDE,
-      customer.id,
-      ALL_FIELDS,
-      1,
-    );
+    const updated = await database
+      .asRequest(new UpdateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock()))
+      .executeAsync(AT_NORTHSIDE, customer.id, ALL_FIELDS, 1);
 
     expect(updated).toMatchObject({ ...ALL_FIELDS, id: customer.id, locationId: NORTHSIDE, version: 2 });
     expect(updated.companyName).toBeNull();
@@ -44,18 +41,15 @@ describe("UpdateCustomerCommandHandler", () => {
     const customer = await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Hopper" });
 
     await expect(
-      new UpdateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock()).executeAsync(
-        AT_RIVERSIDE,
-        customer.id,
-        ALL_FIELDS,
-        1,
-      ),
+      database
+        .asRequest(new UpdateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock()))
+        .executeAsync(AT_RIVERSIDE, customer.id, ALL_FIELDS, 1),
     ).rejects.toThrow(NotFoundException);
   });
 
   it("refuses a save that started from an older version, and keeps the newer one", async () => {
     const customer = await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Hopper" });
-    const handler = new UpdateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock());
+    const handler = database.asRequest(new UpdateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock()));
     // Two people opened version 1; the first saves.
     await handler.executeAsync(AT_NORTHSIDE, customer.id, { ...ALL_FIELDS, city: "Leeds" }, 1);
 
@@ -68,7 +62,7 @@ describe("UpdateCustomerCommandHandler", () => {
 
   it("saves whatever the version for If-Match: * (null), and still refuses another location's", async () => {
     const customer = await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Hopper" });
-    const handler = new UpdateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock());
+    const handler = database.asRequest(new UpdateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock()));
     await handler.executeAsync(AT_NORTHSIDE, customer.id, ALL_FIELDS, 1);
 
     expect((await handler.executeAsync(AT_NORTHSIDE, customer.id, ALL_FIELDS, null)).version).toBe(3);

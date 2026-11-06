@@ -229,8 +229,9 @@ export class ExportQueue implements IExportJobs {
     if (!isValidDownloadLink(jobId, expires, signature, now.epochMilliseconds)) {
       throw new ForbiddenException(localized("exports.linkInvalid"));
     }
-    // The signed link is the permission (it was handed only to the owner), so the row is read by its id alone.
-    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
+    // The signed link is the permission (it was handed only to the owner), so the row is read by its id alone. The
+    // download has no token, so no scope: it reads as the owner role, the one read in a request that does.
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
     const [job] = await work.db.select().from(exportJobs).where(eq(exportJobs.id, jobId));
     if (!job) {
       throw new ForbiddenException(localized("exports.linkInvalid"));

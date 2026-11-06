@@ -1,5 +1,6 @@
 import { afterAll, beforeAll } from "vitest";
 import type { IUnitOfWorkFactory } from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { asRequest } from "./as-request";
 import { seedKit } from "./seed-kit";
 import { createTestDatabaseAsync, type TestDatabase } from "./test-database";
 import { createTestUnitOfWork, type TestUnitOfWork } from "./test-unit-of-work";
@@ -10,6 +11,8 @@ export interface TestDatabaseContext {
   /** The service's unit of work factory on the test database: what handlers are constructed with. */
   readonly unitOfWorkFactory: IUnitOfWorkFactory;
   readonly seed: ReturnType<typeof seedKit>;
+  /** A handler working as a request does, inside its caller's data scope: row-level security applies to it. */
+  readonly asRequest: typeof asRequest;
 }
 
 /**
@@ -47,5 +50,6 @@ export function useTestDatabase(): TestDatabaseContext {
     get seed() {
       return seedKit(ready().database.db);
     },
+    asRequest,
   };
 }

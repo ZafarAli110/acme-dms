@@ -23,19 +23,12 @@ export class GetCustomerQueryHandler implements IGetCustomerQueryHandler {
   }
 
   public async executeAsync(userContext: UserContext, customerId: string): Promise<CustomerResponseDto> {
-    const locationId = requireLocation(userContext);
+    requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const [customer] = await work.db
       .select()
       .from(customers)
-      .where(
-        and(
-          eq(customers.id, customerId),
-          eq(customers.dealerId, userContext.dealerId),
-          eq(customers.locationId, locationId),
-          notDeleted(customers),
-        ),
-      );
+      .where(and(eq(customers.id, customerId), notDeleted(customers)));
     if (!customer) {
       throw new NotFoundException(localized("errors.customerNotFound", { customerId }));
     }

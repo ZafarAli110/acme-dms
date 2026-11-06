@@ -25,14 +25,14 @@ describe("GetRecentCustomersQueryHandler", () => {
     await seed.addCustomerAsync({ locationId: RIVERSIDE, surname: "Farooq", lastContactDate: day("2026-10-31") });
     await seed.addCustomerAsync({ locationId: CENTRAL, surname: "Adeyemi", lastContactDate: day("2026-10-31") });
 
-    const handler = new GetRecentCustomersQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetRecentCustomersQueryHandler(database.unitOfWorkFactory));
 
     expect((await handler.executeAsync(AT_NORTHSIDE)).map((customer) => customer.surname)).toEqual(["Byrne", "Doyle"]);
     expect((await handler.executeAsync(AT_RIVERSIDE)).map((customer) => customer.surname)).toEqual(["Farooq"]);
   });
 
   it("refuses a request with no location selected", async () => {
-    const handler = new GetRecentCustomersQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetRecentCustomersQueryHandler(database.unitOfWorkFactory));
 
     await expect(handler.executeAsync({ ...userAt(NORTHSIDE), locationId: null })).rejects.toThrow(BadRequestException);
   });

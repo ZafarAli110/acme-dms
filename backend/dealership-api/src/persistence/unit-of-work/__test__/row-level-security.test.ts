@@ -114,6 +114,54 @@ describe("row-level security", () => {
     expect(await asRequestAsync(null, (db) => db.select().from(exportJobs))).toHaveLength(3);
   });
 
+  it("shows a request whose scope was never set no business row, not every dealer's", async () => {
+    const run = async () => {
+      await using work = await database.unitOfWorkFactory.beginAsync({ readOnly: true });
+      return {
+        customers: await work.db.select().from(customers),
+        parts: await work.db.select().from(parts),
+        exports: await work.db.select().from(exportJobs),
+      };
+    };
+
+    const seen = await runWithDataScope(run);
+
+    expect(seen).toEqual({ customers: [], parts: [], exports: [] });
+  });
+
+  it("keeps a request's scope in work it starts later, such as a timer or a callback", async () => {
+    const seen = await runWithDataScope(async () => {
+      setDataScope(AT_NORTHSIDE);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      await using work = await database.unitOfWorkFactory.beginAsync({ readOnly: true });
+      return await work.db.select({ surname: customers.surname }).from(customers);
+    });
+
+    expect(seen.map((row) => row.surname)).toEqual(["AtNorthside"]);
+  });
+
+  it("has a policy for the request role on every table, except the ones listed here with their reason", async () => {
+    const NO_POLICY: Record<string, string> = {
+      processed_messages: "the consumer's own bookkeeping: it has no dealer",
+      __drizzle_migrations: "Drizzle's own record of the migrations it ran",
+    };
+    const result = await database.db.execute<{ table: string; secured: boolean; policies: string }>(sql`
+      SELECT c.relname AS "table", c.relrowsecurity AS secured, count(p.polname)::text AS policies
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      LEFT JOIN pg_policy p ON p.polrelid = c.oid
+        AND (p.polroles = '{0}' OR 'dealership_api_user'::regrole::oid = ANY (p.polroles))
+      WHERE n.nspname IN ('public', 'drizzle') AND c.relkind = 'r'
+      GROUP BY c.relname, c.relrowsecurity`);
+
+    const unprotected = result.rows
+      .filter((row) => !(row.table in NO_POLICY) && !(row.secured && Number(row.policies) > 0))
+      .map((row) => row.table);
+
+    // A new business table needs `ENABLE ROW LEVEL SECURITY` and a policy in its migration (docs/standards/multi-tenancy.md).
+    expect(unprotected).toEqual([]);
+  });
+
   it("counts every dealer's queued exports for a place in line, while showing only the user's own", async () => {
     const later = SEEDED_AT.add({ seconds: 1 }).toString();
     const position = await asRequestAsync(AT_NORTHSIDE, async (db) => {

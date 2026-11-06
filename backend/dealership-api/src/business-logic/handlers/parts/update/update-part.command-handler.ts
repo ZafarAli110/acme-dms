@@ -77,8 +77,8 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     }
 
     // 1. Validate everything before writing anything.
-    const locationId = requireLocation(userContext);
-    const { stocked: current, existing } = await this.readPartAsync(userContext.dealerId, locationId, partId);
+    requireLocation(userContext);
+    const { stocked: current, existing } = await this.readPartAsync(partId);
     // Saved by someone else since this save's version: refused before any photo is uploaded.
     if (expectedVersion !== null && current.part.version !== expectedVersion) {
       throw new PreconditionFailedException(localized("errors.partChangedByOthers"));
@@ -144,13 +144,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
           version: sql`${parts.version} + 1`,
           ...updatedAudit(userContext.userId, now),
         })
-        .where(
-          and(
-            eq(parts.dealerId, userContext.dealerId),
-            eq(parts.id, partId),
-            ...(expectedVersion === null ? [] : [eq(parts.version, expectedVersion)]),
-          ),
-        )
+        .where(and(eq(parts.id, partId), ...(expectedVersion === null ? [] : [eq(parts.version, expectedVersion)])))
         .returning({ id: parts.id });
       if (!saved) {
         throw new PreconditionFailedException(localized("errors.partChangedByOthers"));
@@ -167,7 +161,6 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
           })
           .where(
             and(
-              eq(partPhotos.dealerId, userContext.dealerId),
               eq(partPhotos.partId, partId),
               inArray(
                 partPhotos.id,
@@ -180,13 +173,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
         await work.db
           .update(partPhotos)
           .set({ isDefault: photo.isDefault, ...updatedAudit(userContext.userId, now) })
-          .where(
-            and(
-              eq(partPhotos.dealerId, userContext.dealerId),
-              eq(partPhotos.partId, partId),
-              eq(partPhotos.id, photo.id),
-            ),
-          );
+          .where(and(eq(partPhotos.partId, partId), eq(partPhotos.id, photo.id)));
       }
       if (addedPhotos.length > 0) {
         await work.db.insert(partPhotos).values(addedPhotos);
@@ -203,18 +190,18 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       removed.map((photo) => photo.documentId),
     );
 
-    const { stocked, existing: photos } = await this.readPartAsync(userContext.dealerId, locationId, partId);
+    const { stocked, existing: photos } = await this.readPartAsync(partId);
     return toPartResponseDto(stocked.part, stocked.inventory, stocked.bin, photos);
   }
 
   /** The part as this location stocks it, with its photos; a part the location doesn't stock is not found. */
-  private async readPartAsync(dealerId: string, locationId: string, partId: string) {
+  private async readPartAsync(partId: string) {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const stocked = await findStockedPartAsync(work.db, dealerId, locationId, partId);
+    const stocked = await findStockedPartAsync(work.db, partId);
     if (!stocked) {
       throw new NotFoundException(localized("errors.partNotStocked", { partId }));
     }
-    return { stocked, existing: await findPhotosAsync(work.db, dealerId, partId) };
+    return { stocked, existing: await findPhotosAsync(work.db, partId) };
   }
 
   /** Best effort, all at once: a document left behind is logged, never turned into a failed save. */

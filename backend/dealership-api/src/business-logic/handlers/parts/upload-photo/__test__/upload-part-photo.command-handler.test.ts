@@ -13,7 +13,9 @@ describe("UploadPartPhotoCommandHandler", () => {
   it("adds a pending photo, the first one as default", async () => {
     const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "UPL-001" });
     const documents = fakeDocumentApi();
-    const handler = new UploadPartPhotoCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock());
+    const handler = database.asRequest(
+      new UploadPartPhotoCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()),
+    );
 
     const first = await handler.executeAsync(AT_NORTHSIDE, part.id, jpeg("one.jpg"));
     const second = await handler.executeAsync(AT_NORTHSIDE, part.id, jpeg("two.jpg"));
@@ -25,7 +27,9 @@ describe("UploadPartPhotoCommandHandler", () => {
   it("refuses a photo for another dealer's part, before anything is uploaded", async () => {
     const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "UPL-002" });
     const documents = fakeDocumentApi();
-    const handler = new UploadPartPhotoCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock());
+    const handler = database.asRequest(
+      new UploadPartPhotoCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()),
+    );
 
     await expect(handler.executeAsync(AT_CENTRAL, part.id, jpeg("one.jpg"))).rejects.toThrow(NotFoundException);
     expect(documents.uploadDocumentAsync).not.toHaveBeenCalled();

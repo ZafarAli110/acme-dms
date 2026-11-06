@@ -36,14 +36,7 @@ export class CreateBinCommandHandler implements ICreateBinCommandHandler {
     const [existing] = await work.db
       .select({ id: bins.id })
       .from(bins)
-      .where(
-        and(
-          eq(bins.dealerId, userContext.dealerId),
-          eq(bins.locationId, locationId),
-          eq(bins.code, request.code),
-          notDeleted(bins),
-        ),
-      );
+      .where(and(eq(bins.code, request.code), notDeleted(bins)));
     if (existing) {
       throw new ConflictException(localized("errors.binExists", { code: request.code }));
     }

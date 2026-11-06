@@ -9,9 +9,9 @@ describe("CreateCustomerCommandHandler", () => {
   const database = useTestDatabase();
 
   it("adds the customer to the selected location", async () => {
-    const created = await new CreateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock()).executeAsync(
-      AT_NORTHSIDE,
-      {
+    const created = await database
+      .asRequest(new CreateCustomerCommandHandler(database.unitOfWorkFactory, fixedClock()))
+      .executeAsync(AT_NORTHSIDE, {
         firstName: "Grace",
         surname: "Hopper",
         companyName: null,
@@ -20,8 +20,7 @@ describe("CreateCustomerCommandHandler", () => {
         city: null,
         status: "prospect",
         lastContactDate: "2026-10-21",
-      },
-    );
+      });
 
     expect(created).toMatchObject({
       locationId: NORTHSIDE,

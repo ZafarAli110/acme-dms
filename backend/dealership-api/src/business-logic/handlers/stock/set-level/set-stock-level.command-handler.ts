@@ -46,28 +46,21 @@ export class SetStockLevelCommandHandler implements ISetStockLevelCommandHandler
     const [part] = await work.db
       .select()
       .from(parts)
-      .where(and(eq(parts.dealerId, userContext.dealerId), eq(parts.id, partId), notDeleted(parts)));
+      .where(and(eq(parts.id, partId), notDeleted(parts)));
     if (!part) {
       throw new NotFoundException(localized("errors.partNotFound", { partId }));
     }
     const [bin] = await work.db
       .select()
       .from(bins)
-      .where(
-        and(
-          eq(bins.id, request.binId),
-          eq(bins.dealerId, userContext.dealerId),
-          eq(bins.locationId, locationId),
-          notDeleted(bins),
-        ),
-      );
+      .where(and(eq(bins.id, request.binId), notDeleted(bins)));
     if (!bin) {
       throw new BadRequestException(localized("errors.binNotAtLocation", { binId: request.binId }));
     }
 
     const now = this._clock.now();
     const levels = { binId: bin.id, quantityOnHand: request.quantityOnHand, reorderLevel: request.reorderLevel };
-    const existing = await findStockedPartAsync(work.db, userContext.dealerId, locationId, partId);
+    const existing = await findStockedPartAsync(work.db, partId);
     // Stocking the part here for the first time creates its inventory at this location.
     const [inventory] = existing
       ? await work.db

@@ -52,7 +52,7 @@ const page = rows
 const items = await work.db
   .select()
   .from(customers)
-  .where(customerListWhere(dealerId, locationId, query))
+  .where(customerListWhere(query))
   .orderBy(...customerListOrderBy(query))
   .limit(pageSize)
   .offset((page - 1) * pageSize);

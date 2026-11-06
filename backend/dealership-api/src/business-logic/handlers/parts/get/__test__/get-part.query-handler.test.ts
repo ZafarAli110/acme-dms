@@ -12,7 +12,7 @@ describe("GetPartQueryHandler", () => {
     const { part } = await database.seed.addStockedPartAsync({ locationId: RIVERSIDE, partNumber: "RIV-002" });
 
     await expect(
-      new GetPartQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE, part.id),
+      database.asRequest(new GetPartQueryHandler(database.unitOfWorkFactory)).executeAsync(AT_NORTHSIDE, part.id),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -24,7 +24,9 @@ describe("GetPartQueryHandler", () => {
     const kept = await database.seed.addPhotoAsync({ partId: part.id, isDefault: true });
     await database.seed.addPhotoAsync({ partId: part.id, isDefault: false, deleted: true });
 
-    const read = await new GetPartQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE, part.id);
+    const read = await database
+      .asRequest(new GetPartQueryHandler(database.unitOfWorkFactory))
+      .executeAsync(AT_NORTHSIDE, part.id);
 
     expect(read.photos.map((photo) => photo.id)).toEqual([kept.id]);
   });

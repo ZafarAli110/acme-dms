@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, count, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, ilike, or, sql, type SQL } from "drizzle-orm";
 import type { IGetCustomerListQueryHandler } from "#business-logic-abstractions/handlers/customers/get-list/get-customer-list.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
@@ -46,7 +46,8 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
   ): Promise<PageResponseDto<CustomerListItemDto>> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
-    const where = customerListWhere(userContext.dealerId, requireLocation(userContext), query);
+    requireLocation(userContext);
+    const where = customerListWhere(query);
 
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const items = await work.db
@@ -63,13 +64,12 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
 }
 
 /**
- * The customers a list query shows at `locationId`: the location's, not deleted, searched and filtered. Shared with the
- * export, so the file holds exactly the rows the list shows.
+ * The customers a list query shows: not deleted, searched and filtered. Whose they are is the database's to say: a
+ * request sees its own location's customers (row-level security), and the export, which works outside a request, adds
+ * the dealer and the location itself. Shared with the export, so the file holds exactly the rows the list shows.
  */
-export function customerListWhere(dealerId: string, locationId: string, query: ListQueryDto): SQL | undefined {
+export function customerListWhere(query: ListQueryDto): SQL | undefined {
   return and(
-    eq(customers.dealerId, dealerId),
-    eq(customers.locationId, locationId),
     notDeleted(customers),
     query.search ? matching(`%${query.search}%`) : undefined,
     listFilter(CUSTOMER_LIST_COLUMNS, query),

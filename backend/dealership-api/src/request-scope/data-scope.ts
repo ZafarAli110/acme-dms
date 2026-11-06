@@ -30,6 +30,11 @@ export function setDataScope(scope: DataScope): void {
   }
 }
 
+/** True inside a request, whether or not the guard has set its scope yet; false for the worker, the consumer, the seed. */
+export function isInRequest(): boolean {
+  return storage.getStore() !== undefined;
+}
+
 /** The current request's scope, or null: no request, a public endpoint, or before the guard ran. */
 export function currentDataScope(): DataScope | null {
   return storage.getStore()?.scope ?? null;

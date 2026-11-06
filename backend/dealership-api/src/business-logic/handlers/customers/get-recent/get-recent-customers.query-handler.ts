@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, desc, isNotNull } from "drizzle-orm";
 import type { IGetRecentCustomersQueryHandler } from "#business-logic-abstractions/handlers/customers/get-recent/get-recent-customers.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
@@ -28,19 +28,12 @@ export class GetRecentCustomersQueryHandler implements IGetRecentCustomersQueryH
   }
 
   public async executeAsync(userContext: UserContext): Promise<CustomerListItemDto[]> {
-    const locationId = requireLocation(userContext);
+    requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const recent = await work.db
       .select()
       .from(customers)
-      .where(
-        and(
-          eq(customers.dealerId, userContext.dealerId),
-          eq(customers.locationId, locationId),
-          isNotNull(customers.lastContactDate),
-          notDeleted(customers),
-        ),
-      )
+      .where(and(isNotNull(customers.lastContactDate), notDeleted(customers)))
       // Ends with the id: two customers last contacted the same day with one surname keep their order.
       .orderBy(desc(customers.lastContactDate), asc(customers.surname), asc(customers.id))
       .limit(RECENT_CUSTOMERS_LIMIT);

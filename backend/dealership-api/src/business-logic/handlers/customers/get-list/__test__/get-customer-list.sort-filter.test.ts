@@ -31,7 +31,7 @@ describe("GetCustomerListQueryHandler: sorting and filtering as the data grid as
       city: "Bath",
       lastContactDate: date("2026-10-25"),
     });
-    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
     const page = { page: 1, pageSize: 25 };
 
     const byContact = await handler.executeAsync(AT_NORTHSIDE, { ...page, sort: "lastContactDate", direction: "desc" });
@@ -60,7 +60,7 @@ describe("GetCustomerListQueryHandler: sorting and filtering as the data grid as
       email: null,
       lastContactDate: date("2026-10-15"),
     });
-    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
     const page = { page: 1, pageSize: 25, search: "field" };
 
     const named = await handler.executeAsync(AT_NORTHSIDE, {
@@ -90,7 +90,7 @@ describe("GetCustomerListQueryHandler: sorting and filtering as the data grid as
   it("treats % and _ in a filter as the characters, not as wildcards", async () => {
     await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Percent", companyName: "50% Off Ltd" });
     await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Wildcard", companyName: "500 Club" });
-    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
 
     const found = await handler.executeAsync(AT_NORTHSIDE, {
       page: 1,
@@ -104,7 +104,7 @@ describe("GetCustomerListQueryHandler: sorting and filtering as the data grid as
   });
 
   it("refuses a field the list doesn't have, an operator the field's type doesn't take, and a value that isn't one", async () => {
-    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
     const page = { page: 1, pageSize: 25 };
 
     await expect(handler.executeAsync(AT_NORTHSIDE, { ...page, sort: "password" })).rejects.toThrow(

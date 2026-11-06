@@ -10,7 +10,7 @@ describe("CreatePartCommandHandler", () => {
   const database = useTestDatabase();
 
   function handler(): CreatePartCommandHandler {
-    return new CreatePartCommandHandler(database.unitOfWorkFactory, fixedClock());
+    return database.asRequest(new CreatePartCommandHandler(database.unitOfWorkFactory, fixedClock()));
   }
 
   function request(partNumber: string, binId: string) {

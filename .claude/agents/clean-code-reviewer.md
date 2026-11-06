@@ -35,21 +35,15 @@ await work.db
   .from(customers)
   .where(and(eq(customers.id, id), notDeleted(customers)));
 
-// ✅ the dealer, the location for location-scoped data, and not deleted, in the query's own where
+// ✅ the id and not deleted; the dealer and the location are the row-level policy's (requireLocation called first)
 await work.db
   .select()
   .from(customers)
-  .where(
-    and(
-      eq(customers.dealerId, userContext.dealerId),
-      eq(customers.locationId, locationId),
-      eq(customers.id, id),
-      notDeleted(customers),
-    ),
-  );
+  .where(and(eq(customers.id, id), notDeleted(customers)));
 ```
 
-- Every query of business data filters by `userContext.dealerId`; location-scoped data by the location too; every read
+- A request's query does not repeat the dealer or the location (row-level security does: a hand-written one is noise);
+  code outside a request (worker, consumer) does name them; every read
   and join adds `notDeleted(…)` (`multi-tenancy.md`, `database.md`).
 - A migration is added, never edited once committed; a new business table has audit columns and soft delete.
 

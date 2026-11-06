@@ -13,7 +13,7 @@ describe("GetCustomerListQueryHandler", () => {
     await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Lovelace" });
     await database.seed.addCustomerAsync({ locationId: RIVERSIDE, surname: "Hopper" });
     await database.seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Hopperton", deleted: true });
-    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
 
     const all = await handler.executeAsync(AT_NORTHSIDE, { page: 1, pageSize: 25, search: undefined });
     const found = await handler.executeAsync(AT_NORTHSIDE, { page: 1, pageSize: 25, search: "hopper" });
@@ -28,7 +28,7 @@ describe("GetCustomerListQueryHandler", () => {
     for (const surname of ["Adams", "Brown", "Clark"]) {
       await database.seed.addCustomerAsync({ locationId: RIVERSIDE, surname });
     }
-    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
     const riverside = { ...AT_NORTHSIDE, locationId: RIVERSIDE };
 
     const second = await handler.executeAsync(riverside, { page: 2, pageSize: 2, search: undefined });
@@ -38,7 +38,7 @@ describe("GetCustomerListQueryHandler", () => {
   });
 
   it("refuses a page deeper than a list can reach, before it reads anything", async () => {
-    const handler = new GetCustomerListQueryHandler(database.unitOfWorkFactory);
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
 
     await expect(
       handler.executeAsync(AT_NORTHSIDE, { page: 250_000, pageSize: 25, search: undefined }),

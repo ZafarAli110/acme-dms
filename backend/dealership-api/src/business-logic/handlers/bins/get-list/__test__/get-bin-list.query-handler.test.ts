@@ -12,7 +12,9 @@ describe("GetBinListQueryHandler", () => {
     await database.seed.addBinAsync({ locationId: RIVERSIDE, code: "A-02" });
     await database.seed.addBinAsync({ locationId: NORTHSIDE, code: "A-03", deleted: true });
 
-    const bins = await new GetBinListQueryHandler(database.unitOfWorkFactory).executeAsync(AT_NORTHSIDE);
+    const bins = await database
+      .asRequest(new GetBinListQueryHandler(database.unitOfWorkFactory))
+      .executeAsync(AT_NORTHSIDE);
 
     expect(bins.map((bin) => bin.code)).toEqual(["A-01"]);
   });

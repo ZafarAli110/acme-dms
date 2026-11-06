@@ -1,7 +1,8 @@
 /**
  * Who is calling, for which dealer, and at which location. Built by the service layer from the validated access token
- * and passed explicitly to every handler that reads or writes dealership data. Every dealer shares one database, so
- * every query filters by `dealerId` itself (docs/standards/multi-tenancy.md).
+ * and passed explicitly to every handler that reads or writes dealership data. Every dealer shares one database;
+ * Postgres row-level security keeps a request to its own dealer and location, and a handler's inserts take `dealerId`
+ * and `locationId` from here (docs/standards/multi-tenancy.md).
  */
 export interface UserContext {
   userId: string;

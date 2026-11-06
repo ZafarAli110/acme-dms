@@ -36,14 +36,9 @@ export class UpdateCustomerCommandHandler implements IUpdateCustomerCommandHandl
     request: CustomerUpdateRequestDto,
     expectedVersion: number | null,
   ): Promise<CustomerResponseDto> {
-    const locationId = requireLocation(userContext);
+    requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync();
-    const isThisCustomer = and(
-      eq(customers.id, customerId),
-      eq(customers.dealerId, userContext.dealerId),
-      eq(customers.locationId, locationId),
-      notDeleted(customers),
-    );
+    const isThisCustomer = and(eq(customers.id, customerId), notDeleted(customers));
     // PUT: every field comes from the request; identity, location and creation stay as they were. Only from the
     // version the save started from, in the same statement, so two saves can never both win.
     const [updated] = await work.db

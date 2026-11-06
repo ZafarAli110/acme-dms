@@ -12,7 +12,7 @@ describe("SetStockLevelCommandHandler", () => {
   it("stocks a part at this location for the first time, then updates the levels it has", async () => {
     const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "SET-001" });
     const riversideBin = await database.seed.addBinAsync({ locationId: RIVERSIDE, code: "R-09" });
-    const handler = new SetStockLevelCommandHandler(database.unitOfWorkFactory, fixedClock());
+    const handler = database.asRequest(new SetStockLevelCommandHandler(database.unitOfWorkFactory, fixedClock()));
 
     const first = await handler.executeAsync(AT_RIVERSIDE, part.id, {
       binId: riversideBin.id,
@@ -31,7 +31,7 @@ describe("SetStockLevelCommandHandler", () => {
   it("refuses another dealer's part: City Motors cannot stock Northwind's part by its id", async () => {
     const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "SET-002" });
     const centralBin = await database.seed.addBinAsync({ locationId: CENTRAL, code: "C-01" });
-    const handler = new SetStockLevelCommandHandler(database.unitOfWorkFactory, fixedClock());
+    const handler = database.asRequest(new SetStockLevelCommandHandler(database.unitOfWorkFactory, fixedClock()));
 
     await expect(
       handler.executeAsync(AT_CENTRAL, part.id, { binId: centralBin.id, quantityOnHand: 1, reorderLevel: 1 }),

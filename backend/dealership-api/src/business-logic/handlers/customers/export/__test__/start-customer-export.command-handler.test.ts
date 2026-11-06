@@ -1,3 +1,4 @@
+import { runWithDataScope } from "#request-scope/data-scope";
 import { BadRequestException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -48,10 +49,9 @@ describe("StartCustomerExportCommandHandler", () => {
 
   const fileOfAsync = async (job: ExportJobResponseDto) => {
     const link = new URL(job.downloadPath!, "http://service/");
-    const file = await queue.fileForLinkAsync(
-      job.id,
-      link.searchParams.get("expires")!,
-      link.searchParams.get("signature")!,
+    // As the public download route runs it: inside a request that has no scope (no token).
+    const file = await runWithDataScope(() =>
+      queue.fileForLinkAsync(job.id, link.searchParams.get("expires")!, link.searchParams.get("signature")!),
     );
     return readXlsxAsync(file.path);
   };

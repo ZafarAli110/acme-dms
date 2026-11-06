@@ -38,27 +38,22 @@ The most serious bug class here: every dealer's data sits in the same tables (`m
 // ❌ the id comes from the URL; nothing says the row is the caller's dealer's
 await work.db.select().from(parts).where(eq(parts.id, partId));
 
-// ✅ the dealer in every where, the location for location-scoped data, the id last
+// ✅ the dealer and the location are the row-level policy's; the handler says the id and not deleted
 await work.db
   .select()
   .from(customers)
-  .where(
-    and(
-      eq(customers.dealerId, userContext.dealerId),
-      eq(customers.locationId, locationId),
-      eq(customers.id, id),
-      notDeleted(customers),
-    ),
-  );
+  .where(and(eq(customers.id, id), notDeleted(customers)));
 ```
 
-- **Row-level security is the backstop, not the rule** (`multi-tenancy.md`): a new business table with no policy in
-  its migration, a request switching to the owner role, or code that drops a filter because "the database does it",
-  is a finding. A `SECURITY DEFINER` function must return only what the request may see (a count, never rows).
-- **Every query of business data**, reads, updates, deletes and joins alike, has `eq(<table>.dealerId,
-userContext.dealerId)` in its own `where`; location-scoped data also has the user's location. An insert sets
-  `dealerId` from `userContext`. Another dealer's id must answer "not found", never "forbidden" (that would confirm it
-  exists).
+- **Row-level security is the rule** (`multi-tenancy.md`): the request's dealer and location are the table's policy,
+  not each query's. A new business table with no policy in its migration, a request using the owner role
+  (`asOwner: true` is for the signed export download only), a policy that is wider than the data's real scope, or
+  code outside a request (worker, consumer, seed) that reads business data without naming the dealer is a finding.
+  A hand-written `dealerId` or `locationId` condition in a request's query is not a finding, only noise. A
+  `SECURITY DEFINER` function must return only what the request may see (a count, never rows).
+- **An insert sets `dealerId` (and `locationId`) from `userContext`**; the policy's check refuses anything else. Another
+  dealer's id must answer "not found", never "forbidden" (that would confirm it exists): keep the handler's lookup of
+  every id, since a foreign key ignores row-level security.
 - **The dealer and location come from the token** (`userContext`), never from a body, query string or header the
   client chose. A DTO with a `dealerId`, `locationId`, `createdBy` or `isDeleted` field is a finding.
 - **Every route has `@RequirePermission(…)`, or checks that the record is the caller's own.** The

@@ -22,15 +22,11 @@ export class GetStockListQueryHandler implements IGetStockListQueryHandler {
   }
 
   public async executeAsync(userContext: UserContext, query: ListQueryDto): Promise<PageResponseDto<StockListItemDto>> {
+    requireLocation(userContext);
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const { items, total } = await findStockedPartsAsync(
-      work.db,
-      userContext.dealerId,
-      requireLocation(userContext),
-      query,
-    );
+    const { items, total } = await findStockedPartsAsync(work.db, query);
     return {
       items: items.map(({ part, inventory, bin }) => toStockListItemDto(part, inventory, bin)),
       total,

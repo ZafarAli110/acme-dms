@@ -38,23 +38,14 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
     const [bin] = await work.db
       .select()
       .from(bins)
-      .where(
-        and(
-          eq(bins.id, request.binId),
-          eq(bins.dealerId, userContext.dealerId),
-          eq(bins.locationId, locationId),
-          notDeleted(bins),
-        ),
-      );
+      .where(and(eq(bins.id, request.binId), notDeleted(bins)));
     if (!bin) {
       throw new BadRequestException(localized("errors.binNotAtLocation", { binId: request.binId }));
     }
     const [taken] = await work.db
       .select({ id: parts.id })
       .from(parts)
-      .where(
-        and(eq(parts.dealerId, userContext.dealerId), eq(parts.partNumber, request.partNumber), notDeleted(parts)),
-      );
+      .where(and(eq(parts.partNumber, request.partNumber), notDeleted(parts)));
     if (taken) {
       throw new ConflictException(localized("errors.partNumberExists", { partNumber: request.partNumber }));
     }

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, eq } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import type { IGetBinListQueryHandler } from "#business-logic-abstractions/handlers/bins/get-list/get-bin-list.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { BinResponseDto } from "#dto/bins/bin-response.dto";
@@ -22,13 +22,9 @@ export class GetBinListQueryHandler implements IGetBinListQueryHandler {
   }
 
   public async executeAsync(userContext: UserContext): Promise<BinResponseDto[]> {
-    const locationId = requireLocation(userContext);
+    requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const rows = await work.db
-      .select()
-      .from(bins)
-      .where(and(eq(bins.dealerId, userContext.dealerId), eq(bins.locationId, locationId), notDeleted(bins)))
-      .orderBy(asc(bins.code));
+    const rows = await work.db.select().from(bins).where(notDeleted(bins)).orderBy(asc(bins.code));
     return rows.map(toBinResponseDto);
   }
 }

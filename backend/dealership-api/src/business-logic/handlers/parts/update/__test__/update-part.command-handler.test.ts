@@ -24,24 +24,22 @@ describe("UpdatePartCommandHandler", () => {
     const { part, photoA, photoB } = await partWithTwoPhotosAsync("UPD-001");
     const documents = fakeDocumentApi();
 
-    const saved = await new UpdatePartCommandHandler(
-      database.unitOfWorkFactory,
-      documents.client,
-      fixedClock(),
-    ).executeAsync(
-      AT_NORTHSIDE,
-      part.id,
-      {
-        description: "Ceramic pads",
-        photos: [
-          { id: photoA.id, isDefault: false },
-          { id: photoB.id, isDefault: false },
-        ],
-        newPhotos: [{ isDefault: true }],
-      },
-      [jpeg("new.jpg")],
-      1,
-    );
+    const saved = await database
+      .asRequest(new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()))
+      .executeAsync(
+        AT_NORTHSIDE,
+        part.id,
+        {
+          description: "Ceramic pads",
+          photos: [
+            { id: photoA.id, isDefault: false },
+            { id: photoB.id, isDefault: false },
+          ],
+          newPhotos: [{ isDefault: true }],
+        },
+        [jpeg("new.jpg")],
+        1,
+      );
 
     expect(saved.description).toBe("Ceramic pads");
     expect(saved.version).toBe(2);
@@ -56,11 +54,9 @@ describe("UpdatePartCommandHandler", () => {
     const { part, photoA, photoB } = await partWithTwoPhotosAsync("UPD-002");
     const documents = fakeDocumentApi();
 
-    const saved = await new UpdatePartCommandHandler(
-      database.unitOfWorkFactory,
-      documents.client,
-      fixedClock(),
-    ).executeAsync(AT_NORTHSIDE, part.id, { photos: [{ id: photoA.id, isDefault: true }] }, [], 1);
+    const saved = await database
+      .asRequest(new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()))
+      .executeAsync(AT_NORTHSIDE, part.id, { photos: [{ id: photoA.id, isDefault: true }] }, [], 1);
 
     const [removed] = await database.db.select().from(partPhotos).where(eq(partPhotos.id, photoB.id));
     expect(saved.photos.map((photo) => photo.id)).toEqual([photoA.id]);
@@ -74,26 +70,30 @@ describe("UpdatePartCommandHandler", () => {
     const documents = fakeDocumentApi();
 
     await expect(
-      new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()).executeAsync(
-        AT_NORTHSIDE,
-        part.id,
-        // A photo of another part: refused before anything is uploaded…
-        { photos: [{ id: other.photoA.id, isDefault: true }] },
-        [],
-        1,
-      ),
+      database
+        .asRequest(new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()))
+        .executeAsync(
+          AT_NORTHSIDE,
+          part.id,
+          // A photo of another part: refused before anything is uploaded…
+          { photos: [{ id: other.photoA.id, isDefault: true }] },
+          [],
+          1,
+        ),
     ).rejects.toThrow(BadRequestException);
     expect(documents.uploadDocumentAsync).not.toHaveBeenCalled();
 
     // …while a failure after the upload (the description too long for its column) deletes what was uploaded.
     await expect(
-      new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()).executeAsync(
-        AT_NORTHSIDE,
-        part.id,
-        { description: "x".repeat(600), newPhotos: [{ isDefault: false }] },
-        [jpeg("late.jpg")],
-        1,
-      ),
+      database
+        .asRequest(new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()))
+        .executeAsync(
+          AT_NORTHSIDE,
+          part.id,
+          { description: "x".repeat(600), newPhotos: [{ isDefault: false }] },
+          [jpeg("late.jpg")],
+          1,
+        ),
     ).rejects.toThrow();
     const uploaded = await documents.uploadDocumentAsync.mock.results[0]?.value;
     expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(AT_NORTHSIDE, uploaded.id);
@@ -104,7 +104,9 @@ describe("UpdatePartCommandHandler", () => {
   it("refuses a save from an older version before uploading anything", async () => {
     const { part } = await partWithTwoPhotosAsync("UPD-005");
     const documents = fakeDocumentApi();
-    const handler = new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock());
+    const handler = database.asRequest(
+      new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()),
+    );
     await handler.executeAsync(AT_NORTHSIDE, part.id, { description: "First save" }, [], 1);
 
     await expect(
@@ -131,13 +133,15 @@ describe("UpdatePartCommandHandler", () => {
     });
 
     await expect(
-      new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()).executeAsync(
-        AT_NORTHSIDE,
-        part.id,
-        { description: "Mine", newPhotos: [{ isDefault: false }] },
-        [jpeg("race.jpg")],
-        1,
-      ),
+      database
+        .asRequest(new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()))
+        .executeAsync(
+          AT_NORTHSIDE,
+          part.id,
+          { description: "Mine", newPhotos: [{ isDefault: false }] },
+          [jpeg("race.jpg")],
+          1,
+        ),
     ).rejects.toThrow(PreconditionFailedException);
     const uploaded = await documents.uploadDocumentAsync.mock.results[0]?.value;
     expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(AT_NORTHSIDE, uploaded.id);

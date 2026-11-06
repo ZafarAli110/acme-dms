@@ -22,14 +22,13 @@ export class GetPartListQueryHandler implements IGetPartListQueryHandler {
   }
 
   public async executeAsync(userContext: UserContext, query: ListQueryDto): Promise<PageResponseDto<PartListItemDto>> {
-    const locationId = requireLocation(userContext);
+    requireLocation(userContext);
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const { items, total } = await findStockedPartsAsync(work.db, userContext.dealerId, locationId, query);
+    const { items, total } = await findStockedPartsAsync(work.db, query);
     const thumbnails = await findThumbnailsAsync(
       work.db,
-      userContext.dealerId,
       items.map(({ part }) => part.id),
     );
 
