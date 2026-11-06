@@ -15,7 +15,7 @@ public sealed class ProcessDocumentCommandHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_ProducesTheVariantsAndPublishesDocumentProcessed()
     {
-        var database = new TestDatabase();
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
         var documentId = await TestDocuments.UploadPhotoAsync(database, TestContext.CancellationToken);
         await using var backgroundContext = database.CreateContext(dealerId: null);
         var outbox = new Mock<IOutbox>();
