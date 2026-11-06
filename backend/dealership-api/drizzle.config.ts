@@ -5,4 +5,6 @@ export default defineConfig({
   dialect: "postgresql",
   schema: "./src/persistence/schema/*.ts",
   out: "./src/persistence/migrations/drizzle",
+  // Column names are written once, as the property: `dealerId` is the column `dealer_id` (the clients say the same).
+  casing: "snake_case",
 });
