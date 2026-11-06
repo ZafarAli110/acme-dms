@@ -12,6 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { parsePrice } from "./formatters/formatPrice";
 import { useNavigate } from "react-router";
 import { partQueries } from "./queries/partQueries";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
@@ -21,7 +22,7 @@ const EMPTY = { partNumber: "", description: "", unitPrice: "", binId: "", quant
 
 /** A new part is stocked at the selected location from the start, in one of that location's bins. */
 export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t } = useTranslation("parts");
+  const { t, i18n } = useTranslation("parts");
   const { t: tCommon } = useTranslation();
   const { location } = useSelectedLocation();
   const queryClient = useQueryClient();
@@ -40,7 +41,7 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
       partQueries.createPartAsync({
         partNumber: form.partNumber,
         description: form.description,
-        unitPrice: Number(form.unitPrice),
+        unitPrice: parsePrice(form.unitPrice, i18n.language) ?? 0,
         binId: form.binId,
         quantityOnHand: Number(form.quantityOnHand),
         reorderLevel: Number(form.reorderLevel),
@@ -55,7 +56,8 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
 
   const set = (field: keyof typeof EMPTY) => (event: { target: { value: string } }) =>
     setForm({ ...form, [field]: field === "partNumber" ? event.target.value.toUpperCase() : event.target.value });
-  const complete = form.partNumber && form.description && form.unitPrice !== "" && form.binId;
+  const priceIsValid = parsePrice(form.unitPrice, i18n.language) !== null;
+  const complete = form.partNumber && form.description && priceIsValid && form.binId;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -79,11 +81,14 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               label={t("columns.unitPrice")}
-              type="number"
               value={form.unitPrice}
               onChange={set("unitPrice")}
               required
               fullWidth
+              // Text, not type="number": the price is read the user's way ("45,50" in French), not the browser's.
+              slotProps={{ htmlInput: { inputMode: "decimal" } }}
+              error={form.unitPrice !== "" && !priceIsValid}
+              helperText={form.unitPrice !== "" && !priceIsValid ? t("edit.validation.priceInvalid") : undefined}
               data-testid="part-unit-price"
             />
           </Grid>
