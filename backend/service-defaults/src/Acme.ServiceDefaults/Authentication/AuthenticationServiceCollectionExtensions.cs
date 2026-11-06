@@ -23,13 +23,22 @@ public static class AuthenticationServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        // A service asks identity-api whether a token's sign-in is open; identity-api registers its own answer first.
-        services.AddMemoryCache();
-        services.TryAddSingleton(TimeProvider.System);
-        services.TryAddSingleton<SessionStatusCache>();
-        // A slow identity-api must not hold a request for the HttpClient default of 100 seconds.
-        services.AddHttpClient<HttpSessionStatusChecker>(client => client.Timeout = TimeSpan.FromSeconds(2));
-        services.TryAddScoped<ISessionStatusChecker>(provider => provider.GetRequiredService<HttpSessionStatusChecker>());
+        // A service refuses the access tokens of sign-ins identity-api has ended, from a list it keeps (RevokedSessionsFeed);
+        // identity-api registers its own answer (from its database) first, and then asks no one.
+        if (!services.Any(service => service.ServiceType == typeof(ISessionStatusChecker)))
+        {
+            services.TryAddSingleton(TimeProvider.System);
+            // A slow identity-api must not hold the service's start for the HttpClient default of 100 seconds.
+            services.AddHttpClient(nameof(RevokedSessionsFeed), client => client.Timeout = TimeSpan.FromSeconds(2));
+            // One instance: the hook reads what the hosted service keeps up to date.
+            services.AddSingleton(provider => new RevokedSessionsFeed(
+                provider.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(RevokedSessionsFeed)),
+                provider.GetRequiredService<TimeProvider>(),
+                provider.GetRequiredService<IConfiguration>(),
+                provider.GetRequiredService<ILogger<RevokedSessionsFeed>>()));
+            services.AddSingleton<ISessionStatusChecker>(provider => provider.GetRequiredService<RevokedSessionsFeed>());
+            services.AddHostedService(provider => provider.GetRequiredService<RevokedSessionsFeed>());
+        }
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
@@ -60,12 +69,20 @@ public static class AuthenticationServiceCollectionExtensions
 
     /// <summary>
     /// A token whose sign-in was ended (the person signed out, or a replaced refresh token was used again) is refused
-    /// even though it has not expired. Tokens issued before sign-ins had an id (no <c>sid</c>) are checked by expiry alone.
+    /// even though it has not expired. A token with no sign-in id (<c>sid</c>) is refused too: every token identity-api issues
+    /// has one, and one without could never be ended.
     /// </summary>
     public static async Task EndedSessionsAreRefusedAsync(TokenValidatedContext context)
     {
-        if (!Guid.TryParse(context.Principal?.FindFirst("sid")?.Value, out var sessionId) || context.SecurityToken is not JsonWebToken token)
+        if (context.SecurityToken is not JsonWebToken token)
         {
+            context.Fail("The access token is not one this service issues.");
+            return;
+        }
+
+        if (!Guid.TryParse(context.Principal?.FindFirst("sid")?.Value, out var sessionId))
+        {
+            context.Fail("The access token has no sign-in.");
             return;
         }
 
