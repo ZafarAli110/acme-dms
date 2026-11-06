@@ -25,34 +25,34 @@ function sessionChannel(): BroadcastChannel | null {
   return channel;
 }
 
-/** The access token: in memory only, never in storage. A reload gets a new one with the refresh cookie. */
-let accessToken: string | null = null;
+/** Whether this tab has a signed-in person: a 401 then means the sign-in ended, not that nobody signed in yet. */
+let signedIn = false;
 
 /**
- * Where the signed-in session lives in this tab: the access token (in memory, for minutes) and the location the user
- * selected (in sessionStorage, so each tab has its own: Maria can work at Northside in one tab and Riverside in another).
+ * What this tab knows of the sign-in: whether there is one, and the location the user selected (in sessionStorage, so each
+ * tab has its own: Maria can work at Northside in one tab and Riverside in another).
  *
- * Nothing that can sign anyone in is in storage a script can read. The refresh token, which lasts hours, is an httpOnly
- * cookie identity-api sets: the page never sees it, and the browser sends it only to the token endpoints. A new tab, or a
- * reload, has no access token yet and asks identity-api for one with that cookie; signing out in one tab ends the sign-in
- * for all and tells the other tabs over a BroadcastChannel.
+ * The page holds no token at all. The gateway keeps the sign-in (the backend for the frontend): the browser has only its
+ * session cookie, httpOnly, which the page never sees and the browser sends with every `/api` request. A new tab or a reload
+ * is signed in by that cookie; signing out in one tab ends the sign-in for all and tells the other tabs over a
+ * BroadcastChannel.
  */
 export const session = {
-  getToken: (): string | null => accessToken,
-  setToken: (token: string): void => {
-    accessToken = token;
+  isSignedIn: (): boolean => signedIn,
+  setSignedIn: (value: boolean): void => {
+    signedIn = value;
   },
   getLocationId: (): string | null => tabStorage()?.getItem(LOCATION_KEY) ?? null,
   setLocationId: (locationId: string): void => tabStorage()?.setItem(LOCATION_KEY, locationId),
-  /** Forgets this tab's token and location. Other tabs are told separately (`announce`). */
+  /** Forgets this tab's sign-in and location. Other tabs are told separately (`announce`). */
   clear: (): void => {
-    accessToken = null;
+    signedIn = false;
     tabStorage()?.removeItem(LOCATION_KEY);
   },
 
   /**
-   * Signing out clears this tab, but ending the sign-in is a request to identity-api, which can fail (it is down, or slow).
-   * The refresh cookie is then still good, and the next person to open the app would be signed in as the last one. So a
+   * Signing out clears this tab, but ending the sign-in is a request to the gateway, which can fail (it is down, or slow).
+   * The session cookie is then still good, and the next person to open the app would be signed in as the last one. So a
    * sign-out that did not get through is remembered here, and the next load ends the sign-in first and signs no one in.
    */
   isRevokePending: (): boolean => {

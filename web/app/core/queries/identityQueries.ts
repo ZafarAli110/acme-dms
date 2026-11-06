@@ -23,15 +23,12 @@ export interface CurrentUser {
 /** Sign-in and the signed-in user. Used by the auth kernel, outside React. */
 export const identityQueries = {
   /**
-   * The access token to send with requests. The refresh token that renews it is not in the answer: identity-api sets it
-   * as an httpOnly cookie, which this code never sees.
+   * Signs in at the gateway, which checks the password at identity-api and answers with a session cookie: httpOnly, so this
+   * code never sees it, and no token comes back at all. Throws the problem (401) for a wrong email or password.
    */
-  signInAsync: (email: string, password: string) =>
-    apiClient.postAsync<{ accessToken: string; tokenType: string; expiresIn: number }>(
-      `${API_CONFIG.identityUrl}/v1/tokens`,
-      { email, password },
-    ),
-  /** Signing out: ends the sign-in on the service, which removes the cookie. True when the service answered. */
-  revokeAsync: (): Promise<boolean> => apiClient.revokeSignInAsync(),
+  signInAsync: (email: string, password: string): Promise<void> =>
+    apiClient.postAsync<void>(API_CONFIG.sessionUrl, { email, password }, { anonymous: true }),
+  /** Signing out: the gateway ends the sign-in and removes the cookie. True when the gateway answered. */
+  revokeAsync: (): Promise<boolean> => apiClient.signOutAsync(),
   getCurrentUserAsync: () => apiClient.getAsync<CurrentUser>(`${API_CONFIG.identityUrl}/v1/users/me`),
 };
