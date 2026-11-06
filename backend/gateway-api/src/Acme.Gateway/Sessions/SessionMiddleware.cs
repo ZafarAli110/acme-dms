@@ -40,7 +40,7 @@ internal sealed class SessionMiddleware
         {
             accessToken = await sessions.GetAccessTokenAsync(value, context, context.RequestAborted);
         }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && !context.RequestAborted.IsCancellationRequested)
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException && !context.RequestAborted.IsCancellationRequested)
         {
             await SessionProblems.WriteAsync(context, StatusCodes.Status503ServiceUnavailable, SessionProblems.IdentityUnavailable);
             return;
@@ -49,12 +49,35 @@ internal sealed class SessionMiddleware
         if (accessToken is null)
         {
             SessionCookie.Clear(context.Response, _environment);
-            await SessionProblems.WriteAsync(context, StatusCodes.Status401Unauthorized, SessionProblems.Ended);
+            await SessionProblems.WriteEndedAsync(context);
             return;
         }
 
         request.Headers.Authorization = $"Bearer {accessToken}";
+        WithoutTheSessionCookie(request);
         await _next(context);
+    }
+
+    /// <summary>
+    /// The services get the access token, never the session cookie: its value is the key to the session's tokens, so it stays
+    /// between the browser and the gateway (a service that logs headers would otherwise hold it). Other cookies go on.
+    /// </summary>
+    private static void WithoutTheSessionCookie(HttpRequest request)
+    {
+        var prefix = SessionCookie.Name + "=";
+        var others = request.Headers.Cookie
+            .SelectMany(header => (header ?? "").Split(';'))
+            .Select(cookie => cookie.Trim())
+            .Where(cookie => cookie.Length > 0 && !cookie.StartsWith(prefix, StringComparison.Ordinal))
+            .ToArray();
+        if (others.Length == 0)
+        {
+            request.Headers.Remove("Cookie");
+        }
+        else
+        {
+            request.Headers.Cookie = string.Join("; ", others);
+        }
     }
 
     private static bool IsSafe(string method) =>
