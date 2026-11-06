@@ -12,7 +12,7 @@ public sealed class GetDocumentQueryHandlerTests
     [TestMethod]
     public async Task ExecuteAsync_DoesNotReturnAnotherDealersDocument()
     {
-        var database = new TestDatabase();
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
         var documentId = await TestDocuments.UploadPhotoAsync(database, TestContext.CancellationToken);
         await using var otherDealerContext = database.CreateContext(TestDocuments.OtherDealer);
         var otherDealerUser = new UserContext(Guid.NewGuid(), TestDocuments.OtherDealer, Guid.NewGuid());
