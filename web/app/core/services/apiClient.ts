@@ -27,6 +27,9 @@ export interface RequestOptions {
  */
 const FROM_THE_PAGE = { name: "x-requested-with", value: "acme-web" } as const;
 
+/** On the gateway's own 401 when the session is gone: the only answer that ends this tab's sign-in. */
+const SESSION_ENDED = { name: "x-acme-session", value: "ended" } as const;
+
 /**
  * The only code that calls `fetch` for the services. The browser sends the session cookie itself (the gateway turns it into
  * the access token the services check); this adds the selected location (`x-location-id`) and the page's own header,
@@ -115,13 +118,14 @@ class ApiClient {
   }
 
   /**
-   * Sends the request. The gateway renews the access token itself, so a 401 for a signed-in tab means the sign-in is over
-   * (signed out in another browser, ended at identity-api, or run out): the app says so (`sessionExpiry`), and the caller
-   * gets the 401 it had.
+   * Sends the request. The gateway renews the access token itself; when it answers that the sign-in has ended (signed out in
+   * another browser, ended at identity-api, or run out: its 401 says so in `x-acme-session`), the app says so
+   * (`sessionExpiry`). Any other 401 is a service refusing this request, an error for the caller, never a reason to sign out.
    */
   private async sendAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
     const response = await this.sendOnceAsync(url, init, options);
-    if (response.status === 401 && options?.anonymous !== true && session.isSignedIn()) {
+    const ended = response.status === 401 && response.headers.get(SESSION_ENDED.name) === SESSION_ENDED.value;
+    if (ended && options?.anonymous !== true && session.isSignedIn()) {
       sessionExpiry.expire();
     }
     return response;
