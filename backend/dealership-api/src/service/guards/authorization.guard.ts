@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import {
   BadRequestException,
   type CanActivate,
@@ -42,7 +43,7 @@ export class AuthorizationGuard implements CanActivate {
     const locationId = typeof header === "string" && header.length > 0 ? header : null;
     const location = locationId ? token.locations.find((candidate) => candidate.id === locationId) : undefined;
     if (locationId && !location) {
-      throw new ForbiddenException(`You do not work at location ${locationId}.`);
+      throw new ForbiddenException(localized("errors.notAtLocation", { locationId }));
     }
 
     const userContext: UserContext = {
@@ -59,10 +60,10 @@ export class AuthorizationGuard implements CanActivate {
       return true;
     }
     if (!locationId) {
-      throw new BadRequestException(`The ${LOCATION_HEADER} header is required for this endpoint.`);
+      throw new BadRequestException(localized("errors.locationHeaderRequired", { header: LOCATION_HEADER }));
     }
     if (!userContext.permissions.includes(required)) {
-      throw new ForbiddenException(`You do not have the '${required}' permission at this location.`);
+      throw new ForbiddenException(localized("errors.missingPermission", { permission: required }));
     }
     return true;
   }

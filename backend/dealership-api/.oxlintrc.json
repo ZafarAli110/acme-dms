@@ -49,6 +49,42 @@
       }
     },
     {
+      "files": ["src/i18n/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "The messages and their translations depend on nothing."
+              },
+              {
+                "group": ["#business-logic/**", "../**/business-logic/**"],
+                "message": "The messages and their translations depend on nothing."
+              },
+              {
+                "group": ["#business-logic-abstractions/**", "../**/business-logic-abstractions/**"],
+                "message": "The messages and their translations depend on nothing."
+              },
+              {
+                "group": ["#dto/**", "../**/dto/**"],
+                "message": "The messages and their translations depend on nothing."
+              },
+              {
+                "group": ["#persistence/**", "../**/persistence/**"],
+                "message": "The messages and their translations depend on nothing."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "The messages and their translations depend on nothing."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["src/dto/**"],
       "rules": {
         "no-restricted-imports": [
@@ -83,7 +119,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -129,7 +165,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -167,7 +203,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -209,7 +245,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
               }
             ]
           }
@@ -243,7 +279,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -285,7 +321,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -323,7 +359,7 @@
             "paths": [
               {
                 "name": "@nestjs/platform-node",
-                "message": "Only service/main.ts and service/interceptors/file-upload.interceptor.ts know the HTTP adapter."
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the test that checks translated messages through it know the HTTP adapter."
               },
               {
                 "name": "pg",
@@ -339,7 +375,11 @@
       }
     },
     {
-      "files": ["src/service/main.ts", "src/service/interceptors/file-upload.interceptor.ts"],
+      "files": [
+        "src/service/main.ts",
+        "src/service/interceptors/file-upload.interceptor.ts",
+        "src/service/__test__/translated-messages.test.ts"
+      ],
       "rules": {
         "no-restricted-imports": [
           "error",

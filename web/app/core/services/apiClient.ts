@@ -1,3 +1,4 @@
+import { i18n } from "../../i18n";
 import { API_CONFIG } from "../config/api";
 import {
   ApiError,
@@ -123,6 +124,8 @@ class ApiClient {
     if (locationId) {
       headers.set("x-location-id", locationId);
     }
+    // The language the user chose in the app, not the browser's: the services answer their messages in it.
+    headers.set("accept-language", i18n.resolvedLanguage ?? i18n.language);
     try {
       return await fetch(url, { ...init, signal, headers });
     } catch (error) {

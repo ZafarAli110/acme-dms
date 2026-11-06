@@ -44,9 +44,10 @@ describe("CreatePartCommandHandler", () => {
     const bin = await database.seed.addBinAsync({ locationId: NORTHSIDE, code: "A-03" });
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "BRK-003" });
 
-    await expect(handler().executeAsync(AT_NORTHSIDE, request("BRK-003", bin.id))).rejects.toThrow(
-      new ConflictException("Part number BRK-003 already exists in your catalogue."),
-    );
+    const refused = handler().executeAsync(AT_NORTHSIDE, request("BRK-003", bin.id));
+
+    await expect(refused).rejects.toThrow(ConflictException);
+    await expect(refused).rejects.toThrow("Part number BRK-003 already exists in your catalogue.");
   });
 
   it("allows a deleted part number again", async () => {
