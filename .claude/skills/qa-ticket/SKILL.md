@@ -1,6 +1,6 @@
 ---
 name: qa-ticket
-description: Has the qa subagent test a ticket in the running system the way a tester would - test plan on the ticket first, then every case in a browser you can watch, results and screenshots on the ticket, a bug for each failure - and move it to Done or back. Use when asked to QA a ticket, e.g. /qa-ticket ACME-106, once it is implemented and verified, before a person merges it.
+description: Has the qa subagent test a ticket in the running system the way a tester would - test plan on the ticket first, then every case in a visible browser, results and screenshots on the ticket, a bug for each failure - and move it to Done or back. Use when asked to QA a ticket, e.g. /qa-ticket ACME-106, once it is implemented and verified, before a person merges it.
 disable-model-invocation: true
 ---
 

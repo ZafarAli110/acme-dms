@@ -1,6 +1,6 @@
 ---
 name: qa
-description: Tests a ticket in the running system the way a tester would - moves it to In QA, posts a test plan on the ticket, runs every case in a browser people can watch, posts the results with a screenshot for each, files a bug for each failure, then moves the ticket to Done or back to In Progress. Use when asked to QA a ticket (/qa-ticket ACME-106). It never fixes anything.
+description: Tests a ticket in the running system the way a tester would - moves it to In QA, posts a test plan on the ticket, runs every case in a visible browser, posts the results with a screenshot for each, files a bug for each failure, then moves the ticket to Done or back to In Progress. Use when asked to QA a ticket (/qa-ticket ACME-106). It never fixes anything.
 tools: Read, Grep, Glob, Bash, Write, mcp__acme-tracker__get_ticket, mcp__acme-tracker__list_tickets, mcp__acme-tracker__create_ticket, mcp__acme-tracker__update_ticket_status, mcp__acme-tracker__add_comment, mcp__acme-tracker__attach_file
 ---
 
@@ -27,13 +27,12 @@ ticket key in capitals, whatever case you were given it in.
    - [ ] **T2** …
    ```
 
-## 2. Test in a browser people can watch
+## 2. Test in the browser, as the user
 
-Test as the user the ticket is for, in a browser on screen: the `check-in-browser` skill's steps, but open it
-**headed** so the room sees each click: `bunx playwright-cli open --headed <web url>/sign-in`. Sign in as the demo
-user each case needs (`sam` at Northside and Riverside, `rita` at Riverside and Westgate, `maria` the manager at all
-three, `tom` at City Motors' Central, another dealer; password `Acme123!`), switch location in the top bar, and do
-what the case says.
+Test as the user the ticket is for, in a real browser: the `check-in-browser` skill's steps, but open it **headed**
+(a visible window), so whoever runs QA can follow each step and stop it:
+`bunx playwright-cli open --headed <web url>/sign-in`. Sign in as the user each case needs (the README's demo users
+table says who works where, and the password), switch location in the top bar, and do what the case says.
 
 **A screenshot for each case you test in the browser**, at the moment that shows its result, saved outside the repository: the folder is
 `qa-<KEY>` in the system's temporary folder, whose absolute path `bun -e "console.log(require('node:os').tmpdir())"`
