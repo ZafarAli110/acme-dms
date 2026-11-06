@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { BadRequestException } from "@nestjs/common";
 import type { DocumentVariantSpec } from "#business-logic-abstractions/rest-clients/document-api.client.interface";
 import type { PartPhotoUploadRequestDto } from "#dto/parts/part-photo-upload-request.dto";
@@ -23,12 +24,16 @@ export const PART_PHOTO_VARIANTS: DocumentVariantSpec[] = [
 export function validatePhotoFile(file: PartPhotoUploadRequestDto): void {
   if (!ALLOWED_PHOTO_TYPES.has(file.contentType)) {
     throw new BadRequestException(
-      `${file.fileName}: file type ${file.contentType} not allowed. Allowed: ${[...ALLOWED_PHOTO_TYPES].join(", ")}.`,
+      localized("errors.photoTypeNotAllowed", {
+        fileName: file.fileName,
+        contentType: file.contentType,
+        allowed: [...ALLOWED_PHOTO_TYPES].join(", "),
+      }),
     );
   }
   if (file.sizeBytes > MAX_PHOTO_BYTES) {
     throw new BadRequestException(
-      `${file.fileName}: file too large. Maximum size: ${MAX_PHOTO_BYTES / 1024 / 1024} MB.`,
+      localized("errors.photoTooLarge", { fileName: file.fileName, maxMegabytes: MAX_PHOTO_BYTES / 1024 / 1024 }),
     );
   }
 }

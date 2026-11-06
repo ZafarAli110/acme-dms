@@ -1,3 +1,4 @@
+import { isLocalizedMessage, translateMessage } from "#i18n/messages";
 import {
   type ArgumentsHost,
   Catch,
@@ -88,12 +89,16 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     };
   }
 
+  /** The detail in the request's language (`Accept-Language`); the log keeps the English one. */
   private resolveDetail(exception: unknown): string {
     if (!(exception instanceof HttpException)) {
       // Unexpected errors: never leak internals to the client. The full error is in the log and the trace.
-      return resolveDatabaseProblem(exception)?.detail ?? "An unexpected error occurred";
+      return translateMessage(resolveDatabaseProblem(exception)?.key ?? "database.unexpected");
     }
     const body = exception.getResponse();
+    if (isLocalizedMessage(body)) {
+      return translateMessage(body.i18n.key, body.i18n.args);
+    }
     if (typeof body === "string") {
       return body;
     }
