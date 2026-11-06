@@ -4,6 +4,7 @@ import { Box, Button, Card, CardContent, IconButton, LinearProgress, Stack, Typo
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useExports } from "../../core/contexts/exports/useExports";
+import { formatFileSize } from "../../core/formatters/formatNumber";
 import type { ExportEntry } from "../../core/kernel/exportKernel";
 
 const TICK_MS = 500;
@@ -118,7 +119,7 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
               onClick={() => setTimeout(() => dismiss(job.id), 0)}
               data-testid="export-download"
             >
-              {t("exports.download", { size: ((job.fileBytes ?? 0) / 1_048_576).toFixed(1) })}
+              {t("exports.download", { size: formatFileSize(job.fileBytes ?? 0, i18n.language) })}
             </Button>
           )}
         </Stack>

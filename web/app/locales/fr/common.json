@@ -72,7 +72,7 @@
     "elapsed": "{{time}} écoulé",
     "left": "environ {{time}} restant",
     "cancel": "Annuler",
-    "download": "Télécharger ({{size}} Mo)",
+    "download": "Télécharger ({{size}})",
     "close": "Fermer",
     "customersTitle": "Clients du site {{location}}",
     "confirmTitle": "Exporter vers Excel ?",
