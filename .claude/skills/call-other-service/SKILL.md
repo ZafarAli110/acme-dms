@@ -28,7 +28,7 @@ result types and an injection token. No HTTP types, no generated types: the hand
 The other service's request and response types come from its OpenAPI document, never written by hand:
 `bun run generate:clients` in `backend/dealership-api` while the system runs. It writes
 `<service>.openapi.json` (the contract we were built against) and `<service>.schema.d.ts`; commit both. A new service
-needs its own entry in `scripts/generate-rest-clients.ts`.
+needs its own entry in `backend/dealership-api/scripts/generate-rest-clients.ts`.
 
 ## 3. The client: one method, one request
 
