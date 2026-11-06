@@ -1,0 +1,74 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "c68d6a54-14de-4a39-b8e5-6f10553479eb",
+  "prevIds": ["65dc7f85-06fc-4427-a808-c1fd94db6498"],
+  "footprints": [
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_location_name"],
+      "writes": [
+        "s|idx|public.ix_customers_location_name",
+        "n|idx|public.ix_customers_location_name",
+        "e|idx|public.ix_customers_location_name",
+        "n|rel|public.ix_customers_location_name"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.surname",
+        "n|col|public.customers.first_name",
+        "n|col|public.customers.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_location_name",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "surname",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "first_name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"customers\".\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}

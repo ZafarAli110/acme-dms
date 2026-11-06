@@ -1,8 +1,8 @@
-import { pgTable, uuid } from "drizzle-orm/pg-core";
+import { snakeCase, uuid } from "drizzle-orm/pg-core";
 import { instant } from "./columns/temporal-columns";
 
 /** The inbox: each message id a consumer has applied, so a second delivery changes nothing (docs/standards/messaging.md). */
-export const processedMessages = pgTable("processed_messages", {
+export const processedMessages = snakeCase.table("processed_messages", {
   messageId: uuid().primaryKey(),
   processedAt: instant().notNull(),
 });

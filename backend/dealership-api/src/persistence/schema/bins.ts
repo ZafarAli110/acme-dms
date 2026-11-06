@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, snakeCase, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 
 /** A shelf or bin at one rooftop of a dealer, where that rooftop keeps parts. */
-export const bins = pgTable(
+export const bins = snakeCase.table(
   "bins",
   {
     id: uuid()

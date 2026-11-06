@@ -1,0 +1,191 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "65dc7f85-06fc-4427-a808-c1fd94db6498",
+  "prevIds": ["ab7f2dbd-13ed-4e00-9ce1-f839e6516812"],
+  "footprints": [
+    {
+      "statementType": "drop_index",
+      "statementTarget": ["index", "public", "parts", "uq_parts_part_number"],
+      "writes": [
+        "s|idx|public.uq_parts_part_number",
+        "n|idx|public.uq_parts_part_number",
+        "e|idx|public.uq_parts_part_number",
+        "n|rel|public.uq_parts_part_number"
+      ],
+      "reads": ["e|tbl|public.parts", "n|sch|public", "e|col|public.parts.part_number"],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "bins", "dealer_id"],
+      "writes": ["s|col|public.bins.dealer_id", "n|col|public.bins.dealer_id", "e|col|public.bins.dealer_id"],
+      "reads": ["n|tbl|public.bins", "n|sch|public"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "customers", "dealer_id"],
+      "writes": [
+        "s|col|public.customers.dealer_id",
+        "n|col|public.customers.dealer_id",
+        "e|col|public.customers.dealer_id"
+      ],
+      "reads": ["n|tbl|public.customers", "n|sch|public"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "part_inventories", "dealer_id"],
+      "writes": [
+        "s|col|public.part_inventories.dealer_id",
+        "n|col|public.part_inventories.dealer_id",
+        "e|col|public.part_inventories.dealer_id"
+      ],
+      "reads": ["n|tbl|public.part_inventories", "n|sch|public"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "part_photos", "dealer_id"],
+      "writes": [
+        "s|col|public.part_photos.dealer_id",
+        "n|col|public.part_photos.dealer_id",
+        "e|col|public.part_photos.dealer_id"
+      ],
+      "reads": ["n|tbl|public.part_photos", "n|sch|public"]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "parts", "dealer_id"],
+      "writes": ["s|col|public.parts.dealer_id", "n|col|public.parts.dealer_id", "e|col|public.parts.dealer_id"],
+      "reads": ["n|tbl|public.parts", "n|sch|public"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "parts", "uq_parts_dealer_part_number"],
+      "writes": [
+        "s|idx|public.uq_parts_dealer_part_number",
+        "n|idx|public.uq_parts_dealer_part_number",
+        "e|idx|public.uq_parts_dealer_part_number",
+        "n|rel|public.uq_parts_dealer_part_number"
+      ],
+      "reads": ["n|tbl|public.parts", "n|sch|public", "n|col|public.parts.dealer_id", "n|col|public.parts.part_number"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bins",
+        "name": "dealer_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "dealer_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "part_inventories",
+        "name": "dealer_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "part_photos",
+        "name": "dealer_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "parts",
+        "name": "dealer_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "parts",
+        "name": "uq_parts_dealer_part_number",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "part_number",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "NOT \"parts\".\"is_deleted\"",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"uq_parts_part_number\"]"
+    }
+  ]
+}
