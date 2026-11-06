@@ -10,7 +10,7 @@ export interface TokenLocation {
 /** The validated claims of an identity-api access token. */
 export interface AccessTokenClaims {
   sub: string;
-  /** The sign-in this token belongs to. Tokens issued before sign-ins had an id have none. */
+  /** The sign-in this token belongs to: every token identity-api issues has one. */
   sid?: string;
   /** When the token ends, in seconds since 1970. */
   exp?: number;

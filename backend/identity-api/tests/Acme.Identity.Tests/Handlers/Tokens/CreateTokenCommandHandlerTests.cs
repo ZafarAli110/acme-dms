@@ -58,6 +58,6 @@ public sealed class CreateTokenCommandHandlerTests
     {
         var keyProvider = new Mock<ISigningKeyProvider>();
         keyProvider.Setup(p => p.GetSigningKeyAsync(It.IsAny<CancellationToken>())).ReturnsAsync(_signingKey);
-        return new CreateTokenCommandHandler(dbContext, new AccessTokenIssuer(keyProvider.Object), new PasswordHasher<User>(), TimeProvider.System);
+        return new CreateTokenCommandHandler(dbContext, new AccessTokenIssuer(keyProvider.Object), new PasswordHasher<User>(), new SignInThrottle(TimeProvider.System), TimeProvider.System);
     }
 }
