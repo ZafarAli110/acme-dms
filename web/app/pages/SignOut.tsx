@@ -1,9 +1,14 @@
 import { redirect } from "react-router";
 import { authKernel } from "../core/kernel/authKernel";
+import { systemQueries } from "../core/queries/systemQueries";
 
-/** Posted by the top bar's sign-out confirmation. Clears the session and the cache, then shows the sign-in page. */
+/**
+ * Posted by the top bar's sign-out confirmation. Clears the session and the app's cache, asks the browser to drop what it
+ * kept of the service's answers, then shows the sign-in page.
+ */
 export async function clientAction() {
   authKernel.signOut();
+  await systemQueries.clearBrowserCacheAsync();
   return redirect("/sign-in");
 }
 

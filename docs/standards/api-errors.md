@@ -42,6 +42,9 @@ A record people edit (a customer, a part) has a `version`, one more with every s
   (`Vary: authorization, x-location-id`), so the browser sends `If-None-Match` itself. The server still runs the query
   and checks who is asking before it says 304: this saves the body, not the work. Every other answer, saves included,
   stays `Cache-Control: no-store` (one dealer's data, one user's: nothing is kept).
+  Sign-out also asks the browser to drop what it kept: the web app calls `POST /v1/system/sign-out`, which answers 204 with
+  `Clear-Site-Data: "cache"` (Chrome, Edge and Firefox, on HTTPS or localhost; Safari ignores it, and there a kept copy
+  is still only shown after the service agrees, which needs a token).
 - A save (`PUT`, `PATCH`) sends `If-Match` with the version it started from: `428` without it, `412` when it is not
   the current version. The handler checks the version in the same `UPDATE` (`where … version = …`, `version + 1`), so
   two saves from one version can never both win; with files, it checks before uploading too.
