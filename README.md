@@ -226,6 +226,7 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run logs dealership-api`                       | console output of one service                                          |
 | `bun run traces dealership-api`                     | recent traces of one service                                           |
 | `bun run errors`                                    | only failed (5xx) traces, across all services                          |
+| `bun run sql:explain "select …"`                    | how Postgres runs one query: its plan, rows and time (read-only)       |
 | `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)                             |
 | `bun run seed`                                      | add the sample parts, stock, photos, customers                         |
 | `bun run seed:bulk`                                 | add 1.6M customers at Northside, 400k at Riverside, 250k at Westgate   |
@@ -253,6 +254,7 @@ Every project, in either language, has the same targets, run through [Nx](https:
 | `bun run test`                    | Run every project's unit tests                                                             |
 | `bun run coverage`                | Every project's tests with coverage: one table of lines run, reports in `coverage/`        |
 | `bun run format`                  | Format TypeScript, JSON and Markdown                                                       |
+| `bun run format:check`            | Check the formatting without changing any file (what CI runs)                              |
 | `bun run gate:fast`               | Format check, lint, typecheck and tests for the projects changed since your branch started |
 | `bun run gate:slow`               | End-to-end tests of the web app (Playwright, installed Chrome), against the running system |
 | `bunx nx test @acme/identity-api` | One target for one project                                                                 |
