@@ -89,6 +89,7 @@ export const fr: Messages = {
     isUuid: "{property} doit être un identifiant valide.",
     isIn: "{property} doit être l'une de ces valeurs : {constraint1}.",
     isEmail: "{property} doit être une adresse e-mail.",
+    isIso8601: "{property} doit être une date (AAAA-MM-JJ).",
     isArray: "{property} doit être une liste.",
     arrayMinSize: "{property} doit contenir au moins {constraint1} éléments.",
     arrayMaxSize: "{property} doit contenir au plus {constraint1} éléments.",

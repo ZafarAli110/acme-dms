@@ -5,17 +5,19 @@
 //   bun run api as maria POST /api/dealership/v1/parts '{"partNumber":"BP-100","description":"Brake pads","unitPrice":49}'
 //   bun run api as sam --body GET /api/dealership/v1/customers/recent | jq '.[].id'
 //   bun run api as rita --if-match 3 PUT /api/dealership/v1/customers/<id> '{…every field…}'
+//   bun run api as rita --lang fr POST /api/dealership/v1/customers '{"surname":""}'
 //
 // It signs in through identity-api, starts at the user's default location unless --location is given, and prints the
 // status, the correlation id and the JSON body. With --body, standard output is the JSON body alone, ready for jq; the
 // status line goes to standard error, and the exit code still says whether the call succeeded. A save of a customer or
 // a part needs --if-match with the version it starts from (the `version`, or ETag, of a GET; `*` for any): 428
-// without it, 412 when someone saved a newer version first.
+// without it, 412 when someone saved a newer version first. --lang asks for the messages in that language
+// (Accept-Language, as the web app sends the one the user chose): en or fr; anything else gets English.
 import { DEMO_USERS, callAsync, resourceUrl, signInAsync } from "./running-system";
 
 function usage(message: string): never {
   console.error(
-    `${message}\n\nUsage: bun run api as <${Object.keys(DEMO_USERS).join("|")}> [--location <name|code>] [--body] [--if-match <version|*>] <METHOD> <path> [json-body]`,
+    `${message}\n\nUsage: bun run api as <${Object.keys(DEMO_USERS).join("|")}> [--location <name|code>] [--body] [--if-match <version|*>] [--lang <en|fr>] <METHOD> <path> [json-body]`,
   );
   process.exit(1);
 }
@@ -38,6 +40,12 @@ while (rest[0]?.startsWith("--")) {
   } else if (option === "--body") {
     bodyOnly = true;
     rest = rest.slice(1);
+  } else if (option === "--lang") {
+    if (!value) {
+      usage("--lang needs a language, such as fr.");
+    }
+    headers["accept-language"] = value;
+    rest = rest.slice(2);
   } else if (option === "--if-match") {
     if (!value) {
       usage("--if-match needs a version (7) or *.");

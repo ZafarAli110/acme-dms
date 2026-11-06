@@ -92,6 +92,7 @@ export const en = {
     isUuid: "{property} must be a valid id.",
     isIn: "{property} must be one of: {constraint1}.",
     isEmail: "{property} must be an email address.",
+    isIso8601: "{property} must be a date (YYYY-MM-DD).",
     isArray: "{property} must be a list.",
     arrayMinSize: "{property} must have at least {constraint1} items.",
     arrayMaxSize: "{property} must have at most {constraint1} items.",
