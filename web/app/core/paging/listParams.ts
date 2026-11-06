@@ -27,6 +27,8 @@ export interface ListParams {
 /** The free data grid shows at most 100 rows a page. */
 export const PAGE_SIZES = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
+/** How many rows deep the API lets a list page reach (page × page size); a deeper page is a 400. Keep it equal to MAX_LIST_DEPTH in the API. */
+export const MAX_LIST_DEPTH = 10_000;
 
 /**
  * Reads a list page's params from the URL
@@ -34,14 +36,22 @@ const DEFAULT_PAGE_SIZE = 25;
  * anything invalid falls back. Whether the list has that field is the API's to say.
  */
 export function readListParams(searchParams: URLSearchParams): ListParams {
-  const page = Number(searchParams.get("page"));
-  const pageSize = Number(searchParams.get("pageSize"));
+  const requestedPage = Number(searchParams.get("page"));
+  const requestedPageSize = Number(searchParams.get("pageSize"));
+  const pageSize = (PAGE_SIZES as readonly number[]).includes(requestedPageSize)
+    ? requestedPageSize
+    : DEFAULT_PAGE_SIZE;
+  // A shared link to a page the API would refuse opens on the last page it allows.
+  const page =
+    Number.isInteger(requestedPage) && requestedPage >= 1
+      ? Math.min(requestedPage, Math.floor(MAX_LIST_DEPTH / pageSize))
+      : 1;
   const filterField = searchParams.get("filterField");
   const filterOperator = searchParams.get("filterOperator");
   return {
     search: searchParams.get("search") ?? "",
-    page: Number.isInteger(page) && page >= 1 ? page : 1,
-    pageSize: (PAGE_SIZES as readonly number[]).includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE,
+    page,
+    pageSize,
     sort: searchParams.get("sort"),
     direction: searchParams.get("direction") === "desc" ? "desc" : "asc",
     filter:
