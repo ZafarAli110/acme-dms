@@ -1,0 +1,225 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a381489d-713f-4253-975a-cf89b2a2403f",
+  "prevIds": ["c68d6a54-14de-4a39-b8e5-6f10553479eb"],
+  "footprints": [
+    {
+      "statementType": "recreate_index",
+      "statementTarget": ["index", "public", "bins", "uq_bins_location_code"],
+      "writes": [
+        "s|idx|public.uq_bins_location_code",
+        "n|idx|public.uq_bins_location_code",
+        "e|idx|public.uq_bins_location_code",
+        "n|rel|public.uq_bins_location_code"
+      ],
+      "reads": ["n|tbl|public.bins", "n|sch|public", "n|col|public.bins.location_id", "n|col|public.bins.code"],
+      "sharedWrites": [],
+      "sqlHash": "fd45ba960afaf84e"
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": ["index", "public", "part_inventories", "uq_part_inventories_location_part"],
+      "writes": [
+        "s|idx|public.uq_part_inventories_location_part",
+        "n|idx|public.uq_part_inventories_location_part",
+        "e|idx|public.uq_part_inventories_location_part",
+        "n|rel|public.uq_part_inventories_location_part"
+      ],
+      "reads": [
+        "n|tbl|public.part_inventories",
+        "n|sch|public",
+        "n|col|public.part_inventories.location_id",
+        "n|col|public.part_inventories.part_id"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "35e196e29ff1951d"
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": ["index", "public", "parts", "uq_parts_dealer_part_number"],
+      "writes": [
+        "s|idx|public.uq_parts_dealer_part_number",
+        "n|idx|public.uq_parts_dealer_part_number",
+        "e|idx|public.uq_parts_dealer_part_number",
+        "n|rel|public.uq_parts_dealer_part_number"
+      ],
+      "reads": ["n|tbl|public.parts", "n|sch|public", "n|col|public.parts.dealer_id", "n|col|public.parts.part_number"],
+      "sharedWrites": [],
+      "sqlHash": "c0f837a7b76ef6f6"
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_location_name"],
+      "writes": [
+        "s|idx|public.ix_customers_location_name",
+        "n|idx|public.ix_customers_location_name",
+        "e|idx|public.ix_customers_location_name",
+        "n|rel|public.ix_customers_location_name"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.surname",
+        "n|col|public.customers.first_name",
+        "n|col|public.customers.id"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "c310dbfe04d82dbb"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": ["table", "public", "bins"],
+      "writes": ["s|ck|public.bins.ck_bins_deleted"],
+      "reads": [
+        "n|tbl|public.bins",
+        "n|sch|public",
+        "n|col|public.bins.is_deleted",
+        "n|col|public.bins.deleted_at",
+        "n|col|public.bins.deleted_by",
+        "e|col|public.bins.is_deleted",
+        "e|col|public.bins.deleted_at",
+        "e|col|public.bins.deleted_by"
+      ],
+      "sqlHash": "d2d73afd4e144295"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": ["table", "public", "customers"],
+      "writes": ["s|ck|public.customers.ck_customers_deleted"],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.is_deleted",
+        "n|col|public.customers.deleted_at",
+        "n|col|public.customers.deleted_by",
+        "e|col|public.customers.is_deleted",
+        "e|col|public.customers.deleted_at",
+        "e|col|public.customers.deleted_by"
+      ],
+      "sqlHash": "30f19ed807a713de"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": ["table", "public", "part_inventories"],
+      "writes": ["s|ck|public.part_inventories.ck_part_inventories_deleted"],
+      "reads": [
+        "n|tbl|public.part_inventories",
+        "n|sch|public",
+        "n|col|public.part_inventories.is_deleted",
+        "n|col|public.part_inventories.deleted_at",
+        "n|col|public.part_inventories.deleted_by",
+        "e|col|public.part_inventories.is_deleted",
+        "e|col|public.part_inventories.deleted_at",
+        "e|col|public.part_inventories.deleted_by"
+      ],
+      "sqlHash": "e62e2493263b7c22"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": ["table", "public", "part_photos"],
+      "writes": ["s|ck|public.part_photos.ck_part_photos_deleted"],
+      "reads": [
+        "n|tbl|public.part_photos",
+        "n|sch|public",
+        "n|col|public.part_photos.is_deleted",
+        "n|col|public.part_photos.deleted_at",
+        "n|col|public.part_photos.deleted_by",
+        "e|col|public.part_photos.is_deleted",
+        "e|col|public.part_photos.deleted_at",
+        "e|col|public.part_photos.deleted_by"
+      ],
+      "sqlHash": "e01e5a3c34b9032f"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": ["table", "public", "parts"],
+      "writes": ["s|ck|public.parts.ck_parts_deleted"],
+      "reads": [
+        "n|tbl|public.parts",
+        "n|sch|public",
+        "n|col|public.parts.is_deleted",
+        "n|col|public.parts.deleted_at",
+        "n|col|public.parts.deleted_by",
+        "e|col|public.parts.is_deleted",
+        "e|col|public.parts.deleted_at",
+        "e|col|public.parts.deleted_by"
+      ],
+      "sqlHash": "01ba86ff2876ab1d"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"uq_bins_location_code\"]",
+      "set": {
+        "where": "NOT \"is_deleted\""
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"uq_part_inventories_location_part\"]",
+      "set": {
+        "where": "NOT \"is_deleted\""
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"uq_parts_dealer_part_number\"]",
+      "set": {
+        "where": "NOT \"is_deleted\""
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"ix_customers_location_name\"]",
+      "set": {
+        "where": "\"is_deleted\" = false"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "uniques\u0000[\"public\",\"part_photos\",\"part_photos_document_id_unique\"]",
+      "set": {
+        "nameExplicit": true
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"bins\",\"ck_bins_deleted\"]",
+      "set": {
+        "value": "\"is_deleted\" = (\"deleted_at\" IS NOT NULL) AND \"is_deleted\" = (\"deleted_by\" IS NOT NULL)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"customers\",\"ck_customers_deleted\"]",
+      "set": {
+        "value": "\"is_deleted\" = (\"deleted_at\" IS NOT NULL) AND \"is_deleted\" = (\"deleted_by\" IS NOT NULL)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"part_inventories\",\"ck_part_inventories_deleted\"]",
+      "set": {
+        "value": "\"is_deleted\" = (\"deleted_at\" IS NOT NULL) AND \"is_deleted\" = (\"deleted_by\" IS NOT NULL)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"part_photos\",\"ck_part_photos_deleted\"]",
+      "set": {
+        "value": "\"is_deleted\" = (\"deleted_at\" IS NOT NULL) AND \"is_deleted\" = (\"deleted_by\" IS NOT NULL)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"parts\",\"ck_parts_deleted\"]",
+      "set": {
+        "value": "\"is_deleted\" = (\"deleted_at\" IS NOT NULL) AND \"is_deleted\" = (\"deleted_by\" IS NOT NULL)"
+      }
+    }
+  ]
+}

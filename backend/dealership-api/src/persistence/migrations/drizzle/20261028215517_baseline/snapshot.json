@@ -1,0 +1,1441 @@
+{
+  "type": "base",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ab7f2dbd-13ed-4e00-9ce1-f839e6516812",
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "public", "bins"],
+      "writes": [
+        "s|tbl|public.bins",
+        "n|tbl|public.bins",
+        "e|tbl|public.bins",
+        "n|rel|public.bins",
+        "n|type|public.bins",
+        "n|rel|public.bins_pkey"
+      ],
+      "reads": ["n|sch|public"]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "public", "customers"],
+      "writes": [
+        "s|tbl|public.customers",
+        "n|tbl|public.customers",
+        "e|tbl|public.customers",
+        "n|rel|public.customers",
+        "n|type|public.customers",
+        "n|rel|public.customers_pkey"
+      ],
+      "reads": ["n|sch|public"]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "public", "part_inventories"],
+      "writes": [
+        "s|tbl|public.part_inventories",
+        "n|tbl|public.part_inventories",
+        "e|tbl|public.part_inventories",
+        "n|rel|public.part_inventories",
+        "n|type|public.part_inventories",
+        "n|rel|public.part_inventories_pkey"
+      ],
+      "reads": ["n|sch|public"]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "public", "part_photos"],
+      "writes": [
+        "s|tbl|public.part_photos",
+        "n|tbl|public.part_photos",
+        "e|tbl|public.part_photos",
+        "n|rel|public.part_photos",
+        "n|type|public.part_photos",
+        "n|rel|public.part_photos_pkey",
+        "n|rel|public.part_photos_document_id_unique"
+      ],
+      "reads": ["n|sch|public"]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "public", "parts"],
+      "writes": [
+        "s|tbl|public.parts",
+        "n|tbl|public.parts",
+        "e|tbl|public.parts",
+        "n|rel|public.parts",
+        "n|type|public.parts",
+        "n|rel|public.parts_pkey"
+      ],
+      "reads": ["n|sch|public"]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "public", "processed_messages"],
+      "writes": [
+        "s|tbl|public.processed_messages",
+        "n|tbl|public.processed_messages",
+        "e|tbl|public.processed_messages",
+        "n|rel|public.processed_messages",
+        "n|type|public.processed_messages",
+        "n|rel|public.processed_messages_pkey"
+      ],
+      "reads": ["n|sch|public"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "bins", "ix_bins_location"],
+      "writes": [
+        "s|idx|public.ix_bins_location",
+        "n|idx|public.ix_bins_location",
+        "e|idx|public.ix_bins_location",
+        "n|rel|public.ix_bins_location"
+      ],
+      "reads": ["n|tbl|public.bins", "n|sch|public", "n|col|public.bins.location_id"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "bins", "uq_bins_location_code"],
+      "writes": [
+        "s|idx|public.uq_bins_location_code",
+        "n|idx|public.uq_bins_location_code",
+        "e|idx|public.uq_bins_location_code",
+        "n|rel|public.uq_bins_location_code"
+      ],
+      "reads": ["n|tbl|public.bins", "n|sch|public", "n|col|public.bins.location_id", "n|col|public.bins.code"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_location"],
+      "writes": [
+        "s|idx|public.ix_customers_location",
+        "n|idx|public.ix_customers_location",
+        "e|idx|public.ix_customers_location",
+        "n|rel|public.ix_customers_location"
+      ],
+      "reads": ["n|tbl|public.customers", "n|sch|public", "n|col|public.customers.location_id"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "part_inventories", "ix_part_inventories_location"],
+      "writes": [
+        "s|idx|public.ix_part_inventories_location",
+        "n|idx|public.ix_part_inventories_location",
+        "e|idx|public.ix_part_inventories_location",
+        "n|rel|public.ix_part_inventories_location"
+      ],
+      "reads": ["n|tbl|public.part_inventories", "n|sch|public", "n|col|public.part_inventories.location_id"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "part_inventories", "uq_part_inventories_location_part"],
+      "writes": [
+        "s|idx|public.uq_part_inventories_location_part",
+        "n|idx|public.uq_part_inventories_location_part",
+        "e|idx|public.uq_part_inventories_location_part",
+        "n|rel|public.uq_part_inventories_location_part"
+      ],
+      "reads": [
+        "n|tbl|public.part_inventories",
+        "n|sch|public",
+        "n|col|public.part_inventories.location_id",
+        "n|col|public.part_inventories.part_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "part_photos", "ix_part_photos_part"],
+      "writes": [
+        "s|idx|public.ix_part_photos_part",
+        "n|idx|public.ix_part_photos_part",
+        "e|idx|public.ix_part_photos_part",
+        "n|rel|public.ix_part_photos_part"
+      ],
+      "reads": ["n|tbl|public.part_photos", "n|sch|public", "n|col|public.part_photos.part_id"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "parts", "uq_parts_part_number"],
+      "writes": [
+        "s|idx|public.uq_parts_part_number",
+        "n|idx|public.uq_parts_part_number",
+        "e|idx|public.uq_parts_part_number",
+        "n|rel|public.uq_parts_part_number"
+      ],
+      "reads": ["n|tbl|public.parts", "n|sch|public", "n|col|public.parts.part_number"]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": ["table", "public", "part_inventories"],
+      "writes": [
+        "s|fk|public.part_inventories.part_inventories_part_id_parts_id_fk",
+        "n|fk|public.part_inventories.part_inventories_part_id_parts_id_fk",
+        "e|fk|public.part_inventories.part_inventories_part_id_parts_id_fk",
+        "n|con|public.part_inventories.part_inventories_part_id_parts_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.part_inventories",
+        "n|sch|public",
+        "n|tbl|public.parts",
+        "n|sch|public",
+        "n|col|public.part_inventories.part_id",
+        "n|col|public.parts.id",
+        "e|uniqueness|public.parts.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": ["table", "public", "part_inventories"],
+      "writes": [
+        "s|fk|public.part_inventories.part_inventories_bin_id_bins_id_fk",
+        "n|fk|public.part_inventories.part_inventories_bin_id_bins_id_fk",
+        "e|fk|public.part_inventories.part_inventories_bin_id_bins_id_fk",
+        "n|con|public.part_inventories.part_inventories_bin_id_bins_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.part_inventories",
+        "n|sch|public",
+        "n|tbl|public.bins",
+        "n|sch|public",
+        "n|col|public.part_inventories.bin_id",
+        "n|col|public.bins.id",
+        "e|uniqueness|public.bins.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": ["table", "public", "part_photos"],
+      "writes": [
+        "s|fk|public.part_photos.part_photos_part_id_parts_id_fk",
+        "n|fk|public.part_photos.part_photos_part_id_parts_id_fk",
+        "e|fk|public.part_photos.part_photos_part_id_parts_id_fk",
+        "n|con|public.part_photos.part_photos_part_id_parts_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.part_photos",
+        "n|sch|public",
+        "n|tbl|public.parts",
+        "n|sch|public",
+        "n|col|public.part_photos.part_id",
+        "n|col|public.parts.id",
+        "e|uniqueness|public.parts.id"
+      ]
+    }
+  ],
+  "ddl": [
+    {
+      "schema": "public",
+      "name": "bins",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "customers",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "part_inventories",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "part_photos",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "parts",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "processed_messages",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "location_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "code",
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "description",
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "created_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "created_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "updated_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "updated_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "is_deleted",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "deleted_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "deleted_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "location_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "first_name",
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "surname",
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "company_name",
+      "type": "varchar(200)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "email",
+      "type": "varchar(254)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "phone",
+      "type": "varchar(40)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "city",
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "status",
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "last_contact_date",
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "created_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "created_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "updated_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "updated_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "is_deleted",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "deleted_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "deleted_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "location_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "part_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "bin_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "quantity_on_hand",
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "reorder_level",
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "created_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "created_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "updated_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "updated_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "is_deleted",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "deleted_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "deleted_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "part_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "document_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "original_file_name",
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "status",
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "failure_reason",
+      "type": "varchar(1000)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "is_default",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "created_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "created_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "updated_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "updated_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "is_deleted",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "deleted_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "deleted_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "part_number",
+      "type": "varchar(50)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "description",
+      "type": "varchar(500)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "unit_price",
+      "type": "numeric(12,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "created_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "created_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "updated_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "updated_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "is_deleted",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "deleted_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "deleted_by",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "processed_messages",
+      "name": "message_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "processed_messages",
+      "name": "processed_at",
+      "type": "timestamptz",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "ix_bins_location",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "location_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "uq_bins_location_code",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "location_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "code",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "NOT \"bins\".\"is_deleted\"",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "ix_customers_location",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "location_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "ix_part_inventories_location",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "location_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "uq_part_inventories_location_part",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "location_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "part_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "NOT \"part_inventories\".\"is_deleted\"",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "ix_part_photos_part",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "part_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "uq_parts_part_number",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "part_number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "NOT \"parts\".\"is_deleted\"",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "part_inventories_part_id_parts_id_fk",
+      "nameExplicit": false,
+      "columns": ["part_id"],
+      "schemaTo": "public",
+      "tableTo": "parts",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "part_inventories_bin_id_bins_id_fk",
+      "nameExplicit": false,
+      "columns": ["bin_id"],
+      "schemaTo": "public",
+      "tableTo": "bins",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "part_photos_part_id_parts_id_fk",
+      "nameExplicit": false,
+      "columns": ["part_id"],
+      "schemaTo": "public",
+      "tableTo": "parts",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "bins_pkey",
+      "columns": ["id"],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "customers_pkey",
+      "columns": ["id"],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "part_inventories_pkey",
+      "columns": ["id"],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "part_photos_pkey",
+      "columns": ["id"],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "parts_pkey",
+      "columns": ["id"],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "processed_messages",
+      "name": "processed_messages_pkey",
+      "columns": ["message_id"],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "part_photos_document_id_unique",
+      "nameExplicit": false,
+      "columns": ["document_id"],
+      "nullsNotDistinct": false,
+      "entityType": "uniques"
+    },
+    {
+      "schema": "public",
+      "table": "bins",
+      "name": "ck_bins_deleted",
+      "value": "\"bins\".\"is_deleted\" = (\"bins\".\"deleted_at\" IS NOT NULL) AND \"bins\".\"is_deleted\" = (\"bins\".\"deleted_by\" IS NOT NULL)",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "ck_customers_deleted",
+      "value": "\"customers\".\"is_deleted\" = (\"customers\".\"deleted_at\" IS NOT NULL) AND \"customers\".\"is_deleted\" = (\"customers\".\"deleted_by\" IS NOT NULL)",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "part_inventories",
+      "name": "ck_part_inventories_deleted",
+      "value": "\"part_inventories\".\"is_deleted\" = (\"part_inventories\".\"deleted_at\" IS NOT NULL) AND \"part_inventories\".\"is_deleted\" = (\"part_inventories\".\"deleted_by\" IS NOT NULL)",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "part_photos",
+      "name": "ck_part_photos_deleted",
+      "value": "\"part_photos\".\"is_deleted\" = (\"part_photos\".\"deleted_at\" IS NOT NULL) AND \"part_photos\".\"is_deleted\" = (\"part_photos\".\"deleted_by\" IS NOT NULL)",
+      "entityType": "checks"
+    },
+    {
+      "schema": "public",
+      "table": "parts",
+      "name": "ck_parts_deleted",
+      "value": "\"parts\".\"is_deleted\" = (\"parts\".\"deleted_at\" IS NOT NULL) AND \"parts\".\"is_deleted\" = (\"parts\".\"deleted_by\" IS NOT NULL)",
+      "entityType": "checks"
+    }
+  ]
+}
