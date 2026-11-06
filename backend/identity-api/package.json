@@ -21,9 +21,6 @@
       "lint": {
         "parallelism": false
       },
-      "format": {
-        "parallelism": false
-      },
       "test": {
         "parallelism": false
       }
