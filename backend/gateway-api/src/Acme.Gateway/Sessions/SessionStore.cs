@@ -14,6 +14,12 @@ internal sealed class SessionStore
     /// <summary>A request this close to the access token's expiry gets a new one first, so the service never sees it expire.</summary>
     public static readonly TimeSpan RenewEarly = TimeSpan.FromSeconds(60);
 
+    /// <summary>
+    /// A renewal's own time limit, waiting for the lock included. Not the browser's: once identity-api replaces the refresh
+    /// token, the new one must be saved even if the browser has gone, or the session would keep only the replaced one.
+    /// </summary>
+    public static readonly TimeSpan RenewalTimeout = TimeSpan.FromSeconds(15);
+
     private readonly GatewayDbContext _dbContext;
     private readonly IdentityClient _identityClient;
     private readonly TimeProvider _timeProvider;
@@ -68,7 +74,7 @@ internal sealed class SessionStore
             return tokens.AccessToken;
         }
 
-        return await RenewAsync(value, id, browser, cancellationToken);
+        return await RenewAsync(value, id, browser);
     }
 
     /// <summary>
@@ -92,10 +98,13 @@ internal sealed class SessionStore
     /// <summary>
     /// One renewal at a time per session, on every gateway instance: the row is locked, then read again, and a request that
     /// waited finds the token the first one got. Each renewal replaces the refresh token, so two at once would look like a copy
-    /// to identity-api (it allows a short grace for that, but the lock means it is never needed).
+    /// to identity-api. It runs to the end on its own time limit (<see cref="RenewalTimeout"/>), not the browser's: a tab closed
+    /// mid-renewal must not leave the session holding a refresh token identity-api has already replaced.
     /// </summary>
-    private async Task<string?> RenewAsync(string value, string id, HttpContext browser, CancellationToken cancellationToken)
+    private async Task<string?> RenewAsync(string value, string id, HttpContext browser)
     {
+        using var timeout = new CancellationTokenSource(RenewalTimeout);
+        var cancellationToken = timeout.Token;
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         var session = await _dbContext.Sessions
             .FromSqlInterpolated($"SELECT * FROM sessions WHERE id = {id} FOR UPDATE")
@@ -117,7 +126,7 @@ internal sealed class SessionStore
         {
             renewed = await _identityClient.RefreshAsync(tokens.RefreshToken, browser, cancellationToken);
         }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && session.AccessTokenExpiresAt > now)
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException && session.AccessTokenExpiresAt > now)
         {
             // identity-api is not answering, but the token still works for a little while: send it, and renew next time.
             return tokens.AccessToken;
