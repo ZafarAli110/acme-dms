@@ -61,7 +61,7 @@ which only commits and pushes. No model named: it uses the session's.
 | `qa`                   | session's | tests a finished ticket like a tester, from the ticket, and files bugs               | 09  |
 | `security-reviewer`    | Sonnet    | every diff, all ten OWASP Top 10 categories, every file type; says what each came to | 10  |
 | `performance-reviewer` | Sonnet    | the diff against real data sizes; backs a query finding with its plan                | 10  |
-| `test-reviewer`        | Sonnet    | whether the tests would catch the bug they are meant to catch                        | 10  |
+| `test-reviewer`        | Sonnet    | a test per requirement that fails without the change; bad input, edges, luck         | 10  |
 | `git`                  | Haiku     | commits, pushes, opens the pull request; never resolves a conflict                   | 10  |
 
 ## Hooks

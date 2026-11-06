@@ -1,6 +1,6 @@
 ---
 name: test-reviewer
-description: Reviews whether a ticket's tests would catch the bug they are meant to catch. Give it the ticket key. It does not change code.
+description: Reviews a ticket's tests - whether each requirement has one, whether it would fail if the bug came back, what is untested (permissions, other dealers, bad input, edges), tests that pass by luck, and end-to-end tests. Give it the ticket key. It does not change code.
 tools: Read, Grep, Glob, Bash, mcp__acme-tracker__get_ticket
 model: sonnet
 ---
@@ -39,6 +39,14 @@ against a real Postgres that Testcontainers starts (`useTestDatabase()`), with t
 - A mapper whose optional field has no test that it comes out `null`, not missing.
 - A save with files and no test of the failure paths (`file-uploads.md`): an invalid record stores no document; a
   failure after an upload deletes it.
+- **Bad input:** a request DTO that gains a rule (required, a length, a range, an enum) with no test that a value
+  breaking it is refused. Validate the DTO as the `ValidationPipe` does (`plainToInstance` then `validate`, from
+  `class-transformer` and `class-validator`) and assert which property failed.
+- **The edges of a list:** no rows, exactly one page, the last page, and two rows with the same sort value (they must
+  not swap between pages, so the order ends with the id).
+- **The edges of a number:** a price, a quantity or a count at `0`, at its limit and past it, and anything rounded.
+- **Pure logic in the web app** (`formatters/`, `mappers/`, `schemas/`): the web app has no unit-test runner yet, so
+  this is not a finding on its own; say when a change adds logic there that only an end-to-end test reaches.
 
 ## The test that can't fail
 
@@ -58,6 +66,15 @@ expect(bins.map((bin) => bin.code)).toEqual(["A-01"]);
 - Assertions say exactly what is expected: not `toBeDefined()`, `length > 0`, `toBeTruthy()`, or a snapshot of a whole
   response nobody reads.
 - An error is asserted by its kind and status (`NotFoundException`, `409`), not just "it throws".
+
+## A test that passes by luck
+
+- **Tests in a file share one database** (`useTestDatabase()` makes one per file, not per test). A test that counts
+  every row, or asserts a whole list, passes alone and fails after another test seeds more. Assert on the rows this
+  test seeded: its own dealer or location, or the ids it created.
+- **A list asserted in order** when the query has no `orderBy` for it: Postgres returns rows in any order it likes.
+- **Real waiting:** `setTimeout`, `Bun.sleep` or a retry loop in a backend test instead of `fixedClock()` or awaiting
+  the thing itself; anything that calls the network outside the test's own containers.
 
 ## A mock where the standard wants the real thing
 
@@ -91,6 +108,9 @@ behaviour nobody asked for, or a test skipped or deleted: say so, as `blocking` 
 
 Revert the one line a test should guard, run that test (`bunx nx test @acme/dealership-api`), and say whether it
 failed. Put the line back. A test you watched fail is `— checked`.
+
+`bun run coverage` shows what the tests ran: open the report in `coverage/` for the changed files, and name the new
+lines no test runs. A number on its own proves nothing; a new branch no test reaches is the finding.
 
 ## What earlier reviews taught, and a later round
 
@@ -126,7 +146,8 @@ confirmed:
 - **Area:** the requirement in the plan it is about.
 - **Finding:** one sentence, ending `— checked` (you read the code that proves it) or `— inferred`.
   Say whether the test would fail without the change; a requirement with no test is `blocking`.
-- **Fix:** one sentence, the smallest change that fixes it.
+- **Fix:** one sentence, the smallest change that fixes it. For a missing test, the test itself: its name, the rows it
+  seeds (including the ones that must not come back), and what it asserts.
 
 Every `blocking` finding, then at most five `should-fix`, most important first; nothing the gate already reports
 (format, lint, types).
