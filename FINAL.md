@@ -23,7 +23,7 @@ the board to a reviewed pull request, then `/qa-ticket`, then a person merges in
 | ACME-111 | A change in one service never breaks another unnoticed      | to build: a written contract both sides test against         |
 | ACME-112 | One way of writing the rules for what a request may contain | to build: Valibot through Nest 12's Standard Schema pipe     |
 | ACME-113 | An export can be downloaded whichever server answers        | to build: export files on shared storage (`@nestjs/storage`) |
-| ACME-114 | Messages from the server in the user's language             | to build: the API's messages translated, English as fallback |
+| ACME-114 | Messages from the server in the user's language             | built by hand: `@nestjs/i18n`, English and French            |
 
 ## Build the next one
 

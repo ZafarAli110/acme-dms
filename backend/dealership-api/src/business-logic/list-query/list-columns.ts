@@ -1,3 +1,4 @@
+import { localized } from "#i18n/messages";
 import { BadRequestException } from "@nestjs/common";
 import { and, asc, desc, eq, gt, gte, ilike, isNotNull, isNull, lt, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
@@ -16,12 +17,14 @@ export type ListColumns = Readonly<Record<string, ListColumn>>;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function columnFor(columns: ListColumns, field: string, use: string): ListColumn {
+function columnFor(
+  columns: ListColumns,
+  field: string,
+  refusal: "errors.listCannotSortBy" | "errors.listCannotFilterBy",
+): ListColumn {
   const column = columns[field];
   if (!column) {
-    throw new BadRequestException(
-      `This list cannot be ${use} "${field}". It can be by: ${Object.keys(columns).join(", ")}.`,
-    );
+    throw new BadRequestException(localized(refusal, { field, fields: Object.keys(columns).join(", ") }));
   }
   return column;
 }
@@ -33,17 +36,17 @@ function likePattern(value: string, before: string, after: string): string {
 
 function valueFor(column: ListColumn, operator: string, value: string | undefined): string | number {
   if (!value) {
-    throw new BadRequestException(`The filter "${operator}" needs a value.`);
+    throw new BadRequestException(localized("errors.filterNeedsValue", { operator }));
   }
   if (column.type === "number") {
     const number = Number(value);
     if (!Number.isFinite(number)) {
-      throw new BadRequestException(`"${value}" is not a number.`);
+      throw new BadRequestException(localized("errors.notANumber", { value }));
     }
     return number;
   }
   if (column.type === "date" && !ISO_DATE.test(value)) {
-    throw new BadRequestException(`"${value}" is not a date (YYYY-MM-DD).`);
+    throw new BadRequestException(localized("errors.notADate", { value }));
   }
   return value;
 }
@@ -56,7 +59,7 @@ export function listOrderBy(columns: ListColumns, query: ListQueryDto, defaults:
   if (!query.sort) {
     return [...defaults, ...tieBreakers];
   }
-  const source = sql`${columnFor(columns, query.sort, "sorted by").source}`;
+  const source = sql`${columnFor(columns, query.sort, "errors.listCannotSortBy").source}`;
   return [query.direction === "desc" ? desc(source) : asc(source), ...tieBreakers];
 }
 
@@ -65,11 +68,15 @@ export function listFilter(columns: ListColumns, query: ListQueryDto): SQL | und
   if (!query.filterField || !query.filterOperator) {
     return undefined;
   }
-  const column = columnFor(columns, query.filterField, "filtered by");
+  const column = columnFor(columns, query.filterField, "errors.listCannotFilterBy");
   const operator = query.filterOperator;
   if (!(FILTER_OPERATORS[column.type] as readonly string[]).includes(operator)) {
     throw new BadRequestException(
-      `"${query.filterField}" cannot be filtered with "${operator}". It can with: ${FILTER_OPERATORS[column.type].join(", ")}.`,
+      localized("errors.filterOperatorNotAllowed", {
+        field: query.filterField,
+        operator,
+        operators: FILTER_OPERATORS[column.type].join(", "),
+      }),
     );
   }
   // As an expression: a column or a computed value alike. Postgres types each parameter from what it is compared with.

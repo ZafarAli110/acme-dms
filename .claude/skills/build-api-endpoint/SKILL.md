@@ -65,14 +65,15 @@ public description?: string;
   for a query), Drizzle on the table's own file (`#persistence/schema/customers`), `await work.commitAsync()` after a write. No repositories; a
   query several handlers share is a function next to the mapper (`parts/part.queries.ts`).
 - Time from the injected clock (`this._clock.now()`); audit columns from `createdAudit` / `updatedAudit`.
-- An expected failure throws the Nest exception (`NotFoundException`, `ConflictException` for a duplicate); it becomes
-  problem details. Validate before writing anything.
+- An expected failure throws the Nest exception (`NotFoundException`, `ConflictException` for a duplicate) with a
+  catalog key, `localized("errors.<key>", { … })`, added to `src/i18n/catalogs/en.ts` and `fr.ts`; it becomes problem
+  details in the user's language (`api-errors.md`). Validate before writing anything.
 - Copy only the fields this endpoint changes into `.set(...)` / `.values(...)`; never spread the request into them.
 
 ```ts
 // ✅ create: check, then insert with the dealer, the location and the audit columns (CreateBinCommandHandler)
 if (existing) {
-  throw new ConflictException(`Bin ${request.code} already exists at this location.`);
+  throw new ConflictException(localized("errors.binExists", { code: request.code }));
 }
 const [bin] = await work.db
   .insert(bins)

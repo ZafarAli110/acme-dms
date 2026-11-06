@@ -57,7 +57,8 @@ class ExportStoppedError extends Error {
   public readonly reason: StopReason;
 
   public constructor(reason: StopReason) {
-    super(reason === "cancelled" ? "Cancelled by the user." : "This worker no longer holds the export.");
+    // The cancelled one is stored on the job as its catalog key, and translated when the job is read.
+    super(reason === "cancelled" ? "exports.failure.cancelledByUser" : "This worker no longer holds the export.");
     this.name = "ExportStoppedError";
     this.reason = reason;
   }
@@ -222,7 +223,7 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
 
       const cancelled = await work.db
         .update(exportJobs)
-        .set({ status: "cancelled", error: "Cancelled by the user.", finishedAt: now })
+        .set({ status: "cancelled", error: "exports.failure.cancelledByUser", finishedAt: now })
         .where(and(stale, isNotNull(exportJobs.cancelRequestedAt)))
         .returning(done);
       const requeued = await work.db
@@ -232,7 +233,7 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
         .returning(done);
       const failed = await work.db
         .update(exportJobs)
-        .set({ status: "failed", error: "The export stopped responding. Try again.", finishedAt: now })
+        .set({ status: "failed", error: "exports.failure.stoppedResponding", finishedAt: now })
         .where(stale)
         .returning(done);
       const expired = await work.db
@@ -298,7 +299,7 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
       if (!(await this.completeAsync(job, progress, filePath))) {
         // Cancelled at the last moment, or taken back by a sweeper: the file is nobody's.
         await rm(filePath, { force: true });
-        await this.finishAsync(job.id, "cancelled", "Cancelled by the user.");
+        await this.finishAsync(job.id, "cancelled", "exports.failure.cancelledByUser");
       }
     } catch (error) {
       reporting.abort();
@@ -433,11 +434,11 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
       return;
     }
     if (isTimeout(reason) || isTimeout(error)) {
-      await this.finishAsync(jobId, "failed", "The export took too long and was stopped. Try a smaller filter.");
+      await this.finishAsync(jobId, "failed", "exports.failure.tooLong");
       return;
     }
     this._logger.error(`Export ${jobId} failed: ${error instanceof Error ? error.message : String(error)}`);
-    await this.finishAsync(jobId, "failed", "The export failed. Try again.");
+    await this.finishAsync(jobId, "failed", "exports.failure.failed");
   }
 
   private async finishAsync(jobId: string, status: "failed" | "cancelled", error: string): Promise<void> {
