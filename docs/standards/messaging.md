@@ -1,6 +1,6 @@
 # Messaging
 
-Contracts (envelope, exchanges, queues, messages) are in `contracts/README.md`. This is how to produce and consume them.
+Contracts (envelope, exchanges, queues, messages) are in `docs/contracts.md`. This is how to produce and consume them.
 
 ## Publishing: always through the outbox
 
