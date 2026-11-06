@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, snakeCase, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { plainDate } from "./columns/temporal-columns";
 
 export type CustomerStatus = "active" | "prospect" | "inactive";
 
 /** A customer of one rooftop of a dealer: each rooftop keeps its own customer book. */
-export const customers = pgTable(
+export const customers = snakeCase.table(
   "customers",
   {
     id: uuid()

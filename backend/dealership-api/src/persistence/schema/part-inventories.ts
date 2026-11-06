@@ -1,11 +1,11 @@
 import { sql } from "drizzle-orm";
-import { index, integer, pgTable, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { index, integer, snakeCase, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { bins } from "./bins";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { parts } from "./parts";
 
 /** A part as one rooftop stocks it: its bin there, how many are on hand, and when to reorder. */
-export const partInventories = pgTable(
+export const partInventories = snakeCase.table(
   "part_inventories",
   {
     id: uuid()
