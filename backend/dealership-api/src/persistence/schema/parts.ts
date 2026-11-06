@@ -10,18 +10,18 @@ import { money } from "./columns/money-column";
 export const parts = pgTable(
   "parts",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    dealerId: uuid("dealer_id").notNull(),
-    partNumber: varchar("part_number", { length: 50 }).notNull(),
-    description: varchar("description", { length: 500 }).notNull(),
-    unitPrice: money("unit_price").notNull(),
+    dealerId: uuid().notNull(),
+    partNumber: varchar({ length: 50 }).notNull(),
+    description: varchar({ length: 500 }).notNull(),
+    unitPrice: money().notNull(),
     /**
      * Goes up by one with every change. It is the record's ETag: a save says which version it started from
      * (If-Match), and one that started from an older version is refused (412) instead of undoing someone's change.
      */
-    version: integer("version").notNull().default(1),
+    version: integer().notNull().default(1),
     ...auditColumns(),
   },
   (table) => [

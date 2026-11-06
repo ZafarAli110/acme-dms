@@ -9,18 +9,18 @@ export type PartPhotoStatus = "pending" | "ready" | "failed";
 export const partPhotos = pgTable(
   "part_photos",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    dealerId: uuid("dealer_id").notNull(),
-    partId: uuid("part_id")
+    dealerId: uuid().notNull(),
+    partId: uuid()
       .notNull()
       .references(() => parts.id),
-    documentId: uuid("document_id").notNull().unique(),
-    originalFileName: varchar("original_file_name", { length: 255 }).notNull(),
-    status: varchar("status", { length: 20 }).$type<PartPhotoStatus>().notNull(),
-    failureReason: varchar("failure_reason", { length: 1000 }),
-    isDefault: boolean("is_default").notNull(),
+    documentId: uuid().notNull().unique("part_photos_document_id_unique"),
+    originalFileName: varchar({ length: 255 }).notNull(),
+    status: varchar({ length: 20 }).$type<PartPhotoStatus>().notNull(),
+    failureReason: varchar({ length: 1000 }),
+    isDefault: boolean().notNull(),
     ...auditColumns(),
   },
   (table) => [index("ix_part_photos_part").on(table.partId), softDeleteCheck("part_photos", table)],

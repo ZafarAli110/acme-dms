@@ -63,7 +63,9 @@ Business rows are never removed; a delete sets `is_deleted`, `deleted_at` and `d
 
 - NestJS: the schema is TypeScript (`persistence/schema/`, one file per table, Drizzle). Change it, then generate the
   SQL migration from the difference with `bun run db:generate` (in `backend/dealership-api`); read the SQL before
-  committing it. Migrations live in `persistence/migrations/drizzle/`. .NET: EF Core migrations in the Persistence
+  committing it. A column is written by its property (`dealerId: uuid().notNull()` is the column `dealer_id`): the
+  clients and `drizzle.config.ts` set `casing: "snake_case"`, so no name is repeated. A unique constraint on a column
+  is named (`.unique("part_photos_document_id_unique")`), because Drizzle does not apply the casing to that name. Migrations live in `persistence/migrations/drizzle/`. .NET: EF Core migrations in the Persistence
   project (`dotnet ef migrations add <Name>`). Every service applies its migrations when it starts;
   `bun run db:migrate` applies dealership-api's without starting it.
 - A migration that adds a `NOT NULL` column to a table with data backfills it from data the row already has (see
