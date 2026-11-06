@@ -1,17 +1,17 @@
 import type { TFunction } from "i18next";
 import * as v from "valibot";
 import { PART_PHOTO_RULES } from "../constants/partPhotoRules";
+import { parsePrice } from "../formatters/formatPrice";
 import type { PartFormValues } from "../types/part";
 
 const DESCRIPTION_MAX = 500;
-const PRICE = /^\d+(\.\d{1,2})?$/;
 const MAX_MB = PART_PHOTO_RULES.maxBytes / 1024 / 1024;
 
 /**
  * The part edit form's rules: the service's rules, checked before anything is sent. A factory, because the messages
  * are translated (IDS pattern); call it once per language with useMemo.
  */
-export function createPartUpdateSchema(t: TFunction<"parts">) {
+export function createPartUpdateSchema(t: TFunction<"parts">, language: string) {
   const photo = v.object({
     key: v.string(),
     photoId: v.nullable(v.string()),
@@ -44,7 +44,8 @@ export function createPartUpdateSchema(t: TFunction<"parts">) {
       v.string(),
       v.trim(),
       v.nonEmpty(t("edit.validation.priceRequired")),
-      v.regex(PRICE, t("edit.validation.priceInvalid")),
+      // Read the user's way: "45,50" in French, "45.50" in English.
+      v.check((value) => parsePrice(value, language) !== null, t("edit.validation.priceInvalid")),
     ),
     photos: v.pipe(
       v.array(photo),
