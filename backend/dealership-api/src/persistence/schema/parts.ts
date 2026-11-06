@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { snakeCase, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { money } from "./columns/money-column";
 
@@ -7,7 +7,7 @@ import { money } from "./columns/money-column";
  * A dealer's part catalogue. The master record is shared by the dealer's rooftops; each stocks it in
  * `part_inventories`. A part number is unique within the dealer: another dealer may use the same number.
  */
-export const parts = pgTable(
+export const parts = snakeCase.table(
   "parts",
   {
     id: uuid()
