@@ -14,6 +14,8 @@ namespace Acme.Documents.BusinessLogic.Handlers.Documents.Delete;
 /// </summary>
 internal sealed class DeleteDocumentCommandHandler : IDeleteDocumentCommandHandler
 {
+    private const int MaxAttempts = 3;
+
     private readonly DocumentsDbContext _dbContext;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -25,13 +27,26 @@ internal sealed class DeleteDocumentCommandHandler : IDeleteDocumentCommandHandl
 
     public async Task ExecuteAsync(UserContext userContext, Guid documentId, CancellationToken cancellationToken)
     {
-        // The dealer filter on DocumentsDbContext already limits this to the user's dealer.
-        var document = await _dbContext.Documents
-            .Include(d => d.Contents)
-            .SingleOrDefaultAsync(d => d.Id == documentId, cancellationToken)
-            ?? throw new ApiException(ApiErrorCategory.NotFound, $"Document {documentId} was not found.");
+        for (var attempt = 1; ; attempt++)
+        {
+            // The dealer filter on DocumentsDbContext already limits this to the user's dealer.
+            var document = await _dbContext.Documents
+                .Include(d => d.Contents)
+                .SingleOrDefaultAsync(d => d.Id == documentId, cancellationToken)
+                ?? throw new ApiException(ApiErrorCategory.NotFound, $"Document {documentId} was not found.");
 
-        _dbContext.Documents.Remove(document);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _dbContext.Documents.Remove(document);
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < MaxAttempts)
+            {
+                // Processing finished it meanwhile: read it again, so the delete keeps what processing wrote and removes
+                // the variants it added.
+                _dbContext.ChangeTracker.Clear();
+            }
+        }
     }
 }
