@@ -32,7 +32,7 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
   // Bins belong to one location, so the location is part of the key.
   const bins = useQuery({
     queryKey: ["bins", location?.id],
-    queryFn: ({ signal }) => partQueries.getBinsAsync({ signal }),
+    queryFn: ({ signal }) => partQueries.getBinsAsync({ signal, locationId: location?.id }),
     enabled: open && location !== null,
   });
 
