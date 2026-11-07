@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, snakeCase, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, index, snakeCase, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { parts } from "./parts";
 
@@ -31,6 +31,11 @@ export const partPhotos = snakeCase.table(
     softDeleteCheck("part_photos", table),
     // The values only: the moves (pending to ready or failed, never back) are guarded by the updates (photo-outcome.ts).
     check("ck_part_photos_status", sql`${table.status} in ('pending', 'ready', 'failed')`),
+    // One default photo per part. Writes clear the old default before setting the new one; the index makes two at once
+    // impossible rather than unlikely.
+    uniqueIndex("uq_part_photos_default")
+      .on(table.partId)
+      .where(sql`${table.isDefault} AND NOT ${table.isDeleted}`),
   ],
 );
 
