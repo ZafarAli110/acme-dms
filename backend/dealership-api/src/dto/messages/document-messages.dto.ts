@@ -33,3 +33,11 @@ export interface DocumentFailedMessageDto {
 
 export const DOCUMENT_PROCESSED = "document.processed.v1";
 export const DOCUMENT_FAILED = "document.failed.v1";
+/** dealership-api → document-api: no photo was ever saved for this document; document-api deletes it. */
+export const DOCUMENT_UNCLAIMED = "document.unclaimed.v1";
+
+/** A document no record of dealership-api owns: its upload failed or was refused after document-api stored it. */
+export interface DocumentUnclaimedMessageDto {
+  documentId: string;
+  dealerId: string;
+}
