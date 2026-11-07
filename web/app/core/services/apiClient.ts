@@ -20,8 +20,9 @@ export interface RequestOptions {
   /** True for signing in and out: a 401 is that request's own answer (a wrong password), not the end of the sign-in. */
   anonymous?: boolean;
   /**
-   * The location the request is about, when it is not the one selected now: an export started at another location is
-   * followed and cancelled there.
+   * The location the request is about: a query sends the one in its key, so a refetch that starts just after a switch
+   * of location still asks for the location its key names; an export started at another location is followed and
+   * cancelled there. Without it, the location selected now.
    */
   locationId?: string;
 }
