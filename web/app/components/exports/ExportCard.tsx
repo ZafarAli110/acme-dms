@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useExports } from "../../core/contexts/exports/useExports";
 import { formatFileSize } from "../../core/formatters/formatNumber";
-import { type ExportEntry, isRunning } from "../../core/kernel/exportKernel";
+import { type ExportEntry, isLinkExpired, isRunning } from "../../core/kernel/exportKernel";
 
 const TICK_MS = 500;
 
@@ -54,6 +54,16 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
     return () => clearInterval(timer);
   }, [ticking]);
 
+  // A finished export's link runs out: from then on the card says so, and offers no download that would fail.
+  const [linkExpired, setLinkExpired] = useState(() => isLinkExpired(job, Date.now()));
+  useEffect(() => {
+    if (job.status !== "completed" || job.expiresAt === null) {
+      return;
+    }
+    const timer = setTimeout(() => setLinkExpired(true), Math.max(0, Date.parse(job.expiresAt) - Date.now()));
+    return () => clearTimeout(timer);
+  }, [job.status, job.expiresAt]);
+
   const number = (value: number): string => value.toLocaleString(i18n.language);
   const sinceUpdate = ticking ? Math.max(0, now - entry.receivedAt) : 0;
   const percent = job.totalRows ? Math.min(100, Math.floor((job.rows / job.totalRows) * 100)) : 0;
@@ -64,7 +74,9 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
       job.rows === 0
         ? t("exports.sorting", { total: number(job.totalRows ?? 0) })
         : t("exports.writing", { rows: number(job.rows), total: number(job.totalRows ?? 0) }),
-    completed: t("exports.completed", { rows: number(job.rows), time: duration(job.elapsedMs, i18n.language) }),
+    completed: linkExpired
+      ? t("exports.expired")
+      : t("exports.completed", { rows: number(job.rows), time: duration(job.elapsedMs, i18n.language) }),
     failed: job.error ?? t("exports.failed"),
     cancelled: t("exports.cancelled"),
     expired: t("exports.expired"),
@@ -121,7 +133,7 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
               {t("exports.cancel")}
             </Button>
           )}
-          {job.status === "completed" && job.downloadPath && (
+          {job.status === "completed" && job.downloadPath && !linkExpired && (
             <Button
               size="small"
               variant="contained"
