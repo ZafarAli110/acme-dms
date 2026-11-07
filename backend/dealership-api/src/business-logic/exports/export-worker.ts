@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { mkdir, rename, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { hostname } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -163,7 +163,7 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
     try {
       const now = this._clock.now().toString();
       await using work = await this._unitOfWorkFactory.beginAsync();
-      const claimed = await work.db.execute<{ id: string }>(sql`
+      const claimed = await work.db.execute<{ id: string; attempts: number }>(sql`
         with queued as materialized (
           select id, dealer_id, created_at from export_jobs
           where status = 'queued'
@@ -190,16 +190,18 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
           started_at = coalesce(export_jobs.started_at, ${now}::timestamptz), heartbeat_at = ${now}::timestamptz
         from picked
         where export_jobs.id = picked.id
-        returning export_jobs.id`);
+        returning export_jobs.id, export_jobs.attempts`);
       await work.commitAsync();
-      const ids = claimed.rows.map((row) => row.id);
-      for (const id of ids) {
+      for (const { id, attempts } of claimed.rows) {
+        // Keyed by the attempt: a job this worker claims again after a sweep runs beside the old attempt, which can
+        // then neither overwrite nor remove the new one's entry.
+        const key = `${id}:${attempts}`;
         this._running.set(
-          id,
-          this.runAsync(id).finally(() => this._running.delete(id)),
+          key,
+          this.runAsync(id, attempts).finally(() => this._running.delete(key)),
         );
       }
-      return ids;
+      return claimed.rows.map((row) => row.id);
     } catch (error) {
       this._logger.error(`Claiming exports failed: ${error instanceof Error ? error.message : String(error)}`);
       return [];
@@ -236,11 +238,16 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
         .set({ status: "failed", error: "exports.failure.stoppedResponding", finishedAt: now })
         .where(stale)
         .returning(done);
-      const expired = await work.db
-        .update(exportJobs)
-        .set({ status: "expired", filePath: null })
-        .where(and(eq(exportJobs.status, "completed"), lt(exportJobs.expiresAt, now)))
-        .returning({ id: exportJobs.id });
+      // The path each file had: RETURNING gives the new value (null), so it is read before the update.
+      const expired = await work.db.execute<{ file_path: string | null }>(sql`
+        with old as (
+          select id, file_path from export_jobs
+          where status = 'completed' and expires_at < ${now.toString()}::timestamptz
+          for update
+        )
+        update export_jobs set status = 'expired', file_path = null
+        from old where export_jobs.id = old.id
+        returning old.file_path`);
       const recordsBefore = now.subtract({ milliseconds: this._settings.exportFileTtlMs * RECORD_TTL_FACTOR });
       await work.db
         .delete(exportJobs)
@@ -252,10 +259,12 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
       for (const job of [...cancelled, ...requeued, ...failed]) {
         await rm(this.partPath(job.id, job.attempts), { force: true });
       }
-      for (const job of expired) {
-        // The update cleared file_path; the file is always named after its job (filePath below).
-        await rm(this.filePath(job.id), { force: true });
+      for (const { file_path: filePath } of expired.rows) {
+        if (filePath !== null) {
+          await rm(filePath, { force: true });
+        }
       }
+      await this.removeOrphanFilesAsync(now);
       if (requeued.length + failed.length > 0) {
         this._logger.warn(`Took back abandoned exports: ${requeued.length} requeued, ${failed.length} failed.`);
       }
@@ -264,18 +273,53 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
     }
   }
 
+  /**
+   * Removes files no job points at: a completed file nobody recorded (the worker stopped between writing it and
+   * completing the job), or a temp file of an attempt that ended without cleaning up. Only files older than
+   * EXPORT_STALE_SECONDS: a running attempt's file is always recent or recorded.
+   */
+  private async removeOrphanFilesAsync(now: Temporal.Instant): Promise<void> {
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
+    const jobs = await work.db
+      .select({
+        id: exportJobs.id,
+        status: exportJobs.status,
+        attempts: exportJobs.attempts,
+        filePath: exportJobs.filePath,
+      })
+      .from(exportJobs)
+      .where(inArray(exportJobs.status, [...RUNNING_STATUSES, "completed"]));
+    const kept = new Set<string>();
+    for (const job of jobs) {
+      if (job.filePath !== null) {
+        kept.add(job.filePath);
+      }
+      if (job.status !== "completed") {
+        kept.add(this.partPath(job.id, job.attempts));
+        kept.add(this.filePath(job.id, job.attempts));
+      }
+    }
+    const oldBefore = now.epochMilliseconds - this._settings.exportStaleSeconds * 1000;
+    for (const name of await readdir(this._settings.exportDirectory)) {
+      const path = join(this._settings.exportDirectory, name);
+      if (!kept.has(path) && /\.xlsx(\.part)?$/.test(name) && (await stat(path)).mtimeMs < oldBefore) {
+        await rm(path, { force: true });
+      }
+    }
+  }
+
   /** Runs one claimed export to its end. Never rejects: whatever goes wrong is recorded on the job, or logged. */
-  private async runAsync(jobId: string): Promise<void> {
+  private async runAsync(jobId: string, attempt: number): Promise<void> {
     try {
-      await this.runJobAsync(jobId);
+      await this.runJobAsync(jobId, attempt);
     } catch (error) {
       // Only reached when the database is out of reach; the sweeper takes the job back once its heartbeat is stale.
       this._logger.error(`Export ${jobId} could not run: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  private async runJobAsync(jobId: string): Promise<void> {
-    const [job] = await this.readJobAsync(jobId);
+  private async runJobAsync(jobId: string, attempt: number): Promise<void> {
+    const [job] = await this.readJobAsync(jobId, attempt);
     if (!job) {
       return;
     }
@@ -284,7 +328,7 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
     const stop = new AbortController();
     const signal = AbortSignal.any([stop.signal, AbortSignal.timeout(this._settings.exportMaxSeconds * 1000)]);
     const reporting = new AbortController();
-    const reported = this.reportProgressAsync(job.id, progress, stop, reporting.signal);
+    const reported = this.reportProgressAsync(job.id, job.attempts, progress, stop, reporting.signal);
     try {
       const source = EXPORT_SOURCES[job.kind](
         { dealerId: job.dealerId, locationId: job.locationId },
@@ -294,18 +338,20 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
       await this.writeFileAsync(job, source, partPath, progress, signal);
       reporting.abort();
       await reported;
-      const filePath = this.filePath(job.id);
+      // This attempt's own name: renamed first, then recorded, so a completed job always has its file. An attempt
+      // that lost the job removes only its own file, never the one another attempt completed.
+      const filePath = this.filePath(job.id, job.attempts);
       await rename(partPath, filePath);
       if (!(await this.completeAsync(job, progress, filePath))) {
         // Cancelled at the last moment, or taken back by a sweeper: the file is nobody's.
         await rm(filePath, { force: true });
-        await this.finishAsync(job.id, "cancelled", "exports.failure.cancelledByUser");
+        await this.finishAsync(job.id, job.attempts, "cancelled", "exports.failure.cancelledByUser");
       }
     } catch (error) {
       reporting.abort();
       await reported;
       await rm(partPath, { force: true });
-      await this.failAsync(job.id, error, signal);
+      await this.failAsync(job.id, job.attempts, error, signal);
     }
   }
 
@@ -328,7 +374,7 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
       );
       const total = await source.countAsync(work.db);
       signal.throwIfAborted();
-      await this.startWritingAsync(job.id, total);
+      await this.startWritingAsync(job.id, job.attempts, total);
 
       const rows = work.stream(source.rowsQuery(work.db), this._settings.exportBatchSize);
       const destroy = (): void => {
@@ -360,6 +406,7 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
    */
   private async reportProgressAsync(
     jobId: string,
+    attempt: number,
     progress: ExportProgress,
     stop: AbortController,
     done: AbortSignal,
@@ -371,7 +418,7 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
         return;
       }
       try {
-        const [row] = await this.updateHeldAsync(jobId, {
+        const [row] = await this.updateHeldAsync(jobId, attempt, {
           rows: progress.rows,
           firstRowAt: progress.firstRowAt,
           heartbeatAt: this._clock.now(),
@@ -391,8 +438,12 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
     }
   }
 
-  private async startWritingAsync(jobId: string, totalRows: number): Promise<void> {
-    const [row] = await this.updateHeldAsync(jobId, { status: "writing", totalRows, heartbeatAt: this._clock.now() });
+  private async startWritingAsync(jobId: string, attempt: number, totalRows: number): Promise<void> {
+    const [row] = await this.updateHeldAsync(jobId, attempt, {
+      status: "writing",
+      totalRows,
+      heartbeatAt: this._clock.now(),
+    });
     if (!row) {
       throw new ExportStoppedError("lost");
     }
@@ -418,32 +469,37 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
         finishedAt: now,
         expiresAt: now.add({ milliseconds: this._settings.exportFileTtlMs }),
       })
-      .where(and(this.heldWhere(job.id), isNull(exportJobs.cancelRequestedAt)))
+      .where(and(this.heldWhere(job.id, job.attempts), isNull(exportJobs.cancelRequestedAt)))
       .returning({ id: exportJobs.id });
     await work.commitAsync();
     return completed.length > 0;
   }
 
   /** Records why a running export stopped: cancelled, too slow, or failed. A job this worker lost is left alone. */
-  private async failAsync(jobId: string, error: unknown, signal: AbortSignal): Promise<void> {
+  private async failAsync(jobId: string, attempt: number, error: unknown, signal: AbortSignal): Promise<void> {
     const reason: unknown = signal.aborted ? signal.reason : error;
     if (reason instanceof ExportStoppedError) {
       if (reason.reason === "cancelled") {
-        await this.finishAsync(jobId, "cancelled", reason.message);
+        await this.finishAsync(jobId, attempt, "cancelled", reason.message);
       }
       return;
     }
     if (isTimeout(reason) || isTimeout(error)) {
-      await this.finishAsync(jobId, "failed", "exports.failure.tooLong");
+      await this.finishAsync(jobId, attempt, "failed", "exports.failure.tooLong");
       return;
     }
     this._logger.error(`Export ${jobId} failed: ${error instanceof Error ? error.message : String(error)}`);
-    await this.finishAsync(jobId, "failed", "exports.failure.failed");
+    await this.finishAsync(jobId, attempt, "failed", "exports.failure.failed");
   }
 
-  private async finishAsync(jobId: string, status: "failed" | "cancelled", error: string): Promise<void> {
+  private async finishAsync(
+    jobId: string,
+    attempt: number,
+    status: "failed" | "cancelled",
+    error: string,
+  ): Promise<void> {
     try {
-      await this.updateHeldAsync(jobId, { status, error, finishedAt: this._clock.now() });
+      await this.updateHeldAsync(jobId, attempt, { status, error, finishedAt: this._clock.now() });
     } catch (updateError) {
       // The sweeper finishes it once its heartbeat is stale.
       this._logger.error(`Export ${jobId}: could not record that it stopped: ${String(updateError)}`);
@@ -453,38 +509,45 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
   /** Updates a job this worker still holds (claimed by it and still running); returns nothing if it no longer does. */
   private async updateHeldAsync(
     jobId: string,
+    attempt: number,
     changes: Partial<ExportJobRow>,
   ): Promise<{ cancelRequestedAt: Temporal.Instant | null }[]> {
     await using work = await this._unitOfWorkFactory.beginAsync();
     const updated = await work.db
       .update(exportJobs)
       .set(changes)
-      .where(this.heldWhere(jobId))
+      .where(this.heldWhere(jobId, attempt))
       .returning({ cancelRequestedAt: exportJobs.cancelRequestedAt });
     await work.commitAsync();
     return updated;
   }
 
-  private async readJobAsync(jobId: string): Promise<ExportJobRow[]> {
+  private async readJobAsync(jobId: string, attempt: number): Promise<ExportJobRow[]> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    return work.db.select().from(exportJobs).where(this.heldWhere(jobId));
+    return work.db.select().from(exportJobs).where(this.heldWhere(jobId, attempt));
   }
 
   /**
-   * The job, if this worker holds it. The worker's queries filter by the job's id and this worker, not by a dealer:
-   * it serves every dealer, and each row carries its dealer and location, which the export's own queries filter by.
+   * The job, if this worker holds it in this attempt. The worker's queries filter by the job's id, this worker and the
+   * attempt, not by a dealer: it serves every dealer, and each row carries its dealer and location, which the export's
+   * own queries filter by. The attempt matters when this worker was swept and claimed the job again: the old attempt's
+   * writes then match nothing.
    */
-  private heldWhere(jobId: string): SQL | undefined {
+  private heldWhere(jobId: string, attempt: number): SQL | undefined {
     return and(
       eq(exportJobs.id, jobId),
       eq(exportJobs.workerId, this._workerId),
+      eq(exportJobs.attempts, attempt),
       inArray(exportJobs.status, RUNNING_STATUSES),
     );
   }
 
-  /** A finished export's file. The API serves it from here, so both processes must use the same EXPORT_DIR. */
-  private filePath(jobId: string): string {
-    return join(this._settings.exportDirectory, `${jobId}.xlsx`);
+  /**
+   * A finished export's file, one per attempt, recorded in file_path. The API serves it from there, so both processes
+   * must use the same EXPORT_DIR.
+   */
+  private filePath(jobId: string, attempt: number): string {
+    return join(this._settings.exportDirectory, `${jobId}-${attempt}.xlsx`);
   }
 
   /** The temp file of one attempt: a second attempt never writes over, or deletes, the file of a first still running. */

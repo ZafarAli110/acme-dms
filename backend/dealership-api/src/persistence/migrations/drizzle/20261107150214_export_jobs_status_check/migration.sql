@@ -1,0 +1,1 @@
+ALTER TABLE "export_jobs" ADD CONSTRAINT "ck_export_jobs_status" CHECK ("status" in ('queued', 'counting', 'writing', 'completed', 'failed', 'cancelled', 'expired'));

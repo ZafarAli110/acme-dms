@@ -104,7 +104,12 @@ export class ExportQueue implements IExportJobs {
         if (existing.fingerprint !== enqueue.source.fingerprint) {
           throw new UnprocessableEntityException(localized("exports.idempotencyKeyReused"));
         }
-        return toExportJobResponseDto(existing, await this.queuePositionAsync(work.db, existing), now);
+        return toExportJobResponseDto(
+          existing,
+          await this.queuePositionAsync(work.db, existing),
+          now,
+          this._settings.exportLinkKey,
+        );
       }
       const taken = await work.db.execute<{ taken: boolean }>(
         sql`SELECT export_key_in_use(${idempotencyKey}) AS taken`,
@@ -141,13 +146,18 @@ export class ExportQueue implements IExportJobs {
     const [inserted] = await work.db.insert(exportJobs).values(job).returning();
     const position = await this.queuePositionAsync(work.db, inserted!);
     await work.commitAsync();
-    return toExportJobResponseDto(inserted!, position, now);
+    return toExportJobResponseDto(inserted!, position, now, this._settings.exportLinkKey);
   }
 
   public async getAsync(userContext: UserContext, jobId: string): Promise<ExportJobResponseDto> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const job = await this.ownJobAsync(work.db, userContext, jobId);
-    return toExportJobResponseDto(job, await this.queuePositionAsync(work.db, job), this._clock.now());
+    return toExportJobResponseDto(
+      job,
+      await this.queuePositionAsync(work.db, job),
+      this._clock.now(),
+      this._settings.exportLinkKey,
+    );
   }
 
   /** The user's exports at the selected location that still mean something (not expired), newest first. */
@@ -162,7 +172,9 @@ export class ExportQueue implements IExportJobs {
     const now = this._clock.now();
     const listed: ExportJobResponseDto[] = [];
     for (const job of jobs) {
-      listed.push(toExportJobResponseDto(job, await this.queuePositionAsync(work.db, job), now));
+      listed.push(
+        toExportJobResponseDto(job, await this.queuePositionAsync(work.db, job), now, this._settings.exportLinkKey),
+      );
     }
     return listed;
   }
@@ -215,7 +227,7 @@ export class ExportQueue implements IExportJobs {
 
   public async fileForLinkAsync(jobId: string, expires: string, signature: string): Promise<ExportFile> {
     const now = this._clock.now();
-    if (!isValidDownloadLink(jobId, expires, signature, now.epochMilliseconds)) {
+    if (!isValidDownloadLink(this._settings.exportLinkKey, jobId, expires, signature, now.epochMilliseconds)) {
       throw new ForbiddenException(localized("exports.linkInvalid"));
     }
     // The signed link is the permission (it was handed only to the owner), so the row is read by its id alone. The

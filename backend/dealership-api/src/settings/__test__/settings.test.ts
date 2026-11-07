@@ -4,7 +4,10 @@ import { readSettings, requireSetting } from "../settings";
 describe("readSettings", () => {
   it("serves Swagger outside production only", () => {
     expect(readSettings({}).serveSwagger).toBe(true);
-    expect(readSettings({ NODE_ENV: "production" }).serveSwagger).toBe(false);
+    expect(
+      readSettings({ NODE_ENV: "production", EXPORT_LINK_KEY: "a-key-every-api-instance-shares-0123456789" })
+        .serveSwagger,
+    ).toBe(false);
   });
 
   it("uses the defaults when nothing is set, and null for what only Aspire or a deployment provides", () => {
@@ -32,7 +35,16 @@ describe("readSettings", () => {
       exportFileTtlMs: 900_000,
       exportDirectory: expect.stringContaining("acme-dealership-exports"),
       exportBatchSize: 20_000,
+      exportLinkKey: expect.any(String),
     });
+  });
+
+  it("needs a shared export link key in production, of at least 32 characters, and makes one in development", () => {
+    expect(() => readSettings({ NODE_ENV: "production" })).toThrow(/EXPORT_LINK_KEY/);
+    expect(() => readSettings({ EXPORT_LINK_KEY: "too-short" })).toThrow(/EXPORT_LINK_KEY/);
+    const key = "a-key-every-api-instance-shares-0123456789";
+    expect(readSettings({ NODE_ENV: "production", EXPORT_LINK_KEY: key }).exportLinkKey).toBe(key);
+    expect(readSettings({}).exportLinkKey.length).toBeGreaterThanOrEqual(32);
   });
 
   it("reads durations in ms, s, m or h", () => {

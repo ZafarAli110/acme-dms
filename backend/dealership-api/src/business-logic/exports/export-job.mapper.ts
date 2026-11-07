@@ -23,6 +23,7 @@ export function toExportJobResponseDto(
   job: ExportJobRow,
   queuePosition: number | null,
   now: Temporal.Instant,
+  linkKey: string,
 ): ExportJobResponseDto {
   const nowMs = now.epochMilliseconds;
   const writingMs = job.firstRowAt === null ? 0 : nowMs - job.firstRowAt.epochMilliseconds;
@@ -46,7 +47,9 @@ export function toExportJobResponseDto(
     fileName: job.fileName,
     fileBytes: job.fileBytes,
     downloadPath:
-      job.status === "completed" && expiresAt !== null ? signedDownloadPath(job.id, expiresAt.epochMilliseconds) : null,
+      job.status === "completed" && expiresAt !== null
+        ? signedDownloadPath(linkKey, job.id, expiresAt.epochMilliseconds)
+        : null,
     expiresAt: expiresAt === null ? null : toIsoString(expiresAt),
     error: job.error === null ? null : storedError(job.error),
   };

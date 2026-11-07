@@ -11,6 +11,7 @@
  * appsettings.json in .NET.
  */
 
+import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -63,6 +64,11 @@ export interface Environment {
   EXPORT_DIR?: string;
   /** Rows per round trip while an export reads. */
   EXPORT_BATCH_SIZE?: string;
+  /**
+   * A secret of at least 32 characters that signs export download links; every API instance shares it, so a link
+   * outlives a restart and any instance accepts it. Required in production; in development one is made at start.
+   */
+  EXPORT_LINK_KEY?: string;
   /** `production` in a deployment: Swagger UI and the OpenAPI document are then not served. */
   NODE_ENV?: string;
 }
@@ -102,6 +108,8 @@ export interface Settings {
    */
   exportDirectory: string;
   exportBatchSize: number;
+  /** Signs export download links (EXPORT_LINK_KEY). */
+  exportLinkKey: string;
   /** Swagger UI and the OpenAPI document: in development only (the API's map is nobody else's business). */
   serveSwagger: boolean;
 }
@@ -146,6 +154,7 @@ export function readSettings(environment: Environment): Settings {
     exportFileTtlMs: readWholeNumber("EXPORT_TTL_SECONDS", environment.EXPORT_TTL_SECONDS, 900) * 1000,
     exportDirectory: environment.EXPORT_DIR ?? join(tmpdir(), "acme-dealership-exports"),
     exportBatchSize: readWholeNumber("EXPORT_BATCH_SIZE", environment.EXPORT_BATCH_SIZE, 20_000),
+    exportLinkKey: readLinkKey(environment.EXPORT_LINK_KEY, environment.NODE_ENV === "production"),
     serveSwagger: environment.NODE_ENV !== "production",
   };
 }
@@ -157,6 +166,20 @@ export function readSettings(environment: Environment): Settings {
 export function requireSetting(value: string | null, variable: keyof Environment): string {
   if (value === null || value.length === 0) {
     throw new Error(`${variable} is not set: Aspire sets it for bun run dev; a deployment sets it in the environment.`);
+  }
+  return value;
+}
+
+function readLinkKey(value: string | undefined, isProduction: boolean): string {
+  if (value === undefined || value.length === 0) {
+    if (isProduction) {
+      throw new Error("EXPORT_LINK_KEY is not set: export download links need a key every API instance shares.");
+    }
+    // Development: one process serves the links, and a restart may forget them.
+    return randomBytes(32).toString("base64url");
+  }
+  if (value.length < 32) {
+    throw new Error("EXPORT_LINK_KEY must be at least 32 characters.");
   }
   return value;
 }
