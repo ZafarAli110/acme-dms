@@ -63,7 +63,7 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
 
             if (await TryTakeLeaseAsync(id, cancellationToken) is { } lease)
             {
-                return await RenewAsync(cookieValue, id, tokens, session.AccessTokenExpiresAt, lease, caller);
+                return await RenewAsync(cookieValue, id, tokens, session.AccessTokenExpiresAt, lease.Until, lease.Key, caller);
             }
 
             // Another request is renewing it. The token this one has still works: send it.
@@ -86,19 +86,24 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
     /// both win: Postgres checks the condition again on a row another request has just changed. The lease's end it returns
     /// is the renewal's own mark: the save and the release apply only while the row still carries it.
     /// </summary>
-    private async Task<DateTimeOffset?> TryTakeLeaseAsync(string id, CancellationToken cancellationToken)
+    private async Task<Lease?> TryTakeLeaseAsync(string id, CancellationToken cancellationToken)
     {
+        // A key made with the first lease of a renewal, and kept by every retry until one succeeds (`renewal_key`).
+        var newKey = Guid.NewGuid().ToString("N");
         var leases = await _dbContext.Database
-            .SqlQuery<DateTimeOffset>($"""
-                UPDATE sessions SET renewing_until = now() + {SessionSettings.Lease}
+            .SqlQuery<Lease>($"""
+                UPDATE sessions SET renewing_until = now() + {SessionSettings.Lease}, renewal_key = coalesce(renewal_key, {newKey})
                 WHERE id = {id}
                   AND access_token_expires_at <= now() + {SessionSettings.RenewEarly}
                   AND (renewing_until IS NULL OR renewing_until < now())
-                RETURNING renewing_until AS "Value"
+                RETURNING renewing_until AS "Until", renewal_key AS "Key"
                 """)
             .ToListAsync(cancellationToken);
         return leases.Count == 1 ? leases[0] : null;
     }
+
+    /// <summary>A renewal's lease: its end, which marks the renewal's own writes, and the renewal's key.</summary>
+    private sealed record Lease(DateTimeOffset Until, string Key);
 
     /// <summary>Holding the lease. Nothing here takes the browser's cancellation: once identity-api has answered, its answer is saved.</summary>
     private async Task<string?> RenewAsync(
@@ -107,12 +112,13 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
         SessionTokens tokens,
         DateTimeOffset expiresAt,
         DateTimeOffset lease,
+        string renewalKey,
         CallerContext caller)
     {
         IssuedTokens? renewed;
         try
         {
-            renewed = await RefreshWithOneRetryAsync(tokens.RefreshToken, caller);
+            renewed = await RefreshWithOneRetryAsync(tokens.RefreshToken, renewalKey, caller);
         }
         catch (Exception exception)
         {
@@ -146,7 +152,9 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
                 set => set
                     .SetProperty(s => s.Tokens, sealedTokens)
                     .SetProperty(s => s.AccessTokenExpiresAt, renewed.AccessTokenExpiresAt)
-                    .SetProperty(s => s.RenewingUntil, (DateTimeOffset?)null),
+                    .SetProperty(s => s.RenewingUntil, (DateTimeOffset?)null)
+                    // Renewed: the next renewal is a new one, with a key of its own.
+                    .SetProperty(s => s.RenewalKey, (string?)null),
                 CancellationToken.None);
         if (saved == 0)
         {
@@ -163,17 +171,17 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
     /// again inside its 20-second grace period, it gives the same replacement. Left to the next request, which may come
     /// after the grace, the old token would look like a stolen copy and the sign-in would end.
     /// </summary>
-    private async Task<IssuedTokens?> RefreshWithOneRetryAsync(string refreshToken, CallerContext caller)
+    private async Task<IssuedTokens?> RefreshWithOneRetryAsync(string refreshToken, string renewalKey, CallerContext caller)
     {
         try
         {
-            return await RefreshOnceAsync(refreshToken, caller, SessionSettings.RenewalTimeout);
+            return await RefreshOnceAsync(refreshToken, renewalKey, caller, SessionSettings.RenewalTimeout);
         }
         catch (IdentityUnavailableException)
         {
             try
             {
-                return await RefreshOnceAsync(refreshToken, caller, SessionSettings.RenewalRetryTimeout);
+                return await RefreshOnceAsync(refreshToken, renewalKey, caller, SessionSettings.RenewalRetryTimeout);
             }
             catch (IdentityUnavailableException)
             {
@@ -185,12 +193,12 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
         }
     }
 
-    private async Task<IssuedTokens?> RefreshOnceAsync(string refreshToken, CallerContext caller, TimeSpan wait)
+    private async Task<IssuedTokens?> RefreshOnceAsync(string refreshToken, string renewalKey, CallerContext caller, TimeSpan wait)
     {
         using var timeout = new CancellationTokenSource(wait, _timeProvider);
         try
         {
-            return await _identityClient.RefreshAsync(refreshToken, caller, timeout.Token);
+            return await _identityClient.RefreshAsync(refreshToken, renewalKey, caller, timeout.Token);
         }
         catch (OperationCanceledException exception) when (timeout.IsCancellationRequested)
         {
