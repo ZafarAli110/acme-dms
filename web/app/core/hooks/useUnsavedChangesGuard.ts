@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useBlocker } from "react-router";
 import { useLocationChangeGuard } from "../contexts/location/LocationChangeGuardContext";
+import { session } from "../storage/sessionStore";
 
 /** Navigation state that lets one navigation through the guard, e.g. after a confirmed location switch. */
 export const BYPASS_UNSAVED_CHANGES_GUARD = { bypassUnsavedChangesGuard: true };
@@ -47,7 +48,8 @@ export function useUnsavedChangesGuard(isDirty: boolean) {
       return;
     }
     const handler = (event: BeforeUnloadEvent) => {
-      if (!bypassed.current) {
+      // A tab whose sign-in ended (signed out here or in another tab) could save nothing: it goes to the sign-in page.
+      if (!bypassed.current && session.isSignedIn()) {
         event.preventDefault();
       }
     };
