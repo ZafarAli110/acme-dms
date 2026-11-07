@@ -2,7 +2,8 @@ using Acme.Gateway.BusinessLogic.Abstractions.Clients;
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.Create;
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.Delete;
 using Acme.Gateway.DTO.Sessions;
-using Acme.Gateway.Service.Sessions;
+using Acme.Gateway.Service.Authorization;
+using Acme.Gateway.Service.Middleware;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Acme.Gateway.Service.Controllers.Sessions;

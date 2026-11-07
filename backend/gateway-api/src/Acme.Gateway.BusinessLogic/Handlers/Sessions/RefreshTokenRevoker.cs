@@ -1,7 +1,7 @@
 using Acme.Gateway.BusinessLogic.Abstractions.Clients;
 using Microsoft.Extensions.Logging;
 
-namespace Acme.Gateway.BusinessLogic.Sessions;
+namespace Acme.Gateway.BusinessLogic.Handlers.Sessions;
 
 /// <summary>
 /// Ends the refresh token of a session that has just been deleted, at identity-api. It waits a little at most and never fails:

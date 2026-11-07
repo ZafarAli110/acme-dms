@@ -2,7 +2,8 @@ using Acme.Gateway.BusinessLogic;
 using Acme.Gateway.Persistence;
 using Acme.Gateway.RestClients;
 using Acme.Gateway.Service;
-using Acme.Gateway.Service.Sessions;
+using Acme.Gateway.Service.Authorization;
+using Acme.Gateway.Service.Middleware;
 using Acme.ServiceDefaults;
 using Yarp.ReverseProxy.Transforms;
 
