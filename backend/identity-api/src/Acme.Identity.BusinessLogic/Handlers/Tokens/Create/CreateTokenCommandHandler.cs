@@ -41,7 +41,7 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
 
         // Emails are stored lower-case, so an exact match is a case-insensitive match.
         var email = request.Email.Trim().ToLowerInvariant();
-        var wait = _signInThrottle.WaitFor(email);
+        var wait = _signInThrottle.Begin(email);
         if (wait > TimeSpan.Zero)
         {
             var seconds = (int)Math.Ceiling(wait.TotalSeconds);
@@ -59,13 +59,12 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
             // An unknown email costs the same as a wrong password: a hash is checked either way, so the time does not say
             // which emails have an account.
             _passwordHasher.VerifyHashedPassword(_unknownUser, _unknownUserHash.Value, request.Password);
-            _signInThrottle.RecordFailure(email);
             throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
         }
 
         if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
         {
-            _signInThrottle.RecordFailure(email);
+            // Already counted when the attempt began.
             throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
         }
 
