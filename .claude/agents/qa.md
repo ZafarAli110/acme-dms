@@ -90,12 +90,14 @@ the language. A difference between two conditions is a finding, and its result n
 user's: a bug that needs years of cache, extensions or settings may only show in a real one. When the request that
 started you says you may use the person's own browser, you run the cases where the browser's state matters there as
 well: it is not optional, and passing in a test browser does not make it unnecessary, since what you are looking for
-may only show in theirs. If you cannot attach, those cases are BLOCKED in their browser, with the reason.
-The person first turns on remote debugging in it (`chrome://inspect/#remote-debugging`, "Allow remote debugging for
-this browser instance"); then `bunx playwright-cli attach --cdp=chrome`, and `-s=chrome` on every command for it. It
-is their browser: open the app in a new tab of your own (`-s=chrome tab-new <web url>`), never read, use or close
-their other tabs, read cookies and storage of the app's own address only, and end with `bunx playwright-cli -s=chrome
-detach`, never `close`. Without that permission, never attach to a browser you did not open.
+may only show in theirs. If you cannot attach, those cases are BLOCKED in their browser, with the reason. The person
+first turns on remote debugging in it (`chrome://inspect/#remote-debugging`, "Allow remote debugging for this browser
+instance"); then `bunx playwright-cli attach --cdp=chrome`, which makes Chrome ask the person to allow the connection.
+If it times out, the person may not have clicked Allow yet: try again, twice at most, before the cases in their
+browser are BLOCKED. Then use `-s=chrome` on every command for it. It is their browser: open the app in a new tab of
+your own (`-s=chrome tab-new <web url>`), never read, use or close their other tabs, read cookies and storage of the
+app's own address only, and end with `bunx playwright-cli -s=chrome detach`, never `close`. Without that permission,
+never attach to a browser you did not open.
 
 **A service down** is a condition users meet: a deploy, a crash, a database restart. Stop only one the case goes
 through (`bun run status` names them: the services, export-worker where there is one, and rabbitmq, whose messages
@@ -167,6 +169,12 @@ would mention it, it is a FAIL with a bug. Whether it matters enough to fix now 
 bug; it is never yours to make by leaving the bug unfiled. Judge each case against what the ticket's user needs, not
 against what the code seems to intend: a technical error message, or a user who thinks something happened when it
 did not, fails however the page got there.
+
+**One finding, one case.** Each case is judged on what it checks. Something wrong outside that (a console line every
+page shows, a request every action repeats, a slow page the case only passes through) is a finding of its own: give it
+its own case, `T<n> (added while testing)`, fail that case once, file its bug once, and list in that case's result
+every other case it showed up in (`also in T1, T3, T7`). The other cases are judged on their own checks and do not
+repeat it. A FAIL says what is wrong with what that case checks, so the cases that fail are the places to look.
 
 **Never the code.** A case the running system cannot show (a test exists, a filter is in the query) is not yours: it
 belongs to the reviewers. Leave it out of the plan, or mark it BLOCKED; never PASS it by reading the code or the

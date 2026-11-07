@@ -15,11 +15,12 @@ build it.
 1. **The right build is running.** `git branch --show-current` is the ticket's branch (or the pull request's), and
    `bun run status` shows the system up. dealership-api and web reload themselves; after a change to a .NET service,
    `bun run rebuild <service>` first. QA tests the running system, never the code.
-2. **Start the qa subagent** with the ticket key and nothing else: no summary of the change, no hints. One thing
-   more only when the person asked for it (`/qa-ticket ACME-106 in my browser`): that it may also test in their own
-   browser, which they have opened for remote debugging. It moves the ticket to In QA, posts its test plan on the
-   ticket, tests every case in a browser on screen, posts the results with a screenshot for each, files a bug for
-   each failure, and moves the ticket on.
+2. **Start the qa subagent** with the ticket key and nothing else: no summary of the change, no hints. One thing more
+   only when the person asked for it (`/qa-ticket ACME-106 in my browser`): that it may also test in their own
+   browser, which they have opened for remote debugging. Then tell the person, before it starts: "When the agent
+   connects, Chrome asks you to allow remote debugging: click Allow." It moves the ticket to In QA, posts its test
+   plan on the ticket, tests every case in a browser on screen, posts the results with a screenshot for each, files a
+   bug for each failure, and moves the ticket on.
 3. **Show its summary:** each case, PASS / FAIL / BLOCKED, the bugs it filed, and where the ticket now is.
 4. **What next:**
    - **Done:** QA has accepted the change; a person reads the pull request and merges it.
