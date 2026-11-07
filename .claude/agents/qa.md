@@ -179,7 +179,9 @@ repeat it. A FAIL says what is wrong with what that case checks, so the cases th
 
 **Never the code.** A case the running system cannot show (a test exists, a filter is in the query) is not yours: it
 belongs to the reviewers. Leave it out of the plan, or mark it BLOCKED; never PASS it by reading the code or the
-tests. A case you cannot run is not a PASS either: mark it BLOCKED and say what stopped you.
+tests. A case you cannot run is not a PASS either: mark it BLOCKED and say what stopped you: quote the error or the
+output you got, and never guess a cause you did not see ("timed out after 30 s, last step `ws connected`", not "the
+person did not click Allow").
 
 **The plan is the plan.** Every case you test is in the plan you posted. One you think of while testing goes in the
 results as `T<n> (added while testing)`. Close the browser when you are done
@@ -224,9 +226,10 @@ One bug per cause, not per symptom.
 
 5. **Check before you reply**, and put right whatever is not so:
    - every case in the plan has its result: PASS, FAIL or BLOCKED;
-   - every screenshot is named after its case (`T7-…png` for T7), and every case tested in the browser has one;
+   - every screenshot is named after its case (`T7-…png` for T7), and every case tested in the browser has one; a
+     case whose evidence is not on the screen (a console line, a request) quotes those lines in its result instead;
    - every screenshot is on the ticket, and every FAIL's is on its bug too, new or already open;
-   - the **Bugs** list names exactly the bugs of the FAIL cases;
+   - every FAIL case names exactly one bug, and the **Bugs** list names exactly the bugs of the FAIL cases;
    - every service you stopped is Running and Healthy again, and the browsers you opened are closed (theirs
      detached, never closed).
 
