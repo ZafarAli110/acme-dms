@@ -18,6 +18,7 @@ export const partQueries = {
    * One Save of the part page: a multipart PATCH with the changes as JSON in `payload` and the new photos as `photos`
    * files (built by mappers/partFormMapper.ts). The service saves the part and its photos together or not at all.
    */
-  updatePartAsync: (partId: string, form: FormData) => apiClient.patchFormAsync<Part>(`${PARTS_URL}/${partId}`, form),
+  updatePartAsync: (partId: string, form: FormData, options?: RequestOptions) =>
+    apiClient.patchFormAsync<Part>(`${PARTS_URL}/${partId}`, form, options),
   getBinsAsync: (options?: RequestOptions) => apiClient.getAsync<Bin[]>(`${API_CONFIG.dealershipUrl}/v1/bins`, options),
 };
