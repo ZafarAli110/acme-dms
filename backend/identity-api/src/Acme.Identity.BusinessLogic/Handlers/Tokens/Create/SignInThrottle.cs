@@ -92,6 +92,31 @@ public sealed class SignInThrottle
 
     public void RecordSuccess(string email) => _attempts.TryRemove(email, out _);
 
+    /// <summary>
+    /// Gives back an attempt that ended without a verdict on the password (the database out of reach, the request
+    /// cancelled): it is not a wrong password, so it neither counts nor keeps a wait it alone started.
+    /// </summary>
+    public void Abandon(string email)
+    {
+        if (!_attempts.TryGetValue(email, out var attempts))
+        {
+            return;
+        }
+
+        lock (attempts)
+        {
+            if (attempts.Failures > 0)
+            {
+                attempts.Failures--;
+            }
+
+            if (attempts.Failures < FreeFailures)
+            {
+                attempts.BlockedUntil = DateTimeOffset.MinValue;
+            }
+        }
+    }
+
     private void Forget(DateTimeOffset now)
     {
         foreach (var (email, attempts) in _attempts)
