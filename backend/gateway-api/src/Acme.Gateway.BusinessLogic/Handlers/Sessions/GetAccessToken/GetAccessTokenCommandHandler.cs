@@ -171,7 +171,17 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
         }
         catch (IdentityUnavailableException)
         {
-            return await RefreshOnceAsync(refreshToken, caller, SessionSettings.RenewalRetryTimeout);
+            try
+            {
+                return await RefreshOnceAsync(refreshToken, caller, SessionSettings.RenewalRetryTimeout);
+            }
+            catch (IdentityUnavailableException)
+            {
+                // If identity-api replaced the token and both answers were lost, the next request more than 20 seconds
+                // from now looks like a stolen copy and ends the sign-in: this line is where to start looking.
+                LogRenewalUnanswered(_logger);
+                throw;
+            }
         }
     }
 
@@ -192,6 +202,9 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
         await _dbContext.Sessions
             .Where(s => s.Id == id && s.RenewingUntil == lease)
             .ExecuteUpdateAsync(set => set.SetProperty(s => s.RenewingUntil, (DateTimeOffset?)null), CancellationToken.None);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "A session's renewal got no answer twice; if identity-api replaced the token, a later renewal may end the sign-in")]
+    private static partial void LogRenewalUnanswered(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "A session's renewal outlasted its lease; another renewal saved first")]
     private static partial void LogLeaseOvertaken(ILogger logger);

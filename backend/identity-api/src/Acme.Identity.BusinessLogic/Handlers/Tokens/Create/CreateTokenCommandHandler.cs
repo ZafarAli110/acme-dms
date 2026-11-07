@@ -48,27 +48,38 @@ internal sealed class CreateTokenCommandHandler : ICreateTokenCommandHandler
             throw new ApiException(ApiErrorCategory.TooManyRequests, $"Too many sign-in attempts. Try again in {seconds} seconds.", seconds);
         }
 
-        var user = await _dbContext.Users
-            .Include(u => u.Dealer)
-            .Include(u => u.LocationRoles).ThenInclude(r => r.Location)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(u => u.Email == email, cancellationToken);
-
-        if (user is null)
+        User? user;
+        try
         {
-            // An unknown email costs the same as a wrong password: a hash is checked either way, so the time does not say
-            // which emails have an account.
-            _passwordHasher.VerifyHashedPassword(_unknownUser, _unknownUserHash.Value, request.Password);
-            throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
+            user = await _dbContext.Users
+                .Include(u => u.Dealer)
+                .Include(u => u.LocationRoles).ThenInclude(r => r.Location)
+                .AsNoTracking()
+                .SingleOrDefaultAsync(u => u.Email == email, cancellationToken);
+
+            if (user is null)
+            {
+                // An unknown email costs the same as a wrong password: a hash is checked either way, so the time does not say
+                // which emails have an account.
+                _passwordHasher.VerifyHashedPassword(_unknownUser, _unknownUserHash.Value, request.Password);
+                throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
+            }
+
+            if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+            {
+                // Already counted when the attempt began.
+                throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
+            }
+
+            _signInThrottle.RecordSuccess(email);
+        }
+        catch (Exception exception) when (exception is not ApiException)
+        {
+            // Not a wrong password (the database out of reach, the request cancelled): the attempt is not counted.
+            _signInThrottle.Abandon(email);
+            throw;
         }
 
-        if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
-        {
-            // Already counted when the attempt began.
-            throw new ApiException(ApiErrorCategory.Unauthorized, InvalidCredentials);
-        }
-
-        _signInThrottle.RecordSuccess(email);
 
         var now = _timeProvider.GetUtcNow();
         // A sign-in starts a chain of refresh tokens: its id is the access tokens' `sid`, and its refresh tokens end after the lifetime.
