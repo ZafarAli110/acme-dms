@@ -67,10 +67,10 @@ export class AuthKernel {
     this.commit(RESOLVING);
     this._resolving = this.resolveUserAsync();
     await this._resolving;
-    if (this._snapshot.status !== "signed-in") {
+    if (this._snapshot.status !== "signed-in" || this._snapshot.user === null) {
       throw new Error(i18n.t("errors.accountNotLoaded"));
     }
-    session.announce({ kind: "signed-in" });
+    session.announce({ kind: "signed-in", userId: this._snapshot.user.id });
   }
 
   /**
@@ -81,12 +81,18 @@ export class AuthKernel {
    * The page keeps showing what it showed until then: forgetting first would empty the screen behind the sign-out dialog
    * while the gateway answers. The gateway is given `signOutWaitMs`; a sign-out it did not get is remembered
    * (`setRevokePending`), before asking, so even a tab closed meanwhile has the next load end the sign-in first.
+   *
+   * Then it leaves for the sign-in page itself, answered or not, so a Back pressed while it waited cannot leave this tab
+   * on a page whose sign-in has ended.
    */
   public async signOutAsync(): Promise<void> {
+    const generation = this._generation;
     session.setRevokePending(true);
-    session.setRevokePending(!(await identityQueries.revokeAsync()));
-    session.clear();
+    const ended = await identityQueries.revokeAsync();
+    // Another tab signed in while this waited: the cookie is that sign-in's now, and must not be ended on the next load.
+    session.setRevokePending(generation === this._generation && !ended);
     session.announce({ kind: "signed-out" });
+    this.leaveForSignIn();
   }
 
   /** A request of this signed-in tab got a 401 (`sessionExpiry`): the sign-in is over, here and in the other tabs. */
@@ -109,12 +115,18 @@ export class AuthKernel {
       this.leaveForSignIn();
       return;
     }
+    // The same person signing in again elsewhere: the cookie is still theirs, so this tab keeps its location, its data
+    // and any unsaved form.
+    if (this._snapshot.status === "signed-in" && this._snapshot.user?.id === change.userId) {
+      return;
+    }
+    // Someone else, or a tab that was not signed in: the cookie is the new sign-in's now. A fresh load of the home page
+    // finds who it is (and shows an error page, with a retry, if identity-api cannot be reached), with nothing of the
+    // old sign-in left on screen.
     this.forget();
-    // The other tab signed in as someone: the session cookie is theirs now, shared by every tab, so this tab follows it.
-    this.commit(RESOLVING);
-    // Nobody awaits this one: when identity-api cannot be reached, the tab stays resolving and the next navigation
-    // (waitForResolvedAuthAsync) tries again and shows the error.
-    this._resolving = this.resolveUserAsync().catch(() => undefined);
+    if (typeof window !== "undefined") {
+      window.location.replace("/");
+    }
   }
 
   /**
