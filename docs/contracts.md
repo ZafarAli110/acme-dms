@@ -30,9 +30,10 @@ Anonymous: no token, no location. Each service's tests check the shape.
 
 The web app's sign-in. Both need the header `X-Requested-With: acme-web` (403 without it).
 
-- `POST` with `{ "email": "…", "password": "…" }`: `204` and the httpOnly `acme_session` cookie (`Path=/api`,
-  `SameSite=Strict`); otherwise identity-api's own answer, unchanged (`401`, or `429` with `Retry-After`); `503` when
-  identity-api cannot be reached. It ends the session the browser had.
+- `POST` with `{ "email": "…", "password": "…" }`: `204` and the session cookie, `__Host-acme_session` (`acme_session` in
+  local development): `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`. Otherwise identity-api's own answer, unchanged
+  (`400`, `401`, or `429` with `Retry-After`); `503` when identity-api cannot be reached or answers anything else. It
+  ends the session the browser had.
 - `DELETE`: always `204`, with the cookie removed and `Clear-Site-Data: "cache"`.
 
 With the cookie, a request to `/api/…` reaches the service with `Authorization: Bearer` and without the cookie. When the
