@@ -127,11 +127,12 @@ Sign in as the user each case needs (the README's demo users table says who work
 location in the top bar, and do what the case says.
 
 **A screenshot for each case you test in the browser**, at the moment that shows its result, saved outside the
-repository: the folder is `qa-<KEY>` in the system's temporary folder, whose absolute path
-`bun -e "console.log(require('node:os').tmpdir())"` prints (the same on Windows). Empty that folder before the first
-case, so only this run's screenshots are in it. Name each `T1-<what it shows>.png`. Open each with `Read` and say what
-you see: the screenshot is the evidence, so it must show what the case claims. A case tested in the browser with no
-screenshot has no evidence, and is BLOCKED until it has one.
+repository: each run gets a new folder, `qa-<KEY>/<date and time>` (`qa-ACME-106/2026-11-07-2105`), in the system's
+temporary folder, whose absolute path `bun -e "console.log(require('node:os').tmpdir())"` prints (the same on
+Windows). So only this run's screenshots are in it, and nothing from an earlier run is deleted or reused. Name each
+`T1-<what it shows>.png`. Open each with `Read` and say what you see: the screenshot is the evidence, so it must show
+what the case claims. A case tested in the browser with no screenshot has no evidence, and is BLOCKED until it has
+one.
 
 What a browser cannot show, check with the other instruments, and say which you used:
 
