@@ -31,7 +31,23 @@ instructions and marks the entries here as learned.
 
 ## Missed
 
-None yet.
+### test-reviewer, clean-code-reviewer, security-reviewer: signing out broke the other tabs (7 Nov 2026)
+
+- **Bug:** signing out with several tabs open emptied the screen behind the sign-out dialog (skeletons), took several
+  clicks, and left the other tabs on their page: one showed "This is not a customer of ." until a click took it to the
+  sign-in page. Found by a person testing under Aspire with four tabs open.
+- **Why:** the web app forgot the sign-in (its cached data and selected location) before asking the gateway, so the
+  page fetched again with no location while the dialog waited; nothing stopped a second submit; and another tab only
+  cleared its state, it never left its page.
+- **What the reviewers did not have in front of them:** a second tab and a slow answer. Three review rounds read the
+  diff (round 1 even reordered sign-out against the browser-cache clear), and the end-to-end tests used one tab, a fast
+  local gateway and the Home page. Each step was right on its own; the order across tabs was the bug.
+- **Evidence:** gateway traces, 7 Nov 11:43:53: the first `DELETE /api/session` answered 204 in 83 ms, four more
+  followed within eight seconds, and the page's fetches got 401 meanwhile. The new end-to-end test fails on the old code
+  (the other tab stays on `/customers/new`) and passes on the fix.
+- **Fix:** the gateway first, then a fresh sign-in page in every tab (`web/app/core/kernel/authKernel.ts`,
+  `signOutAsync` and `leaveForSignIn`); the dialog says it is signing out and cannot be sent twice (`TopBar.tsx`). What
+  would have caught it: `web/e2e/sign-out.spec.ts`, "signing out in one tab takes every tab to the sign-in page".
 
 ## Learned
 
