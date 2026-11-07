@@ -1,0 +1,46 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f31c27aa-f8be-4c9b-83ec-71a8a2489787",
+  "prevIds": ["59095af3-ec62-44e8-9799-0fc7a66915df"],
+  "footprints": [
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "part_photos", "uq_part_photos_default"],
+      "writes": [
+        "s|idx|public.uq_part_photos_default",
+        "n|idx|public.uq_part_photos_default",
+        "e|idx|public.uq_part_photos_default",
+        "n|rel|public.uq_part_photos_default"
+      ],
+      "reads": ["n|tbl|public.part_photos", "n|sch|public", "n|col|public.part_photos.part_id"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "part_photos",
+        "name": "uq_part_photos_default",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "part_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"is_default\" AND NOT \"is_deleted\"",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}
