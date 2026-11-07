@@ -1,4 +1,5 @@
 import { apiClient } from "../services/apiClient";
+import { session } from "../storage/sessionStore";
 
 /** Which list an export is of. */
 export type ExportKind = "customers";
@@ -35,6 +36,8 @@ export interface ExportEntry {
   problem: string | null;
   /** Put back from the service (after a reload), not started in this tab just now. */
   restored: boolean;
+  /** The location it was started at: it is followed and cancelled there, and shown only while that one is selected. */
+  locationId: string;
 }
 
 const FINISHED: ReadonlySet<ExportStatus> = new Set(["completed", "failed", "cancelled", "expired"]);
@@ -63,10 +66,12 @@ export class ExportKernel {
    * same export, never a second one.
    */
   public async startAsync(title: string, serviceUrl: string, path: string, body: unknown): Promise<void> {
+    const locationId = this.selectedLocationId();
     const job = await apiClient.postAsync<ExportJob>(`${serviceUrl}/${path}`, body, {
       headers: { "idempotency-key": crypto.randomUUID() },
+      locationId,
     });
-    this.put({ title, serviceUrl, job, receivedAt: performance.now(), problem: null, restored: false });
+    this.put({ title, serviceUrl, job, receivedAt: performance.now(), problem: null, restored: false, locationId });
     void this.followAsync(job.id);
   }
 
@@ -76,13 +81,22 @@ export class ExportKernel {
    * not brought back, since the user chose to drop them.
    */
   public async restoreAsync(serviceUrl: string, titleOf: (job: ExportJob) => string): Promise<void> {
-    const jobs = await apiClient.getAsync<ExportJob[]>(`${serviceUrl}/v1/exports`);
+    const locationId = this.selectedLocationId();
+    const jobs = await apiClient.getAsync<ExportJob[]>(`${serviceUrl}/v1/exports`, { locationId });
     // The service lists the newest first; the panel shows them in the order they were started.
     for (const job of jobs.toReversed()) {
       if (this.find(job.id) || job.status === "cancelled") {
         continue;
       }
-      this.put({ title: titleOf(job), serviceUrl, job, receivedAt: performance.now(), problem: null, restored: true });
+      this.put({
+        title: titleOf(job),
+        serviceUrl,
+        job,
+        receivedAt: performance.now(),
+        problem: null,
+        restored: true,
+        locationId,
+      });
       if (!FINISHED.has(job.status)) {
         void this.followAsync(job.id);
       }
@@ -92,8 +106,20 @@ export class ExportKernel {
   public async cancelAsync(jobId: string): Promise<void> {
     const entry = this.find(jobId);
     if (entry) {
-      await apiClient.deleteAsync(`${entry.serviceUrl}/v1/exports/${jobId}`);
+      await apiClient.deleteAsync(`${entry.serviceUrl}/v1/exports/${jobId}`, { locationId: entry.locationId });
     }
+  }
+
+  /**
+   * Forgets every export: the sign-in ended or changed, and the cards (and their download links) were the previous
+   * user's. The next user's are put back from the service by `restoreAsync`.
+   */
+  public reset(): void {
+    for (const following of this._following.values()) {
+      following.abort();
+    }
+    this._following.clear();
+    this.commit([]);
   }
 
   /** Takes a finished export off the panel; one still running is cancelled first. */
@@ -118,7 +144,7 @@ export class ExportKernel {
       await apiClient.readEventsAsync<ExportJob>(
         `${entry.serviceUrl}/v1/exports/${jobId}/events`,
         (job) => this.update(jobId, { job, receivedAt: performance.now(), problem: null }),
-        { signal: following.signal },
+        { signal: following.signal, locationId: entry.locationId },
       );
     } catch (error) {
       if (!following.signal.aborted) {
@@ -127,6 +153,14 @@ export class ExportKernel {
     } finally {
       this._following.delete(jobId);
     }
+  }
+
+  private selectedLocationId(): string {
+    const locationId = session.getLocationId();
+    if (locationId === null) {
+      throw new Error("No location is selected.");
+    }
+    return locationId;
   }
 
   private find(jobId: string): ExportEntry | null {
