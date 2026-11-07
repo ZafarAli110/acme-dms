@@ -3,9 +3,10 @@ import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
 import { useEffect, useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useNavigation, useSubmit } from "react-router";
+import { useActionData, useNavigate, useNavigation, useSubmit } from "react-router";
 import { FormGuards } from "../../components/FormGuards";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
+import { useErrorUntilEdited } from "../../core/hooks/useErrorUntilEdited";
 import { CustomerFields } from "./components/CustomerFields";
 import { toCustomerInput, toFormValues } from "./mappers/customerFormMapper";
 import { createCustomerSchema } from "./schemas/customerSchema";
@@ -52,6 +53,8 @@ export function CustomerForm({
     resolver: valibotResolver(schema),
     defaultValues: toFormValues(customer),
   });
+  // The page's action result, for the error's identity: a new failed save shows its error again.
+  const saveError = useErrorUntilEdited(useActionData<object>(), error, methods);
   const { isDirty } = methods.formState;
   useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
   const disabled = !canEdit || isSubmitting;
@@ -82,9 +85,9 @@ export function CustomerForm({
           {tCommon("revision.changedElsewhere")}
         </Alert>
       )}
-      {error && (
+      {saveError && (
         <Alert severity="error" sx={{ mb: 2 }} data-testid="save-error">
-          {error}
+          {saveError}
         </Alert>
       )}
       {saved && !isDirty && (
