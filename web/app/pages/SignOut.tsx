@@ -1,15 +1,14 @@
-import { redirect } from "react-router";
+import { redirect, redirectDocument } from "react-router";
 import { authKernel } from "../core/kernel/authKernel";
-import { systemQueries } from "../core/queries/systemQueries";
 
 /**
- * Posted by the top bar's sign-out confirmation. Clears the session and the app's cache, asks the browser to drop what it
- * kept of the service's answers, then shows the sign-in page.
+ * Posted by the top bar's sign-out confirmation, which says it is signing out until the sign-in page loads. Ends the sign-in,
+ * then loads the sign-in page with a full navigation: nothing of the old sign-in (a query's data, a form's state) survives.
+ * The form submits with `replace`, so Back does not return to the screen that was signed out of.
  */
 export async function clientAction() {
-  // Both at once: ending the sign-in on the service, and the browser dropping what it kept of the service's answers.
-  await Promise.all([authKernel.signOutAsync(), systemQueries.clearBrowserCacheAsync()]);
-  return redirect("/sign-in");
+  await authKernel.signOutAsync();
+  return redirectDocument("/sign-in");
 }
 
 /** Nothing to show: the route only has its action. Visiting it goes back to Home. */

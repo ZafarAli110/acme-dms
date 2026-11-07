@@ -25,7 +25,7 @@ import {
 import { useColorScheme } from "@mui/material/styles";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Form } from "react-router";
+import { Form, useNavigation } from "react-router";
 import { useAuth } from "../core/contexts/auth/useAuth";
 import { useLocationChangeGuard } from "../core/contexts/location/LocationChangeGuardContext";
 import { useSelectedLocation } from "../core/contexts/location/useSelectedLocation";
@@ -43,6 +43,8 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
   const [locationAnchor, setLocationAnchor] = useState<HTMLElement | null>(null);
   const [profileAnchor, setProfileAnchor] = useState<HTMLElement | null>(null);
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const navigation = useNavigation();
+  const signingOut = navigation.state !== "idle" && navigation.formAction === "/sign-out";
 
   const dark = (mode === "system" ? systemMode : mode) === "dark";
   const initials = (user?.displayName ?? "?")
@@ -181,16 +183,19 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
         </Menu>
       </Toolbar>
 
-      <Dialog open={confirmingSignOut} onClose={() => setConfirmingSignOut(false)}>
+      {/* While signing out the dialog stays and says so, and cannot be sent twice or closed: the sign-in page loads next. */}
+      <Dialog open={confirmingSignOut || signingOut} onClose={() => !signingOut && setConfirmingSignOut(false)}>
         <DialogTitle>{t("topBar.signOut")}</DialogTitle>
         <DialogContent>
           <Typography>{t("topBar.signOutQuestion")}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmingSignOut(false)}>{t("actions.cancel")}</Button>
-          <Form method="post" action="/sign-out">
-            <Button type="submit" variant="contained" data-testid="confirm-sign-out">
-              {t("topBar.signOut")}
+          <Button onClick={() => setConfirmingSignOut(false)} disabled={signingOut}>
+            {t("actions.cancel")}
+          </Button>
+          <Form method="post" action="/sign-out" replace>
+            <Button type="submit" variant="contained" disabled={signingOut} data-testid="confirm-sign-out">
+              {signingOut ? t("topBar.signingOut") : t("topBar.signOut")}
             </Button>
           </Form>
         </DialogActions>

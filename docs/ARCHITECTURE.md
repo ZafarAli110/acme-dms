@@ -125,7 +125,9 @@ on every gateway instance. A stream already open (an export's progress) runs on:
 The gateway then asks identity-api to revoke the chain (`POST /v1/tokens/revoke`); that can fail without harm, because
 nothing outside the deleted session had the refresh token. If the page cannot reach the gateway the cookie is still
 good, so the sign-out is remembered in `localStorage` (`acme.revokePending`) and the next load ends that sign-in first
-and signs no one in with it. Unknown email and wrong password cost the same time at sign-in (a hash is checked either
+and signs no one in with it. The page keeps its screen, with the dialog saying it is signing out, until the gateway has
+answered; then every open tab loads the sign-in page afresh (a full navigation, so no data or form of the old sign-in
+survives), even one with unsaved changes, which nothing could save any more. Unknown email and wrong password cost the same time at sign-in (a hash is checked either
 way).
 
 **An access token is not taken back (a decision).** Signing out of the browser is immediate, because the session is
