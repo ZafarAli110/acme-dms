@@ -1,7 +1,7 @@
 using Acme.Gateway.BusinessLogic.Abstractions.Clients;
 using Acme.ServiceDefaults.ProblemDetails;
 
-namespace Acme.Gateway.Service.Sessions;
+namespace Acme.Gateway.Service.Authorization;
 
 /// <summary>The gateway's own refusals, in the problem-details shape every service answers with.</summary>
 internal static class SessionProblems
