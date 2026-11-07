@@ -1,7 +1,6 @@
 using Acme.Gateway.BusinessLogic.Abstractions.Clients;
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.GetAccessToken;
-using Acme.Gateway.BusinessLogic.Abstractions.Sessions;
-using Acme.Gateway.BusinessLogic.Sessions;
+using Acme.Gateway.BusinessLogic.Handlers.Sessions;
 using Acme.Gateway.Persistence.Database;
 using Microsoft.EntityFrameworkCore;
 

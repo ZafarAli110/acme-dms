@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace Acme.Gateway.BusinessLogic.Sessions;
+namespace Acme.Gateway.BusinessLogic.Handlers.Sessions;
 
 /// <summary>The tokens a session keeps, sealed together.</summary>
 internal sealed record SessionTokens(string AccessToken, string RefreshToken);
