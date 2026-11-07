@@ -359,6 +359,7 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run health`                                    | what is not healthy, its last log lines, and the likely fix            |
 | `bun run start` / `bun run stop`                    | start the whole system in the background / stop it                     |
 | `bun run rebuild identity-api`                      | rebuild one .NET service after a change (the rest reload themselves)   |
+| `bun run resource dealership-api stop`              | stop one service (or `start`, `restart`): how the rest copes           |
 | `bun run logs dealership-api`                       | console output of one service                                          |
 | `bun run traces dealership-api`                     | recent traces of one service                                           |
 | `bun run errors`                                    | only failed (5xx) traces, across all services                          |
