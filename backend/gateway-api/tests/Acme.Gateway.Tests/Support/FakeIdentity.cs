@@ -16,7 +16,8 @@ namespace Acme.Gateway.Tests.Support;
 internal sealed class FakeIdentity : HttpMessageHandler
 {
     public static readonly Guid UserId = Guid.Parse("0190a000-0000-7000-8000-000000000001");
-    private static readonly TimeSpan _grace = TimeSpan.FromSeconds(20);
+    /// <summary>identity-api's grace period for a replaced token shown again; a test sets it to zero instead of waiting.</summary>
+    public TimeSpan Grace { get; set; } = TimeSpan.FromSeconds(20);
     private static readonly SymmetricSecurityKey _key = new(new byte[32]);
 
     private readonly ConcurrentDictionary<string, RefreshTokenState> _tokens = new();
@@ -34,6 +35,9 @@ internal sealed class FakeIdentity : HttpMessageHandler
 
     /// <summary>The next refresh replaces the token and commits, and then its answer is lost on the way back.</summary>
     public bool LoseNextRefreshAnswer { get; set; }
+
+    /// <summary>How many refresh answers in a row are lost after identity-api has acted on them.</summary>
+    public int LoseRefreshAnswers { get; set; }
 
     /// <summary>When set, a refresh waits for it after replacing the token (and says so on <see cref="RefreshReplaced"/>).</summary>
     public TaskCompletionSource? HoldRefreshAnswer { get; set; }
@@ -73,6 +77,7 @@ internal sealed class FakeIdentity : HttpMessageHandler
         }
 
         Interlocked.Increment(ref _refreshes);
+        var renewalKey = request.Headers.TryGetValues("Idempotency-Key", out var keys) ? keys.Single() : null;
         string? next;
         lock (_lock)
         {
@@ -84,9 +89,9 @@ internal sealed class FakeIdentity : HttpMessageHandler
             if (state.ReplacedAt is not { } replacedAt)
             {
                 next = NewRefreshToken();
-                _tokens[presented] = state with { ReplacedAt = DateTimeOffset.UtcNow, Next = next };
+                _tokens[presented] = state with { ReplacedAt = DateTimeOffset.UtcNow, Next = next, Key = renewalKey };
             }
-            else if (DateTimeOffset.UtcNow - replacedAt <= _grace)
+            else if (DateTimeOffset.UtcNow - replacedAt <= Grace || (renewalKey is not null && state.Key == renewalKey))
             {
                 next = _tokens.TryGetValue(state.Next!, out var nextState) && nextState.ReplacedAt is null ? state.Next : null;
             }
@@ -97,9 +102,10 @@ internal sealed class FakeIdentity : HttpMessageHandler
             }
         }
 
-        if (LoseNextRefreshAnswer)
+        if (LoseNextRefreshAnswer || LoseRefreshAnswers > 0)
         {
             LoseNextRefreshAnswer = false;
+            LoseRefreshAnswers = Math.Max(0, LoseRefreshAnswers - 1);
             throw new HttpRequestException("The answer was lost on the way back.");
         }
 
@@ -147,5 +153,5 @@ internal sealed class FakeIdentity : HttpMessageHandler
         Content = new StringContent($$"""{"status":{{(int)status}},"detail":"{{detail}}"}""", System.Text.Encoding.UTF8, "application/problem+json"),
     };
 
-    private sealed record RefreshTokenState(DateTimeOffset? ReplacedAt, string? Next);
+    private sealed record RefreshTokenState(DateTimeOffset? ReplacedAt, string? Next, string? Key = null);
 }
