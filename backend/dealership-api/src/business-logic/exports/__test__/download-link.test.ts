@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { isValidDownloadLink, signedDownloadPath } from "../download-link";
 
+function signatureOf(path: string): string {
+  return new URL(path, "http://api.test/").searchParams.get("signature")!;
+}
+
 describe("download links", () => {
   const key = "a-key-every-api-instance-shares-0123456789";
   const expires = 2_000_000_000_000;
-  const signatureOf = (path: string): string => new URL(path, "http://api.test/").searchParams.get("signature")!;
 
   it("are accepted by any instance with the shared key, after a restart too", () => {
     const signature = signatureOf(signedDownloadPath(key, "job-1", expires));
