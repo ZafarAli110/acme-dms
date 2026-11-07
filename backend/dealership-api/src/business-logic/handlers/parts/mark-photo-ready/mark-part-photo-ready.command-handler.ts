@@ -1,17 +1,15 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, eq } from "drizzle-orm";
 import type { IMarkPartPhotoReadyCommandHandler } from "#business-logic-abstractions/handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler.interface";
 import { UnhandledMessageError } from "#business-logic-abstractions/messaging/unhandled-message.error";
 import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
-import { SYSTEM_USER_ID } from "#business-logic-abstractions/user-context/system-user";
 import type { DocumentProcessedMessageDto, MessageEnvelopeDto } from "#dto/messages/document-messages.dto";
-import { partPhotos } from "#persistence/schema/part-photos";
 import { processedMessages } from "#persistence/schema/processed-messages";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
 import { PART_PHOTO_OWNER_TYPE } from "../part-photo.rules";
+import { recordPhotoOutcomeAsync } from "../photo-outcome";
 
 /** document-api finished a document: if it is a part photo, mark the photo ready. Safe to receive twice. */
 @Injectable()
@@ -43,11 +41,11 @@ export class MarkPartPhotoReadyCommandHandler implements IMarkPartPhotoReadyComm
     if (!first) {
       return;
     }
-    await work.db
-      .update(partPhotos)
-      // Background work: no signed-in user, so the system is recorded as the one who changed the photo.
-      .set({ status: "ready", failureReason: null, updatedAt: now, updatedBy: SYSTEM_USER_ID })
-      .where(and(eq(partPhotos.dealerId, data.dealerId), eq(partPhotos.documentId, data.documentId)));
+    await recordPhotoOutcomeAsync(
+      work.db,
+      { dealerId: data.dealerId, documentId: data.documentId, status: "ready", failureReason: null },
+      now,
+    );
     await work.commitAsync();
   }
 }
