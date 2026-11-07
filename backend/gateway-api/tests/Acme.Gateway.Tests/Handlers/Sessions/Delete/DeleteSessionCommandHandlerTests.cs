@@ -42,6 +42,19 @@ public sealed class DeleteSessionCommandHandlerTests
     }
 
     [TestMethod]
+    public async Task ExecuteAsync_SigningOutInSeveralTabsAtOnce_EndsTheSessionOnce_AndFailsNone()
+    {
+        await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
+        var cookie = await gateway.SignInForCookieAsync(TestContext.CancellationToken);
+
+        await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => ExecuteAsync(gateway, cookie)));
+
+        await using var dbContext = gateway.NewDbContext();
+        Assert.AreEqual(0, await dbContext.Sessions.CountAsync(TestContext.CancellationToken));
+        Assert.AreEqual("refresh-1", gateway.Identity.Revoked.Single(), "only the request that deleted the session ends its token");
+    }
+
+    [TestMethod]
     public async Task ExecuteAsync_DoesNothing_ForACookieWithNoSession()
     {
         await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
