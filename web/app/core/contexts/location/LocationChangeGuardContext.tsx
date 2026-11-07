@@ -10,9 +10,6 @@ interface LocationChangeGuardValue {
   /** Returns the held location id and clears it. */
   confirmSwitch: () => string | null;
   cancelSwitch: () => void;
-  /** Lets a form's `beforeunload` handler be turned off before a confirmed hard navigation. */
-  registerBeforeUnloadBypass: (bypass: () => void) => void;
-  disableAllBeforeUnload: () => void;
 }
 
 const LocationChangeGuardContext = createContext<LocationChangeGuardValue | null>(null);
@@ -23,7 +20,6 @@ const LocationChangeGuardContext = createContext<LocationChangeGuardValue | null
  */
 export function LocationChangeGuardProvider({ children }: { children: ReactNode }) {
   const guardCount = useRef(0);
-  const bypasses = useRef(new Set<() => void>());
   const [pendingLocationId, setPendingLocationId] = useState<string | null>(null);
 
   const registerGuard = useCallback(() => {
@@ -52,16 +48,6 @@ export function LocationChangeGuardProvider({ children }: { children: ReactNode 
 
   const cancelSwitch = useCallback(() => setPendingLocationId(null), []);
 
-  const registerBeforeUnloadBypass = useCallback((bypass: () => void) => {
-    bypasses.current.add(bypass);
-  }, []);
-
-  const disableAllBeforeUnload = useCallback(() => {
-    for (const bypass of bypasses.current) {
-      bypass();
-    }
-  }, []);
-
   const value = useMemo<LocationChangeGuardValue>(
     () => ({
       registerGuard,
@@ -69,18 +55,8 @@ export function LocationChangeGuardProvider({ children }: { children: ReactNode 
       pendingLocationId,
       confirmSwitch,
       cancelSwitch,
-      registerBeforeUnloadBypass,
-      disableAllBeforeUnload,
     }),
-    [
-      registerGuard,
-      requestSwitch,
-      pendingLocationId,
-      confirmSwitch,
-      cancelSwitch,
-      registerBeforeUnloadBypass,
-      disableAllBeforeUnload,
-    ],
+    [registerGuard, requestSwitch, pendingLocationId, confirmSwitch, cancelSwitch],
   );
 
   return <LocationChangeGuardContext.Provider value={value}>{children}</LocationChangeGuardContext.Provider>;
