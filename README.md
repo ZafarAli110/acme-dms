@@ -52,6 +52,7 @@ Demo users, all with the password `Acme123!`:
 | `bun run logs dealership-api`   | One service's console output      |
 | `bun run traces dealership-api` | One service's recent traces       |
 | `bun run rebuild`               | Rebuild one .NET service          |
+| `bun run resource`              | Stop or start one service         |
 | `bun run reset`                 | Back to the sample data           |
 | `bun run seed`                  | Add the sample data               |
 | `bun run seed:bulk`             | Add 1.6M customers, for big lists |
