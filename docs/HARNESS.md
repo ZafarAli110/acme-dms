@@ -48,7 +48,7 @@ anything. The ones marked **you** are started by a person (`/name`); the others 
 | `/write-retro <KEY>`          | you        | what the ticket taught, as lessons with evidence, in `docs/lessons/`              | 09  |
 | `/learn-from-lessons`         | you        | proven lessons become skills; reviewers' mistakes become their instructions       | 09  |
 | `/ticket-to-pr <KEY>`         | you        | the whole loop with agents, from the board to a reviewed pull request             | 10  |
-| `/review-pr <n>`              | you        | the four reviewers on any pull request, one review round posted; changes no code  | 10  |
+| `/review-pr <n>`              | you        | the five reviewers on any pull request, one review round posted; changes no code  | 10  |
 | `/resolve-pr-comments <n>`    | you        | judges each review comment, fixes the real ones, answers the rest                 | 10  |
 
 ## Subagents
@@ -65,6 +65,7 @@ which only commits and pushes. No model named: it uses the session's.
 | `security-reviewer`    | Sonnet    | every diff, all ten OWASP Top 10 categories, every file type; says what each came to | 10  |
 | `performance-reviewer` | Sonnet    | the diff against real data sizes; backs a query finding with its plan                | 10  |
 | `test-reviewer`        | Sonnet    | a test per requirement that fails without the change; bad input, edges, luck         | 10  |
+| `state-reviewer`       | session's | stages and moves: guarded writes, a way out of every unfinished state, races, tabs   | —   |
 | `git`                  | Haiku     | commits, pushes, opens the pull request; never resolves a conflict                   | 10  |
 
 ## Hooks

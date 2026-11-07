@@ -1,6 +1,6 @@
 ---
 name: review-pr
-description: Reviews a pull request already on GitHub with the four specialist reviewers - security, performance, tests, clean code - in parallel, checks each blocking finding against the code, and posts one review round on the pull request. It changes no code. Started by a person, e.g. /review-pr 12, a pull request's URL, or nothing to pick from the open ones.
+description: Reviews a pull request already on GitHub with the five specialist reviewers - security, state, performance, tests, clean code - in parallel, checks each blocking finding against the code, and posts one review round on the pull request. It changes no code. Started by a person, e.g. /review-pr 12, a pull request's URL, or nothing to pick from the open ones.
 disable-model-invocation: true
 argument-hint: "[pull request number or URL]"
 ---
@@ -38,10 +38,10 @@ the requirement, and say so in the review.
   It has no installed packages and nothing runs from it: reviewers read the code there, and a finding they could only
   prove by running it stays `— inferred`. To measure, run `gh pr checkout <number>` first and then `/review-pr` again.
 
-## 3. The four reviewers, at once
+## 3. The five reviewers, at once
 
-Start all four in one message, so they run side by side: **security-reviewer**, **performance-reviewer**,
-**test-reviewer**, **clean-code-reviewer**. A pull request someone else wrote gets every one; a reviewer with nothing
+Start all five in one message, so they run side by side: **security-reviewer**, **state-reviewer**,
+**performance-reviewer**, **test-reviewer**, **clean-code-reviewer**. A pull request someone else wrote gets every one; a reviewer with nothing
 in its area says so and approves. Give each:
 
 - the ticket key, or "no ticket: the requirement is the pull request's title and body", with both;
@@ -57,12 +57,12 @@ Subagents cannot start subagents, so this skill starts them itself rather than h
 For each `blocking` finding, open the file and line it cites and read what the code does. A finding the code plainly
 contradicts is not posted: record it in `docs/lessons/reviewers.md` under "Wrong", with that code. Drop a finding only
 because the code shows it is not true, never because fixing it is work. The same finding from two reviewers is posted
-once, under the first in this order: security, performance, tests, clean code.
+once, under the first in this order: security, state, performance, tests, clean code.
 
 ## 5. Post one review round
 
-All four reports in one comment, as a "Review round" (`pr-comments.md`), ids prefixed `SEC`, `PERF`, `TEST`,
-`CLEAN`. If the pull request already has review rounds, this one is the next number, and an answered finding is not
+All five reports in one comment, as a "Review round" (`pr-comments.md`), ids prefixed `SEC`, `STATE`, `PERF`,
+`TEST`, `CLEAN`. If the pull request already has review rounds, this one is the next number, and an answered finding is not
 posted again. Write the body to a file in the temporary folder and post it:
 `gh pr comment <number> --body-file <file>`.
 

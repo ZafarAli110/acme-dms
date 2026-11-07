@@ -48,6 +48,8 @@ instructions and marks the entries here as learned.
 - **Fix:** the gateway first, then a fresh sign-in page in every tab (`web/app/core/kernel/authKernel.ts`,
   `signOutAsync` and `leaveForSignIn`); the dialog says it is signing out and cannot be sent twice (`TopBar.tsx`). What
   would have caught it: `web/e2e/sign-out.spec.ts`, "signing out in one tab takes every tab to the sign-in page".
+- **Learned:** sign-in is a state machine across tabs. The new `state-reviewer` (7 Nov 2026) plays every change to a
+  stage through two tabs, two requests, a slow answer and a lost one, and asks of each unfinished state what moves it on.
 
 ## Learned
 
