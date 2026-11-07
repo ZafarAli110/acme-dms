@@ -119,14 +119,12 @@ public sealed class GetAccessTokenCommandHandlerTests
         gateway.Identity.AccessTokenLifetime = TimeSpan.FromMinutes(15);
         gateway.Identity.LoseNextRefreshAnswer = true;
 
-        // identity-api replaced refresh-1 with refresh-2, and the answer never arrived: the old token is still sent.
-        await ExecuteAsync(gateway, cookie);
-        Assert.AreEqual("refresh-1", await RefreshTokenAsync(gateway, cookie));
-
-        // The lease was given back at once: the next request asks again inside the grace and gets refresh-2 after all.
+        // identity-api replaced refresh-1 with refresh-2, and the answer never arrived. The same request asks again at once,
+        // inside the grace, and gets refresh-2: it does not wait for a next request, which might come after the grace.
         await ExecuteAsync(gateway, cookie);
         Assert.AreEqual("refresh-2", await RefreshTokenAsync(gateway, cookie));
         Assert.AreEqual(2, gateway.Identity.Refreshes);
+        Assert.IsEmpty(gateway.Identity.Revoked, "the sign-in goes on");
     }
 
     [TestMethod]
