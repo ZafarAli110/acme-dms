@@ -17,6 +17,9 @@ public interface IIdentityClient
     /// </summary>
     Task<IssuedTokens?> RefreshAsync(string refreshToken, CallerContext caller, CancellationToken cancellationToken);
 
+    /// <summary>As above, with the renewal's key (Idempotency-Key): the same key until a renewal of the sign-in succeeds.</summary>
+    Task<IssuedTokens?> RefreshAsync(string refreshToken, string? renewalKey, CallerContext caller, CancellationToken cancellationToken);
+
     /// <summary>Ends the sign-in at identity-api: the whole refresh-token chain.</summary>
     Task RevokeAsync(string refreshToken, CallerContext caller, CancellationToken cancellationToken);
 }
