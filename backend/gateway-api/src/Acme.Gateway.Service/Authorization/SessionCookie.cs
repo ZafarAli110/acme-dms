@@ -1,4 +1,4 @@
-namespace Acme.Gateway.Service.Sessions;
+namespace Acme.Gateway.Service.Authorization;
 
 /// <summary>
 /// The browser's session cookie, as HTTP sees it. Its value (made by the business logic) is the only thing the browser holds of

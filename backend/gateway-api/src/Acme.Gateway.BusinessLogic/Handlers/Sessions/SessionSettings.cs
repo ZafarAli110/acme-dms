@@ -1,7 +1,7 @@
-namespace Acme.Gateway.BusinessLogic.Abstractions.Sessions;
+namespace Acme.Gateway.BusinessLogic.Handlers.Sessions;
 
 /// <summary>How long a browser's sign-in lasts, and when the gateway renews its access token.</summary>
-public static class SessionSettings
+internal static class SessionSettings
 {
     /// <summary>Must match identity-api's <c>TokenSettings.RefreshLifetimeSeconds</c>: a sign-in lasts at most this long.</summary>
     public static readonly TimeSpan Lifetime = TimeSpan.FromHours(8);
