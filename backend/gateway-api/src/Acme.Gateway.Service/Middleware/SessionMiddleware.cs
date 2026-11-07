@@ -1,7 +1,8 @@
 using Acme.Gateway.BusinessLogic.Abstractions.Clients;
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.GetAccessToken;
+using Acme.Gateway.Service.Authorization;
 
-namespace Acme.Gateway.Service.Sessions;
+namespace Acme.Gateway.Service.Middleware;
 
 /// <summary>
 /// Turns the browser's session cookie into the access token the services check. A request to <c>/api/…</c> with the cookie is
