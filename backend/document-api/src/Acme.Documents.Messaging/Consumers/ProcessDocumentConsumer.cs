@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.Fail;
+using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.ForgetUnclaimed;
 using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.Process;
 using Acme.Documents.DTO.Messages;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,7 +53,24 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
         consumer.ReceivedAsync += (_, delivery) => HandleAsync(_channel, delivery, stoppingToken);
         await _channel.BasicConsumeAsync(RabbitMqConnection.ProcessDocumentQueue, autoAck: false, consumer, stoppingToken);
 
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+        // Nothing reads the dead-letter queue on its own: while it holds messages, a warning says so once a minute, with the
+        // way out (the `replay-dead-letters` command, after reading why they failed).
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            try
+            {
+                var parked = await _channel.MessageCountAsync(RabbitMqConnection.ProcessDocumentDeadLetterQueue, stoppingToken);
+                if (parked > 0)
+                {
+                    LogDeadLettersParked(_logger, parked);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // The channel is reconnecting: the next minute looks again.
+            }
+        }
     }
 
     private async Task HandleAsync(IChannel channel, BasicDeliverEventArgs delivery, CancellationToken cancellationToken)
@@ -71,6 +89,12 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
         if (envelope is null)
         {
             await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);
+            return;
+        }
+
+        if (envelope.Type == MessageTypes.DocumentUnclaimed)
+        {
+            await ForgetUnclaimedAsync(channel, delivery, envelope.Data, cancellationToken);
             return;
         }
 
@@ -120,6 +144,22 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
         }
     }
 
+    /// <summary>A document the owning service never claimed: deleted, or dead-lettered when that fails.</summary>
+    private async Task ForgetUnclaimedAsync(IChannel channel, BasicDeliverEventArgs delivery, ProcessDocumentMessageDto data, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<IForgetUnclaimedDocumentCommandHandler>().ExecuteAsync(data, cancellationToken);
+            await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogCouldNotForget(_logger, data.DocumentId, ex);
+            await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);
+        }
+    }
+
     private static int ReadAttempt(IReadOnlyBasicProperties properties) =>
         properties.Headers is not null && properties.Headers.TryGetValue(AttemptHeader, out var value) && value is int attempt ? attempt : 1;
 
@@ -135,6 +175,12 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Processing document {DocumentId} failed after {Attempt} attempts; marking it failed")]
     private static partial void LogGivingUp(ILogger logger, Guid documentId, int attempt, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Unclaimed document {DocumentId} could not be deleted; its message goes to the dead-letter queue")]
+    private static partial void LogCouldNotForget(ILogger logger, Guid documentId, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "{Count} processing messages are parked in the dead-letter queue: read why in RabbitMQ's management UI, then run the service with replay-dead-letters")]
+    private static partial void LogDeadLettersParked(ILogger logger, uint count);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "The retry of document {DocumentId} could not be published; its message goes back to the queue")]
     private static partial void LogRepublishFailed(ILogger logger, Guid documentId, Exception exception);
