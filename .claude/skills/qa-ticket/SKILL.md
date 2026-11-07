@@ -18,9 +18,10 @@ build it.
 2. **Start the qa subagent** with the ticket key and nothing else: no summary of the change, no hints. One thing more
    only when the person asked for it (`/qa-ticket ACME-106 in my browser`): that it may also test in their own
    browser, which they have opened for remote debugging. Then tell the person, before it starts: "When the agent
-   connects, Chrome asks you to allow remote debugging: click Allow." It moves the ticket to In QA, posts its test
-   plan on the ticket, tests every case in a browser on screen, posts the results with a screenshot for each, files a
-   bug for each failure, and moves the ticket on.
+   connects, Chrome asks you to allow remote debugging: bring Chrome to the front and click Allow; the question can
+   sit behind other windows." It moves the ticket to In QA, posts its test plan on the ticket, tests every case in a
+   browser on screen, posts the results with a screenshot for each, files a bug for each failure, and moves the ticket
+   on.
 3. **Show its summary:** each case, PASS / FAIL / BLOCKED, the bugs it filed, and where the ticket now is.
 4. **What next:**
    - **Done:** QA has accepted the change; a person reads the pull request and merges it.
