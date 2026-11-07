@@ -29,6 +29,7 @@ import { GetCustomerQueryHandler } from "./handlers/customers/get/get-customer.q
 import { UpdateCustomerCommandHandler } from "./handlers/customers/update/update-customer.command-handler";
 import { MarkPartPhotoFailedCommandHandler } from "./handlers/parts/mark-photo-failed/mark-part-photo-failed.command-handler";
 import { MarkPartPhotoReadyCommandHandler } from "./handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler";
+import { PhotoSweeper } from "./handlers/parts/photo-sweeper";
 import { CreatePartCommandHandler } from "./handlers/parts/create/create-part.command-handler";
 import { GetPartListQueryHandler } from "./handlers/parts/get-list/get-part-list.query-handler";
 import { GetPartQueryHandler } from "./handlers/parts/get/get-part.query-handler";
@@ -74,6 +75,8 @@ const HANDLERS = [
   // (service/worker.ts, a process of its own) runs them; the API never does.
   providers: [
     ...HANDLERS,
+    // Not a handler: runs on its own timer, failing photos whose processing never answered.
+    PhotoSweeper,
     { provide: CLOCK, useClass: SystemClock },
     ExportQueue,
     { provide: EXPORT_JOBS, useExisting: ExportQueue },
