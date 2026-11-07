@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
+using Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Acme.Gateway.RestClients.Identity;
@@ -9,7 +9,8 @@ namespace Acme.Gateway.RestClients.Identity;
 /// <summary>
 /// identity-api's token endpoints over HTTP. The browser's address goes in <c>X-Forwarded-For</c> (identity-api trusts one hop:
 /// this one). identity-api answers with the refresh token in a cookie; here it is read from <c>Set-Cookie</c>. A refused
-/// connection, or no answer in time, becomes <see cref="IdentityUnavailableException"/>.
+/// connection, no answer in time, or an answer that is neither a token nor a refusal meant for the person (400, 401, 429)
+/// becomes <see cref="IdentityUnavailableException"/>.
 /// </summary>
 internal sealed class IdentityClient : IIdentityClient
 {
@@ -18,6 +19,10 @@ internal sealed class IdentityClient : IIdentityClient
     /// <summary>What identity-api asks of a refresh or revoke: a header only a page's own request (or this gateway) adds.</summary>
     private const string FromThePageHeader = "X-Requested-With";
     private const string FromThePageValue = "acme-web";
+
+    /// <summary>The refusals that are the person's to see, passed on as they are; anything else is identity-api failing.</summary>
+    private static readonly HashSet<HttpStatusCode> _refusalsForThePerson =
+        [HttpStatusCode.BadRequest, HttpStatusCode.Unauthorized, HttpStatusCode.TooManyRequests];
 
     private readonly HttpClient _httpClient;
     private readonly TimeProvider _timeProvider;
@@ -36,9 +41,14 @@ internal sealed class IdentityClient : IIdentityClient
         };
         Forward(request, caller);
         using var response = await SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        if (_refusalsForThePerson.Contains(response.StatusCode))
         {
             return new IdentitySignInResult(null, await RefusalAsync(response, cancellationToken));
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new IdentityUnavailableException($"identity-api answered {(int)response.StatusCode} to a sign-in.");
         }
 
         var refreshToken = RefreshTokenIn(response)

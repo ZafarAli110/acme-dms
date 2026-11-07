@@ -1,7 +1,7 @@
 # Database
 
-Each service owns one Postgres database (identity, dealership, documents); no service reads another's tables. These
-rules apply to every table in all three.
+Each service owns one Postgres database (identity, dealership, documents, and the gateway's own, gateway); no service
+reads another's tables. These rules apply to every table in all four.
 
 ## Tables and columns
 
@@ -34,7 +34,11 @@ A check constraint (`ck_<table>_deleted`) keeps the three delete columns consist
 - **"Who" is a user id**: the signed-in user, or `00000000-0000-0000-0000-000000000000` (the system) for work no user
   does: seeding, processing document events.
 - **Technical tables are exempt** and keep their own timestamp: `processed_messages`, `outbox_messages`,
-  `document_contents` (part of its document), `signing_keys`.
+  `document_contents` (part of its document), `signing_keys`, and the gateway's `sessions`. A session's id is not a
+  `uuid` but the SHA-256 of the browser's cookie (hex), so the row is found by the cookie and the cookie is never stored.
+- **Secrets are never stored readable.** A refresh token by its hash; a session's tokens, and the token that replaced a
+  refresh token, sealed with a key only their holder's cookie or token gives; a signing key encrypted with ASP.NET Data
+  Protection, whose own keys are not in the database (`docs/ARCHITECTURE.md`, "Signing in").
 - **NestJS**: every table spreads `auditColumns()` (`persistence/schema/columns/audit-columns.ts`); handlers fill the columns
   with `createdAudit(userId, now)` / `updatedAudit(userId, now)` from `business-logic/audit/audit-fields.ts`, with the
   time from the injected clock.

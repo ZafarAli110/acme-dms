@@ -9,6 +9,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Moq" />
     <PackageReference Include="MSTest" />
     <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
