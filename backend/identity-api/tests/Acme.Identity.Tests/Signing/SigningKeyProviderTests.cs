@@ -151,6 +151,26 @@ public sealed class SigningKeyProviderTests
         Assert.AreEqual(Convert.ToBase64String(published.Single().Rsa.ExportParameters(false).Modulus!), Convert.ToBase64String(rsa.ExportParameters(false).Modulus!));
     }
 
+    [TestMethod]
+    public async Task ReplaceKeysItCannotOpenAsync_IsTheWayOut_WhenNoInstanceCanOpenTheKeyInUse()
+    {
+        var keys = await KeysAsync();
+        var lost = await keys.NewProvider().GetSigningKeyAsync(TestContext.CancellationToken);
+        // Every instance's Data Protection keys are gone: nothing can sign, and nothing deletes the key on its own.
+        keys.DataProtection = new EphemeralDataProtectionProvider();
+        var provider = keys.NewProvider();
+        Assert.IsFalse(await provider.CanSignAsync(TestContext.CancellationToken));
+
+        var deleted = await provider.ReplaceKeysItCannotOpenAsync(TestContext.CancellationToken);
+
+        Assert.AreEqual(1, deleted);
+        var signing = await provider.GetSigningKeyAsync(TestContext.CancellationToken);
+        Assert.AreNotEqual(lost.KeyId, signing.KeyId);
+        Assert.IsTrue(await keys.NewProvider().CanSignAsync(TestContext.CancellationToken), "a restarted instance signs with it too");
+        await using var dbContext = keys.NewDbContext();
+        Assert.AreEqual(signing.KeyId, (await dbContext.SigningKeys.SingleAsync(TestContext.CancellationToken)).Id);
+    }
+
     private async Task<Keys> KeysAsync() => new(await TestPostgres.NewDatabaseAsync(TestContext.CancellationToken));
 
     /// <summary>One identity database, a clock the test moves, and the Data Protection keys every provider shares.</summary>
