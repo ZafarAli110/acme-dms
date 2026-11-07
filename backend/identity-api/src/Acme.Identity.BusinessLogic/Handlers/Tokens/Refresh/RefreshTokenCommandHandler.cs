@@ -57,8 +57,9 @@ internal sealed class RefreshTokenCommandHandler : IRefreshTokenCommandHandler
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         // One at a time per sign-in (with other refreshes, and with signing out); then read the token again.
         await RefreshTokenChain.LockAsync(_dbContext, found.FamilyId, cancellationToken);
-        var current = await _dbContext.RefreshTokens.AsNoTracking().SingleAsync(t => t.Id == found.Id, cancellationToken);
-        if (current.RevokedAt is not null || current.ExpiresAt <= now)
+        // Gone while this waited for the lock (a sign-in clears the person's ended tokens): the same answer as unknown.
+        var current = await _dbContext.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.Id == found.Id, cancellationToken);
+        if (current is null || current.RevokedAt is not null || current.ExpiresAt <= now)
         {
             throw new ApiException(ApiErrorCategory.Unauthorized, SessionEnded);
         }
