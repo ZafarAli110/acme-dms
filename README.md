@@ -213,9 +213,15 @@ are kept).
 | RabbitMQ (UI + AMQP) | `acme`          | `acme`     |
 | Demo users           | see table above | `Acme123!` |
 
-**Swagger:** every service has Swagger UI at `/swagger` on its own URL. Click the service's URL in the dashboard and
-add `/swagger`. Get a token with `POST /v1/tokens` on identity-api, then use **Authorize**. dealership-api also needs
-the `x-location-id` header.
+**Swagger** (in development only): every service has Swagger UI at `/swagger` on its own URL. Click the service's URL in
+the dashboard and add `/swagger`. Get a token with `POST /v1/tokens` on identity-api, then use **Authorize**.
+dealership-api also needs the `x-location-id` header.
+
+**identity-api's signing keys** are kept encrypted in its database, with ASP.NET Data Protection keys that live outside
+it: in development, a folder in your user profile (`acme-dms/identity-api/data-protection-keys` under the local
+application data folder: `~/Library/Application Support` on macOS, `%LOCALAPPDATA%` on Windows, `~/.local/share` on
+Linux). Deleting that folder costs nothing worse than one renewal: identity-api replaces a signing key it can no longer
+open.
 
 ## Look around a running system
 

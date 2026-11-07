@@ -1,4 +1,4 @@
-namespace Acme.Gateway.BusinessLogic.Abstractions.Clients;
+namespace Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 
 /// <summary>
 /// The browser the gateway acts for when it calls identity-api: its address (identity-api's limits count each person, not the

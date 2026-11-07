@@ -1,8 +1,8 @@
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.GetAccessToken;
-using Acme.Gateway.BusinessLogic.Handlers.Sessions;
+using Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 using Acme.Gateway.Persistence.Database;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Acme.Gateway.BusinessLogic.Handlers.Sessions.GetAccessToken;
 
@@ -10,14 +10,17 @@ namespace Acme.Gateway.BusinessLogic.Handlers.Sessions.GetAccessToken;
 /// The access token to send on for a session, renewed first when it is about to expire.
 ///
 /// One renewal at a time per session, on every gateway instance, with no transaction held across the call to identity-api
-/// (<c>business-handlers.md</c>): a renewal first takes a lease (one short <c>UPDATE</c> that sets <c>renewing_until</c>, only
-/// where no lease runs and the token is still due), calls identity-api, then saves the new tokens and gives the lease back in a
-/// second short <c>UPDATE</c>. Each renewal replaces the refresh token, so two at once would look like a copy to identity-api.
-/// A request that finds a lease running sends the token it has while that still works, and otherwise waits for the renewal.
-/// The renewal runs on its own time limit, not the browser's: a tab closed midway must not leave the session holding a refresh
-/// token identity-api has already replaced.
+/// (<c>business-handlers.md</c>): a renewal takes a lease (one short <c>UPDATE</c> that sets <c>renewing_until</c>, only where
+/// no lease runs and the token is still due, all by Postgres's clock so the instances' clocks do not matter), calls
+/// identity-api, then saves the new tokens and gives the lease back in a second short <c>UPDATE</c>, which applies only while
+/// the lease is still its own. A request that finds a lease running sends the token it has while that still works, and
+/// otherwise waits for the renewal.
+///
+/// A renewal runs on its own time limit, not the browser's, and gives its lease back on any failure: the next request then
+/// asks identity-api again inside its grace period and gets the same replacement token, so an answer that was lost costs
+/// nothing.
 /// </summary>
-internal sealed class GetAccessTokenCommandHandler : IGetAccessTokenCommandHandler
+internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenCommandHandler
 {
     /// <summary>How often a request waiting for another's renewal looks again.</summary>
     private static readonly TimeSpan _lookAgainAfter = TimeSpan.FromMilliseconds(200);
@@ -25,18 +28,24 @@ internal sealed class GetAccessTokenCommandHandler : IGetAccessTokenCommandHandl
     private readonly GatewayDbContext _dbContext;
     private readonly IIdentityClient _identityClient;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<GetAccessTokenCommandHandler> _logger;
 
-    public GetAccessTokenCommandHandler(GatewayDbContext dbContext, IIdentityClient identityClient, TimeProvider timeProvider)
+    public GetAccessTokenCommandHandler(
+        GatewayDbContext dbContext,
+        IIdentityClient identityClient,
+        TimeProvider timeProvider,
+        ILogger<GetAccessTokenCommandHandler> logger)
     {
         _dbContext = dbContext;
         _identityClient = identityClient;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     public async Task<string?> ExecuteAsync(string cookieValue, CallerContext caller, CancellationToken cancellationToken)
     {
         var id = SessionSecrets.IdOf(cookieValue);
-        var waitUntil = _timeProvider.GetUtcNow().Add(SessionSettings.RenewalTimeout);
+        var waitUntil = _timeProvider.GetUtcNow().Add(SessionSettings.Lease);
         while (true)
         {
             var now = _timeProvider.GetUtcNow();
@@ -52,9 +61,9 @@ internal sealed class GetAccessTokenCommandHandler : IGetAccessTokenCommandHandl
                 return tokens.AccessToken;
             }
 
-            if (await TryTakeLeaseAsync(id, now, cancellationToken))
+            if (await TryTakeLeaseAsync(id, cancellationToken) is { } lease)
             {
-                return await RenewAsync(cookieValue, id, tokens, session.AccessTokenExpiresAt, caller);
+                return await RenewAsync(cookieValue, id, tokens, session.AccessTokenExpiresAt, lease, caller);
             }
 
             // Another request is renewing it. The token this one has still works: send it.
@@ -73,23 +82,32 @@ internal sealed class GetAccessTokenCommandHandler : IGetAccessTokenCommandHandl
     }
 
     /// <summary>
-    /// One statement, so two requests cannot both win: Postgres checks the condition again on a row another request has just
-    /// changed. Taken only while the token is still due, so a request that comes after a finished renewal does not renew again.
+    /// The lease, or null when another request holds it or the token is no longer due. One statement, so two requests cannot
+    /// both win: Postgres checks the condition again on a row another request has just changed. The lease's end it returns
+    /// is the renewal's own mark: the save and the release apply only while the row still carries it.
     /// </summary>
-    private async Task<bool> TryTakeLeaseAsync(string id, DateTimeOffset now, CancellationToken cancellationToken)
+    private async Task<DateTimeOffset?> TryTakeLeaseAsync(string id, CancellationToken cancellationToken)
     {
-        var due = now.Add(SessionSettings.RenewEarly);
-        var leaseUntil = now.Add(SessionSettings.Lease);
-        var taken = await _dbContext.Sessions
-            .Where(s => s.Id == id && s.AccessTokenExpiresAt <= due && (s.RenewingUntil == null || s.RenewingUntil < now))
-            .ExecuteUpdateAsync(set => set.SetProperty(s => s.RenewingUntil, leaseUntil), cancellationToken);
-        return taken == 1;
+        var leases = await _dbContext.Database
+            .SqlQuery<DateTimeOffset>($"""
+                UPDATE sessions SET renewing_until = now() + {SessionSettings.Lease}
+                WHERE id = {id}
+                  AND access_token_expires_at <= now() + {SessionSettings.RenewEarly}
+                  AND (renewing_until IS NULL OR renewing_until < now())
+                RETURNING renewing_until AS "Value"
+                """)
+            .ToListAsync(cancellationToken);
+        return leases.Count == 1 ? leases[0] : null;
     }
 
-    /// <summary>
-    /// Holding the lease. Nothing here takes the browser's cancellation: once identity-api has answered, its answer is saved.
-    /// </summary>
-    private async Task<string?> RenewAsync(string cookieValue, string id, SessionTokens tokens, DateTimeOffset expiresAt, CallerContext caller)
+    /// <summary>Holding the lease. Nothing here takes the browser's cancellation: once identity-api has answered, its answer is saved.</summary>
+    private async Task<string?> RenewAsync(
+        string cookieValue,
+        string id,
+        SessionTokens tokens,
+        DateTimeOffset expiresAt,
+        DateTimeOffset lease,
+        CallerContext caller)
     {
         using var timeout = new CancellationTokenSource(SessionSettings.RenewalTimeout, _timeProvider);
         IssuedTokens? renewed;
@@ -97,11 +115,17 @@ internal sealed class GetAccessTokenCommandHandler : IGetAccessTokenCommandHandl
         {
             renewed = await _identityClient.RefreshAsync(tokens.RefreshToken, caller, timeout.Token);
         }
-        catch (Exception exception) when (exception is IdentityUnavailableException || (exception is OperationCanceledException && timeout.IsCancellationRequested))
+        catch (Exception exception)
         {
-            await _dbContext.Sessions
-                .Where(s => s.Id == id)
-                .ExecuteUpdateAsync(set => set.SetProperty(s => s.RenewingUntil, (DateTimeOffset?)null), CancellationToken.None);
+            // Whatever went wrong, the next request may try at once, inside identity-api's grace period.
+            await GiveBackLeaseAsync(id, lease);
+            var unavailable = exception is IdentityUnavailableException
+                || (exception is OperationCanceledException && timeout.IsCancellationRequested);
+            if (!unavailable)
+            {
+                throw;
+            }
+
             // identity-api is not answering, but the token still works for a little while: send it, and renew next time.
             if (expiresAt > _timeProvider.GetUtcNow())
             {
@@ -119,14 +143,29 @@ internal sealed class GetAccessTokenCommandHandler : IGetAccessTokenCommandHandl
         }
 
         var sealedTokens = SessionSecrets.Seal(cookieValue, new SessionTokens(renewed.AccessToken, renewed.RefreshToken));
-        await _dbContext.Sessions
-            .Where(s => s.Id == id)
+        var saved = await _dbContext.Sessions
+            .Where(s => s.Id == id && s.RenewingUntil == lease)
             .ExecuteUpdateAsync(
                 set => set
                     .SetProperty(s => s.Tokens, sealedTokens)
                     .SetProperty(s => s.AccessTokenExpiresAt, renewed.AccessTokenExpiresAt)
                     .SetProperty(s => s.RenewingUntil, (DateTimeOffset?)null),
                 CancellationToken.None);
+        if (saved == 0)
+        {
+            // The lease ran out before this renewal finished, and another one has renewed since. identity-api gave both the
+            // same replacement inside its grace period, so the session holds a working token either way.
+            LogLeaseOvertaken(_logger);
+        }
+
         return renewed.AccessToken;
     }
+
+    private async Task GiveBackLeaseAsync(string id, DateTimeOffset lease) =>
+        await _dbContext.Sessions
+            .Where(s => s.Id == id && s.RenewingUntil == lease)
+            .ExecuteUpdateAsync(set => set.SetProperty(s => s.RenewingUntil, (DateTimeOffset?)null), CancellationToken.None);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "A session's renewal outlasted its lease; another renewal saved first")]
+    private static partial void LogLeaseOvertaken(ILogger logger);
 }

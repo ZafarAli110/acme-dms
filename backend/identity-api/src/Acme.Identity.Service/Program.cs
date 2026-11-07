@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Acme.Identity.Persistence.Auditing;
 using Microsoft.AspNetCore.HttpOverrides;
 using Acme.Identity.Service;
@@ -47,12 +48,24 @@ builder.Services.AddAcmeDatabaseErrors(options =>
 
 builder.Services.AddAcmeAuthentication(builder.Configuration);
 
-// identity-api validates its own tokens with the key it signs them with; other services use JWKS discovery.
+// identity-api validates its own tokens with the keys it publishes; other services use JWKS discovery.
 builder.Services
     .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
     .Configure<ISigningKeyProvider>((options, keyProvider) =>
         options.TokenValidationParameters.IssuerSigningKeyResolver = (_, _, _, _) =>
-            [keyProvider.GetSigningKeyAsync(CancellationToken.None).GetAwaiter().GetResult()]);
+            keyProvider.GetPublishedKeysAsync(CancellationToken.None).GetAwaiter().GetResult());
+
+// The signing keys are kept encrypted in the identity database with ASP.NET Data Protection. Its own keys must live
+// somewhere else, or a copy of the database would hold both halves: a folder (DataProtection__KeysPath), shared by every
+// identity-api instance; in production, a key vault. In Development, a folder in the user's profile.
+var dataProtectionKeys = builder.Configuration["DataProtection:KeysPath"]
+    ?? (builder.Environment.IsDevelopment()
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "acme-dms", "identity-api", "data-protection-keys")
+        : throw new InvalidOperationException("DataProtection:KeysPath is not configured: identity-api needs a place outside its database for the keys that protect its signing keys."));
+builder.Services
+    .AddDataProtection()
+    .SetApplicationName("acme-identity-api")
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeys));
 
 var app = builder.Build();
 
