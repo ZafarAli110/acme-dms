@@ -25,6 +25,12 @@ public sealed class Session
     /// </summary>
     public DateTimeOffset? RenewingUntil { get; set; }
 
+    /// <summary>
+    /// The renewal under way's key, sent to identity-api as Idempotency-Key: kept until a renewal succeeds, so a retry
+    /// after a lost answer, however late, gets the replacement identity-api already made instead of looking like a copy.
+    /// </summary>
+    public string? RenewalKey { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>The sign-in's end however often it is renewed: identity-api's refresh lifetime, from the moment of signing in.</summary>

@@ -173,6 +173,27 @@ public sealed class RefreshTokenTests
     }
 
     [TestMethod]
+    public async Task Refresh_TheSameRenewalAskedAgainLongAfterItsAnswerWasLost_GetsTheSameReplacement_ButNotWithoutItsKey()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        var clock = new TestClock();
+        var signedIn = await SignInAsync(dbContext, clock);
+        // The gateway's renewal: identity-api replaces the token, and the answer never reaches the gateway.
+        var lost = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, "renewal-1", TestContext.CancellationToken);
+        clock.Advance(TimeSpan.FromMinutes(2));
+
+        // The next request, long after the grace period, asks again with the same key: the same replacement.
+        var again = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, "renewal-1", TestContext.CancellationToken);
+        Assert.AreEqual(lost.RefreshToken, again.RefreshToken);
+
+        // Anyone else showing the old token has no key: a copy, and the sign-in ends.
+        await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
+        var sessionId = (await dbContext.RefreshTokens.AsNoTracking().FirstAsync(TestContext.CancellationToken)).FamilyId;
+        Assert.IsFalse(await IsOpenAsync(dbContext, clock, sessionId));
+    }
+
+    [TestMethod]
     public async Task Refresh_ATokenAtTheEndOfItsLifetime_IsRefused()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
