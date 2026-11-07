@@ -3,7 +3,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
-using Acme.Gateway.Sessions;
+using Acme.Gateway.BusinessLogic.Abstractions.Clients;
+using Acme.Gateway.Persistence.Database;
+using Acme.Gateway.RestClients.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -76,7 +78,7 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
             builder.UseSetting("services:document-api:http:0", "http://documents.test");
             builder.ConfigureServices(services =>
             {
-                services.AddHttpClient<IdentityClient>().ConfigurePrimaryHttpMessageHandler(() => Identity);
+                services.AddHttpClient<IIdentityClient, IdentityClient>().ConfigurePrimaryHttpMessageHandler(() => Identity);
                 services.AddSingleton<IForwarderHttpClientFactory>(new ForwardTo(Service));
                 services.AddSingleton<IStartupFilter>(new FromAddress(BrowserAddress));
             });
