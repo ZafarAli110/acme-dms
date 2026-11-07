@@ -109,19 +109,16 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
         DateTimeOffset lease,
         CallerContext caller)
     {
-        using var timeout = new CancellationTokenSource(SessionSettings.RenewalTimeout, _timeProvider);
         IssuedTokens? renewed;
         try
         {
-            renewed = await _identityClient.RefreshAsync(tokens.RefreshToken, caller, timeout.Token);
+            renewed = await RefreshWithOneRetryAsync(tokens.RefreshToken, caller);
         }
         catch (Exception exception)
         {
-            // Whatever went wrong, the next request may try at once, inside identity-api's grace period.
+            // Whatever went wrong, the next request may try at once.
             await GiveBackLeaseAsync(id, lease);
-            var unavailable = exception is IdentityUnavailableException
-                || (exception is OperationCanceledException && timeout.IsCancellationRequested);
-            if (!unavailable)
+            if (exception is not IdentityUnavailableException)
             {
                 throw;
             }
@@ -132,7 +129,7 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
                 return tokens.AccessToken;
             }
 
-            throw exception as IdentityUnavailableException ?? new IdentityUnavailableException("identity-api did not answer in time.", exception);
+            throw;
         }
 
         if (renewed is null)
@@ -159,6 +156,36 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
         }
 
         return renewed.AccessToken;
+    }
+
+    /// <summary>
+    /// Asks identity-api, and once more at once when no answer came. It may have replaced the token and lost the answer: asked
+    /// again inside its 20-second grace period, it gives the same replacement. Left to the next request, which may come
+    /// after the grace, the old token would look like a stolen copy and the sign-in would end.
+    /// </summary>
+    private async Task<IssuedTokens?> RefreshWithOneRetryAsync(string refreshToken, CallerContext caller)
+    {
+        try
+        {
+            return await RefreshOnceAsync(refreshToken, caller, SessionSettings.RenewalTimeout);
+        }
+        catch (IdentityUnavailableException)
+        {
+            return await RefreshOnceAsync(refreshToken, caller, SessionSettings.RenewalRetryTimeout);
+        }
+    }
+
+    private async Task<IssuedTokens?> RefreshOnceAsync(string refreshToken, CallerContext caller, TimeSpan wait)
+    {
+        using var timeout = new CancellationTokenSource(wait, _timeProvider);
+        try
+        {
+            return await _identityClient.RefreshAsync(refreshToken, caller, timeout.Token);
+        }
+        catch (OperationCanceledException exception) when (timeout.IsCancellationRequested)
+        {
+            throw new IdentityUnavailableException("identity-api did not answer in time.", exception);
+        }
     }
 
     private async Task GiveBackLeaseAsync(string id, DateTimeOffset lease) =>
