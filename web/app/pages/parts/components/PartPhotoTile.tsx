@@ -73,6 +73,11 @@ export function PartPhotoTile({ index, saved, disabled, onMakeDefault, onRemove 
           </Tooltip>
         )}
       </Stack>
+      {status === "failed" && saved?.failureReason && (
+        <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }} data-testid="photo-failure">
+          {saved.failureReason}
+        </Typography>
+      )}
       {fileError && (
         <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
           {fileError}
