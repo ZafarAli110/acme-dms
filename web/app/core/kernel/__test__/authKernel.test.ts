@@ -57,6 +57,14 @@ const rita = {
   defaultLocationId: null,
 };
 
+/** A tab signed in as Rita, working at Northside. */
+async function ritasTabAsync(): Promise<AuthKernel> {
+  const kernel = new AuthKernel();
+  await kernel.waitForResolvedAuthAsync();
+  session.setLocationId("northside");
+  return kernel;
+}
+
 describe("AuthKernel", () => {
   let replace: ReturnType<typeof vi.fn>;
 
@@ -79,14 +87,6 @@ describe("AuthKernel", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
-
-  /** A tab signed in as Rita, working at Northside. */
-  async function ritasTabAsync(): Promise<AuthKernel> {
-    const kernel = new AuthKernel();
-    await kernel.waitForResolvedAuthAsync();
-    session.setLocationId("northside");
-    return kernel;
-  }
 
   it("changes nothing when the same person signs in again in another tab", async () => {
     const kernel = await ritasTabAsync();
