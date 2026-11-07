@@ -48,6 +48,8 @@ internal sealed partial class SigningKeyProvider : ISigningKeyProvider, IDisposa
     private readonly ConcurrentDictionary<string, RsaSecurityKey> _opened = new();
     private readonly ConcurrentDictionary<string, RsaSecurityKey> _public = new();
     private KeyRing? _ring;
+    /// <summary>Keys the last load deleted because this instance could not open them.</summary>
+    private int _replaced;
 
     public SigningKeyProvider(
         IServiceScopeFactory scopeFactory,
@@ -89,7 +91,7 @@ internal sealed partial class SigningKeyProvider : ISigningKeyProvider, IDisposa
         try
         {
             var now = _timeProvider.GetUtcNow();
-            _ring = IsCurrent(_ring, now) ?? await LoadAsync(now, cancellationToken);
+            _ring = IsCurrent(_ring, now) ?? await LoadAsync(now, _replaceKeysItCannotOpen, cancellationToken);
             return _ring;
         }
         finally
@@ -102,7 +104,22 @@ internal sealed partial class SigningKeyProvider : ISigningKeyProvider, IDisposa
     private static KeyRing? IsCurrent(KeyRing? ring, DateTimeOffset now) =>
         ring is not null && ring.LoadedAt + _lookAgainEvery > now && ring.ActiveUntil > now ? ring : null;
 
-    private async Task<KeyRing> LoadAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task<int> ReplaceKeysItCannotOpenAsync(CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            _replaced = 0;
+            _ring = await LoadAsync(_timeProvider.GetUtcNow(), replaceKeysItCannotOpen: true, cancellationToken);
+            return _replaced;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    private async Task<KeyRing> LoadAsync(DateTimeOffset now, bool replaceKeysItCannotOpen, CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
@@ -118,9 +135,10 @@ internal sealed partial class SigningKeyProvider : ISigningKeyProvider, IDisposa
 
         foreach (var key in keys.Where(k => !CanOpen(k)).ToList())
         {
-            if (_replaceKeysItCannotOpen)
+            if (replaceKeysItCannotOpen)
             {
                 LogKeyReplaced(_logger, key.Id);
+                _replaced++;
                 dbContext.SigningKeys.Remove(key);
                 keys.Remove(key);
             }
@@ -194,7 +212,7 @@ internal sealed partial class SigningKeyProvider : ISigningKeyProvider, IDisposa
     [LoggerMessage(Level = LogLevel.Error, Message = "Signing key {KeyId} cannot be opened with this instance's Data Protection keys; it is kept and still published. Check DataProtection__KeysPath: every identity-api instance must share it")]
     private static partial void LogKeyCannotBeOpened(ILogger logger, string keyId);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Signing key {KeyId} cannot be opened with this Data Protection key ring; in Development it is deleted and a new key signs")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Signing key {KeyId} cannot be opened with this Data Protection key ring; it is deleted (Development, or replace-signing-keys) and a new key signs")]
     private static partial void LogKeyReplaced(ILogger logger, string keyId);
 
     /// <summary>The key as tokens are signed and checked with it; each is opened once and kept.</summary>
