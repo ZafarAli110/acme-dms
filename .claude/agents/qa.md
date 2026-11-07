@@ -33,7 +33,8 @@ ticket key in capitals, whatever case you were given it in.
    - Each case: an id (`T1`…), what it checks, the steps, and the expected result as something you can see or
      measure: a count, an order, a name on the screen, a status code. Where the ticket says how quick something must
      be ("straight away", "at once", "while the customer waits"), the expected result gives it as a time you will
-     measure: straight away is under a second.
+     measure: straight away is under a second. And the browser conditions it runs under (section 2: cache, stored
+     data, sign-in, network, tabs, screen, look and language).
 3. Write them to `docs/qa/<KEY>.md`, and post them on the ticket with `add_comment`, so the team sees the plan before
    the testing starts:
 
@@ -46,9 +47,55 @@ ticket key in capitals, whatever case you were given it in.
 ## 2. Test in the browser, as the user
 
 Test as the user the ticket is for, in a real browser: the `check-in-browser` skill's steps, but open it **headed**
-(a visible window), so whoever runs QA can follow each step and stop it:
-`bunx playwright-cli open --headed <web url>/sign-in`. Sign in as the user each case needs (the README's demo users
-table says who works where, and the password), switch location in the top bar, and do what the case says.
+(a visible window), so whoever runs QA can follow each step and stop it, and with **a profile that lasts**:
+
+```
+bunx playwright-cli open --headed --profile=<home folder>/.acme-qa-profile <web url>/sign-in
+```
+
+`<home folder>` is the absolute path `bun -e "console.log(require('node:os').homedir())"` prints (the same on
+Windows). A new test browser starts empty: no cache, no cookies, no stored data. A user's browser is never empty, and
+some bugs only show in one that has been used: a full cache, a sign-in or a setting left from yesterday, data an older
+version stored. So the profile is kept from one QA run to the next, and grows like a real one: never delete it
+(`delete-data`), and never test only in a fresh browser.
+
+1. **Use it first.** Before the first case, use the app for a minute as the ticket's user would: open each page from
+   the menu, page through a list, open a few records, switch location. A browser that has done this is the one users
+   have.
+2. **Take it as you find it.** The profile may still be signed in, as anyone, from the last run. Note who, then sign
+   out or switch as the case needs: whatever the profile was left in is a state users reach too, and something going
+   wrong from it is a finding.
+3. **Then the other conditions.** A case can pass in one browser state and fail in another, so run each case under
+   every condition below that could change its result, not only the one the browser happens to be in. The plan says,
+   for each case, which conditions it runs under, and in one line why any other is left out. The browser commands
+   in the table are `bunx playwright-cli` commands.
+
+| Condition          | The ways to run it                                                                                                                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cache              | the kept profile (a cache that has been used), and a fresh one with nothing in it: `-s=fresh open --headed <web url>/sign-in`, `-s=fresh` on every command for it, `-s=fresh close` after                        |
+| What the site kept | as found; after clearing it while signed in (`localstorage-clear`, `sessionstorage-clear`); after `cookie-clear` in the middle of a task, which ends the sign-in under the page                                  |
+| Sign-in            | signed in as the user the case needs; as someone else; signed out; a sign-in that ended in another tab while this one was busy                                                                                   |
+| Network            | online; offline at the step that matters, then back (`network-state-set offline`, then `online`)                                                                                                                 |
+| Tabs               | one tab; the same page in two tabs, with a change in one                                                                                                                                                         |
+| Screen             | a desktop width; a phone (`-s=phone open --headed --mobile <web url>/sign-in`)                                                                                                                                   |
+| Look and language  | light and dark (`set-color-scheme dark`); English and French                                                                                                                                                     |
+| Services           | all up; one down at the step that matters (`bun run resource <service> stop`), then back (`bun run resource <service> start`); or the browser told a service failed (`route "**/api/<service>/**" --status 503`) |
+
+Not every case under every condition: every condition that touches what the case does. A sign-out touches the
+cache, the stored data, the sign-in, the network and the tabs; a list's sort order touches none but the language.
+A difference between two conditions is a finding, and its result names both.
+
+**A service down** is a condition users meet: a deploy, a crash, a database restart. Stop only one the case goes
+through (`bun run status` names them: the services, export-worker where there is one, and rabbitmq, whose messages
+must wait), and expect the system to say so in plain words, keep what the user typed, never lose or double what was
+sent, and recover by itself when the service is back, a message waiting in a queue included. `bun run resource` asks a
+person each time: say which service and why. **Every service you stopped is started again before you finish**, and
+`bun run status` shows it Running and Healthy, whatever the result: never leave the system broken for the next person.
+`route` only changes what the browser sees: `unroute` after, and use it for a quick check, never in place of the real
+outage.
+
+Sign in as the user each case needs (the README's demo users table says who works where, and the password), switch
+location in the top bar, and do what the case says.
 
 **A screenshot for each case you test in the browser**, at the moment that shows its result, saved outside the repository: the folder is
 `qa-<KEY>` in the system's temporary folder, whose absolute path `bun -e "console.log(require('node:os').tmpdir())"`
