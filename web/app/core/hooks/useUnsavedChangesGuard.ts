@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useBlocker } from "react-router";
 import { useLocationChangeGuard } from "../contexts/location/LocationChangeGuardContext";
 import { session } from "../storage/sessionStore";
@@ -12,15 +12,8 @@ export const BYPASS_UNSAVED_CHANGES_GUARD = { bypassUnsavedChangesGuard: true };
  * one question is asked. Use it through `<FormGuards>`.
  */
 export function useUnsavedChangesGuard(isDirty: boolean) {
-  const { pendingLocationId, registerBeforeUnloadBypass } = useLocationChangeGuard();
+  const { pendingLocationId } = useLocationChangeGuard();
   const isSwitchingLocation = pendingLocationId !== null;
-  const bypassed = useRef(false);
-
-  useEffect(() => {
-    registerBeforeUnloadBypass(() => {
-      bypassed.current = true;
-    });
-  }, [registerBeforeUnloadBypass]);
 
   // Stable between renders: a new function on every render makes useBlocker re-register in a loop.
   const shouldBlock = useCallback(
@@ -49,7 +42,7 @@ export function useUnsavedChangesGuard(isDirty: boolean) {
     }
     const handler = (event: BeforeUnloadEvent) => {
       // A tab whose sign-in ended (signed out here or in another tab) could save nothing: it goes to the sign-in page.
-      if (!bypassed.current && session.isSignedIn()) {
+      if (session.isSignedIn()) {
         event.preventDefault();
       }
     };
