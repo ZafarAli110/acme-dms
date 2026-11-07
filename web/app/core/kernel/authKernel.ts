@@ -4,6 +4,7 @@ import { type CurrentUser, identityQueries } from "../queries/identityQueries";
 import { queryClient } from "../queries/queryClient";
 import { sessionExpiry } from "../services/sessionExpiry";
 import { type OtherTabChange, session } from "../storage/sessionStore";
+import { exportKernel } from "./exportKernel";
 
 export type AuthStatus = "resolving" | "signed-in" | "signed-out";
 
@@ -135,6 +136,8 @@ export class AuthKernel {
   private forget(): void {
     session.clear();
     queryClient.clear();
+    // The cards hold the previous sign-in's download links; the next user's exports are put back from the service.
+    exportKernel.reset();
     this._generation += 1;
     this._resolving = null;
   }
