@@ -13,6 +13,6 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Acme.Gateway\Acme.Gateway.csproj" />
+    <ProjectReference Include="..\..\src\Acme.Gateway.Service\Acme.Gateway.Service.csproj" />
   </ItemGroup>
 </Project>

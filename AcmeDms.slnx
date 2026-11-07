@@ -16,7 +16,12 @@
     <Project Path="backend/document-api/tests/Acme.Documents.Tests/Acme.Documents.Tests.csproj" />
   </Folder>
   <Folder Name="/backend/gateway-api/">
-    <Project Path="backend/gateway-api/src/Acme.Gateway/Acme.Gateway.csproj" />
+    <Project Path="backend/gateway-api/src/Acme.Gateway.BusinessLogic.Abstractions/Acme.Gateway.BusinessLogic.Abstractions.csproj" />
+    <Project Path="backend/gateway-api/src/Acme.Gateway.BusinessLogic/Acme.Gateway.BusinessLogic.csproj" />
+    <Project Path="backend/gateway-api/src/Acme.Gateway.DTO/Acme.Gateway.DTO.csproj" />
+    <Project Path="backend/gateway-api/src/Acme.Gateway.Persistence/Acme.Gateway.Persistence.csproj" />
+    <Project Path="backend/gateway-api/src/Acme.Gateway.RestClients/Acme.Gateway.RestClients.csproj" />
+    <Project Path="backend/gateway-api/src/Acme.Gateway.Service/Acme.Gateway.Service.csproj" />
     <Project Path="backend/gateway-api/tests/Acme.Gateway.Tests/Acme.Gateway.Tests.csproj" />
   </Folder>
   <Folder Name="/backend/identity-api/" />
