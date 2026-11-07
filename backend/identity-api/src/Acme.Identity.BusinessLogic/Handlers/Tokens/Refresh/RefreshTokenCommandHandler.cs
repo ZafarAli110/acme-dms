@@ -39,7 +39,10 @@ internal sealed class RefreshTokenCommandHandler : IRefreshTokenCommandHandler
         _timeProvider = timeProvider;
     }
 
-    public async Task<IssuedTokens> ExecuteAsync(string? refreshToken, CancellationToken cancellationToken)
+    public Task<IssuedTokens> ExecuteAsync(string? refreshToken, CancellationToken cancellationToken) =>
+        ExecuteAsync(refreshToken, renewalKey: null, cancellationToken);
+
+    public async Task<IssuedTokens> ExecuteAsync(string? refreshToken, string? renewalKey, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(refreshToken))
         {
@@ -65,7 +68,9 @@ internal sealed class RefreshTokenCommandHandler : IRefreshTokenCommandHandler
         }
 
         var replacedFor = now - current.RotatedAt;
-        if (replacedFor > TimeSpan.FromSeconds(TokenSettings.RefreshReuseGraceSeconds))
+        // The renewal that replaced it, asked again with its key after its answer was lost: not a copy, however late.
+        var sameRenewal = renewalKey is not null && current.RotationKey == renewalKey;
+        if (replacedFor > TimeSpan.FromSeconds(TokenSettings.RefreshReuseGraceSeconds) && !sameRenewal)
         {
             // Replaced long ago and shown again: someone else has a copy. Nobody keeps this sign-in, not even its owner.
             await RefreshTokenChain.RevokeAsync(_dbContext, current.FamilyId, now, cancellationToken);
@@ -99,7 +104,10 @@ internal sealed class RefreshTokenCommandHandler : IRefreshTokenCommandHandler
         await _dbContext.RefreshTokens
             .Where(t => t.Id == current.Id)
             .ExecuteUpdateAsync(
-                set => set.SetProperty(t => t.RotatedAt, now).SetProperty(t => t.NextTokenSealed, nextSealed),
+                set => set
+                    .SetProperty(t => t.RotatedAt, now)
+                    .SetProperty(t => t.NextTokenSealed, nextSealed)
+                    .SetProperty(t => t.RotationKey, renewalKey),
                 cancellationToken);
         // The chain stays short: what was replaced long ago can no longer tell a copy from the owner.
         await _dbContext.RefreshTokens
