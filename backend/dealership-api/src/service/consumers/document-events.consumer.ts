@@ -133,6 +133,17 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
       return;
     }
     try {
+      await this.settleAsync(channel, message);
+    } catch (error) {
+      // The channel closed under it (a reconnect): the message was never acknowledged, so RabbitMQ delivers it again on
+      // the new channel, and the inbox makes the second time harmless. Called with `void`: nothing may escape here.
+      this._logger.warn({ err: error }, "Could not acknowledge a document event; it will be delivered again");
+    }
+  }
+
+  /** Handles the message and acknowledges, retries or dead-letters it. Throws only when the channel is gone. */
+  private async settleAsync(channel: ConfirmChannel, message: ConsumeMessage): Promise<void> {
+    try {
       const envelope = JSON.parse(message.content.toString("utf8")) as MessageEnvelopeDto<unknown>;
       switch (envelope.type) {
         case DOCUMENT_PROCESSED:

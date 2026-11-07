@@ -96,4 +96,51 @@ describe("UpdatePartCommandHandler", () => {
     const [unchanged] = await database.db.select().from(parts).where(eq(parts.id, part.id));
     expect(unchanged?.description).toBe("Part UPD-003");
   });
+
+  it("counts again under the part's lock: a photo uploaded meanwhile cannot take it past the limit", async () => {
+    const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "UPD-LIM" });
+    const existing = [];
+    for (let index = 0; index < 9; index++) {
+      existing.push(await database.seed.addPhotoAsync({ partId: part.id, isDefault: index === 0 }));
+    }
+    const documents = fakeDocumentApi();
+    documents.uploadDocumentAsync.mockImplementationOnce(async () => {
+      // Someone uploads the tenth photo through the photo endpoint while this save is uploading its file.
+      await database.seed.addPhotoAsync({ partId: part.id, isDefault: false });
+      return { id: crypto.randomUUID(), status: "Pending" };
+    });
+
+    await expect(
+      new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()).executeAsync(
+        AT_NORTHSIDE,
+        part.id,
+        {
+          photos: existing.map((photo) => ({ id: photo.id, isDefault: photo.isDefault })),
+          newPhotos: [{ isDefault: false }],
+        },
+        [jpeg("eleventh.jpg")],
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(documents.deleteDocumentAsync).toHaveBeenCalledOnce();
+  });
+
+  it("leaves one default when a photo uploaded meanwhile was made the default too", async () => {
+    const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "UPD-DEF" });
+    const documents = fakeDocumentApi();
+    documents.uploadDocumentAsync.mockImplementationOnce(async () => {
+      // The first photo, uploaded through the photo endpoint meanwhile, becomes the default there.
+      await database.seed.addPhotoAsync({ partId: part.id, isDefault: true });
+      return { id: crypto.randomUUID(), status: "Pending" };
+    });
+
+    const saved = await new UpdatePartCommandHandler(
+      database.unitOfWorkFactory,
+      documents.client,
+      fixedClock(),
+    ).executeAsync(AT_NORTHSIDE, part.id, { photos: [], newPhotos: [{ isDefault: true }] }, [jpeg("chosen.jpg")]);
+
+    expect(saved.photos.filter((photo) => photo.isDefault).map((photo) => photo.originalFileName)).toEqual([
+      "chosen.jpg",
+    ]);
+  });
 });
