@@ -19,7 +19,8 @@ Every piece of the harness, what it does and the lab that added it: `docs/HARNES
 
 **Goal:** Take ACME-106 from the board to a reviewed pull request and through QA, and watch what it costs.
 
-**Tickets:** ACME-108 is already built on this branch: don't pick it. The others are open.
+**Tickets:** ACME-108 is already built on this branch: don't pick it. ACME-115 is for the second exercise. The
+others are open.
 
 1. Open `.claude/skills/ticket-to-pr/SKILL.md` and `.claude/agents/architect.md`.
 2. Install a plugin, once: the cost meter, which shows what the run costs while it runs. In Claude:
@@ -45,11 +46,42 @@ Every piece of the harness, what it does and the lab that added it: `docs/HARNES
 - Reviewers from one model family share blind spots: a person still reads the diff and merges.
 - A plugin is how a team shares harness pieces across repositories: one install, and it works in every project.
 
+## Exercise 2 (take-home): QA what is already built
+
+**Goal:** QA a feature nobody changed, and find out what a tester needs to see that a clean test browser does not.
+
+**Ticket:** ACME-115, signing out in every open tab. It is already built on this branch: QA it, don't build it.
+
+1. On the board, move ACME-115 to **In Review**: it is ready to test.
+2. Start the system (`bun run dev`) and the tracker. In Claude: `/clear`, `/show-meter reset`, then
+   `/qa-ticket ACME-115`. Watch the plan it posts first, then the browser. When it asks to stop a service
+   (`bun run resource`), read why before you answer.
+3. Read its results on the ticket: for each case, what it saw on the screen, in the console, in the network, in the
+   timings and in the services' traces. A PASS with no evidence is not a PASS.
+4. Now test it yourself, in your own everyday browser, not a test one: open the app in three tabs, open the developer
+   tools (Network, with **Preserve log** on, and Console), and sign out. Then do it again. Did you see anything QA did
+   not?
+5. Run `/qa-ticket ACME-115` twice more, moving it back to In Review each time. Its browser keeps its profile between
+   runs: does what it finds change?
+
+### What to notice
+
+- A test browser starts empty; a user's never is. Some bugs only show in a browser that has been used.
+- The screen is the last place a problem shows: the console, the network log, the timings and the traces show it
+  first.
+- QA finds what it tests for. When it misses something you found, what would it have needed to look at, and where does
+  that belong: in the ticket, or in the qa agent's instructions?
+
 ## Cost
 
 The largest single command in the labs: several agents across a whole ticket. Run it once, and read what it spent on
 the cost meter.
 A pull request needs a repository you can push to: push your clone to your own repository first.
+
+Exercise 2: one QA run is one subagent and a browser, for a few minutes. Reset the meter before each run
+(`/show-meter reset`) and compare the three: more evidence costs more tokens.
+
+How to spend less, and what each model costs: the README's [Spending tokens wisely](README.md#spending-tokens-wisely).
 
 ## Next
 
