@@ -69,11 +69,12 @@ Every message has the same envelope; `data` depends on `type`.
 | `acme.documents`     | topic | document-api's work items and events               |
 | `acme.documents.dlx` | topic | dead letters: messages a consumer could not handle |
 
-| Queue                            | Consumer       | Bound to                                      |
-| -------------------------------- | -------------- | --------------------------------------------- |
-| `document-api.process-document`  | document-api   | `document.process.v1`                         |
-| `dealership-api.document-events` | dealership-api | `document.processed.v1`, `document.failed.v1` |
-| `*.dlq`                          | (people)       | the dead letters of the queue with that name  |
+| Queue                                  | Consumer       | Bound to                                                                                                                             |
+| -------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `document-api.process-document`        | document-api   | `document.process.v1`                                                                                                                |
+| `dealership-api.document-events`       | dealership-api | `document.processed.v1`, `document.failed.v1`                                                                                        |
+| `dealership-api.document-events.retry` | (none)         | a failed event waits 5 s, then goes back to `dealership-api.document-events` (default exchange); 5 tries, then the dead-letter queue |
+| `*.dlq`                                | (people)       | the dead letters of the queue with that name                                                                                         |
 
 ### Message types
 
