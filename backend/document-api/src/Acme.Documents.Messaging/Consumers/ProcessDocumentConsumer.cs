@@ -57,7 +57,17 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
 
     private async Task HandleAsync(IChannel channel, BasicDeliverEventArgs delivery, CancellationToken cancellationToken)
     {
-        var envelope = JsonSerializer.Deserialize<MessageEnvelope<ProcessDocumentMessageDto>>(delivery.Body.Span, _jsonOptions);
+        MessageEnvelope<ProcessDocumentMessageDto>? envelope;
+        try
+        {
+            envelope = JsonSerializer.Deserialize<MessageEnvelope<ProcessDocumentMessageDto>>(delivery.Body.Span, _jsonOptions);
+        }
+        catch (JsonException)
+        {
+            // Never handleable: to the dead-letter queue, not held unacknowledged.
+            envelope = null;
+        }
+
         if (envelope is null)
         {
             await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);
@@ -77,7 +87,18 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
             {
                 LogRetrying(_logger, envelope.Data.DocumentId, attempt, ex);
                 await Task.Delay(TimeSpan.FromSeconds(2 * attempt), cancellationToken);
-                await RepublishAsync(channel, delivery, attempt + 1, cancellationToken);
+                try
+                {
+                    await RepublishAsync(channel, delivery, attempt + 1, cancellationToken);
+                }
+                catch (Exception publishError) when (publishError is not OperationCanceledException)
+                {
+                    // The broker did not take the retry: give this delivery back to the queue instead of holding it.
+                    LogRepublishFailed(_logger, envelope.Data.DocumentId, publishError);
+                    await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: true, cancellationToken);
+                    return;
+                }
+
                 await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken);
                 return;
             }
@@ -114,6 +135,9 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Processing document {DocumentId} failed after {Attempt} attempts; marking it failed")]
     private static partial void LogGivingUp(ILogger logger, Guid documentId, int attempt, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The retry of document {DocumentId} could not be published; its message goes back to the queue")]
+    private static partial void LogRepublishFailed(ILogger logger, Guid documentId, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Document {DocumentId} could not be marked failed; its message goes to the dead-letter queue")]
     private static partial void LogCouldNotMarkFailed(ILogger logger, Guid documentId, Exception exception);
