@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { earlyDocumentOutcomes } from "#persistence/schema/early-document-outcomes";
 import { partPhotos } from "#persistence/schema/part-photos";
 import { processedMessages } from "#persistence/schema/processed-messages";
@@ -8,6 +8,7 @@ import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { fixedClock, TEST_NOW } from "#test-setup/time/fixed-clock";
 import { MarkPartPhotoReadyCommandHandler } from "../mark-photo-ready/mark-part-photo-ready.command-handler";
 import { PHOTO_TIMED_OUT, sweepPhotosAsync } from "../photo-outcome";
+import { PhotoSweeper } from "../../../photos/photo-sweeper";
 
 describe("the photo sweep", () => {
   const database = useTestDatabase();
@@ -80,5 +81,36 @@ describe("the photo sweep", () => {
     const messages = await database.db.select().from(processedMessages);
     expect(messages.map((message) => message.messageId)).toContain(newMessage);
     expect(messages.map((message) => message.messageId)).not.toContain(oldMessage);
+  });
+
+  it("tells document-api about a document no photo claimed in a day, and forgets it only once that is sent", async () => {
+    const now = TEST_NOW.add({ hours: 25 });
+    const orphan = {
+      documentId: crypto.randomUUID(),
+      dealerId: NORTHWIND,
+      status: "ready" as const,
+      failureReason: null,
+    };
+    await database.db.insert(earlyDocumentOutcomes).values({ ...orphan, receivedAt: TEST_NOW });
+    const broker = {
+      publishUnclaimedAsync: vi.fn<(documents: { documentId: string; dealerId: string }[]) => Promise<void>>(() =>
+        Promise.reject(new Error("RabbitMQ is not connected")),
+      ),
+    };
+    const stillThere = async () =>
+      (await database.db.select().from(earlyDocumentOutcomes)).some((row) => row.documentId === orphan.documentId);
+
+    // The broker is down: the outcome stays for the next sweep.
+    await new PhotoSweeper(database.unitOfWorkFactory, fixedClock(now), broker).sweepAsync();
+    expect(await stillThere()).toBe(true);
+
+    broker.publishUnclaimedAsync.mockResolvedValueOnce(undefined);
+    await new PhotoSweeper(database.unitOfWorkFactory, fixedClock(now), broker).sweepAsync();
+
+    expect(broker.publishUnclaimedAsync.mock.lastCall?.[0]).toContainEqual({
+      documentId: orphan.documentId,
+      dealerId: NORTHWIND,
+    });
+    expect(await stillThere()).toBe(false);
   });
 });

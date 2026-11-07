@@ -97,7 +97,10 @@ export async function applyEarlyOutcomesAsync(
  * outcomes after a day (their upload failed or was refused) and the inbox's message ids after 30 days (a redelivery
  * comes within minutes). Every statement is conditional, so a sweep on several instances at once does no harm.
  */
-export async function sweepPhotosAsync(db: Database, now: Temporal.Instant): Promise<{ timedOut: number }> {
+export async function sweepPhotosAsync(
+  db: Database,
+  now: Temporal.Instant,
+): Promise<{ timedOut: number; unclaimed: { documentId: string; dealerId: string }[] }> {
   const timedOut = await db
     .update(partPhotos)
     .set({ status: "failed", failureReason: PHOTO_TIMED_OUT, updatedAt: now, updatedBy: SYSTEM_USER_ID })
@@ -109,9 +112,14 @@ export async function sweepPhotosAsync(db: Database, now: Temporal.Instant): Pro
       ),
     )
     .returning({ id: partPhotos.id });
-  await db.delete(earlyDocumentOutcomes).where(lt(earlyDocumentOutcomes.receivedAt, now.subtract({ hours: 24 })));
+  // An outcome no upload claimed in a day: its photo was never saved, so its document is nobody's (PhotoSweeper tells
+  // document-api, which deletes it).
+  const unclaimed = await db
+    .delete(earlyDocumentOutcomes)
+    .where(lt(earlyDocumentOutcomes.receivedAt, now.subtract({ hours: 24 })))
+    .returning({ documentId: earlyDocumentOutcomes.documentId, dealerId: earlyDocumentOutcomes.dealerId });
   await db.delete(processedMessages).where(lt(processedMessages.processedAt, now.subtract({ hours: 24 * 30 })));
-  return { timedOut: timedOut.length };
+  return { timedOut: timedOut.length, unclaimed };
 }
 
 /** One document's events and its upload take turns, until the transaction ends. */
