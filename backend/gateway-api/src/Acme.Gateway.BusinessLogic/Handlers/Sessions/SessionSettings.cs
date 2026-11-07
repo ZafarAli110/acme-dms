@@ -19,8 +19,15 @@ internal static class SessionSettings
     public static readonly TimeSpan RenewalTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>
-    /// How long a renewal holds its lease on the session (<c>renewing_until</c>): longer than <see cref="RenewalTimeout"/>, so
-    /// a renewal still running is not overtaken, and shorter than identity-api's 20-second grace period, so a gateway that
+    /// The time limit of the one retry after a renewal got no answer. identity-api may have replaced the token and lost the
+    /// answer; asked again at once, inside its grace period, it gives the same replacement. Both calls end inside
+    /// <see cref="Lease"/>.
+    /// </summary>
+    public static readonly TimeSpan RenewalRetryTimeout = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// How long a renewal holds its lease on the session (<c>renewing_until</c>): longer than <see cref="RenewalTimeout"/> and
+    /// <see cref="RenewalRetryTimeout"/> together, so a renewal still running is not overtaken, and shorter than identity-api's 20-second grace period, so a gateway that
     /// stopped mid-renewal is followed by one that asks again inside the grace and gets the same replacement token.
     /// </summary>
     public static readonly TimeSpan Lease = TimeSpan.FromSeconds(15);
