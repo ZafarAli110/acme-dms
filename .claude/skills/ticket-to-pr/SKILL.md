@@ -71,6 +71,9 @@ Start, in parallel, each reviewer whose area the diff touches, each with the tic
 
 - **security-reviewer**: always. A secret in a config, personal data in a log line or a new package is a security
   finding in a diff that touches no endpoint.
+- **state-reviewer**: anything that moves through stages: a status or lifecycle column, a job, queue or sweeper, a
+  message sent or consumed, a lease, lock or retry, a cache or ETag, sign-in or sign-out, a kernel, a form or dialog
+  that submits, or anything kept per tab.
 - **performance-reviewer**: a query, a list or an export, or anything done per row.
 - **test-reviewer**: always.
 - **clean-code-reviewer**: always.
