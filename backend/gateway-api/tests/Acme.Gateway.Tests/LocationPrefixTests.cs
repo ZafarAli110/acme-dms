@@ -1,3 +1,5 @@
+using Acme.Gateway.Service;
+
 namespace Acme.Gateway.Tests;
 
 [TestClass]
