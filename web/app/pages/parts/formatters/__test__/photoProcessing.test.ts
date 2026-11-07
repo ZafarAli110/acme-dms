@@ -2,37 +2,50 @@ import { describe, expect, it } from "vitest";
 import type { PartPhoto } from "../../types/part";
 import { isTakingLong, isWorthPolling, msUntilTakingLong, PHOTO_POLL_LIMIT_MS } from "../photoProcessing";
 
-const savedAt = Date.parse("2026-11-07T09:00:00Z");
-const photo = (status: PartPhoto["status"]): PartPhoto => ({
-  id: "p1",
+let next = 0;
+/** A photo with an id of its own, so each test starts its clock afresh; `createdAt` is the server's and ignored. */
+const photo = (status: PartPhoto["status"], createdAt = "2026-11-07T09:00:00Z"): PartPhoto => ({
+  id: `p${++next}`,
   documentId: "d1",
   originalFileName: "front.jpg",
   status,
   failureReason: null,
   isDefault: true,
-  createdAt: new Date(savedAt).toISOString(),
+  createdAt,
 });
 
 describe("photo processing", () => {
-  it("keeps asking about a photo being processed, until the limit", () => {
-    expect(isWorthPolling([photo("pending")], savedAt + 1000)).toBe(true);
-    expect(isWorthPolling([photo("pending")], savedAt + PHOTO_POLL_LIMIT_MS)).toBe(false);
+  const seenAt = 1_000_000;
+
+  it("keeps asking about a photo being processed, until the limit from when this page first saw it", () => {
+    const pending = [photo("pending")];
+
+    expect(isWorthPolling(pending, seenAt)).toBe(true);
+    expect(isWorthPolling(pending, seenAt + PHOTO_POLL_LIMIT_MS - 1)).toBe(true);
+    expect(isWorthPolling(pending, seenAt + PHOTO_POLL_LIMIT_MS)).toBe(false);
   });
 
-  it("says a photo is taking long once the page has stopped asking", () => {
-    expect(isTakingLong([photo("pending")], savedAt + PHOTO_POLL_LIMIT_MS - 1)).toBe(false);
-    expect(isTakingLong([photo("pending")], savedAt + PHOTO_POLL_LIMIT_MS)).toBe(true);
+  it("does not trust the server's time against this browser's clock", () => {
+    // A laptop whose clock runs ten minutes ahead of the server: the photo was just saved.
+    const pending = [photo("pending", new Date(seenAt - 10 * 60 * 1000).toISOString())];
+
+    expect(isWorthPolling(pending, seenAt)).toBe(true);
+    expect(isTakingLong(pending, seenAt)).toBe(false);
+  });
+
+  it("says a photo is taking long once the page has stopped asking, and when that will be", () => {
+    const pending = [photo("pending")];
+
+    expect(msUntilTakingLong(pending, seenAt)).toBe(PHOTO_POLL_LIMIT_MS);
+    expect(isTakingLong(pending, seenAt + PHOTO_POLL_LIMIT_MS)).toBe(true);
+    expect(msUntilTakingLong(pending, seenAt + PHOTO_POLL_LIMIT_MS)).toBeNull();
   });
 
   it("does neither for photos that are finished", () => {
     const finished = [photo("ready"), photo("failed")];
-    expect(isWorthPolling(finished, savedAt)).toBe(false);
-    expect(isTakingLong(finished, savedAt + PHOTO_POLL_LIMIT_MS * 10)).toBe(false);
-  });
 
-  it("says when the page should look again: when the first photo still processing reaches the limit", () => {
-    expect(msUntilTakingLong([photo("pending")], savedAt + 1000)).toBe(PHOTO_POLL_LIMIT_MS - 1000);
-    expect(msUntilTakingLong([photo("pending")], savedAt + PHOTO_POLL_LIMIT_MS)).toBeNull();
-    expect(msUntilTakingLong([photo("ready")], savedAt)).toBeNull();
+    expect(isWorthPolling(finished, seenAt)).toBe(false);
+    expect(isTakingLong(finished, seenAt + PHOTO_POLL_LIMIT_MS * 10)).toBe(false);
+    expect(msUntilTakingLong(finished, seenAt)).toBeNull();
   });
 });
