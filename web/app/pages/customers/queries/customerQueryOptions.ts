@@ -11,22 +11,23 @@ export const customerQueryOptions = {
   list: (locationId: string, params: ListParams) =>
     queryOptions({
       queryKey: CUSTOMER_QUERY_KEYS.list(locationId, params),
-      queryFn: ({ signal }) => customerQueries.getCustomersAsync(params, { signal }),
+      queryFn: ({ signal }) => customerQueries.getCustomersAsync(params, { signal, locationId }),
     }),
   /** The first page of one: its `total` is how many customers the location has. */
   count: (locationId: string) =>
     queryOptions({
       queryKey: CUSTOMER_QUERY_KEYS.count(locationId),
-      queryFn: ({ signal }) => customerQueries.getCustomersAsync({ ...FIRST_PAGE, pageSize: 1 }, { signal }),
+      queryFn: ({ signal }) =>
+        customerQueries.getCustomersAsync({ ...FIRST_PAGE, pageSize: 1 }, { signal, locationId }),
     }),
   recent: (locationId: string) =>
     queryOptions({
       queryKey: CUSTOMER_QUERY_KEYS.recent(locationId),
-      queryFn: ({ signal }) => customerQueries.getRecentCustomersAsync({ signal }),
+      queryFn: ({ signal }) => customerQueries.getRecentCustomersAsync({ signal, locationId }),
     }),
   detail: (locationId: string, customerId: string) =>
     queryOptions({
       queryKey: CUSTOMER_QUERY_KEYS.detail(locationId, customerId),
-      queryFn: ({ signal }) => customerQueries.getCustomerAsync(customerId, { signal }),
+      queryFn: ({ signal }) => customerQueries.getCustomerAsync(customerId, { signal, locationId }),
     }),
 };
