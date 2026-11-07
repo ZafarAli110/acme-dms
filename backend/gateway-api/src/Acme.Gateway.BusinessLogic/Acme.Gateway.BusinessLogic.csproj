@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Acme.Gateway.BusinessLogic.Abstractions\Acme.Gateway.BusinessLogic.Abstractions.csproj" />
+    <ProjectReference Include="..\Acme.Gateway.Persistence\Acme.Gateway.Persistence.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Acme.Gateway.Tests" />
+  </ItemGroup>
+</Project>
