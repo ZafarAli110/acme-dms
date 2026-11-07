@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Security.Cryptography;
 using Acme.Identity.BusinessLogic.Abstractions.Exceptions;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.Tokens;
@@ -13,9 +14,11 @@ using Acme.Identity.Persistence.Entities;
 using Acme.Identity.Tests.Support;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
+using Npgsql;
 
 namespace Acme.Identity.Tests.Handlers.Tokens;
 
@@ -231,6 +234,26 @@ public sealed class RefreshTokenTests
     }
 
     [TestMethod]
+    public async Task Refresh_ATokenDeletedAfterItWasFound_BeforeTheLock_IsRefusedLikeAnUnknownOne()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        var clock = new TestClock();
+        var signedIn = await SignInAsync(dbContext, clock);
+        var connectionString = dbContext.Database.GetConnectionString()!;
+        // Another request (a sign-in clearing the person's ended tokens) deletes the token between this refresh finding it
+        // and taking the sign-in's lock.
+        await using var refreshing = new IdentityDbContext(
+            new DbContextOptionsBuilder<IdentityDbContext>()
+                .UseNpgsql(connectionString)
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(new DeleteTokensBeforeTheLock(connectionString))
+                .Options);
+
+        // Refused as unknown (401), not a crash (500).
+        await Assert.ThrowsExactlyAsync<ApiException>(() => Refresh(refreshing, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
+    }
+
+    [TestMethod]
     public async Task Refresh_RefusesATokenThatIsMissingUnknownRevokedOrPastItsLifetime_WithTheSameAnswer()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
@@ -350,5 +373,34 @@ public sealed class RefreshTokenTests
         public override DateTimeOffset GetUtcNow() => _now;
 
         public void Advance(TimeSpan by) => _now += by;
+    }
+
+    /// <summary>Deletes every refresh token from another connection just before the refresh's lock statement runs.</summary>
+    private sealed class DeleteTokensBeforeTheLock : DbCommandInterceptor
+    {
+        private readonly string _connectionString;
+
+        public DeleteTokensBeforeTheLock(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(command);
+            if (command.CommandText.Contains("FOR UPDATE", StringComparison.Ordinal))
+            {
+                await using var connection = new NpgsqlConnection(_connectionString);
+                await connection.OpenAsync(cancellationToken);
+                await using var delete = new NpgsqlCommand("DELETE FROM refresh_tokens", connection);
+                await delete.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            return result;
+        }
     }
 }
