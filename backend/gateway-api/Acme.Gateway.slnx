@@ -1,5 +1,12 @@
 <Solution>
-  <Project Path="src/Acme.Gateway/Acme.Gateway.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/Acme.Gateway.BusinessLogic.Abstractions/Acme.Gateway.BusinessLogic.Abstractions.csproj" />
+    <Project Path="src/Acme.Gateway.BusinessLogic/Acme.Gateway.BusinessLogic.csproj" />
+    <Project Path="src/Acme.Gateway.DTO/Acme.Gateway.DTO.csproj" />
+    <Project Path="src/Acme.Gateway.Persistence/Acme.Gateway.Persistence.csproj" />
+    <Project Path="src/Acme.Gateway.RestClients/Acme.Gateway.RestClients.csproj" />
+    <Project Path="src/Acme.Gateway.Service/Acme.Gateway.Service.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Acme.Gateway.Tests/Acme.Gateway.Tests.csproj" />
   </Folder>
