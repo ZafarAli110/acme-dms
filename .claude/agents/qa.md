@@ -88,7 +88,9 @@ the language. A difference between two conditions is a finding, and its result n
 
 **The person's own browser, only when you are told you may.** A test browser, even a kept one, is younger than a
 user's: a bug that needs years of cache, extensions or settings may only show in a real one. When the request that
-started you says you may use the person's own browser, run the cases where the browser's state matters there as well.
+started you says you may use the person's own browser, you run the cases where the browser's state matters there as
+well: it is not optional, and passing in a test browser does not make it unnecessary, since what you are looking for
+may only show in theirs. If you cannot attach, those cases are BLOCKED in their browser, with the reason.
 The person first turns on remote debugging in it (`chrome://inspect/#remote-debugging`, "Allow remote debugging for
 this browser instance"); then `bunx playwright-cli attach --cdp=chrome`, and `-s=chrome` on every command for it. It
 is their browser: open the app in a new tab of your own (`-s=chrome tab-new <web url>`), never read, use or close
@@ -107,10 +109,12 @@ outage.
 Sign in as the user each case needs (the README's demo users table says who works where, and the password), switch
 location in the top bar, and do what the case says.
 
-**A screenshot for each case you test in the browser**, at the moment that shows its result, saved outside the repository: the folder is
-`qa-<KEY>` in the system's temporary folder, whose absolute path `bun -e "console.log(require('node:os').tmpdir())"`
-prints (the same on Windows). Name each `T1-<what it shows>.png`. Open each with `Read` and say what you see: the
-screenshot is the evidence, so it must show what the case claims.
+**A screenshot for each case you test in the browser**, at the moment that shows its result, saved outside the
+repository: the folder is `qa-<KEY>` in the system's temporary folder, whose absolute path
+`bun -e "console.log(require('node:os').tmpdir())"` prints (the same on Windows). Empty that folder before the first
+case, so only this run's screenshots are in it. Name each `T1-<what it shows>.png`. Open each with `Read` and say what
+you see: the screenshot is the evidence, so it must show what the case claims. A case tested in the browser with no
+screenshot has no evidence, and is BLOCKED until it has one.
 
 What a browser cannot show, check with the other instruments, and say which you used:
 
@@ -193,10 +197,18 @@ One bug per cause, not per symptom.
    ## QA results: PASS | FAIL | BLOCKED
    - [x] **T1** PASS: <what you saw>; console clean, 3 requests all 2xx, slowest 120 ms; no error traces
    - [ ] **T2** FAIL: <what you saw, and the instrument that showed it>. Bug: ACME-111
+
+   ### Bugs
+   - ACME-111 <its title> (new)
+   - ACME-104 <its title> (already open, still happens)
    ```
 
-3. Attach each case's screenshot to the ticket with `attach_file` (its absolute path), the caption `T1 PASS: <what it
-shows>`, in the order of the cases.
+   The **Bugs** list names every bug this run found, new or already open, by key and title, so whoever reads the
+   ticket sees them without opening each case.
+
+3. Attach **every** case's screenshot to the ticket with `attach_file` (its absolute path), the caption
+   `T1 PASS: <what it shows>`, in the order of the cases: every FAIL's above all, never a chosen few. A FAIL's
+   screenshot also goes on its bug, a new one or one already open.
 4. Move the ticket: **every case PASS** → `done`, and only then; **any FAIL** → `in-progress`, the bugs named in the
    results;
    **anything BLOCKED and nothing failed** → it stays `in-qa`, and the results say what it needs.
