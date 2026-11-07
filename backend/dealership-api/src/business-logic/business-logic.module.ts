@@ -29,7 +29,6 @@ import { GetCustomerQueryHandler } from "./handlers/customers/get/get-customer.q
 import { UpdateCustomerCommandHandler } from "./handlers/customers/update/update-customer.command-handler";
 import { MarkPartPhotoFailedCommandHandler } from "./handlers/parts/mark-photo-failed/mark-part-photo-failed.command-handler";
 import { MarkPartPhotoReadyCommandHandler } from "./handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler";
-import { PhotoSweeper } from "./handlers/parts/photo-sweeper";
 import { CreatePartCommandHandler } from "./handlers/parts/create/create-part.command-handler";
 import { GetPartListQueryHandler } from "./handlers/parts/get-list/get-part-list.query-handler";
 import { GetPartQueryHandler } from "./handlers/parts/get/get-part.query-handler";
@@ -65,8 +64,8 @@ const HANDLERS = [
 @Module({
   imports: [PersistenceModule],
   // The clock handlers use for the current time (tests pass a fixed one).
-  // PhotoSweeper is not a handler: it runs on its own timer, failing photos whose processing never answered.
-  providers: [...HANDLERS, PhotoSweeper, { provide: CLOCK, useClass: SystemClock }],
-  exports: [...HANDLERS.map((handler) => handler.provide), CLOCK],
+  providers: [...HANDLERS, { provide: CLOCK, useClass: SystemClock }],
+  // The unit of work too: the photo sweeper (registered in AppModule, beside the message publisher) needs it.
+  exports: [...HANDLERS.map((handler) => handler.provide), CLOCK, PersistenceModule],
 })
 export class BusinessLogicModule {}
