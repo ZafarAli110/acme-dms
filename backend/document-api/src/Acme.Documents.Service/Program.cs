@@ -8,6 +8,8 @@ using Acme.ServiceDefaults.Authentication;
 using Acme.ServiceDefaults.DatabaseErrors;
 using Acme.Documents.Persistence.Auditing;
 using Acme.Documents.Persistence.Database;
+using Acme.Documents.Messaging.RabbitMq;
+using Acme.Documents.Messaging.DeadLetters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,15 @@ builder.Services.AddAcmeAuthentication(builder.Configuration);
 var app = builder.Build();
 
 await app.Services.MigrateDocumentsDatabaseAsync(CancellationToken.None);
+
+// `replay-dead-letters`: sends the processing messages parked in the dead-letter queue back to their queue, once whatever
+// made them fail is fixed (docs/contracts.md). It does its work and exits, serving nothing.
+if (args.Contains("replay-dead-letters"))
+{
+    var replayed = await DeadLetterReplay.ReplayAsync(app.Services.GetRequiredService<RabbitMqConnection>(), CancellationToken.None);
+    Console.WriteLine($"Replayed {replayed} processing messages from the dead-letter queue.");
+    return;
+}
 
 app.UseServiceDefaults();
 app.UseAcmeAuthorization();
