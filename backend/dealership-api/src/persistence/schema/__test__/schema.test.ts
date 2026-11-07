@@ -99,10 +99,12 @@ describe("the dealership schema", () => {
     );
 
     expect(result.rows).toEqual(
-      ["bins", "customers", "part_inventories", "part_photos", "parts"].map((table_name) => ({
-        table_name,
-        is_nullable: "NO",
-      })),
+      ["bins", "customers", "early_document_outcomes", "part_inventories", "part_photos", "parts"].map(
+        (table_name) => ({
+          table_name,
+          is_nullable: "NO",
+        }),
+      ),
     );
   });
 });
