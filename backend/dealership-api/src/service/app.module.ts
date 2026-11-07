@@ -31,6 +31,8 @@ import { RequestCancellationMiddleware } from "./middleware/request-cancellation
 import { loggerOptions } from "./logging/logger-options";
 import { TraceRouteInterceptor } from "./interceptors/trace-route.interceptor";
 import { ProblemDetailsFilter } from "./filters/problem-details.filter";
+import { DOCUMENT_MESSAGE_PUBLISHER } from "#business-logic-abstractions/messaging/document-message.publisher.interface";
+import { PhotoSweeper } from "#business-logic/photos/photo-sweeper";
 
 @Module({
   // The composition root: the only place that wires implementations (REST clients) to abstractions.
@@ -66,6 +68,10 @@ import { ProblemDetailsFilter } from "./filters/problem-details.filter";
   providers: [
     AccessTokenVerifier,
     DocumentEventsConsumer,
+    // The consumer's channel also publishes dealership-api's messages to document-api.
+    { provide: DOCUMENT_MESSAGE_PUBLISHER, useExisting: DocumentEventsConsumer },
+    // Not a handler: runs on its own timer, failing photos whose processing never answered.
+    PhotoSweeper,
     // Guards run in this order: who is calling, then what they may do.
     { provide: APP_GUARD, useClass: AuthenticationGuard },
     { provide: APP_GUARD, useClass: AuthorizationGuard },
