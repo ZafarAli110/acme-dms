@@ -220,6 +220,10 @@ namespace Acme.Identity.Persistence.Migrations
                         .HasColumnType("bytea")
                         .HasColumnName("protected_private_key");
 
+                    b.Property<byte[]>("PublicKeySpki")
+                        .HasColumnType("bytea")
+                        .HasColumnName("public_key_spki");
+
                     b.HasKey("Id")
                         .HasName("pk_signing_keys");
 
