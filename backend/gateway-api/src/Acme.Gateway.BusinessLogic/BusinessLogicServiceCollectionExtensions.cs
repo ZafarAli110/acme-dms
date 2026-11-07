@@ -6,7 +6,7 @@ using Acme.Gateway.BusinessLogic.Handlers.Sessions.Create;
 using Acme.Gateway.BusinessLogic.Handlers.Sessions.Delete;
 using Acme.Gateway.BusinessLogic.Handlers.Sessions.GetAccessToken;
 using Acme.Gateway.BusinessLogic.Handlers.System.GetHealth;
-using Acme.Gateway.BusinessLogic.Sessions;
+using Acme.Gateway.BusinessLogic.Handlers.Sessions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
