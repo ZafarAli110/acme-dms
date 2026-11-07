@@ -59,9 +59,10 @@ some bugs only show in one that has been used: a full cache, a sign-in or a sett
 version stored. So the profile is kept from one QA run to the next, and grows like a real one: never delete it
 (`delete-data`), and never test only in a fresh browser.
 
-1. **Use it first.** Before the first case, use the app for a minute as the ticket's user would: open each page from
-   the menu, page through a list, open a few records, switch location. A browser that has done this is the one users
-   have.
+1. **Use it first, every run.** Before the first case, use the app for a minute as the ticket's user would: open
+   each page from the menu, page through a list, open a few records, switch location. A browser that has done this is
+   the one users have. Never skip it, even when the profile is not new, and say in the results that you did it and
+   what you opened.
 2. **Take it as you find it.** The profile may still be signed in, as anyone, from the last run. Note who, then sign
    out or switch as the case needs: whatever the profile was left in is a state users reach too, and something going
    wrong from it is a finding.
@@ -127,6 +128,17 @@ what they showed in its result:
    second or so by itself): `bunx playwright-cli eval "JSON.stringify(performance.getEntriesByType('navigation').concat(performance.getEntriesByType('resource')).map((e) => [e.name, Math.round(e.duration)]))"`
    gives how long the page and each of its requests took, in milliseconds. A wait longer than the plan allows is a
    finding.
+
+   An action that loads a new page (a sign-in, a sign-out, a save that moves on) wipes that clock, so time it from the
+   click: before it, `bunx playwright-cli eval "addEventListener('click', () => localStorage.setItem('qa.click', String(Date.now())), true)"`;
+   once the new page is there, `bunx playwright-cli eval "Math.round(performance.timeOrigin - Number(localStorage.getItem('qa.click')))"`
+   is how long the user waited between their last click and the new page starting, in milliseconds.
+
+   **A measurement that did not work is not a PASS.** `NaN`, `undefined` or "unknown" means you have no figure: fix
+   the measurement and run the case again, or mark the case BLOCKED and say why. Never put a different figure in its
+   place: a service's trace says how long the **service** took, not how long the **user** waited, and the gap
+   between the two is one of the things you are looking for.
+
 4. **The services.** After the case, from the repository root: `bun run errors` (every failed request, across all
    services), `bun run traces <service>` (each request that reached the service, and how long it took there:
    `gateway-api` sees every one), and `bun run logs <service>` for its warnings and errors at the time of the case.
@@ -135,6 +147,12 @@ what they showed in its result:
 
 **A finding is a FAIL**, however right the screen looks, unless the ticket itself explains it: the result says which
 instrument showed it and quotes the lines.
+
+**Three results only: PASS, FAIL, BLOCKED.** There is no "PASS with a note", "PASS, but", or "worth a look". If you
+would mention it, it is a FAIL with a bug. Whether it matters enough to fix now is the team's decision, made on the
+bug; it is never yours to make by leaving the bug unfiled. Judge each case against what the ticket's user needs, not
+against what the code seems to intend: a technical error message, or a user who thinks something happened when it
+did not, fails however the page got there.
 
 **Never the code.** A case the running system cannot show (a test exists, a filter is in the query) is not yours: it
 belongs to the reviewers. Leave it out of the plan, or mark it BLOCKED; never PASS it by reading the code or the
@@ -169,7 +187,8 @@ One bug per cause, not per symptom.
 
 3. Attach each case's screenshot to the ticket with `attach_file` (its absolute path), the caption `T1 PASS: <what it
 shows>`, in the order of the cases.
-4. Move the ticket: **every case PASS** → `done`; **any FAIL** → `in-progress`, the bugs named in the results;
+4. Move the ticket: **every case PASS** → `done`, and only then; **any FAIL** → `in-progress`, the bugs named in the
+   results;
    **anything BLOCKED and nothing failed** → it stays `in-qa`, and the results say what it needs.
 
 Reply with the same results table, the bugs, and where the ticket now is. You write only `docs/qa/<KEY>.md` and the
