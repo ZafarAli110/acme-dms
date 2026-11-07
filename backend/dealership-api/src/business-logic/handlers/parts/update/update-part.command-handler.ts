@@ -21,6 +21,7 @@ import { createdAudit, updatedAudit } from "../../../audit/audit-fields";
 import { requireLocation } from "../../../user-context/require-location";
 import { toPartResponseDto } from "../part.mapper";
 import { findPhotosAsync, findStockedPartAsync } from "../part.queries";
+import { applyEarlyOutcomesAsync } from "../photo-outcome";
 import {
   MAX_PHOTOS_PER_PART,
   PART_PHOTO_OWNER_TYPE,
@@ -151,7 +152,8 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
             ),
           );
       }
-      for (const photo of kept) {
+      // Clearing a default before setting the new one: never two defaults, even for a moment.
+      for (const photo of kept.toSorted((a, b) => Number(a.isDefault) - Number(b.isDefault))) {
         await work.db
           .update(partPhotos)
           .set({ isDefault: photo.isDefault, ...updatedAudit(userContext.userId, now) })
@@ -165,6 +167,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       }
       if (addedPhotos.length > 0) {
         await work.db.insert(partPhotos).values(addedPhotos);
+        await applyEarlyOutcomesAsync(work.db, uploadedDocumentIds, now);
       }
       await work.commitAsync();
     } catch (error) {
