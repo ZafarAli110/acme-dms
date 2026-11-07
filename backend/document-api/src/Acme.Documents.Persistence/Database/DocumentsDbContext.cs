@@ -33,6 +33,7 @@ public sealed class DocumentsDbContext : DbContext
             document.Property(d => d.Status).HasConversion<string>().HasMaxLength(20);
             document.Property(d => d.FailureReason).HasMaxLength(1000);
             document.Property(d => d.RequestedVariants).HasColumnType("jsonb");
+            document.Property(d => d.Version).IsRowVersion();
             document.HasIndex(d => new { d.DealerId, d.OwnerType, d.OwnerId });
 
             document.ToTable(table => table.HasCheckConstraint(
