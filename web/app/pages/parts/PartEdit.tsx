@@ -43,7 +43,10 @@ export async function clientAction({ request, context, params }: ClientActionFun
     // The version the form was opened from goes as If-Match, not as a multipart field the API does not know.
     const version = Number(form.get("version"));
     form.delete("version");
-    await partQueries.updatePartAsync(partId, form, version);
+    // Sent for the location the user saw when they pressed Save, even if another is selected by now.
+    const locationId = String(form.get("locationId") ?? resolved.locationId);
+    form.delete("locationId");
+    await partQueries.updatePartAsync(partId, form, version, locationId);
   } catch (error) {
     if (error instanceof ApiError && error.status === 412) {
       // Someone else saved first: read their version, so the form can show it or keep the user's edits over it.

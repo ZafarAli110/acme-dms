@@ -18,6 +18,6 @@ export const customerQueries = {
     apiClient.getAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, options),
   createCustomerAsync: (input: CustomerInput) => apiClient.postAsync<Customer>(CUSTOMERS_URL, input),
   /** PUT: every field is sent, from `version` (If-Match): a newer version saved meanwhile answers 412. */
-  updateCustomerAsync: (customerId: string, input: CustomerInput, version: number) =>
-    apiClient.putAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, input, { headers: ifMatch(version) }),
+  updateCustomerAsync: (customerId: string, input: CustomerInput, version: number, locationId?: string) =>
+    apiClient.putAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, input, { headers: ifMatch(version), locationId }),
 };

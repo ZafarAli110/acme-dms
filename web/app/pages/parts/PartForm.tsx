@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useActionData, useNavigate, useNavigation, useSubmit } from "react-router";
 import { FormGuards } from "../../components/FormGuards";
 import { PageHeader } from "../../components/PageHeader";
+import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { PartPhotosSection } from "./components/PartPhotosSection";
 import { mergePhotos, toFormValues, toUpdateFormData } from "./mappers/partFormMapper";
 import type { clientAction } from "./PartEdit";
@@ -32,6 +33,14 @@ interface PartFormProps {
  * The part edit form: details, the stock here (read only) and the photos. One Save sends everything together through
  * the page's clientAction; nothing is saved before that.
  */
+/** The location the form was saved at: the page's action sends the save there, whatever is selected by then. */
+function withLocation(form: FormData, locationId: string | undefined): FormData {
+  if (locationId) {
+    form.append("locationId", locationId);
+  }
+  return form;
+}
+
 export function PartForm({
   part,
   locationName,
@@ -42,6 +51,7 @@ export function PartForm({
   onKeepMine,
 }: PartFormProps) {
   const { t, i18n } = useTranslation("parts");
+  const { location } = useSelectedLocation();
   const { t: tCommon } = useTranslation();
   const navigate = useNavigate();
   const submit = useSubmit();
@@ -61,7 +71,10 @@ export function PartForm({
   const disabled = !canEdit || isSubmitting;
 
   const save = methods.handleSubmit((values) =>
-    submit(toUpdateFormData(values, opened, i18n.language), { method: "post", encType: "multipart/form-data" }),
+    submit(withLocation(toUpdateFormData(values, opened, i18n.language), location?.id), {
+      method: "post",
+      encType: "multipart/form-data",
+    }),
   );
 
   // Their version under the user's edits: what the user did not touch becomes theirs, then the form saves from theirs.

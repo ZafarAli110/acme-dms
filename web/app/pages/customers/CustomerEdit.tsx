@@ -45,8 +45,12 @@ export async function clientAction({ request, context, params }: ClientActionFun
   }
   try {
     // The version the form was opened from goes as If-Match, not in the body (the API accepts only its fields).
-    const { version, ...input } = (await request.json()) as CustomerInput & { version: number };
-    await customerQueries.updateCustomerAsync(customerId, input, version);
+    // Sent for the location the user saw when they pressed Save, even if another is selected by now.
+    const { version, locationId, ...input } = (await request.json()) as CustomerInput & {
+      version: number;
+      locationId?: string;
+    };
+    await customerQueries.updateCustomerAsync(customerId, input, version, locationId ?? resolved.locationId);
   } catch (error) {
     if (error instanceof ApiError && error.status === 412) {
       // Someone else saved first: read their version, so the form can show it or keep the user's edits over it.
