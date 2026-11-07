@@ -73,6 +73,9 @@ internal sealed partial class SigningKeyProvider : ISigningKeyProvider, IDisposa
     public async Task<IReadOnlyList<RsaSecurityKey>> GetPublishedKeysAsync(CancellationToken cancellationToken) =>
         (await RingAsync(cancellationToken)).Published;
 
+    public async Task<bool> CanSignAsync(CancellationToken cancellationToken) =>
+        (await RingAsync(cancellationToken)).Active is not null;
+
     public void Dispose() => _lock.Dispose();
 
     private async Task<KeyRing> RingAsync(CancellationToken cancellationToken)
