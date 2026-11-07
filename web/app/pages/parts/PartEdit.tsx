@@ -39,7 +39,11 @@ export async function clientAction({ request, context, params }: ClientActionFun
     return { saved: false, error: i18n.t("errors.unexpected") };
   }
   try {
-    await partQueries.updatePartAsync(partId, await request.formData());
+    // Sent for the location the user saw when they pressed Save, even if another is selected by now.
+    const form = await request.formData();
+    const locationId = String(form.get("locationId") ?? resolved.locationId);
+    form.delete("locationId");
+    await partQueries.updatePartAsync(partId, form, { locationId });
   } catch (error) {
     return { saved: false, error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
   }
