@@ -44,9 +44,9 @@ A record people edit (a customer, a part) has a `version`, one more with every s
   body, not the work. Every other answer, saves included,
   stays `Cache-Control: no-store` (one dealer's data, one user's: nothing is kept).
   Sign-out also asks the browser to drop what it kept: the gateway's `DELETE /api/session` answers with
-  `Clear-Site-Data: "cache"`, and so does `POST /v1/system/sign-out`, which the web app also calls (Chrome, Edge and
-  Firefox, on HTTPS or localhost; Safari ignores it, and there a kept copy is still only shown after the service agrees,
-  which needs a signed-in session).
+  `Clear-Site-Data: "cache"`; one answer saying it is enough, so no service repeats it (Chrome, Edge and Firefox, on
+  HTTPS or localhost; Safari ignores it, and there a kept copy is still only shown after the service agrees, which needs
+  a signed-in session).
 - A save (`PUT`, `PATCH`) sends `If-Match` with the version it started from: `428` without it, `412` when it is not
   the current version. The handler checks the version in the same `UPDATE` (`where … version = …`, `version + 1`), so
   two saves from one version can never both win; with files, it checks before uploading too.
