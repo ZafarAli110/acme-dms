@@ -51,7 +51,14 @@ public sealed class TokenCommandController : ApiControllerBase
     public async Task<ActionResult<TokenCreateResponseDto>> RefreshAsync(CancellationToken cancellationToken)
     {
         RequireThePage();
-        var issued = await _refreshTokenCommandHandler.ExecuteAsync(Request.Cookies[RefreshCookie.Name], cancellationToken);
+        // The gateway's renewal key: the same until a renewal of this sign-in succeeds (a bounded string, or ignored).
+        var renewalKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
+        if (renewalKey is { Length: > 100 })
+        {
+            renewalKey = null;
+        }
+
+        var issued = await _refreshTokenCommandHandler.ExecuteAsync(Request.Cookies[RefreshCookie.Name], renewalKey, cancellationToken);
         if (issued.RefreshToken is not null)
         {
             RefreshCookie.Set(Response, _environment, issued.RefreshToken);

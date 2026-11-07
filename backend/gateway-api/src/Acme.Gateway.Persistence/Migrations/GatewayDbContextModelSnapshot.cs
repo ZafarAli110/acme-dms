@@ -41,6 +41,10 @@ namespace Acme.Gateway.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
 
+                    b.Property<string>("RenewalKey")
+                        .HasColumnType("text")
+                        .HasColumnName("renewal_key");
+
                     b.Property<DateTimeOffset?>("RenewingUntil")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("renewing_until");
