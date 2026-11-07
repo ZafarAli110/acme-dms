@@ -43,7 +43,9 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _channel = await _rabbitMq.CreateChannelAsync(publisherConfirms: false, stoppingToken);
+        // Confirmed: a retry is republished before the delivery is acknowledged, so a republish the broker lost must fail
+        // here, not leave the document pending for good.
+        _channel = await _rabbitMq.CreateChannelAsync(publisherConfirms: true, stoppingToken);
         await _channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 4, global: false, stoppingToken);
 
         var consumer = new AsyncEventingBasicConsumer(_channel);
@@ -81,7 +83,18 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
             }
 
             LogGivingUp(_logger, envelope.Data.DocumentId, attempt, ex);
-            await scope.ServiceProvider.GetRequiredService<IFailDocumentCommandHandler>().ExecuteAsync(envelope.Data, ex.Message, cancellationToken);
+            try
+            {
+                // A scope of its own: the one that failed may hold the document as it was before a race.
+                using var failScope = _scopeFactory.CreateScope();
+                await failScope.ServiceProvider.GetRequiredService<IFailDocumentCommandHandler>().ExecuteAsync(envelope.Data, ex.Message, cancellationToken);
+            }
+            catch (Exception failError) when (failError is not OperationCanceledException)
+            {
+                // The message still goes to the dead-letter queue, where it can be read and sent again.
+                LogCouldNotMarkFailed(_logger, envelope.Data.DocumentId, failError);
+            }
+
             await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);
         }
     }
@@ -101,4 +114,7 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Processing document {DocumentId} failed after {Attempt} attempts; marking it failed")]
     private static partial void LogGivingUp(ILogger logger, Guid documentId, int attempt, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Document {DocumentId} could not be marked failed; its message goes to the dead-letter queue")]
+    private static partial void LogCouldNotMarkFailed(ILogger logger, Guid documentId, Exception exception);
 }
