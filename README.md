@@ -90,7 +90,8 @@ acme-dms/
     identity-api/         .NET: Acme.Identity.{Service, BusinessLogic.Abstractions, BusinessLogic, DTO, Persistence}
     document-api/         .NET: Acme.Documents.{same layers}
     dealership-api/src/   NestJS, same layers: service/, business-logic-abstractions/, business-logic/, dto/, persistence/
-    gateway-api/          .NET: Acme.Gateway, a YARP reverse proxy (routes in appsettings.json) and the web app's sign-in
+    gateway-api/          .NET: Acme.Gateway.{same layers, and RestClients}: a YARP reverse proxy (routes in
+                          appsettings.json) and the web app's sign-in
     service-defaults/     .NET platform code every .NET service uses (telemetry, auth, problem details, correlation)
   web/                    React single-page app (Vite)
   scripts/                helper scripts (see "Look around a running system")

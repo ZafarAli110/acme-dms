@@ -54,7 +54,7 @@ builder.AddExecutable("export-worker", "bun", "../../backend/dealership-api", "r
     .WaitFor(dealershipApi);
 
 // The single entry point for the web app: /api/<service>/... is routed to that service with the prefix removed.
-var gateway = builder.AddProject<Projects.Acme_Gateway>("gateway-api")
+var gateway = builder.AddProject<Projects.Acme_Gateway_Service>("gateway-api")
     .WithHttpHealthCheck("/v1/system/health")
     .WithReference(identityApi)
     .WithReference(dealershipApi.GetEndpoint("http"))
