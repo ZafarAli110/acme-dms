@@ -74,27 +74,25 @@ export class AuthKernel {
   }
 
   /**
-   * Signs out this tab and every other open tab of the app, and ends the sign-in at the gateway, which deletes the session:
-   * its cookie signs no one in from then on, at once. The person is signed out here first and always. If the gateway cannot
-   * be reached the cookie is still good, so the sign-out is remembered (`setRevokePending`) and the next load ends the
-   * sign-in before anything can use the cookie.
+   * Ends the sign-in at the gateway, which deletes the session: its cookie signs no one in from then on, at once. Then this
+   * tab forgets its sign-in and tells the other tabs, which go to the sign-in page. The caller (the sign-out action) loads
+   * the sign-in page afresh.
+   *
+   * The page keeps showing what it showed until then: forgetting first would empty the screen behind the sign-out dialog
+   * while the gateway answers. The gateway is given `signOutWaitMs`; a sign-out it did not get is remembered
+   * (`setRevokePending`), before asking, so even a tab closed meanwhile has the next load end the sign-in first.
    */
   public async signOutAsync(): Promise<void> {
-    this.forget();
-    this.commit(SIGNED_OUT);
-    session.announce({ kind: "signed-out" });
+    session.setRevokePending(true);
     session.setRevokePending(!(await identityQueries.revokeAsync()));
+    session.clear();
+    session.announce({ kind: "signed-out" });
   }
 
   /** A request of this signed-in tab got a 401 (`sessionExpiry`): the sign-in is over, here and in the other tabs. */
   private expire(): void {
-    this.forget();
-    this.commit(SIGNED_OUT);
     session.announce({ kind: "signed-out" });
-    if (typeof window !== "undefined") {
-      // A full navigation, not the router's: nothing of the old sign-in (a form's state, a query's data) may survive it.
-      window.location.replace("/sign-in");
-    }
+    this.leaveForSignIn();
   }
 
   /**
@@ -102,16 +100,36 @@ export class AuthKernel {
    * screens with another user's sign-in. Its cached data and location belonged to the old sign-in.
    */
   private followOtherTab(change: OtherTabChange): void {
-    this.forget();
     if (change.kind === "signed-out") {
-      this.commit(SIGNED_OUT);
+      // A tab already on the sign-in page has nothing to leave; any other tab's screens belonged to the sign-in that ended.
+      if (this._snapshot.status === "signed-out") {
+        this.forget();
+        return;
+      }
+      this.leaveForSignIn();
       return;
     }
+    this.forget();
     // The other tab signed in as someone: the session cookie is theirs now, shared by every tab, so this tab follows it.
     this.commit(RESOLVING);
     // Nobody awaits this one: when identity-api cannot be reached, the tab stays resolving and the next navigation
     // (waitForResolvedAuthAsync) tries again and shows the error.
     this._resolving = this.resolveUserAsync().catch(() => undefined);
+  }
+
+  /**
+   * The sign-in ended: this tab forgets it and loads the sign-in page with a full navigation, not the router's, so nothing
+   * of the old sign-in (a form's state, a query's data) survives. Nothing is shown in between: telling React first would
+   * redraw the old screen without its location (empty skeletons, "not a customer of") until the new page loads.
+   */
+  private leaveForSignIn(): void {
+    // Also what lets a form with unsaved changes go without asking (useUnsavedChangesGuard): nothing could save them now.
+    session.clear();
+    this._generation += 1;
+    this._resolving = null;
+    if (typeof window !== "undefined") {
+      window.location.replace("/sign-in");
+    }
   }
 
   private forget(): void {
