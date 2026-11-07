@@ -19,4 +19,12 @@ public interface ISigningKeyProvider
 
     /// <summary>Whether this instance can sign now: false when its Data Protection keys cannot open the key in use.</summary>
     Task<bool> CanSignAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The way out when no instance can open the key in use (its Data Protection keys were lost): deletes every key this
+    /// instance cannot open and, when that leaves none signing, makes one that signs at once. A person runs it, once,
+    /// with the Data Protection keys every instance shares (<c>replace-signing-keys</c>); it is never automatic, since
+    /// one misconfigured instance would otherwise replace the keys of all the others. Returns how many keys it deleted.
+    /// </summary>
+    Task<int> ReplaceKeysItCannotOpenAsync(CancellationToken cancellationToken);
 }
