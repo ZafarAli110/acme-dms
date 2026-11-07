@@ -28,5 +28,12 @@ public sealed class Document : AuditedEntity
 
     public DateTimeOffset? ProcessedAt { get; set; }
 
+    /// <summary>
+    /// Postgres's row version (<c>xmin</c>), checked on every save: processing, failing and deleting a document each read
+    /// it first, so a save that lost a race to another fails instead of writing over it (a deleted document marked
+    /// ready, or a delete writing back the status it read).
+    /// </summary>
+    public uint Version { get; set; }
+
     public ICollection<DocumentContent> Contents { get; } = [];
 }

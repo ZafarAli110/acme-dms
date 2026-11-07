@@ -1,4 +1,9 @@
 using Acme.Documents.BusinessLogic.Handlers.Documents.Delete;
+using Acme.Documents.BusinessLogic.Handlers.Documents.Process;
+using Acme.Documents.DTO.Messages;
+using Acme.Documents.Persistence.Entities;
+using Acme.Documents.Persistence.Messaging;
+using Moq;
 using Microsoft.EntityFrameworkCore;
 using Acme.Documents.BusinessLogic.Abstractions.Authorization;
 using Acme.Documents.BusinessLogic.Abstractions.Exceptions;
@@ -58,5 +63,28 @@ public sealed class DeleteDocumentCommandHandlerTests
         Assert.AreEqual(ApiErrorCategory.NotFound, ex.Category);
         await using var check = database.CreateContext(TestDocuments.Northwind);
         Assert.IsTrue(await check.Documents.AnyAsync(d => d.Id == documentId, TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_ADocumentProcessedWhileItIsDeleted_StaysReady_WithItsVariantsRemoved()
+    {
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
+        var documentId = await TestDocuments.UploadPhotoAsync(database, TestContext.CancellationToken);
+        await using var dbContext = database.CreateContext(TestDocuments.Northwind);
+        // Processing finishes between the delete reading the document and saving it.
+        var processMeanwhile = new TestUnitOfWork(dbContext, async () =>
+        {
+            await using var backgroundContext = database.CreateContext(dealerId: null);
+            await new ProcessDocumentCommandHandler(backgroundContext, new FakeImageProcessor(), new Mock<IOutbox>().Object, new TestUnitOfWork(backgroundContext), TimeProvider.System)
+                .ExecuteAsync(new ProcessDocumentMessageDto(documentId, TestDocuments.Northwind), TestContext.CancellationToken);
+        });
+
+        await new DeleteDocumentCommandHandler(dbContext, processMeanwhile).ExecuteAsync(TestDocuments.Alice, documentId, TestContext.CancellationToken);
+
+        await using var check = database.CreateContext(dealerId: null);
+        var document = await check.Documents.IgnoreQueryFilters().SingleAsync(d => d.Id == documentId, TestContext.CancellationToken);
+        Assert.IsTrue(document.IsDeleted);
+        Assert.AreEqual(DocumentStatus.Ready, document.Status, "the delete does not write back the status it first read");
+        Assert.IsFalse(await check.DocumentContents.AnyAsync(c => c.DocumentId == documentId, TestContext.CancellationToken), "the variants go too");
     }
 }
