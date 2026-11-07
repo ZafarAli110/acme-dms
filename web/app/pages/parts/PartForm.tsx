@@ -8,6 +8,7 @@ import { useActionData, useNavigate, useNavigation, useSubmit } from "react-rout
 import { FormGuards } from "../../components/FormGuards";
 import { PageHeader } from "../../components/PageHeader";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
+import { useErrorUntilEdited } from "../../core/hooks/useErrorUntilEdited";
 import { PartPhotosSection } from "./components/PartPhotosSection";
 import { mergePhotos, toFormValues, toUpdateFormData } from "./mappers/partFormMapper";
 import type { clientAction } from "./PartEdit";
@@ -66,6 +67,7 @@ export function PartForm({
     resolver: valibotResolver(schema),
     defaultValues: toFormValues(opened, i18n.language),
   });
+  const saveError = useErrorUntilEdited(actionData, actionData?.error, methods);
   const { isDirty } = methods.formState;
   useEffect(() => onDirtyChange(isDirty), [isDirty, onDirtyChange]);
   const disabled = !canEdit || isSubmitting;
@@ -140,9 +142,9 @@ export function PartForm({
           {tCommon("revision.changedElsewhere")}
         </Alert>
       )}
-      {actionData?.error && (
+      {saveError && (
         <Alert severity="error" sx={{ mb: 2 }} data-testid="save-error">
-          {actionData.error}
+          {saveError}
         </Alert>
       )}
       {actionData?.saved && !isDirty && (
