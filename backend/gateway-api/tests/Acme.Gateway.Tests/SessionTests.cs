@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
-using Acme.Gateway.Sessions;
+using Acme.Gateway.BusinessLogic.Abstractions.Clients;
+using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.GetAccessToken;
+using Acme.Gateway.BusinessLogic.Sessions;
 using Acme.Gateway.Tests.Support;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -44,12 +46,12 @@ public sealed class SessionTests
         var session = await dbContext.Sessions.SingleAsync(TestContext.CancellationToken);
 
         Assert.AreNotEqual(cookieValue, session.Id);
-        Assert.AreEqual(SessionCookie.IdOf(cookieValue), session.Id);
+        Assert.AreEqual(SessionSecrets.IdOf(cookieValue), session.Id);
         var stored = Encoding.UTF8.GetString(session.Tokens);
         Assert.DoesNotContain("refresh-1", stored);
         Assert.DoesNotContain("eyJ", stored);
-        Assert.IsNull(SessionCookie.Open(SessionCookie.NewValue(), session.Tokens), "another cookie value cannot open the tokens");
-        Assert.AreEqual("refresh-1", SessionCookie.Open(cookieValue, session.Tokens)?.RefreshToken);
+        Assert.IsNull(SessionSecrets.Open(SessionSecrets.NewValue(), session.Tokens), "another cookie value cannot open the tokens");
+        Assert.AreEqual("refresh-1", SessionSecrets.Open(cookieValue, session.Tokens)?.RefreshToken);
         Assert.AreEqual(FakeIdentity.UserId, session.UserId);
     }
 
@@ -131,7 +133,7 @@ public sealed class SessionTests
     }
 
     [TestMethod]
-    public async Task AnAccessTokenAboutToExpire_IsRenewedOnce_HoweverManyRequestsFindItAtOnce()
+    public async Task AnAccessTokenAboutToExpire_IsRenewedOnce_WhileTheOthersSendTheTokenThatStillWorks()
     {
         await using var gateway = await TestGateway.NewAsync(TestContext.CancellationToken);
         gateway.Identity.AccessTokenLifetime = TimeSpan.FromSeconds(30);
@@ -143,7 +145,10 @@ public sealed class SessionTests
 
         Assert.IsTrue(responses.All(response => response.StatusCode == HttpStatusCode.OK));
         Assert.AreEqual(1, gateway.Identity.Refreshes);
-        Assert.AreEqual(1, gateway.Service.Authorizations.Distinct().Count(), "every request went on with the one renewed token");
+        await using var dbContext = gateway.NewDbContext();
+        var session = await dbContext.Sessions.SingleAsync(TestContext.CancellationToken);
+        Assert.IsNull(session.RenewingUntil, "the lease is given back");
+        Assert.IsTrue(session.AccessTokenExpiresAt > DateTimeOffset.UtcNow.AddMinutes(10), "the session holds the renewed token");
         Assert.IsTrue(gateway.Identity.ForwardedFor.All(address => address == GatewayUnderTest.BrowserAddress), "identity-api counts the browser, not the gateway");
         foreach (var response in responses)
         {
@@ -234,9 +239,8 @@ public sealed class SessionTests
 
         using var leaving = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         await using var scope = gateway.Services.CreateAsyncScope();
-        var browser = new DefaultHttpContext();
-        browser.Connection.RemoteIpAddress = IPAddress.Parse(GatewayUnderTest.BrowserAddress);
-        var renewal = scope.ServiceProvider.GetRequiredService<SessionStore>().GetAccessTokenAsync(cookie, browser, leaving.Token);
+        var caller = new CallerContext(GatewayUnderTest.BrowserAddress, null);
+        var renewal = scope.ServiceProvider.GetRequiredService<IGetAccessTokenCommandHandler>().ExecuteAsync(cookie, caller, leaving.Token);
         await gateway.Identity.RefreshReplaced.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
         // The browser leaves while identity-api's answer is on its way: it has already replaced refresh-1 with refresh-2.
         await leaving.CancelAsync();
@@ -245,9 +249,62 @@ public sealed class SessionTests
 
         await using var dbContext = gateway.NewDbContext();
         var session = await dbContext.Sessions.SingleAsync(TestContext.CancellationToken);
-        var kept = SessionCookie.Open(cookie, session.Tokens)?.RefreshToken;
+        var kept = SessionSecrets.Open(cookie, session.Tokens)?.RefreshToken;
         StringAssert.StartsWith(accessToken, "eyJ");
         Assert.AreEqual("refresh-2", kept);
+    }
+
+    [TestMethod]
+    public async Task ARequestThatFindsTheTokenExpiredAndARenewalRunning_WaitsForIt()
+    {
+        await using var gateway = await TestGateway.NewAsync(TestContext.CancellationToken);
+        gateway.Identity.AccessTokenLifetime = TimeSpan.FromSeconds(-5);
+        using var signedIn = await gateway.SignInAsync("right", TestContext.CancellationToken);
+        gateway.Identity.AccessTokenLifetime = TimeSpan.FromMinutes(15);
+        gateway.Identity.HoldRefreshAnswer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var customers = new Uri("/api/dealership/v1/customers", UriKind.Relative);
+
+        var renewing = gateway.Browser.GetAsync(customers, TestContext.CancellationToken);
+        await gateway.Identity.RefreshReplaced.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
+        var waiting = gateway.Browser.GetAsync(customers, TestContext.CancellationToken);
+        await Task.Delay(500, TestContext.CancellationToken);
+        Assert.IsFalse(waiting.IsCompleted, "an expired token is not sent: the request waits for the renewal");
+        gateway.Identity.HoldRefreshAnswer.SetResult();
+        using var first = await renewing.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
+        using var second = await waiting.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.OK, first.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, second.StatusCode);
+        Assert.AreEqual(1, gateway.Identity.Refreshes);
+        Assert.AreEqual(1, gateway.Service.Authorizations.Distinct().Count(), "both went on with the renewed token");
+    }
+
+    [TestMethod]
+    public async Task ALeaseHeldSendsTheTokenThatStillWorks_AndALeaseLeftBehindExpires()
+    {
+        await using var gateway = await TestGateway.NewAsync(TestContext.CancellationToken);
+        gateway.Identity.AccessTokenLifetime = TimeSpan.FromSeconds(30);
+        using var signedIn = await gateway.SignInAsync("right", TestContext.CancellationToken);
+        gateway.Identity.AccessTokenLifetime = TimeSpan.FromMinutes(15);
+        var customers = new Uri("/api/dealership/v1/customers", UriKind.Relative);
+        await SetLeaseAsync(gateway, DateTimeOffset.UtcNow.AddSeconds(20));
+
+        // Another gateway instance is renewing: the token still works, so it is sent, and nothing renews twice.
+        using var whileLeased = await gateway.Browser.GetAsync(customers, TestContext.CancellationToken);
+        Assert.AreEqual(HttpStatusCode.OK, whileLeased.StatusCode);
+        Assert.AreEqual(0, gateway.Identity.Refreshes);
+
+        // That instance stopped mid-renewal: its lease runs out, and the next request renews.
+        await SetLeaseAsync(gateway, DateTimeOffset.UtcNow.AddSeconds(-1));
+        using var afterwards = await gateway.Browser.GetAsync(customers, TestContext.CancellationToken);
+        Assert.AreEqual(HttpStatusCode.OK, afterwards.StatusCode);
+        Assert.AreEqual(1, gateway.Identity.Refreshes);
+    }
+
+    private async Task SetLeaseAsync(GatewayUnderTest gateway, DateTimeOffset until)
+    {
+        await using var dbContext = gateway.NewDbContext();
+        await dbContext.Sessions.ExecuteUpdateAsync(set => set.SetProperty(s => s.RenewingUntil, until), TestContext.CancellationToken);
     }
 
     private static string CookieOf(HttpResponseMessage signIn) =>
