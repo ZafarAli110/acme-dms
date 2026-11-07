@@ -19,6 +19,13 @@ public sealed class SigningKey
     /// </summary>
     public byte[]? PrivateKeyPkcs8 { get; set; }
 
+    /// <summary>
+    /// The public key (SubjectPublicKeyInfo), not secret. Every instance publishes the key from it, whether or not its own
+    /// Data Protection keys can open the private key. Null on a key from before it was kept: the first instance that can
+    /// open that key fills it in.
+    /// </summary>
+    public byte[]? PublicKeySpki { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>From when this key signs; it is published (JWKS) before, so every service knows it by then.</summary>
