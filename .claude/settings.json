@@ -45,6 +45,7 @@
     ],
     "ask": [
       "Bash(bun run reset)",
+      "Bash(bun run resource *)",
       "Bash(bun run seed)",
       "Bash(bun add *)",
       "Bash(bun install *)",
