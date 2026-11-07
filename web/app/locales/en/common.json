@@ -24,7 +24,8 @@
     "profileMenu": "Profile menu",
     "roleAtLocation": "{{role}} at {{location}}",
     "signOut": "Sign out",
-    "signOutQuestion": "Are you sure you want to sign out?"
+    "signOutQuestion": "Are you sure you want to sign out?",
+    "signingOut": "Signing out…"
   },
   "unsavedChanges": {
     "leaveTitle": "Leave without saving?",
