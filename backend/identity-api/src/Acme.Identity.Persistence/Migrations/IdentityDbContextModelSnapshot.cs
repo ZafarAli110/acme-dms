@@ -171,6 +171,10 @@ namespace Acme.Identity.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("rotated_at");
 
+                    b.Property<string>("RotationKey")
+                        .HasColumnType("text")
+                        .HasColumnName("rotation_key");
+
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
