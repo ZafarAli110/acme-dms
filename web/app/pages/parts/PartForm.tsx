@@ -1,7 +1,7 @@
 import { formatNumber } from "../../core/formatters/formatNumber";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert, Box, Button, Chip, Grid, Paper, Stack, TextField, Typography } from "@mui/material";
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useActionData, useNavigate, useNavigation, useSubmit } from "react-router";
@@ -14,17 +14,30 @@ import { createPartUpdateSchema } from "./schemas/partSchema";
 import type { Part, PartFormValues } from "./types/part";
 
 interface PartFormProps {
-  /** The part as saved. The page remounts the form when it changes, so the form starts from what was saved. */
+  /** The part as saved. The page remounts the form when it shows a newer version (useFormRevision). */
   part: Part;
   locationName: string;
   canEdit: boolean;
+  /** Tells the page whether the form has unsaved changes, so a newer version never replaces them unasked. */
+  onDirtyChange: (dirty: boolean) => void;
+  /** Someone else saved a newer version while this form has unsaved changes. */
+  changedElsewhere: boolean;
+  /** Drops the unsaved changes and shows the newer version. */
+  onShowLatest: () => void;
 }
 
 /**
  * The part edit form: details, the stock here (read only) and the photos. One Save sends everything together through
  * the page's clientAction; nothing is saved before that.
  */
-export function PartForm({ part, locationName, canEdit }: PartFormProps) {
+export function PartForm({
+  part,
+  locationName,
+  canEdit,
+  onDirtyChange,
+  changedElsewhere,
+  onShowLatest,
+}: PartFormProps) {
   const { t, i18n } = useTranslation("parts");
   const { t: tCommon } = useTranslation();
   const navigate = useNavigate();
@@ -32,16 +45,19 @@ export function PartForm({ part, locationName, canEdit }: PartFormProps) {
   const actionData = useActionData<typeof clientAction>();
   const isSubmitting = useNavigation().state === "submitting";
 
+  // The part as this form opened it: the unsaved edits are compared with it, never with a newer version read meanwhile.
+  const [opened] = useState(part);
   const schema = useMemo(() => createPartUpdateSchema(t, i18n.language), [t, i18n.language]);
   const methods = useForm<PartFormValues>({
     resolver: valibotResolver(schema),
-    defaultValues: toFormValues(part, i18n.language),
+    defaultValues: toFormValues(opened, i18n.language),
   });
   const { isDirty } = methods.formState;
+  useEffect(() => onDirtyChange(isDirty), [isDirty, onDirtyChange]);
   const disabled = !canEdit || isSubmitting;
 
   const save = methods.handleSubmit((values) =>
-    submit(toUpdateFormData(values, part, i18n.language), { method: "post", encType: "multipart/form-data" }),
+    submit(toUpdateFormData(values, opened, i18n.language), { method: "post", encType: "multipart/form-data" }),
   );
 
   return (
@@ -70,6 +86,20 @@ export function PartForm({ part, locationName, canEdit }: PartFormProps) {
         }
       />
       <FormGuards isDirty={isDirty && !isSubmitting} redirectTo="/parts" />
+      {changedElsewhere && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={onShowLatest} data-testid="show-latest">
+              {tCommon("revision.showLatest")}
+            </Button>
+          }
+          data-testid="changed-elsewhere"
+        >
+          {tCommon("revision.changedElsewhere")}
+        </Alert>
+      )}
       {actionData?.error && (
         <Alert severity="error" sx={{ mb: 2 }} data-testid="save-error">
           {actionData.error}
