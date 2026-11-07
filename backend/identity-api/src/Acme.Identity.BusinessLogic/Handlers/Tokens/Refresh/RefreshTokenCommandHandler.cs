@@ -16,8 +16,10 @@ namespace Acme.Identity.BusinessLogic.Handlers.Tokens.Refresh;
 ///
 /// A token that was already replaced is the sign of a copy: a second holder. Within the grace period it is taken for the
 /// same person's second request racing the first (the answer to the first was lost, or two requests were sent together):
-/// it gets an access token and NO new refresh token, so a copy used inside the window gets 15 minutes and nothing that
-/// lasts. After the grace period the whole sign-in ends.
+/// it gets an access token and the SAME replacement the first request got, while that replacement is still unused, so a
+/// lost answer costs nothing. A copy used inside the window ends up with the same replacement as the owner: whichever of
+/// the two uses it second shows a replaced token after the grace period, and the whole sign-in ends. After the grace
+/// period the whole sign-in ends at once.
 /// </summary>
 internal sealed class RefreshTokenCommandHandler : IRefreshTokenCommandHandler
 {
@@ -85,15 +87,19 @@ internal sealed class RefreshTokenCommandHandler : IRefreshTokenCommandHandler
         var response = new TokenCreateResponseDto(accessToken, "Bearer", TokenSettings.LifetimeSeconds);
         if (current.RotatedAt is not null)
         {
-            // The grace period: the token that replaced this one is the person's, and no second one is made from it.
+            // The grace period: no second replacement is made. The one already made is given again while it is unused.
+            var again = await UnusedReplacementAsync(refreshToken, current, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            return new IssuedTokens(response, null);
+            return new IssuedTokens(response, again);
         }
 
         var next = RefreshTokenSecret.Create();
+        var nextSealed = RefreshTokenSecret.SealNext(refreshToken, next);
         await _dbContext.RefreshTokens
             .Where(t => t.Id == current.Id)
-            .ExecuteUpdateAsync(set => set.SetProperty(t => t.RotatedAt, now), cancellationToken);
+            .ExecuteUpdateAsync(
+                set => set.SetProperty(t => t.RotatedAt, now).SetProperty(t => t.NextTokenSealed, nextSealed),
+                cancellationToken);
         // The chain stays short: what was replaced long ago can no longer tell a copy from the owner.
         await _dbContext.RefreshTokens
             .Where(t => t.FamilyId == current.FamilyId && t.RotatedAt != null && t.RotatedAt < now - _replacedKeptFor)
@@ -111,5 +117,20 @@ internal sealed class RefreshTokenCommandHandler : IRefreshTokenCommandHandler
         await transaction.CommitAsync(cancellationToken);
 
         return new IssuedTokens(response, next);
+    }
+
+    /// <summary>The token that replaced this one, when it has not been used or revoked since; otherwise null.</summary>
+    private async Task<string?> UnusedReplacementAsync(string refreshToken, RefreshToken current, CancellationToken cancellationToken)
+    {
+        if (current.NextTokenSealed is not { } sealedNext || RefreshTokenSecret.OpenNext(refreshToken, sealedNext) is not { } next)
+        {
+            return null;
+        }
+
+        var nextHash = RefreshTokenSecret.Hash(next);
+        var unused = await _dbContext.RefreshTokens.AnyAsync(
+            t => t.TokenHash == nextHash && t.RotatedAt == null && t.RevokedAt == null,
+            cancellationToken);
+        return unused ? next : null;
     }
 }
