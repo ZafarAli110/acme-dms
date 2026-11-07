@@ -17,14 +17,26 @@ The same shape everywhere, with every field always present. Aspire polls it to s
 { "service": "identity-api", "status": "ok", "version": "26.11.0", "databaseReachable": true }
 ```
 
-| Field               | Meaning                                                                                |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| `service`           | `gateway-api`, `identity-api`, `document-api` or `dealership-api`                      |
-| `status`            | `ok`, or `degraded` when the service cannot reach its database                         |
-| `version`           | the product version, from the root `package.json`; the same for every service          |
-| `databaseReachable` | whether the service's database answers; `null` for a service without one (the gateway) |
+| Field               | Meaning                                                                         |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `service`           | `gateway-api`, `identity-api`, `document-api` or `dealership-api`               |
+| `status`            | `ok`, or `degraded` when the service cannot reach its database                  |
+| `version`           | the product version, from the root `package.json`; the same for every service   |
+| `databaseReachable` | whether the service's database answers (the gateway's is its sessions database) |
 
 Anonymous: no token, no location. Each service's tests check the shape.
+
+### `POST` and `DELETE /api/session` (the gateway, for the web app)
+
+The web app's sign-in. Both need the header `X-Requested-With: acme-web` (403 without it).
+
+- `POST` with `{ "email": "…", "password": "…" }`: `204` and the httpOnly `acme_session` cookie (`Path=/api`,
+  `SameSite=Strict`); otherwise identity-api's own answer, unchanged (`401`, or `429` with `Retry-After`); `503` when
+  identity-api cannot be reached. It ends the session the browser had.
+- `DELETE`: always `204`, with the cookie removed and `Clear-Site-Data: "cache"`.
+
+With the cookie, a request to `/api/…` reaches the service with `Authorization: Bearer` and without the cookie. When the
+session is gone the gateway answers `401` itself, with `X-Acme-Session: ended`: the only 401 that signs the page out.
 
 ## Messages
 
