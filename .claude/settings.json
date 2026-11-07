@@ -28,6 +28,7 @@
       "mcp__acme-tracker__update_ticket_status",
       "mcp__acme-tracker__add_comment",
       "Bash(bun run reset)",
+      "Bash(bun run resource *)",
       "Bash(bun run seed)",
       "Bash(bun add *)",
       "Bash(bun install *)",
