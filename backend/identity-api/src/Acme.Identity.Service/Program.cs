@@ -69,10 +69,7 @@ builder.Services
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync(CancellationToken.None);
-}
+await StartupDatabase.PrepareAsync(app.Services, app.Environment, CancellationToken.None);
 
 app.UseForwardedHeaders();
 app.UseServiceDefaults();
