@@ -8,6 +8,7 @@ architecture and real conventions.
 - [The workshop: two repositories](#the-workshop-two-repositories)
 - [Branches](#branches)
 - [Working with Claude Code](#working-with-claude-code)
+  - [The cost meter](#the-cost-meter)
 - [The business](#the-business)
 - [What it does](#what-it-does)
 - [Architecture](#architecture)
@@ -21,6 +22,10 @@ architecture and real conventions.
 - [Troubleshooting](#troubleshooting)
 
 ## The workshop: two repositories
+
+Start with [tiny-harness](https://github.com/ZafarAli110/tiny-harness), the workshop's first session and a prerequisite
+for this one: a tiny coding agent built in six steps on a small local model, showing what a harness is before you use
+Claude Code's. Then this session's two repositories:
 
 | Repository                                                  | What it is                                                                                                 |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -68,6 +73,11 @@ stands at that point of the workshop. `final` holds every piece.
 A change to the system is made on `main` and carried to every lab branch and `final`, so they differ only in what the
 table says. Switching to a branch that adds a package (lab 09-after does) needs `bun install` once.
 
+**Every lab branch has its exercise in `LAB.md`**, at the repository's root: what the branch adds, the goal, the steps
+(with the prompt to give Claude), what to notice, what the run roughly costs, and the branch to go to next. Start at
+`lab/00-start` and follow each `LAB.md` to the next. `final` has `FINAL.md` in its place: every Acme ticket, whether it
+is built yet, and how to build the next one with the whole harness.
+
 ## Working with Claude Code
 
 On a lab branch from 01 on, start `claude` in the repository folder. What it finds there:
@@ -94,6 +104,21 @@ A ticket's life on lab 10 and `final`:
 added it. From lab 10, `/find-state-machines` sweeps the whole repository for stages nobody declared (a photo stuck in
 `pending`, an export nobody finishes); on `final`, [docs/plans/implicit-state-machines.md](https://github.com/ZafarAli110/acme-dms/blob/final/docs/plans/implicit-state-machines.md) holds what it found and what
 was fixed.
+
+### The cost meter
+
+Every lab spends real tokens, and a ticket run with several agents spends a lot of them. The cost meter, a Claude Code
+plugin ([claude-code-cost-meter](https://github.com/ZafarAli110/claude-code-cost-meter)), shows what the work costs
+while it runs: the estimated cost against a budget, the tokens and how many came from the cache, how full the context
+window is, the model calls, and every subagent with its own time, tokens and cost. Lab 10 asks for it; install it before
+lab 00 to see what every lab costs. Once, at the Claude Code prompt (the same on Windows, macOS and Linux):
+
+```
+/plugin install cost-meter --marketplace ZafarAli110/claude-code-cost-meter
+```
+
+Answer `y` and pick the **user** scope. The meter shows above the prompt; `/show-meter` opens it beside the chat,
+`/show-meter reset` counts from zero just before a run, and `/show-meter budget 20` sets the budget (default $10).
 
 ## The business
 
@@ -298,6 +323,18 @@ are kept).
 | Postgres             | `acme`          | `acme`     |
 | RabbitMQ (UI + AMQP) | `acme`          | `acme`     |
 | Demo users           | see table above | `Acme123!` |
+
+One Postgres server holds every service's database, all with that login:
+
+| Database     | Owned by       | Holds                                                                   |
+| ------------ | -------------- | ----------------------------------------------------------------------- |
+| `identity`   | identity-api   | dealers, locations, users and their roles, refresh tokens, signing keys |
+| `dealership` | dealership-api | parts, bins, stock, photos, customers, and exports (lab 09-after on)    |
+| `documents`  | document-api   | stored files, their variants, the outbox                                |
+| `gateway`    | gateway-api    | the browsers' sign-in sessions: each one's tokens and its renewal lease |
+
+Its address is the `postgres` resource in the dashboard. `bun run reset` leaves `identity` and `gateway` alone, so you
+stay signed in.
 
 **Swagger** (in development only): every service has Swagger UI at `/swagger` on its own URL. Click the service's URL in
 the dashboard and add `/swagger`. Get a token with `POST /v1/tokens` on identity-api, then use **Authorize**.
