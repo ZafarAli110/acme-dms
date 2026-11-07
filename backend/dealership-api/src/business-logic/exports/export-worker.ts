@@ -372,7 +372,17 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
       await work.db.execute(
         sql.raw(`set local statement_timeout = '${this._settings.exportStatementTimeoutSeconds}s'`),
       );
-      const total = await source.countAsync(work.db);
+      // A cancel or the time limit stops a long count too: Postgres cancels the statement this connection is running,
+      // instead of the export waiting out its statement timeout.
+      const [backend] = (await work.db.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`)).rows;
+      const cancelCount = (): void => void this.cancelStatementAsync(backend!.pid);
+      signal.addEventListener("abort", cancelCount, { once: true });
+      let total: number;
+      try {
+        total = await source.countAsync(work.db);
+      } finally {
+        signal.removeEventListener("abort", cancelCount);
+      }
       signal.throwIfAborted();
       await this.startWritingAsync(job.id, job.attempts, total);
 
@@ -397,6 +407,19 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
       // Destroyed without an error on purpose: an 'error' event nobody listens for ends the whole process.
       writer.abort();
       throw error;
+    }
+  }
+
+  /** Cancels what the given connection is running, from another connection. Best effort: the export stops either way. */
+  private async cancelStatementAsync(pid: number): Promise<void> {
+    try {
+      await using work = await this._unitOfWorkFactory.beginAsync();
+      await work.db.execute(sql`select pg_cancel_backend(${pid})`);
+      await work.commitAsync();
+    } catch (error) {
+      this._logger.warn(
+        `Could not cancel an export's count: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

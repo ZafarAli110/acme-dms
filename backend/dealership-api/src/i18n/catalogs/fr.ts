@@ -57,6 +57,7 @@ export const fr: Messages = {
       cancelledByUser: "Annulé par l'utilisateur.",
       cancelledBeforeStart: "Annulé avant de commencer.",
       stoppedResponding: "L'export ne répond plus. Réessayez.",
+      noWorker: "Aucun processus d'export n'a pris cet export. Réessayez plus tard.",
       tooLong: "L'export a pris trop de temps et a été arrêté. Essayez un filtre plus restreint.",
       failed: "L'export a échoué. Réessayez.",
     },

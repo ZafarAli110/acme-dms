@@ -117,4 +117,27 @@ describe("ExportQueue", () => {
 
     expect(listed.map((job) => job.id)).toEqual([newer.id, older.id]);
   });
+
+  it("fails an export no worker took after half an hour, and leaves a recent one waiting", async () => {
+    const stale = await database.seed.addExportJobAsync({
+      locationId: NORTHSIDE,
+      createdAt: TEST_NOW.subtract({ minutes: 31 }),
+    });
+    const recent = await database.seed.addExportJobAsync({
+      locationId: NORTHSIDE,
+      createdAt: TEST_NOW.subtract({ minutes: 5 }),
+    });
+
+    const failed = await new ExportQueue(
+      database.unitOfWorkFactory,
+      fixedClock(),
+      readSettings({}),
+    ).failUnclaimedAsync();
+
+    expect(failed).toBeGreaterThanOrEqual(1);
+    const [staleRow] = await database.db.select().from(exportJobs).where(eq(exportJobs.id, stale.id));
+    const [recentRow] = await database.db.select().from(exportJobs).where(eq(exportJobs.id, recent.id));
+    expect(staleRow).toMatchObject({ status: "failed", error: "exports.failure.noWorker" });
+    expect(recentRow?.status).toBe("queued");
+  });
 });

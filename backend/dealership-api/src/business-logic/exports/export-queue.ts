@@ -6,7 +6,10 @@ import {
   GoneException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  type OnApplicationBootstrap,
+  type OnApplicationShutdown,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { and, count, desc, eq, inArray, lt, ne, or, type SQL, sql } from "drizzle-orm";
@@ -61,10 +64,18 @@ export interface ExportEnqueueRequest {
  * API loses no export, and the API never holds a database connection for an export's rows.
  */
 @Injectable()
-export class ExportQueue implements IExportJobs {
+export class ExportQueue implements IExportJobs, OnApplicationBootstrap, OnApplicationShutdown {
+  private readonly _logger = new Logger(ExportQueue.name);
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
   private readonly _clock: IClock;
   private readonly _settings: Settings;
+
+  /**
+   * The way out of `queued` when no export worker runs: an export no worker claimed in this long is failed, so it says
+   * why and stops counting against its user's limit. Checked by every API instance once a minute (a conditional update).
+   */
+  public static readonly UNCLAIMED_AFTER_MINUTES = 30;
+  private _unclaimedCheck: NodeJS.Timeout | null = null;
 
   public constructor(
     @Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory,
@@ -74,6 +85,38 @@ export class ExportQueue implements IExportJobs {
     this._unitOfWorkFactory = unitOfWorkFactory;
     this._clock = clock;
     this._settings = settings;
+  }
+
+  public onApplicationBootstrap(): void {
+    this._unclaimedCheck = setInterval(() => void this.failUnclaimedAsync().catch(() => undefined), 60_000);
+    this._unclaimedCheck.unref();
+  }
+
+  public onApplicationShutdown(): void {
+    if (this._unclaimedCheck) {
+      clearInterval(this._unclaimedCheck);
+    }
+  }
+
+  /** Fails the exports still queued after UNCLAIMED_AFTER_MINUTES; returns how many. */
+  public async failUnclaimedAsync(): Promise<number> {
+    const now = this._clock.now();
+    await using work = await this._unitOfWorkFactory.beginAsync();
+    const failed = await work.db
+      .update(exportJobs)
+      .set({ status: "failed", error: "exports.failure.noWorker", finishedAt: now })
+      .where(
+        and(
+          eq(exportJobs.status, "queued"),
+          lt(exportJobs.createdAt, now.subtract({ minutes: ExportQueue.UNCLAIMED_AFTER_MINUTES })),
+        ),
+      )
+      .returning({ id: exportJobs.id });
+    await work.commitAsync();
+    if (failed.length > 0) {
+      this._logger.warn(`Failed ${failed.length} exports no export worker took: is one running?`);
+    }
+    return failed.length;
   }
 
   /**

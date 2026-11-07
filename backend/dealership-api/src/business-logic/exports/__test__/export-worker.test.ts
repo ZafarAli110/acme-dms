@@ -1,12 +1,13 @@
 import { mkdir, stat, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
-import { afterEach, describe, expect, it } from "vitest";
+import { eq, sql } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ExportJobRow, exportJobs } from "#persistence/schema/export-jobs";
 import { readSettings, type Settings } from "#settings/settings";
 import { CENTRAL, NORTHSIDE, SEEDED_AT } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { fixedClock, TEST_NOW } from "#test-setup/time/fixed-clock";
+import { EXPORT_SOURCES } from "../export-sources";
 import { ExportWorker } from "../export-worker";
 
 describe("ExportWorker", () => {
@@ -188,4 +189,31 @@ describe("ExportWorker", () => {
     await expect(stat(completedFile)).resolves.toBeTruthy();
     await expect(stat(strayFile)).rejects.toThrow();
   });
+
+  it("stops a long count at once when the export is cancelled, instead of waiting out its statement timeout", async () => {
+    const customers = EXPORT_SOURCES.customers;
+    // A count that would take half a minute.
+    const slow = vi
+      .spyOn(EXPORT_SOURCES as Record<"customers", typeof customers>, "customers")
+      .mockImplementation((scope, request, at) => {
+        const source = customers(scope, request, at);
+        source.countAsync = async (db) => {
+          await db.execute(sql`select pg_sleep(30)`);
+          return 0;
+        };
+        return source;
+      });
+    const job = await database.seed.addExportJobAsync({ locationId: NORTHSIDE });
+    const started = Date.now();
+    const running = workerWith().runUntilIdleAsync();
+    await vi.waitFor(async () => expect((await statusOfAsync(job.id))?.status).toBe("counting"), { timeout: 5000 });
+
+    // The user cancels while it counts.
+    await database.db.update(exportJobs).set({ cancelRequestedAt: TEST_NOW }).where(eq(exportJobs.id, job.id));
+    await running;
+    slow.mockRestore();
+
+    expect((await statusOfAsync(job.id))?.status).toBe("cancelled");
+    expect(Date.now() - started).toBeLessThan(15_000);
+  }, 40_000);
 });

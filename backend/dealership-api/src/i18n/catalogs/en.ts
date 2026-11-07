@@ -59,6 +59,7 @@ export const en = {
       cancelledByUser: "Cancelled by the user.",
       cancelledBeforeStart: "Cancelled before it started.",
       stoppedResponding: "The export stopped responding. Try again.",
+      noWorker: "No export worker took this export. Try again later.",
       tooLong: "The export took too long and was stopped. Try a smaller filter.",
       failed: "The export failed. Try again.",
     },
