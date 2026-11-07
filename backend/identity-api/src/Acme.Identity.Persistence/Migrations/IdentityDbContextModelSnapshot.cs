@@ -159,6 +159,10 @@ namespace Acme.Identity.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("family_id");
 
+                    b.Property<byte[]>("NextTokenSealed")
+                        .HasColumnType("bytea")
+                        .HasColumnName("next_token_sealed");
+
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("revoked_at");
@@ -200,14 +204,21 @@ namespace Acme.Identity.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset>("ActivatesAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("activates_at");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<byte[]>("PrivateKeyPkcs8")
-                        .IsRequired()
                         .HasColumnType("bytea")
                         .HasColumnName("private_key_pkcs8");
+
+                    b.Property<byte[]>("ProtectedPrivateKey")
+                        .HasColumnType("bytea")
+                        .HasColumnName("protected_private_key");
 
                     b.HasKey("Id")
                         .HasName("pk_signing_keys");

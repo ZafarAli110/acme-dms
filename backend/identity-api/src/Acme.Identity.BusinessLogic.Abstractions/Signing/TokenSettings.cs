@@ -4,6 +4,21 @@ namespace Acme.Identity.BusinessLogic.Abstractions.Signing;
 public static class TokenSettings
 {
     public const string Issuer = "acme-identity";
+
+    /// <summary>How long a signing key signs before the next one takes over.</summary>
+    public static readonly TimeSpan SigningKeyRotateEvery = TimeSpan.FromDays(30);
+
+    /// <summary>
+    /// How long a new signing key is published (JWKS) before it signs anything: the services fetch the keys again when
+    /// they meet one they do not know, but a key they already have saves them the round trip.
+    /// </summary>
+    public static readonly TimeSpan SigningKeyPublishedAhead = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// How long a signing key stays published after the next one takes over: longer than any token it signed can live,
+    /// with an hour for clocks and caches.
+    /// </summary>
+    public static readonly TimeSpan SigningKeyKeptAfter = TimeSpan.FromSeconds(LifetimeSeconds) + TimeSpan.FromHours(1);
     public const string Audience = "acme-dms";
 
     /// <summary>
