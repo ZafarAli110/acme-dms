@@ -82,9 +82,18 @@ version stored. So the profile is kept from one QA run to the next, and grows li
 | Look and language  | light and dark (`set-color-scheme dark`); English and French                                                                                                                                                     |
 | Services           | all up; one down at the step that matters (`bun run resource <service> stop`), then back (`bun run resource <service> start`); or the browser told a service failed (`route "**/api/<service>/**" --status 503`) |
 
-Not every case under every condition: every condition that touches what the case does. A sign-out touches the
-cache, the stored data, the sign-in, the network and the tabs; a list's sort order touches none but the language.
-A difference between two conditions is a finding, and its result names both.
+Not every case under every condition: every condition that touches what the case does. An export touches the network,
+the tabs and the services; a photo upload the network, the screen and the services; a list's sort order touches only
+the language. A difference between two conditions is a finding, and its result names both.
+
+**The person's own browser, only when you are told you may.** A test browser, even a kept one, is younger than a
+user's: a bug that needs years of cache, extensions or settings may only show in a real one. When the request that
+started you says you may use the person's own browser, run the cases where the browser's state matters there as well.
+The person first turns on remote debugging in it (`chrome://inspect/#remote-debugging`, "Allow remote debugging for
+this browser instance"); then `bunx playwright-cli attach --cdp=chrome`, and `-s=chrome` on every command for it. It
+is their browser: open the app in a new tab of your own (`-s=chrome tab-new <web url>`), never read, use or close
+their other tabs, read cookies and storage of the app's own address only, and end with `bunx playwright-cli -s=chrome
+detach`, never `close`. Without that permission, never attach to a browser you did not open.
 
 **A service down** is a condition users meet: a deploy, a crash, a database restart. Stop only one the case goes
 through (`bun run status` names them: the services, export-worker where there is one, and rabbitmq, whose messages
@@ -123,27 +132,28 @@ what they showed in its result:
 2. **The network.** After the case, `bunx playwright-cli requests`: every request the page made, with its status. A
    status the case did not expect (4xx, 5xx), a request that failed or was cancelled, or the same request sent twice is
    a finding; `bunx playwright-cli request <n>` shows one in full. Both lists start again when the page loads afresh
-   (a sign-in, a sign-out, a reload): read them before a step that leaves the page as well as after it.
+   (a reload, a save that moves on, signing in or out): read them before a step that leaves the page as well as after
+   it.
 3. **The timing.** Measure with the page's own clock, never the time between two commands (each command takes a
    second or so by itself): `bunx playwright-cli eval "JSON.stringify(performance.getEntriesByType('navigation').concat(performance.getEntriesByType('resource')).map((e) => [e.name, Math.round(e.duration)]))"`
    gives how long the page and each of its requests took, in milliseconds. A wait longer than the plan allows is a
    finding.
 
-   An action that loads a new page (a sign-in, a sign-out, a save that moves on) wipes that clock, so time it from the
-   click: before it, `bunx playwright-cli eval "addEventListener('click', () => localStorage.setItem('qa.click', String(Date.now())), true)"`;
+   An action that loads a new page (a save that moves on, a form that submits, signing in or out) wipes that clock, so
+   time it from the click: before it, `bunx playwright-cli eval "addEventListener('click', () => localStorage.setItem('qa.click', String(Date.now())), true)"`;
    once the new page is there, `bunx playwright-cli eval "Math.round(performance.timeOrigin - Number(localStorage.getItem('qa.click')))"`
    is how long the user waited between their last click and the new page starting, in milliseconds.
 
    **A measurement that did not work is not a PASS.** `NaN`, `undefined` or "unknown" means you have no figure: fix
    the measurement and run the case again, or mark the case BLOCKED and say why. Never put a different figure in its
-   place: a service's trace says how long the **service** took, not how long the **user** waited, and the gap
-   between the two is one of the things you are looking for.
+   place: what a service recorded is not what the user saw.
 
 4. **The services.** After the case, from the repository root: `bun run errors` (every failed request, across all
    services), `bun run traces <service>` (each request that reached the service, and how long it took there:
    `gateway-api` sees every one), and `bun run logs <service>` for its warnings and errors at the time of the case.
-   `bun run status` names the services. A request the browser waited long for that the service answered quickly, a
-   request sent more often than the case explains, an error trace or an error logged during the case is a finding.
+   `bun run status` names the services. Compare what the browser saw with what the services recorded: a difference
+   between the two (in time, in how many requests, in their status), an error trace or an error logged during the
+   case is a finding.
 
 **A finding is a FAIL**, however right the screen looks, unless the ticket itself explains it: the result says which
 instrument showed it and quotes the lines.
