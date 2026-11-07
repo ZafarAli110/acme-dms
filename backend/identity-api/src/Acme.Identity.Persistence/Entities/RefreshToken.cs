@@ -26,6 +26,12 @@ public sealed class RefreshToken
     /// <summary>When this token was used and replaced. A token used again after the grace period ends the chain.</summary>
     public DateTimeOffset? RotatedAt { get; set; }
 
+    /// <summary>
+    /// The token that replaced this one, sealed with a key only this token gives. Within the grace period the holder of this
+    /// token gets the same replacement again (an answer that was lost), rather than nothing it can keep using.
+    /// </summary>
+    public byte[]? NextTokenSealed { get; set; }
+
     /// <summary>Set on every token of the chain when the person signs out, or when a replaced token is used again.</summary>
     public DateTimeOffset? RevokedAt { get; set; }
 }

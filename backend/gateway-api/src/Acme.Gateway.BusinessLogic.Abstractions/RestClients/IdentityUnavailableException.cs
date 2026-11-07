@@ -1,4 +1,4 @@
-namespace Acme.Gateway.BusinessLogic.Abstractions.Clients;
+namespace Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 
 /// <summary>identity-api could not be reached, or did not answer in time: signing in and renewing wait for it to come back.</summary>
 public sealed class IdentityUnavailableException : Exception
