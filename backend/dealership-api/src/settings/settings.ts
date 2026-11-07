@@ -63,6 +63,8 @@ export interface Environment {
   EXPORT_DIR?: string;
   /** Rows per round trip while an export reads. */
   EXPORT_BATCH_SIZE?: string;
+  /** `production` in a deployment: Swagger UI and the OpenAPI document are then not served. */
+  NODE_ENV?: string;
 }
 
 export interface Settings {
@@ -100,6 +102,8 @@ export interface Settings {
    */
   exportDirectory: string;
   exportBatchSize: number;
+  /** Swagger UI and the OpenAPI document: in development only (the API's map is nobody else's business). */
+  serveSwagger: boolean;
 }
 
 export function readSettings(environment: Environment): Settings {
@@ -142,6 +146,7 @@ export function readSettings(environment: Environment): Settings {
     exportFileTtlMs: readWholeNumber("EXPORT_TTL_SECONDS", environment.EXPORT_TTL_SECONDS, 900) * 1000,
     exportDirectory: environment.EXPORT_DIR ?? join(tmpdir(), "acme-dealership-exports"),
     exportBatchSize: readWholeNumber("EXPORT_BATCH_SIZE", environment.EXPORT_BATCH_SIZE, 20_000),
+    serveSwagger: environment.NODE_ENV !== "production",
   };
 }
 
