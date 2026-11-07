@@ -1,6 +1,5 @@
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
+using Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.Create;
-using Acme.Gateway.BusinessLogic.Handlers.Sessions;
 using Acme.Gateway.DTO.Sessions;
 using Acme.Gateway.Persistence.Database;
 using Acme.Gateway.Persistence.Entities;

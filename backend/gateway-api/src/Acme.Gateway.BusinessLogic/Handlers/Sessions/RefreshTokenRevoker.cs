@@ -1,4 +1,4 @@
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
+using Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 using Microsoft.Extensions.Logging;
 
 namespace Acme.Gateway.BusinessLogic.Handlers.Sessions;

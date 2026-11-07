@@ -2,8 +2,18 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Acme.Identity.BusinessLogic.Abstractions.Signing;
 
-/// <summary>The RSA key identity-api signs tokens with. Created on first use and kept in the identity database.</summary>
+/// <summary>
+/// The RSA keys identity-api signs tokens with, kept encrypted in the identity database and rotated
+/// (<see cref="TokenSettings.SigningKeyRotateEvery"/>).
+/// </summary>
 public interface ISigningKeyProvider
 {
+    /// <summary>The key that signs tokens now.</summary>
     Task<RsaSecurityKey> GetSigningKeyAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every key a token may be checked with: the one signing now, the next one (published ahead), and the ones before it
+    /// while a token they signed can still be shown. The JWKS lists these.
+    /// </summary>
+    Task<IReadOnlyList<RsaSecurityKey>> GetPublishedKeysAsync(CancellationToken cancellationToken);
 }

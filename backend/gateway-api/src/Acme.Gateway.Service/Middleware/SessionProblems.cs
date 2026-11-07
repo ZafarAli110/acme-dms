@@ -1,7 +1,6 @@
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
 using Acme.ServiceDefaults.ProblemDetails;
 
-namespace Acme.Gateway.Service.Authorization;
+namespace Acme.Gateway.Service.Middleware;
 
 /// <summary>The gateway's own refusals, in the problem-details shape every service answers with.</summary>
 internal static class SessionProblems
@@ -29,8 +28,4 @@ internal static class SessionProblems
         var problem = ProblemDetailsDtoFactory.CreateWithSafeDetail(context, status, detail);
         return context.Response.WriteAsJsonAsync(problem, (System.Text.Json.JsonSerializerOptions?)null, "application/problem+json", context.RequestAborted);
     }
-
-    /// <summary>Who the gateway acts for when it calls identity-api: the browser's address and language.</summary>
-    public static CallerContext CallerOf(HttpContext context) =>
-        new(context.Connection.RemoteIpAddress?.ToString(), context.Request.Headers.AcceptLanguage.ToString());
 }
