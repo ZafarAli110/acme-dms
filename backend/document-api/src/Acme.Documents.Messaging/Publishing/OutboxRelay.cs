@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Acme.Documents.DTO.Messages;
 using Microsoft.EntityFrameworkCore;
@@ -73,14 +74,25 @@ public sealed partial class OutboxRelay : BackgroundService
             ActivityContext.TryParse(message.TraceParent, null, out var parent);
             using var activity = _activitySource.StartActivity($"publish {message.Type}", ActivityKind.Producer, parent);
 
-            var envelope = new JsonObject
+            JsonObject envelope;
+            try
             {
-                ["messageId"] = message.Id,
-                ["type"] = message.Type,
-                ["occurredAt"] = message.OccurredAt,
-                ["correlationId"] = parent.TraceId.ToString(),
-                ["data"] = JsonNode.Parse(message.Payload),
-            };
+                envelope = new JsonObject
+                {
+                    ["messageId"] = message.Id,
+                    ["type"] = message.Type,
+                    ["occurredAt"] = message.OccurredAt,
+                    ["correlationId"] = parent.TraceId.ToString(),
+                    ["data"] = JsonNode.Parse(message.Payload),
+                };
+            }
+            catch (JsonException ex)
+            {
+                // A row that can never be sent must not hold up the ones behind it.
+                LogUnpublishable(_logger, message.Id, ex);
+                continue;
+            }
+
             var properties = new BasicProperties
             {
                 MessageId = message.Id.ToString(),
@@ -90,12 +102,15 @@ public sealed partial class OutboxRelay : BackgroundService
             };
 
             await channel.BasicPublishAsync(MessageTypes.Exchange, message.Type, mandatory: false, properties, Encoding.UTF8.GetBytes(envelope.ToJsonString()), cancellationToken);
+            // Saved as soon as the broker confirmed it: a failure later in the batch never sends this one again.
             message.PublishedAt = _timeProvider.GetUtcNow();
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Publishing outbox messages failed; they will be retried")]
     private static partial void LogPublishFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Outbox message {MessageId} is not valid JSON and cannot be sent; the messages after it go on")]
+    private static partial void LogUnpublishable(ILogger logger, Guid messageId, Exception exception);
 }
