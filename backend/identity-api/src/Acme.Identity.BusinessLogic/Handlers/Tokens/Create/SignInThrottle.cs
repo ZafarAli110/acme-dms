@@ -9,6 +9,8 @@ namespace Acme.Identity.BusinessLogic.Handlers.Tokens.Create;
 /// a quiet <see cref="ForgetAfter"/>. An email nobody has an account for is counted the same, so the wait does not say which
 /// emails have one. The wait is short at first on purpose: a person who is locked out only waits; it is no way to lock someone out
 /// for good. In memory, so each instance of the service counts for itself.
+/// An attempt is counted as a failure when it starts (<see cref="Begin"/>), before the slow password check, and a right
+/// password clears the count: guesses sent at once cannot all pass the check before the first failure is recorded.
 /// </summary>
 public sealed class SignInThrottle
 {
@@ -49,7 +51,11 @@ public sealed class SignInThrottle
         }
     }
 
-    public void RecordFailure(string email)
+    /// <summary>
+    /// Starts an attempt: zero when it may go ahead, counted as a failure until <see cref="RecordSuccess"/> clears it;
+    /// otherwise how long the email must wait, and the attempt is not counted.
+    /// </summary>
+    public TimeSpan Begin(string email)
     {
         var now = _timeProvider.GetUtcNow();
         var attempts = _attempts.GetOrAdd(email, _ => new Attempts());
@@ -58,6 +64,12 @@ public sealed class SignInThrottle
             if (now - attempts.LastFailureAt > ForgetAfter)
             {
                 attempts.Failures = 0;
+                attempts.BlockedUntil = DateTimeOffset.MinValue;
+            }
+
+            if (attempts.BlockedUntil > now)
+            {
+                return attempts.BlockedUntil - now;
             }
 
             attempts.Failures++;
@@ -74,6 +86,8 @@ public sealed class SignInThrottle
         {
             Forget(now);
         }
+
+        return TimeSpan.Zero;
     }
 
     public void RecordSuccess(string email) => _attempts.TryRemove(email, out _);
