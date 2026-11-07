@@ -2,23 +2,22 @@ using System.Net;
 using System.Text.Json;
 using Acme.Gateway.Tests.Support;
 
-namespace Acme.Gateway.Tests;
+namespace Acme.Gateway.Tests.Controllers;
 
-/// <summary>The gateway in memory: its own GET /v1/system/health answers in the shape every service shares.</summary>
+/// <summary>The gateway's own GET /v1/system/health: the shape every service shares, with its sessions database.</summary>
 [TestClass]
-public sealed class HealthEndpointTests
+public sealed class SystemControllerTests
 {
     private static readonly string[] _sharedShape = ["service", "status", "version", "databaseReachable"];
 
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public async Task GetHealth_AnswersInTheSharedShape_WithItsSessionsDatabase()
+    public async Task GetHealthAsync_AnswersInTheSharedShape_WithItsSessionsDatabase()
     {
-        await using var gateway = await TestGateway.NewAsync(TestContext.CancellationToken);
-        var client = gateway.Browser;
+        await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
 
-        using var response = await client.GetAsync(new Uri("/v1/system/health", UriKind.Relative), TestContext.CancellationToken);
+        using var response = await gateway.Browser.GetAsync(new Uri("/v1/system/health", UriKind.Relative), TestContext.CancellationToken);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.CancellationToken));
         var body = json.RootElement;
 
@@ -31,12 +30,11 @@ public sealed class HealthEndpointTests
     }
 
     [TestMethod]
-    public async Task EveryResponse_ForbidsCaching()
+    public async Task GetHealthAsync_ForbidsCaching_AsEveryAnswerDoes()
     {
-        await using var gateway = await TestGateway.NewAsync(TestContext.CancellationToken);
-        var client = gateway.Browser;
+        await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
 
-        using var response = await client.GetAsync(new Uri("/v1/system/health", UriKind.Relative), TestContext.CancellationToken);
+        using var response = await gateway.Browser.GetAsync(new Uri("/v1/system/health", UriKind.Relative), TestContext.CancellationToken);
 
         Assert.IsTrue(response.Headers.CacheControl?.NoStore);
     }
