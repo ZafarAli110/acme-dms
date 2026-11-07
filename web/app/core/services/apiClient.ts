@@ -15,6 +15,11 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** True for signing in and out: a 401 is that request's own answer (a wrong password), not the end of the sign-in. */
   anonymous?: boolean;
+  /**
+   * The location the request is about: a query sends the one in its key, so a refetch that starts just after a switch
+   * of location still asks for the location its key names. Without it, the location selected now.
+   */
+  locationId?: string;
 }
 
 /**
@@ -117,7 +122,7 @@ class ApiClient {
     const timeout = AbortSignal.timeout(API_CONFIG.timeoutMs);
     const signal = options?.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
 
-    const locationId = options?.anonymous === true ? null : session.getLocationId();
+    const locationId = options?.anonymous === true ? null : (options?.locationId ?? session.getLocationId());
     // The caller's headers (a JSON body's content type) plus where, and that the page itself is asking. A FormData body
     // gets its multipart content type, with the boundary, from fetch itself.
     const headers = new Headers(init.headers);
