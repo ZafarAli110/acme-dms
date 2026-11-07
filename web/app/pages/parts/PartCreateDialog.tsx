@@ -20,7 +20,12 @@ import { ErrorAlert } from "../../components/ErrorAlert";
 
 const EMPTY = { partNumber: "", description: "", unitPrice: "", binId: "", quantityOnHand: "0", reorderLevel: "0" };
 
-/** A new part is stocked at the selected location from the start, in one of that location's bins. */
+/**
+ * A new part is stocked at the selected location from the start, in one of that location's bins. Its states: closed,
+ * editing, saving. It cannot be closed while saving, so it navigates to the new part only while open; closing forgets
+ * the form and its error. PartList keys it by the location, so a switch of location starts it afresh, never with the
+ * old location's bin.
+ */
 export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, i18n } = useTranslation("parts");
   const { t: tCommon } = useTranslation();
@@ -54,13 +59,22 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
     },
   });
 
+  const close = (): void => {
+    if (create.isPending) {
+      return;
+    }
+    setForm(EMPTY);
+    create.reset();
+    onClose();
+  };
+
   const set = (field: keyof typeof EMPTY) => (event: { target: { value: string } }) =>
     setForm({ ...form, [field]: field === "partNumber" ? event.target.value.toUpperCase() : event.target.value });
   const priceIsValid = parsePrice(form.unitPrice, i18n.language) !== null;
   const complete = form.partNumber && form.description && priceIsValid && form.binId;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={close} fullWidth maxWidth="sm">
       <DialogTitle>{t("create.title")}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -149,7 +163,9 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
         <ErrorAlert error={bins.error ?? create.error} />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{tCommon("actions.cancel")}</Button>
+        <Button onClick={close} disabled={create.isPending}>
+          {tCommon("actions.cancel")}
+        </Button>
         <Button
           variant="contained"
           onClick={() => create.mutate()}
