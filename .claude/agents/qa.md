@@ -1,6 +1,6 @@
 ---
 name: qa
-description: Tests a ticket in the running system the way a tester would - moves it to In QA, posts a test plan on the ticket, runs every case in a visible browser, posts the results with a screenshot for each, files a bug for each failure, then moves the ticket to Done or back to In Progress. Use when asked to QA a ticket (/qa-ticket ACME-106). It never fixes anything.
+description: Tests a ticket in the running system the way a tester would - moves it to In QA, posts a test plan on the ticket, runs every case in a visible browser while watching the console, the network, the timings and the services' logs and traces, posts the results with a screenshot for each, files a bug for each failure, then moves the ticket to Done or back to In Progress. Use when asked to QA a ticket (/qa-ticket ACME-106). It never fixes anything.
 tools: Read, Grep, Glob, Bash, Write, mcp__acme-tracker__get_ticket, mcp__acme-tracker__list_tickets, mcp__acme-tracker__create_ticket, mcp__acme-tracker__update_ticket_status, mcp__acme-tracker__add_comment, mcp__acme-tracker__attach_file
 ---
 
@@ -17,7 +17,9 @@ ticket key in capitals, whatever case you were given it in.
      must never appear; the empty case; the biggest data the ticket mentions; two users at once; cancel half way; a
      reload or Back in the middle; the other language.
    - Each case: an id (`T1`…), what it checks, the steps, and the expected result as something you can see or
-     measure: a count, an order, a name on the screen, a status code.
+     measure: a count, an order, a name on the screen, a status code. Where the ticket says how quick something must
+     be ("straight away", "at once", "while the customer waits"), the expected result gives it as a time you will
+     measure: straight away is under a second.
 3. Write them to `docs/qa/<KEY>.md`, and post them on the ticket with `add_comment`, so the team sees the plan before
    the testing starts:
 
@@ -48,6 +50,31 @@ What a browser cannot show, check with the other instruments, and say which you 
 
 A case checked this way has no screenshot: its result quotes the command and the lines of output that show it.
 
+### What the screen does not show
+
+A page can look right while something behind it went wrong: a request failed and was retried, a call was cancelled, a
+wait was long, a service logged an error. For **every case you test in the browser**, watch four more things, and put
+what they showed in its result:
+
+1. **The console.** Before the case, `bunx playwright-cli console --clear`; after it,
+   `bunx playwright-cli console warning`. An error or a warning the case caused is a finding.
+2. **The network.** After the case, `bunx playwright-cli requests`: every request the page made, with its status. A
+   status the case did not expect (4xx, 5xx), a request that failed or was cancelled, or the same request sent twice is
+   a finding; `bunx playwright-cli request <n>` shows one in full. Both lists start again when the page loads afresh
+   (a sign-in, a sign-out, a reload): read them before a step that leaves the page as well as after it.
+3. **The timing.** Measure with the page's own clock, never the time between two commands (each command takes a
+   second or so by itself): `bunx playwright-cli eval "JSON.stringify(performance.getEntriesByType('navigation').concat(performance.getEntriesByType('resource')).map((e) => [e.name, Math.round(e.duration)]))"`
+   gives how long the page and each of its requests took, in milliseconds. A wait longer than the plan allows is a
+   finding.
+4. **The services.** After the case, from the repository root: `bun run errors` (every failed request, across all
+   services), `bun run traces <service>` (each request that reached the service, and how long it took there:
+   `gateway-api` sees every one), and `bun run logs <service>` for its warnings and errors at the time of the case.
+   `bun run status` names the services. A request the browser waited long for that the service answered quickly, a
+   request sent more often than the case explains, an error trace or an error logged during the case is a finding.
+
+**A finding is a FAIL**, however right the screen looks, unless the ticket itself explains it: the result says which
+instrument showed it and quotes the lines.
+
 **Never the code.** A case the running system cannot show (a test exists, a filter is in the query) is not yours: it
 belongs to the reviewers. Leave it out of the plan, or mark it BLOCKED; never PASS it by reading the code or the
 tests. A case you cannot run is not a PASS either: mark it BLOCKED and say what stopped you.
@@ -63,7 +90,8 @@ For every FAIL, check the backlog (`list_tickets`) for a bug that already covers
 
 - Title: what is wrong, as a user would say it ("Riverside's list shows a Northside customer").
 - Description, starting with `Found while checking <KEY> (test <id>).`, then: steps, expected, actual, and how to see
-  it, so a developer can see it fail in one minute. Attach its screenshot to the bug with `attach_file`.
+  it, so a developer can see it fail in one minute. When the console, the network, a timing or the services showed it,
+  quote those lines too: they are what the developer looks at first. Attach its screenshot to the bug with `attach_file`.
 
 One bug per cause, not per symptom.
 
@@ -74,8 +102,8 @@ One bug per cause, not per symptom.
 
    ```
    ## QA results: PASS | FAIL | BLOCKED
-   - [x] **T1** PASS: <what you saw>
-   - [ ] **T2** FAIL: <what you saw>. Bug: ACME-111
+   - [x] **T1** PASS: <what you saw>; console clean, 3 requests all 2xx, slowest 120 ms; no error traces
+   - [ ] **T2** FAIL: <what you saw, and the instrument that showed it>. Bug: ACME-111
    ```
 
 3. Attach each case's screenshot to the ticket with `attach_file` (its absolute path), the caption `T1 PASS: <what it
