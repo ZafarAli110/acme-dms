@@ -11,17 +11,17 @@ export const partQueryOptions = {
   list: (locationId: string, params: ListParams) =>
     queryOptions({
       queryKey: PART_QUERY_KEYS.list(locationId, params),
-      queryFn: ({ signal }) => partQueries.getPartsAsync(params, { signal }),
+      queryFn: ({ signal }) => partQueries.getPartsAsync(params, { signal, locationId }),
     }),
   /** The first page of one: its `total` is how many parts the location stocks. */
   count: (locationId: string) =>
     queryOptions({
       queryKey: PART_QUERY_KEYS.count(locationId),
-      queryFn: ({ signal }) => partQueries.getPartsAsync({ ...FIRST_PAGE, pageSize: 1 }, { signal }),
+      queryFn: ({ signal }) => partQueries.getPartsAsync({ ...FIRST_PAGE, pageSize: 1 }, { signal, locationId }),
     }),
   detail: (locationId: string, partId: string) =>
     queryOptions({
       queryKey: PART_QUERY_KEYS.detail(locationId, partId),
-      queryFn: ({ signal }) => partQueries.getPartAsync(partId, { signal }),
+      queryFn: ({ signal }) => partQueries.getPartAsync(partId, { signal, locationId }),
     }),
 };
