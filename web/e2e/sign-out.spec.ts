@@ -54,6 +54,28 @@ test.describe("the session", () => {
     expect((await request.get("/api/identity/v1/users/me", { headers: withCopy })).status()).toBe(401);
   });
 
+  test("signing out in one tab takes every tab to the sign-in page, a half-filled form too, with one click", async ({
+    page,
+    context,
+  }) => {
+    await signInAsync(page, MARIA);
+    await page.goto("/customers");
+    const other = await context.newPage();
+    await other.goto("/customers/new");
+    await other.getByTestId("customer-firstName").locator("input").fill("Pat");
+
+    await page.getByTestId("profile-menu").click();
+    await page.getByTestId("sign-out").click();
+    await page.getByTestId("confirm-sign-out").click();
+
+    await expect(page).toHaveURL(/\/sign-in/);
+    // The form's unsaved changes do not hold the tab: nothing could save them once the sign-in has ended.
+    await expect(other).toHaveURL(/\/sign-in/);
+    // Back leads to a screen of the old sign-in, which sends the browser to the sign-in page again.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/sign-in/);
+  });
+
   test("a reload after signing out stays signed out: nothing is left to sign anyone in", async ({ page }) => {
     await signInAsync(page, MARIA);
     await page.getByTestId("profile-menu").click();

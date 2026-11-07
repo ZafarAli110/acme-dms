@@ -24,7 +24,8 @@
     "profileMenu": "Menu du profil",
     "roleAtLocation": "{{role}} à {{location}}",
     "signOut": "Se déconnecter",
-    "signOutQuestion": "Voulez-vous vraiment vous déconnecter ?"
+    "signOutQuestion": "Voulez-vous vraiment vous déconnecter ?",
+    "signingOut": "Déconnexion…"
   },
   "unsavedChanges": {
     "leaveTitle": "Quitter sans enregistrer ?",
