@@ -68,9 +68,12 @@ public sealed class RabbitMqConnection : IAsyncDisposable
 
         await channel.QueueDeclareAsync(ProcessDocumentDeadLetterQueue, durable: true, exclusive: false, autoDelete: false, cancellationToken: cancellationToken);
         await channel.QueueBindAsync(ProcessDocumentDeadLetterQueue, DeadLetterExchange, MessageTypes.ProcessDocument, cancellationToken: cancellationToken);
+        await channel.QueueBindAsync(ProcessDocumentDeadLetterQueue, DeadLetterExchange, MessageTypes.DocumentUnclaimed, cancellationToken: cancellationToken);
 
         var arguments = new Dictionary<string, object?> { ["x-dead-letter-exchange"] = DeadLetterExchange };
         await channel.QueueDeclareAsync(ProcessDocumentQueue, durable: true, exclusive: false, autoDelete: false, arguments: arguments, cancellationToken: cancellationToken);
         await channel.QueueBindAsync(ProcessDocumentQueue, MessageTypes.Exchange, MessageTypes.ProcessDocument, cancellationToken: cancellationToken);
+        // The same queue takes dealership-api's word that a document is nobody's: the consumer deletes it.
+        await channel.QueueBindAsync(ProcessDocumentQueue, MessageTypes.Exchange, MessageTypes.DocumentUnclaimed, cancellationToken: cancellationToken);
     }
 }
