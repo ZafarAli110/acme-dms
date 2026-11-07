@@ -23,5 +23,6 @@ export function useExports() {
       exportKernel.restoreAsync(serviceUrl, titleOf),
     cancelAsync: (jobId: string) => exportKernel.cancelAsync(jobId),
     dismiss: (jobId: string) => exportKernel.dismiss(jobId),
+    retry: (jobId: string) => exportKernel.retry(jobId),
   };
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { session } from "../../storage/sessionStore";
-import { type ExportJob, ExportKernel } from "../exportKernel";
+import { type ExportJob, ExportKernel, isRunning } from "../exportKernel";
 
 class FakeStorage implements Storage {
   private readonly _items = new Map<string, string>();
@@ -41,19 +41,53 @@ const running: ExportJob = {
   error: null,
 };
 
-/** dealership-api: answers each call and records where it was sent for. */
+/** dealership-api: answers each call and records where it was sent for, and with which idempotency key. */
 function fakeService() {
-  const calls: { method: string; url: string; location: string | null }[] = [];
+  const calls: { method: string; url: string; location: string | null; key: string | null }[] = [];
+  const behaviour = {
+    /** How the events stream answers: open until stopped, ended at once with no final state, or gone. */
+    events: "open" as "open" | "ends" | "gone",
+    /** What a read of the export returns. */
+    job: running,
+    /** POSTs that never reach the service, before one does. */
+    unreachablePosts: 0,
+  };
   const handler = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const method = init?.method ?? "GET";
-    calls.push({ method, url: String(url), location: new Headers(init?.headers).get("x-location-id") });
-    if (String(url).endsWith("/events")) {
-      // A stream that stays open until the kernel stops following it.
-      return new Response(new ReadableStream(), { headers: { "content-type": "text/event-stream" } });
+    const headers = new Headers(init?.headers);
+    calls.push({
+      method,
+      url: String(url),
+      location: headers.get("x-location-id"),
+      key: headers.get("idempotency-key"),
+    });
+    if (method === "POST" && behaviour.unreachablePosts > 0) {
+      behaviour.unreachablePosts--;
+      throw new TypeError("Failed to fetch");
     }
-    return method === "DELETE" ? new Response(null, { status: 204 }) : Response.json(running);
+    if (String(url).endsWith("/events")) {
+      if (behaviour.events === "gone") {
+        return Response.json(
+          {
+            type: "urn:acme:error:not-found",
+            title: "Not Found",
+            status: 404,
+            detail: "",
+            instance: "",
+            timestamp: "",
+          },
+          { status: 404, headers: { "content-type": "application/problem+json" } },
+        );
+      }
+      const body = behaviour.events === "ends" ? "" : new ReadableStream();
+      return new Response(body, { headers: { "content-type": "text/event-stream" } });
+    }
+    if (method === "DELETE") {
+      return new Response(null, { status: 204 });
+    }
+    return Response.json(method === "POST" ? running : behaviour.job);
   };
-  return { calls, handler };
+  return { calls, behaviour, handler };
 }
 
 describe("ExportKernel", () => {
@@ -93,5 +127,35 @@ describe("ExportKernel", () => {
     kernel.reset();
 
     expect(kernel.getSnapshot()).toEqual([]);
+  });
+
+  it("reads the state and follows again when the events stop without a final state", async () => {
+    service.behaviour.events = "ends";
+    service.behaviour.job = { ...running, status: "completed", rows: 100 };
+
+    await kernel.startAsync("Customers", "/api/dealership", "v1/customers/exports", {});
+    await vi.waitFor(() => expect(kernel.getSnapshot()[0]?.job.status).toBe("completed"), { timeout: 3000 });
+
+    expect(kernel.getSnapshot()[0]?.connection).toBe("following");
+  });
+
+  it("marks an export the service no longer has as lost: no longer running", async () => {
+    service.behaviour.events = "gone";
+
+    await kernel.startAsync("Customers", "/api/dealership", "v1/customers/exports", {});
+    await vi.waitFor(() => expect(kernel.getSnapshot()[0]?.connection).toBe("lost"));
+
+    expect(isRunning(kernel.getSnapshot()[0]!)).toBe(false);
+  });
+
+  it("sends a start that never reached the service again, with the same key, so it makes one export", async () => {
+    service.behaviour.unreachablePosts = 1;
+
+    await kernel.startAsync("Customers", "/api/dealership", "v1/customers/exports", {});
+
+    const posts = service.calls.filter((call) => call.method === "POST");
+    expect(posts).toHaveLength(2);
+    expect(posts[0]?.key).toBeTruthy();
+    expect(posts[1]?.key).toBe(posts[0]?.key);
   });
 });
