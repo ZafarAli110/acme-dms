@@ -1,5 +1,6 @@
 using System.Reflection;
 using Acme.Identity.BusinessLogic.Abstractions.Handlers.System.GetHealth;
+using Acme.Identity.BusinessLogic.Abstractions.Signing;
 using Acme.Identity.DTO.System;
 using Acme.Identity.Persistence.Database;
 
@@ -16,15 +17,19 @@ internal sealed class GetHealthQueryHandler : IGetHealthQueryHandler
         ?? "unknown";
 
     private readonly IdentityDbContext _dbContext;
+    private readonly ISigningKeyProvider _signingKeyProvider;
 
-    public GetHealthQueryHandler(IdentityDbContext dbContext)
+    public GetHealthQueryHandler(IdentityDbContext dbContext, ISigningKeyProvider signingKeyProvider)
     {
         _dbContext = dbContext;
+        _signingKeyProvider = signingKeyProvider;
     }
 
     public async Task<HealthCheckResponseDto> ExecuteAsync(CancellationToken cancellationToken)
     {
         var databaseReachable = await _dbContext.Database.CanConnectAsync(cancellationToken);
-        return new HealthCheckResponseDto("identity-api", databaseReachable ? "ok" : "degraded", _version, databaseReachable);
+        // An instance whose Data Protection keys cannot open the signing key in use signs no one in: not fine either.
+        var canSign = databaseReachable && await _signingKeyProvider.CanSignAsync(cancellationToken);
+        return new HealthCheckResponseDto("identity-api", canSign ? "ok" : "degraded", _version, databaseReachable);
     }
 }
