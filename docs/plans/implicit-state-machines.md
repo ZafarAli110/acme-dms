@@ -119,3 +119,28 @@ lab 10) stay as they are.
 moves, lists every unfinished state with its way out and its owner, and plays the change through duplicates, wrong
 order, a crash between steps, two requests, two tabs and two instances. `/review-pr` runs it with the other four;
 `/ticket-to-pr` runs it when the diff touches a status, a job, a message, a lease, a cache, sign-in, a kernel or a form.
+
+## Review round 1 (7 Nov 2026)
+
+Two reviewers read the plans against the code: the `architect` (is each fix the simplest that fits this codebase) and the
+`state-reviewer` applied to the fix designs themselves (would the fix leave a new stuck state or race). Each plan now
+ends with what changed in its decisions and the questions only a person can answer. Two things hold for all of them:
+
+- **Migrations are made on each branch, never cherry-picked.** `main`, `lab/09-export-final` and `final` each have their
+  own Drizzle snapshot chain; a `CHECK`, an index or a column is generated separately on each branch that gets it.
+- **"The same on every branch" is checked per file, not assumed.** The web `apiClient.ts` on `main` and the labs up to
+  `lab/09-export-before` has no `headers`, `timeout` or `readEventsAsync`: those are lab 9's answer and are never copied
+  back.
+
+**Done:** SIGN-1 (seeding in Development only), on `main` first.
+
+## Answers (7 Nov 2026)
+
+Zafar Ali took the recommendations:
+
+- **Users outside Development:** none are created for now; a way to create dealers and users is a feature of its own.
+- **Photos:** a photo still processing after 10 minutes is failed, "timed out"; the page stops asking after 2 minutes
+  and says the photo is still being processed; a failed photo shows its reason on the tile.
+- **Save conflicts:** "Reload their version" and "Keep my edits", which puts this user's changes onto theirs.
+- **Exports after a location switch:** the panel shows only this location's exports; the others come back on
+  switching back.

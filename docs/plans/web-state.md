@@ -83,3 +83,24 @@ clears `failed`; `submitting` ignores a second submit; `conflict` offers "Reload
   banner shows.
 - `web/e2e/sign-out.spec.ts`: the gateway's answer delayed 3 s, confirm, go Back → the sign-in page; the same user signs
   in in a second tab → the first tab's dirty form is still there.
+
+## Review round 1: changes to the decisions
+
+1. **The location travels with every location-scoped call**, not only queries: actions, the export stream and
+   downloads too. `apiClient` takes the location explicitly, with no fallback to session storage; an action takes the
+   location captured when its form opened. On `main` and the labs up to `lab/09-export-before` this is a narrow
+   `locationId` option, never lab 9's `headers` option.
+2. **The `signed-in` message carries the user id**; when it matches this tab's user, the tab checks in the background
+   without committing `resolving`, and keeps its location, cache, forms and export cards.
+3. **"Keep my edits" merges.** A PUT sends every field, so keeping the old form would overwrite what the other person
+   changed. The conflict state holds their version; "Keep my edits" puts only the fields this user changed onto it,
+   takes its version, and goes back to `dirty`. The smallest first step: invalidate on a `412` too.
+4. **`signing-out` leaves on the timeout as well as the answer**, announcing to the other tabs before it navigates.
+5. **A late revoke flag must not end the next sign-in:** `signing-out` writes `revokePending` only if no sign-in
+   happened since it began (a counter shared through `localStorage`). This one was already there.
+
+## Questions for a person
+
+- On a save conflict: "Reload their version" and "Keep my edits", or other words, or one choice only?
+- The banners: "changed by someone else" on a dirty form, and "can't reach the server" while the tab retries.
+- When the same user signs in again in another tab, should a dirty form here stay as it is? (The plan says yes.)

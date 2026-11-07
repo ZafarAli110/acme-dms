@@ -82,3 +82,28 @@ RETURNING blocked_until` first, reset on success), shared by every instance.
 - `DeleteSessionCommandHandlerTests`: the row deleted from outside between load and save → `204`, no exception.
 - `SignInThrottleTests`: 20 wrong passwords at once → at most 5 checked.
 - `RefreshTokenTests`: the row deleted between the read and the lock → `401`.
+
+## Review round 1: changes to the decisions
+
+1. **SIGN-1 is done** without the advisory lock: in Development one instance seeds. The migrations moved out of the
+   seeder into `StartupDatabase`, so every environment still migrates; the seeder no longer does.
+2. **SIGN-2: publish every key from its public half.** Today a key's public half comes only from opening its private
+   half, so skipping an unopenable key would also unpublish it, and services verifying through that instance would
+   refuse tokens the other signed. The row stores the public key (SPKI); every key is published from it. An instance
+   that can't open the active key reports unhealthy and logs at Error; a key is made only when the table has none or the
+   newest is due, whoever can open it. No `unopenable_at`: that is one instance's fact on a shared row. An unopenable key
+   still retires by age. The first key on an empty table signs at once. Development keeps replacing a key it can't open
+   (a developer who wiped their profile folder).
+3. **SIGN-3 starts with the interim:** on a timeout, retry once at once, inside the 20 s grace. That makes
+   `docs/ARCHITECTURE.md` true. The attempt-key protocol loosens reuse detection and changes identity-api's contract: a
+   security decision, made separately.
+4. **SIGN-5 stays in memory**, as `docs/ARCHITECTURE.md` "Guessing passwords" chose: an atomic reservation in the
+   `ConcurrentDictionary` before hashing. A shared store is a separate decision.
+5. **Decision 7, the sweeps, is out of this plan**: expired rows don't change behaviour.
+6. SIGN-4 and SIGN-6 stand as written.
+
+## Questions for a person
+
+- With seeding in Development only, how are dealers and users created anywhere else? Today nothing else creates them.
+- Who deletes a signing key that can't be opened, and how?
+- Should a lost renewal answer be honoured for longer than the 20 s grace (the attempt-key protocol)?

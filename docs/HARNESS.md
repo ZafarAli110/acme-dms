@@ -50,6 +50,7 @@ anything. The ones marked **you** are started by a person (`/name`); the others 
 | `/ticket-to-pr <KEY>`         | you        | the whole loop with agents, from the board to a reviewed pull request             | 10  |
 | `/review-pr <n>`              | you        | the five reviewers on any pull request, one review round posted; changes no code  | 10  |
 | `/resolve-pr-comments <n>`    | you        | judges each review comment, fixes the real ones, answers the rest                 | 10  |
+| `/find-state-machines [area]` | you        | sweeps the whole repository for undeclared state machines; changes no code        | —   |
 
 ## Subagents
 

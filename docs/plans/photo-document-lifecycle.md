@@ -103,3 +103,33 @@ design of its own; the upload idempotency key; `mandatory: true` with a declared
   still deleted. `DeleteDocumentCommandHandlerTests`: a delete after Ready → still Ready.
 - `OutboxRelayTests` (new): a poison row does not republish the rows before it; two relays never publish one row twice.
 - `schema.test.ts`: `status = 'bogus'` is refused.
+
+## Review round 1: changes to the decisions
+
+1. **The retry is not `ProcessDocumentConsumer`'s.** That pattern republishes to the delivery's exchange without
+   confirms (DOC-2 again), and in dealership-api it would send a copy to every queue bound to the shared
+   `acme.documents` exchange. An early event is not retried by timer at all: on 0 rows and no photo row, ack and store
+   the outcome (`early_document_outcomes`, by `document_id`); the upload's insert applies a stored outcome; the sweep
+   prunes outcomes older than a day. A handler error (PHOTO-5) is retried through dealership-api's own retry queue (a
+   TTL that dead-letters back to its queue), added to `docs/contracts.md`; an unknown message or bad JSON goes straight to
+   the dead-letter queue.
+2. **No `pending_until` column.** The deadline is `created_at + 10 minutes`. The sweep may move `failed` with reason
+   "timed out" to `ready` when `processed` arrives late. document-api's own deadline for a `Pending` document is
+   shorter, so `document.failed` normally comes first. The sweep is a later, separate change: `main` and labs 00 to 08
+   have no export worker to shape it on.
+3. **The part GET is never answered `304`.** Its ETag stays the version, for `If-Match`, so `docs/standards/api-errors.md`
+   needs no change; but the part answers `Cache-Control: no-store`, because its body shows photos and stock that change
+   without the version. Not a version bump: a user who saves a photo and goes on editing would get a conflict on the next
+   save, after their own photo finished. A body-derived ETag that `If-Match` also accepts is a later choice. Photos are
+   ordered by `created_at, id`, so one save's photos never swap.
+4. **The default photo:** `update-part` clears `is_default` before it sets it (a partial unique index can't be
+   deferred); an upload counts early, counts again under the part lock, and deletes its document when refused.
+5. **DOC-1 uses `xmin` as a concurrency token**, not `ExecuteUpdateAsync`, which would skip the auditing interceptor.
+6. **DOC-3: save after each publish and catch errors per row.** No `attempts` column: the inbox already absorbs
+   duplicates, and parked rows would be one more place nobody reads.
+
+## Questions for a person
+
+- How long may a photo stay "processing" before the page says it failed, and what does the tile say?
+- Should the page stop asking after 2 minutes, and with what message?
+- Should a failed photo show its reason on the tile, and offer a retry?

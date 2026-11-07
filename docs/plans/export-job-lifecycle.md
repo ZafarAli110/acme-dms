@@ -85,3 +85,23 @@ is one table of moves, a fence on the attempt, and a client that models the card
   cards; a double follow keeps one controller; a POST timeout retries with the same key.
 - `web/e2e/export.spec.ts`: switch location and cancel the first location's card → the job is cancelled; sign in as
   another user in a second tab → no cards.
+
+## Review round 1: changes to the decisions
+
+1. **Rename first, then complete.** With a file per attempt, renaming to `${id}-${attempt}.xlsx` before the fenced
+   completion is safe; an attempt that loses deletes its own file. The orphan scan removes `.xlsx` and `.part` files no
+   row points at, only when older than `exportStaleSeconds`. The expire UPDATE returns the old `file_path` through a CTE
+   (`RETURNING` gives the new value, `null`).
+2. **Reset the cards only when the user changes**, not on every `forget()`: the web plan keeps everything when the same
+   user signs in elsewhere.
+3. **Every call a card makes carries the card's location** (follow, get, cancel, download), not only Cancel; otherwise
+   a reconnect after a switch is `404` and the card turns `lost` while the job runs.
+4. **`reconnecting` has a cap**: after N tries the card is `stalled` with a Retry button, owned by the export kernel.
+5. **Three changes, in order:** the server (EXP-2, EXP-4, EXP-5 and the `CHECK`), whose card it is (EXP-1, EXP-6), then
+   the watchdog and the retried POST (EXP-3, EXP-7).
+6. **`lab/09-export-after` and lab 10 are left alone on purpose.** They have the older runner, and EXP-1 and EXP-4 exist
+   there too, beside the export-panel bug the room fixes.
+
+## Questions for a person
+
+- After a location switch, should the panel hide the other locations' exports, or show them with their location?
