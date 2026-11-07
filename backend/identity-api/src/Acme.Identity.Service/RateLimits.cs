@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.RateLimiting;
 using Acme.ServiceDefaults.ProblemDetails;
 using Microsoft.AspNetCore.RateLimiting;
@@ -34,6 +36,32 @@ public static class RateLimits
 
     private static RateLimitPartition<string> PerAddress(HttpContext context, int permits) =>
         RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            AddressKey(context.Connection.RemoteIpAddress),
             _ => new FixedWindowRateLimiterOptions { PermitLimit = permits, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+
+    /// <summary>
+    /// What one caller is counted by. An IPv4 address as it is. An IPv6 address by its /64: one home or office network gets
+    /// a whole /64, and counting each address of it would let one caller switch addresses without end.
+    /// </summary>
+    public static string AddressKey(IPAddress? address)
+    {
+        if (address is null)
+        {
+            return "unknown";
+        }
+
+        if (address.IsIPv4MappedToIPv6)
+        {
+            return address.MapToIPv4().ToString();
+        }
+
+        if (address.AddressFamily != AddressFamily.InterNetworkV6)
+        {
+            return address.ToString();
+        }
+
+        var network = address.GetAddressBytes();
+        Array.Clear(network, 8, 8);
+        return $"{new IPAddress(network)}/64";
+    }
 }

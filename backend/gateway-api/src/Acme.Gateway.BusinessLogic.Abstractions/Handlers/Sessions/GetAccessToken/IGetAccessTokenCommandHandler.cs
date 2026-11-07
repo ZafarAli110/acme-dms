@@ -1,4 +1,4 @@
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
+using Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 
 namespace Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.GetAccessToken;
 
