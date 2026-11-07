@@ -17,13 +17,19 @@ type HeaderSetter = { setHeader(name: string, value: string): void };
  * answer a browser may keep, and only to ask again (`Cache-Control: private, no-cache`); every other answer stays `no-store`.
  *
  *   @Get(":customerId") @ETagged()
+ *
+ * `revalidate: false` for a record whose answer shows more than its version covers (a part's photos and stock change
+ * without it): the ETag is still sent, for If-Match, but the answer is never 304 and stays `no-store`, so a client
+ * polling it always sees the latest.
  */
-export function ETagged() {
-  return UseInterceptors(ETagInterceptor);
+export function ETagged(options: { revalidate?: boolean } = {}) {
+  return UseInterceptors(options.revalidate === false ? ETagWithoutRevalidationInterceptor : ETagInterceptor);
 }
 
 @Injectable()
 export class ETagInterceptor implements NestInterceptor {
+  protected readonly revalidate: boolean = true;
+
   public intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp();
     const request = http.getRequest<EtagRequest>();
@@ -36,7 +42,7 @@ export class ETagInterceptor implements NestInterceptor {
         }
         const etag = etagOf(version);
         response.setHeader("etag", etag);
-        if (request.method === "GET") {
+        if (request.method === "GET" && this.revalidate) {
           // One record, one user's: the browser may keep it (`private`) but must ask before every use (`no-cache`), which
           // costs a 304 with no body when the version is the same. The server still runs the query and checks who is
           // asking, so a copy is never trusted without it. What differs by sign-in (a script's token, the browser's
@@ -51,4 +57,10 @@ export class ETagInterceptor implements NestInterceptor {
       }),
     );
   }
+}
+
+/** The ETag for If-Match only: never a 304, never kept by the browser (see `ETagged`). */
+@Injectable()
+export class ETagWithoutRevalidationInterceptor extends ETagInterceptor {
+  protected override readonly revalidate: boolean = false;
 }

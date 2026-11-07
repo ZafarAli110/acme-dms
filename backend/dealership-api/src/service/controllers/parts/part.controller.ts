@@ -43,7 +43,8 @@ export class PartController {
 
   @Get(":partId")
   @RequirePermission("parts.read")
-  @ETagged()
+  // Its photos and stock change without the part's version: never answered from the browser's copy.
+  @ETagged({ revalidate: false })
   public findOneAsync(
     @CurrentUser() userContext: UserContext,
     @Param("partId", ParseUUIDPipe) partId: string,
