@@ -82,9 +82,12 @@ instance**, with no transaction held across the call to identity-api: a renewal 
 (`renewing_until`, one short `UPDATE` that only one request can win, timed by Postgres's clock so the instances' own
 clocks do not matter), calls identity-api, then saves the new tokens and gives the lease back, both only while the lease
 is still its own. A request that finds a renewal running sends the token it has while that still works, and otherwise
-waits for it. A renewal has 10 seconds, on its own time limit rather than the browser's, and its lease lasts 15: shorter
-than identity-api's 20-second grace period, so when an answer is lost (a timeout, a gateway that stopped), the next
-renewal asks again inside the grace and gets the same replacement token (see "Rotation and reuse"). If identity-api
+waits for it. A renewal has 10 seconds, on its own time limit rather than the browser's; when no answer comes it asks once
+more at once, with 4 seconds, because identity-api may have replaced the token and lost the answer, and asked again
+inside its 20-second grace period it gives the same replacement (see "Rotation and reuse"). The lease lasts 15 seconds,
+longer than both calls and shorter than the grace, so after a gateway that stopped mid-renewal the next request can
+ask again inside the grace. A gateway that stopped and a next request more than about 20 seconds later still end the
+sign-in: the old token then looks like a stolen copy. If identity-api
 cannot be reached, a token that has not yet expired is still sent; otherwise the gateway answers 503. A renewal **reads
 the person's roles and locations again**, so a change Maria makes on the Locations page reaches a signed-in person
 within 15 minutes, and a person who was deleted cannot renew. When identity-api has ended the sign-in, the gateway
