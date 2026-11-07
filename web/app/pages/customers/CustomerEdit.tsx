@@ -44,7 +44,9 @@ export async function clientAction({ request, context, params }: ClientActionFun
     return { saved: false, error: i18n.t("errors.unexpected") };
   }
   try {
-    await customerQueries.updateCustomerAsync(customerId, (await request.json()) as CustomerInput);
+    // Sent for the location the user saw when they pressed Save, even if another is selected by now.
+    const { locationId, ...input } = (await request.json()) as CustomerInput & { locationId?: string };
+    await customerQueries.updateCustomerAsync(customerId, input, { locationId: locationId ?? resolved.locationId });
   } catch (error) {
     return { saved: false, error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
   }
