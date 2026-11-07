@@ -65,4 +65,30 @@ describe("DocumentEventsConsumer", () => {
     expect(channel.sendToQueue).not.toHaveBeenCalled();
     expect(channel.nack).toHaveBeenCalledWith(expect.anything(), false, false);
   });
+
+  it("parks an event that failed every retry: the dead-letter queue listens for the key a retried event carries", async () => {
+    const binds: [string, string, string][] = [];
+    const channel = {
+      assertExchange: vi.fn(() => Promise.resolve()),
+      assertQueue: vi.fn(() => Promise.resolve()),
+      bindQueue: vi.fn((queue: string, exchange: string, key: string) => {
+        binds.push([queue, exchange, key]);
+        return Promise.resolve();
+      }),
+    };
+    const consumer = new DocumentEventsConsumer(
+      { executeAsync: vi.fn() },
+      { executeAsync: vi.fn() },
+      readSettings({}),
+    ) as unknown as { declareTopologyAsync(channel: ConfirmChannel): Promise<void> };
+
+    await consumer.declareTopologyAsync(channel as unknown as ConfirmChannel);
+
+    // A retried event comes back from the retry queue with the main queue's name as its routing key.
+    expect(binds).toContainEqual([
+      "dealership-api.document-events.dlq",
+      "acme.documents.dlx",
+      "dealership-api.document-events",
+    ]);
+  });
 });

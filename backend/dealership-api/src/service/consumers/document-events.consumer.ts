@@ -113,6 +113,9 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
     await channel.assertQueue(DEAD_LETTER_QUEUE, { durable: true });
     await channel.bindQueue(DEAD_LETTER_QUEUE, DEAD_LETTER_EXCHANGE, DOCUMENT_PROCESSED);
     await channel.bindQueue(DEAD_LETTER_QUEUE, DEAD_LETTER_EXCHANGE, DOCUMENT_FAILED);
+    // A message that came back from RETRY_QUEUE carries QUEUE's name as its routing key: dead-lettered after its last try,
+    // it is routed by that, so the dead-letter queue listens for it too. Without this it would match nothing and be lost.
+    await channel.bindQueue(DEAD_LETTER_QUEUE, DEAD_LETTER_EXCHANGE, QUEUE);
     await channel.assertQueue(QUEUE, { durable: true, deadLetterExchange: DEAD_LETTER_EXCHANGE });
     await channel.bindQueue(QUEUE, EXCHANGE, DOCUMENT_PROCESSED);
     await channel.bindQueue(QUEUE, EXCHANGE, DOCUMENT_FAILED);
