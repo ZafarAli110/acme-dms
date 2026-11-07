@@ -91,4 +91,13 @@ describe("DocumentEventsConsumer", () => {
       "dealership-api.document-events",
     ]);
   });
+
+  it("lets nothing escape when the channel closed under it: the message is delivered again", async () => {
+    const closed = () => {
+      throw new Error("Channel closed");
+    };
+    const channel = { ...fakeChannel(), ack: vi.fn(closed), nack: vi.fn(closed), sendToQueue: vi.fn(closed) };
+
+    await expect(consumerWhoseHandlerFails()(channel, delivery("document.processed.v1"))).resolves.toBeUndefined();
+  });
 });
