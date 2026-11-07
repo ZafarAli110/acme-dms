@@ -128,6 +128,27 @@ public sealed class GetAccessTokenCommandHandlerTests
     }
 
     [TestMethod]
+    public async Task ExecuteAsync_RecoversARenewalWhoseAnswersWereAllLost_HoweverLateTheNextRequestComes()
+    {
+        await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
+        gateway.Identity.AccessTokenLifetime = TimeSpan.FromSeconds(30);
+        var cookie = await gateway.SignInForCookieAsync(TestContext.CancellationToken);
+        gateway.Identity.AccessTokenLifetime = TimeSpan.FromMinutes(15);
+        // identity-api replaced refresh-1 with refresh-2, and both the answer and the retry's answer were lost.
+        gateway.Identity.LoseRefreshAnswers = 2;
+        await ExecuteAsync(gateway, cookie);
+        Assert.AreEqual("refresh-1", await RefreshTokenAsync(gateway, cookie));
+
+        // The next request comes long after the grace period (here: none at all). Its renewal key says it is the same
+        // renewal, so it gets refresh-2 rather than ending the sign-in as a stolen copy would.
+        gateway.Identity.Grace = TimeSpan.Zero;
+        await ExecuteAsync(gateway, cookie);
+
+        Assert.AreEqual("refresh-2", await RefreshTokenAsync(gateway, cookie));
+        Assert.IsEmpty(gateway.Identity.Revoked, "the sign-in goes on");
+    }
+
+    [TestMethod]
     public async Task ExecuteAsync_SendsTheTokenThatStillWorks_WhenIdentityApiIsDown()
     {
         await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
