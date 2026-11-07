@@ -1,5 +1,6 @@
 using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.Delete;
 using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.Fail;
+using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.ForgetUnclaimed;
 using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.Get;
 using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.GetContent;
 using Acme.Documents.BusinessLogic.Abstractions.Handlers.Documents.Process;
@@ -9,6 +10,7 @@ using Acme.Documents.BusinessLogic.Abstractions.Handlers.System.GetHealth;
 using Acme.Documents.BusinessLogic.Abstractions.ImageProcessing;
 using Acme.Documents.BusinessLogic.Handlers.Documents.Delete;
 using Acme.Documents.BusinessLogic.Handlers.Documents.Fail;
+using Acme.Documents.BusinessLogic.Handlers.Documents.ForgetUnclaimed;
 using Acme.Documents.BusinessLogic.Handlers.Documents.Get;
 using Acme.Documents.BusinessLogic.Handlers.Documents.GetContent;
 using Acme.Documents.BusinessLogic.Handlers.Documents.Process;
@@ -35,6 +37,7 @@ public static class BusinessLogicServiceCollectionExtensions
         services.AddScoped<IProcessDocumentCommandHandler, ProcessDocumentCommandHandler>();
         services.AddScoped<IFailDocumentCommandHandler, FailDocumentCommandHandler>();
         services.AddScoped<ISweepDocumentsCommandHandler, SweepDocumentsCommandHandler>();
+        services.AddScoped<IForgetUnclaimedDocumentCommandHandler, ForgetUnclaimedDocumentCommandHandler>();
         services.AddScoped<IDeleteDocumentCommandHandler, DeleteDocumentCommandHandler>();
         return services;
     }
