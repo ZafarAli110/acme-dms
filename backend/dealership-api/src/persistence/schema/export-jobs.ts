@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, index, integer, jsonb, snakeCase, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { bigint, check, index, integer, jsonb, snakeCase, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { ExportJobStatus, ExportKind } from "#dto/exports/export-job-response.dto";
 import type { ExportRequestDto } from "#dto/exports/export-request.dto";
 import { instant } from "./columns/temporal-columns";
@@ -60,6 +60,12 @@ export const exportJobs = snakeCase.table(
     index("ix_export_jobs_status_created").on(table.status, table.createdAt),
     // How many a dealer has running, for the fair claim and the per-dealer limit.
     index("ix_export_jobs_dealer_status").on(table.dealerId, table.status),
+    // The values the queue and the worker move a job between (ExportJobStatus); the moves themselves are guarded by
+    // their conditional updates.
+    check(
+      "ck_export_jobs_status",
+      sql`${table.status} in ('queued', 'counting', 'writing', 'completed', 'failed', 'cancelled', 'expired')`,
+    ),
   ],
 );
 

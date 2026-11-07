@@ -1,0 +1,32 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "6ee4084b-0d87-465a-8a9e-b5f64aef7747",
+  "prevIds": ["be9bc248-f321-4409-ad1a-2b87792b0751"],
+  "footprints": [
+    {
+      "statementType": "add_check",
+      "statementTarget": ["table", "public", "export_jobs"],
+      "writes": [
+        "s|ck|public.export_jobs.ck_export_jobs_status",
+        "n|ck|public.export_jobs.ck_export_jobs_status",
+        "e|ck|public.export_jobs.ck_export_jobs_status",
+        "n|con|public.export_jobs.ck_export_jobs_status"
+      ],
+      "reads": ["n|tbl|public.export_jobs", "n|sch|public", "n|col|public.export_jobs.status"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "export_jobs",
+        "name": "ck_export_jobs_status",
+        "value": "\"status\" in ('queued', 'counting', 'writing', 'completed', 'failed', 'cancelled', 'expired')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

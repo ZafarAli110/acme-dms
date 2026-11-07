@@ -1,8 +1,8 @@
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
-import { exportJobs } from "#persistence/schema/export-jobs";
+import { type ExportJobRow, exportJobs } from "#persistence/schema/export-jobs";
 import { readSettings, type Settings } from "#settings/settings";
 import { CENTRAL, NORTHSIDE, SEEDED_AT } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
@@ -132,7 +132,60 @@ describe("ExportWorker", () => {
     const row = await statusOfAsync(job.id);
     expect(row).toMatchObject({ status: "completed", rows: 1, totalRows: 1, attempts: 1 });
     expect(row?.expiresAt?.toString()).toBe(TEST_NOW.add({ seconds: 900 }).toString());
-    expect(row?.filePath).toBe(join(readSettings({}).exportDirectory, `${job.id}.xlsx`));
+    // One file per attempt: an attempt that lost the job can only ever remove its own.
+    expect(row?.filePath).toBe(join(readSettings({}).exportDirectory, `${job.id}-1.xlsx`));
     await expect(stat(row!.filePath!)).resolves.toBeTruthy();
+  });
+
+  it("ignores the writes of an attempt this worker lost, once it claimed the job again", async () => {
+    // This worker's id, as a job it ran records it.
+    await database.seed.addCustomerAsync({ locationId: NORTHSIDE, firstName: "Ann", surname: "Ash" });
+    const ran = await database.seed.addExportJobAsync({ locationId: NORTHSIDE });
+    const sameWorker = workerWith();
+    await sameWorker.runUntilIdleAsync();
+    const workerId = (await statusOfAsync(ran.id))!.workerId!;
+    // Its first attempt went quiet, was swept, and this worker claimed the job again: attempt 2 is the live one.
+    const job = await database.seed.addExportJobAsync({
+      locationId: NORTHSIDE,
+      status: "writing",
+      workerId,
+      attempts: 2,
+      rows: 10,
+      heartbeatAt: TEST_NOW,
+    });
+    const internals = sameWorker as unknown as {
+      updateHeldAsync(jobId: string, attempt: number, changes: Partial<ExportJobRow>): Promise<unknown[]>;
+    };
+
+    const late = await internals.updateHeldAsync(job.id, 1, { rows: 999, status: "failed" });
+
+    expect(late).toHaveLength(0);
+    expect(await statusOfAsync(job.id)).toMatchObject({ status: "writing", rows: 10, attempts: 2 });
+  });
+
+  it("removes old export files no job points at, and keeps a completed attempt's file", async () => {
+    const directory = readSettings({}).exportDirectory;
+    await mkdir(directory, { recursive: true });
+    const done = await database.seed.addExportJobAsync({
+      locationId: NORTHSIDE,
+      status: "completed",
+      attempts: 2,
+      finishedAt: TEST_NOW,
+      expiresAt: TEST_NOW.add({ minutes: 10 }),
+    });
+    const completedFile = join(directory, `${done.id}-2.xlsx`);
+    const strayFile = join(directory, `${done.id}-1.xlsx`);
+    await database.db.update(exportJobs).set({ filePath: completedFile }).where(eq(exportJobs.id, done.id));
+    // Both written long ago: the stray one by an attempt that stopped between writing it and completing the job.
+    const longAgo = TEST_NOW.subtract({ minutes: 10 }).epochMilliseconds / 1000;
+    for (const file of [completedFile, strayFile]) {
+      await writeFile(file, "not really a workbook");
+      await utimes(file, longAgo, longAgo);
+    }
+
+    await workerWith().sweepAsync();
+
+    await expect(stat(completedFile)).resolves.toBeTruthy();
+    await expect(stat(strayFile)).rejects.toThrow();
   });
 });
