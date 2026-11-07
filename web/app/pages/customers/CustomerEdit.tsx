@@ -9,7 +9,7 @@ import {
   useParams,
 } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
-import { problemErrorMessage } from "../../core/config/apiErrors";
+import { ApiError, problemErrorMessage } from "../../core/config/apiErrors";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useFormRevision } from "../../core/hooks/useFormRevision";
 import { formatInstant } from "../../core/formatters/formatDate";
@@ -48,6 +48,10 @@ export async function clientAction({ request, context, params }: ClientActionFun
     const { version, ...input } = (await request.json()) as CustomerInput & { version: number };
     await customerQueries.updateCustomerAsync(customerId, input, version);
   } catch (error) {
+    if (error instanceof ApiError && error.status === 412) {
+      // Someone else saved first: read their version, so the form can show it or keep the user's edits over it.
+      await queryClient.invalidateQueries({ queryKey: CUSTOMER_QUERY_KEYS.detail(resolved.locationId, customerId) });
+    }
     return { saved: false, error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
   }
   await queryClient.invalidateQueries({ queryKey: CUSTOMER_QUERY_KEYS.all(resolved.locationId) });
@@ -94,6 +98,7 @@ export default function CustomerEdit() {
             onDirtyChange={revision.onDirtyChange}
             changedElsewhere={revision.changedElsewhere}
             onShowLatest={revision.showLatest}
+            onKeepMine={revision.keepMine}
             customer={customer}
             canEdit={can("customers.write")}
             error={actionData?.error ?? null}

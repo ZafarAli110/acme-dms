@@ -7,7 +7,7 @@ import {
   useActionData,
   useParams,
 } from "react-router";
-import { problemErrorMessage } from "../../core/config/apiErrors";
+import { ApiError, problemErrorMessage } from "../../core/config/apiErrors";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useFormRevision } from "../../core/hooks/useFormRevision";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
@@ -45,6 +45,10 @@ export async function clientAction({ request, context, params }: ClientActionFun
     form.delete("version");
     await partQueries.updatePartAsync(partId, form, version);
   } catch (error) {
+    if (error instanceof ApiError && error.status === 412) {
+      // Someone else saved first: read their version, so the form can show it or keep the user's edits over it.
+      await queryClient.invalidateQueries({ queryKey: PART_QUERY_KEYS.detail(resolved.locationId, partId) });
+    }
     return { saved: false, error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
   }
   await queryClient.invalidateQueries({ queryKey: PART_QUERY_KEYS.all(resolved.locationId) });
@@ -83,6 +87,7 @@ export default function PartEdit() {
       onDirtyChange={revision.onDirtyChange}
       changedElsewhere={revision.changedElsewhere}
       onShowLatest={revision.showLatest}
+      onKeepMine={revision.keepMine}
     />
   );
 }

@@ -24,6 +24,8 @@ interface PartFormProps {
   changedElsewhere: boolean;
   /** Drops the unsaved changes and shows the newer version. */
   onShowLatest: () => void;
+  /** Keeps the unsaved changes over the newer version: the form takes it in, so the next save is not refused. */
+  onKeepMine: () => void;
 }
 
 /**
@@ -37,6 +39,7 @@ export function PartForm({
   onDirtyChange,
   changedElsewhere,
   onShowLatest,
+  onKeepMine,
 }: PartFormProps) {
   const { t, i18n } = useTranslation("parts");
   const { t: tCommon } = useTranslation();
@@ -45,8 +48,9 @@ export function PartForm({
   const actionData = useActionData<typeof clientAction>();
   const isSubmitting = useNavigation().state === "submitting";
 
-  // The part as this form opened it: the unsaved edits are compared with it, never with a newer version read meanwhile.
-  const [opened] = useState(part);
+  // The part as this form opened it: its version goes with a save, so a save over someone else's is refused (412), and
+  // the unsaved edits are compared with it.
+  const [opened, setOpened] = useState(part);
   const schema = useMemo(() => createPartUpdateSchema(t, i18n.language), [t, i18n.language]);
   const methods = useForm<PartFormValues>({
     resolver: valibotResolver(schema),
@@ -59,6 +63,19 @@ export function PartForm({
   const save = methods.handleSubmit((values) =>
     submit(toUpdateFormData(values, opened, i18n.language), { method: "post", encType: "multipart/form-data" }),
   );
+
+  // Their version under the user's edits: what the user did not touch becomes theirs, then the form saves from theirs.
+  const keepMine = (): void => {
+    const theirs = toFormValues(part, i18n.language);
+    const { dirtyFields } = methods.formState;
+    for (const field of ["description", "unitPrice", "photos"] as const) {
+      if (!dirtyFields[field]) {
+        methods.setValue(field, theirs[field]);
+      }
+    }
+    setOpened(part);
+    onKeepMine();
+  };
 
   return (
     <FormProvider {...methods}>
@@ -91,9 +108,14 @@ export function PartForm({
           severity="warning"
           sx={{ mb: 2 }}
           action={
-            <Button color="inherit" size="small" onClick={onShowLatest} data-testid="show-latest">
-              {tCommon("revision.showLatest")}
-            </Button>
+            <Fragment>
+              <Button color="inherit" size="small" onClick={keepMine} data-testid="keep-mine">
+                {tCommon("revision.keepMine")}
+              </Button>
+              <Button color="inherit" size="small" onClick={onShowLatest} data-testid="show-latest">
+                {tCommon("revision.showLatest")}
+              </Button>
+            </Fragment>
           }
           data-testid="changed-elsewhere"
         >

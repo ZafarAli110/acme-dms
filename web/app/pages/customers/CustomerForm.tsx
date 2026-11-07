@@ -1,6 +1,6 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
-import { useEffect, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useNavigation, useSubmit } from "react-router";
@@ -23,6 +23,8 @@ interface CustomerFormProps {
   changedElsewhere?: boolean;
   /** The edit page: drops the unsaved changes and shows the newer version. */
   onShowLatest?: () => void;
+  /** The edit page: keeps the unsaved changes over the newer version, so the next save is not refused. */
+  onKeepMine?: () => void;
 }
 
 /**
@@ -37,6 +39,7 @@ export function CustomerForm({
   onDirtyChange,
   changedElsewhere = false,
   onShowLatest,
+  onKeepMine,
 }: CustomerFormProps) {
   const { t } = useTranslation("customers");
   const { t: tCommon } = useTranslation();
@@ -46,9 +49,11 @@ export function CustomerForm({
   const isSubmitting = navigation.state === "submitting";
 
   const schema = useMemo(() => createCustomerSchema(t), [t]);
+  // The customer as this form opened it: its version goes with a save, so a save over someone else's is refused (412).
+  const [opened, setOpened] = useState(customer);
   const methods = useForm<CustomerFormValues>({
     resolver: valibotResolver(schema),
-    defaultValues: toFormValues(customer),
+    defaultValues: toFormValues(opened),
   });
   const { isDirty } = methods.formState;
   useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
@@ -56,24 +61,45 @@ export function CustomerForm({
 
   const save = methods.handleSubmit((values) =>
     // An edit carries the version it was opened from; the page's clientAction sends it as If-Match.
-    submit(
-      customer === null ? { ...toCustomerInput(values) } : { ...toCustomerInput(values), version: customer.version },
-      { method: "post", encType: "application/json" },
-    ),
+    submit(opened === null ? { ...toCustomerInput(values) } : { ...toCustomerInput(values), version: opened.version }, {
+      method: "post",
+      encType: "application/json",
+    }),
   );
+
+  // Their version under the user's edits: what the user did not touch becomes theirs, then the form saves from theirs.
+  const keepMine = (): void => {
+    if (customer === null) {
+      return;
+    }
+    const theirs = toFormValues(customer);
+    const { dirtyFields } = methods.formState;
+    for (const field of Object.keys(theirs) as (keyof CustomerFormValues)[]) {
+      if (!dirtyFields[field]) {
+        methods.setValue(field, theirs[field]);
+      }
+    }
+    setOpened(customer);
+    onKeepMine?.();
+  };
 
   return (
     <FormProvider {...methods}>
       {/* Not while a navigation is under way: a create's redirect to the new customer must not ask. */}
       <FormGuards isDirty={isDirty && navigation.state === "idle"} redirectTo="/customers" />
-      {changedElsewhere && onShowLatest && (
+      {changedElsewhere && onShowLatest && onKeepMine && (
         <Alert
           severity="warning"
           sx={{ mb: 2 }}
           action={
-            <Button color="inherit" size="small" onClick={onShowLatest} data-testid="show-latest">
-              {tCommon("revision.showLatest")}
-            </Button>
+            <Fragment>
+              <Button color="inherit" size="small" onClick={keepMine} data-testid="keep-mine">
+                {tCommon("revision.keepMine")}
+              </Button>
+              <Button color="inherit" size="small" onClick={onShowLatest} data-testid="show-latest">
+                {tCommon("revision.showLatest")}
+              </Button>
+            </Fragment>
           }
           data-testid="changed-elsewhere"
         >

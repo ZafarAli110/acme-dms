@@ -89,7 +89,8 @@
     "panel": "Exports"
   },
   "revision": {
-    "changedElsewhere": "Someone else saved this record while you were editing. Your changes are still here; saving them replaces theirs.",
-    "showLatest": "Show their version"
+    "changedElsewhere": "Someone else saved this record while you were editing. Show their version, or keep your edits on top of theirs.",
+    "showLatest": "Show their version",
+    "keepMine": "Keep my edits"
   }
 }

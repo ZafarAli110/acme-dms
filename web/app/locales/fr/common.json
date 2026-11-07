@@ -89,7 +89,8 @@
     "panel": "Exports"
   },
   "revision": {
-    "changedElsewhere": "Quelqu'un d'autre a enregistré cette fiche pendant votre modification. Vos changements sont toujours là ; les enregistrer remplace les siens.",
-    "showLatest": "Voir sa version"
+    "changedElsewhere": "Quelqu'un d'autre a enregistré cette fiche pendant votre modification. Affichez sa version, ou gardez vos changements par-dessus les siens.",
+    "showLatest": "Voir sa version",
+    "keepMine": "Garder mes changements"
   }
 }
