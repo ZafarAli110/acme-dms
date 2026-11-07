@@ -23,15 +23,16 @@ internal sealed class DeleteSessionCommandHandler : IDeleteSessionCommandHandler
     public async Task ExecuteAsync(string cookieValue, CallerContext caller, CancellationToken cancellationToken)
     {
         var id = SessionSecrets.IdOf(cookieValue);
-        var session = await _dbContext.Sessions.SingleOrDefaultAsync(s => s.Id == id, cancellationToken);
-        if (session is null)
+        var tokens = await _dbContext.Sessions.AsNoTracking().Where(s => s.Id == id).Select(s => s.Tokens).SingleOrDefaultAsync(cancellationToken);
+        if (tokens is null)
         {
             return;
         }
 
-        _dbContext.Sessions.Remove(session);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        if (SessionSecrets.Open(cookieValue, session.Tokens)?.RefreshToken is { } refreshToken)
+        // One statement, so a session another request already ended (a second tab signing out, a renewal identity-api
+        // refused) is not an error; and only the request that deleted it ends its refresh token.
+        var deleted = await _dbContext.Sessions.Where(s => s.Id == id).ExecuteDeleteAsync(cancellationToken);
+        if (deleted == 1 && SessionSecrets.Open(cookieValue, tokens)?.RefreshToken is { } refreshToken)
         {
             await _revoker.RevokeQuietlyAsync(refreshToken, caller);
         }
