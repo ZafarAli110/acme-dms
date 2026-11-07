@@ -6,7 +6,8 @@ using Acme.Identity.Persistence.Database;
 namespace Acme.Identity.BusinessLogic.Seeding;
 
 /// <summary>
-/// Keeps the identity database in line with <see cref="DemoData"/>. Development only.
+/// Keeps the identity database in line with <see cref="DemoData"/>. Development only: the service runs it there alone,
+/// after its migrations (<c>StartupDatabase</c>).
 /// On every start it adds what is missing and removes dealers, locations and users the demo no longer has. It never
 /// touches the locations of a demo user who already exists: a manager may have changed them, and a restart must not
 /// undo that. <see cref="ResetDemoUsersAsync"/> puts them back (`bun run reset`).
@@ -24,7 +25,6 @@ public sealed class IdentitySeeder
 
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
-        await _dbContext.Database.MigrateAsync(cancellationToken);
         await RemoveRetiredAsync(cancellationToken);
         await AddMissingAsync(cancellationToken);
         await SetMissingDefaultLocationsAsync(cancellationToken);
