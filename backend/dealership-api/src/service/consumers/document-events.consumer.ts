@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { type ChannelModel, type ConfirmChannel, type ConsumeMessage, connect } from "amqplib";
 import {
   MARK_PART_PHOTO_FAILED_COMMAND_HANDLER,
@@ -12,21 +13,24 @@ import { UnhandledMessageError } from "#business-logic-abstractions/messaging/un
 import {
   DOCUMENT_FAILED,
   DOCUMENT_PROCESSED,
+  DOCUMENT_UNCLAIMED,
   type DocumentFailedMessageDto,
   type DocumentProcessedMessageDto,
+  type DocumentUnclaimedMessageDto,
   type MessageEnvelopeDto,
 } from "#dto/messages/document-messages.dto";
 import { requireSetting, SETTINGS, type Settings } from "#settings/settings";
+import { DEAD_LETTER_QUEUE, QUEUE, RETRIES_HEADER } from "./document-events.queues";
+import type { IDocumentMessagePublisher } from "#business-logic-abstractions/messaging/document-message.publisher.interface";
 
 const EXCHANGE = "acme.documents";
 const DEAD_LETTER_EXCHANGE = "acme.documents.dlx";
-const QUEUE = "dealership-api.document-events";
-const DEAD_LETTER_QUEUE = "dealership-api.document-events.dlq";
 /** A message whose handler failed waits here RETRY_DELAY_MS, then goes back to QUEUE, up to MAX_RETRIES times. */
 const RETRY_QUEUE = "dealership-api.document-events.retry";
 const RETRY_DELAY_MS = 5_000;
 const MAX_RETRIES = 5;
-const RETRIES_HEADER = "x-retries";
+/** How often the dead-letter queue is looked at: a parked event is logged until someone replays it. */
+const DEAD_LETTER_CHECK_MS = 60_000;
 /** How long to wait before connecting again after RabbitMQ dropped the connection. */
 const RECONNECT_MS = 5_000;
 
@@ -40,13 +44,17 @@ const RECONNECT_MS = 5_000;
  * again every RECONNECT_MS: without its error listener, amqplib throws it and the whole API stops.
  */
 @Injectable()
-export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplicationShutdown {
+export class DocumentEventsConsumer
+  implements OnApplicationBootstrap, OnApplicationShutdown, IDocumentMessagePublisher
+{
   private readonly _logger = new Logger(DocumentEventsConsumer.name);
   private readonly _markPartPhotoReady: IMarkPartPhotoReadyCommandHandler;
   private readonly _markPartPhotoFailed: IMarkPartPhotoFailedCommandHandler;
   private readonly _settings: Settings;
   private _connection: ChannelModel | null = null;
   private _reconnect: NodeJS.Timeout | null = null;
+  private _deadLetterCheck: NodeJS.Timeout | null = null;
+  private _channel: ConfirmChannel | null = null;
   private _isStopping = false;
 
   public constructor(
@@ -68,6 +76,9 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
     if (this._reconnect) {
       clearTimeout(this._reconnect);
     }
+    if (this._deadLetterCheck) {
+      clearInterval(this._deadLetterCheck);
+    }
     await this._connection?.close();
   }
 
@@ -79,6 +90,7 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
     this._connection = connection;
     // Confirmed: a retry is sent to RETRY_QUEUE before the message is acknowledged, so it must be known to be there.
     const channel = await connection.createConfirmChannel();
+    this._channel = channel;
     channel.on("error", (error: unknown) => this._logger.warn({ err: error }, "RabbitMQ channel error"));
     // A channel that closes on its own stops the consuming: close the connection too, so it all starts again.
     channel.on("close", () => {
@@ -89,7 +101,54 @@ export class DocumentEventsConsumer implements OnApplicationBootstrap, OnApplica
     await this.declareTopologyAsync(channel);
     await channel.prefetch(10);
     await channel.consume(QUEUE, (message) => void this.handleAsync(channel, message));
+    this.watchDeadLetters(channel);
     this._logger.log(`Consuming ${QUEUE}`);
+  }
+
+  public async publishUnclaimedAsync(documents: DocumentUnclaimedMessageDto[]): Promise<void> {
+    const channel = this._channel;
+    if (channel === null) {
+      throw new Error("RabbitMQ is not connected: the unclaimed documents are sent by a later sweep.");
+    }
+    for (const data of documents) {
+      const envelope = {
+        messageId: randomUUID(),
+        type: DOCUMENT_UNCLAIMED,
+        occurredAt: new Date().toISOString(),
+        correlationId: null,
+        data,
+      };
+      channel.publish(EXCHANGE, DOCUMENT_UNCLAIMED, Buffer.from(JSON.stringify(envelope)), {
+        contentType: "application/json",
+        messageId: envelope.messageId,
+        type: DOCUMENT_UNCLAIMED,
+        persistent: true,
+      });
+    }
+    await channel.waitForConfirms();
+  }
+
+  /**
+   * Nothing reads the dead-letter queue on its own: while it holds events, a warning says so once a minute, with the way
+   * out (`bun run replay:dead-letters`, after reading why they failed).
+   */
+  private watchDeadLetters(channel: ConfirmChannel): void {
+    if (this._deadLetterCheck) {
+      clearInterval(this._deadLetterCheck);
+    }
+    this._deadLetterCheck = setInterval(() => {
+      channel
+        .checkQueue(DEAD_LETTER_QUEUE)
+        .then(({ messageCount }) => {
+          if (messageCount > 0) {
+            this._logger.warn(
+              `${messageCount} document events are parked in ${DEAD_LETTER_QUEUE}: read why in RabbitMQ's management UI, then replay them with bun run replay:dead-letters`,
+            );
+          }
+        })
+        .catch(() => undefined);
+    }, DEAD_LETTER_CHECK_MS);
+    this._deadLetterCheck.unref();
   }
 
   private reconnectLater(): void {
