@@ -93,11 +93,12 @@ well: it is not optional, and passing in a test browser does not make it unneces
 may only show in theirs. If you cannot attach, those cases are BLOCKED in their browser, with the reason. The person
 first turns on remote debugging in it (`chrome://inspect/#remote-debugging`, "Allow remote debugging for this browser
 instance"); then `bunx playwright-cli attach --cdp=chrome`, which makes Chrome ask the person to allow the connection.
-If it times out, the person may not have clicked Allow yet: try again, twice at most, before the cases in their
-browser are BLOCKED. Then use `-s=chrome` on every command for it. It is their browser: open the app in a new tab of
-your own (`-s=chrome tab-new <web url>`), never read, use or close their other tabs, read cookies and storage of the
-app's own address only, and end with `bunx playwright-cli -s=chrome detach`, never `close`. Without that permission,
-never attach to a browser you did not open.
+Attach first, before you open any browser of your own, so that question is not hidden behind your windows. If it times
+out, the person may not have clicked Allow yet: try again, twice at most, before the cases in their browser are
+BLOCKED. Then use `-s=chrome` on every command for it. It is their browser: open the app in a new tab of your own
+(`-s=chrome tab-new <web url>`), never read, use or close their other tabs, read cookies and storage of the app's own
+address only, and end with `bunx playwright-cli -s=chrome detach`, never `close`. Without that permission, never
+attach to a browser you did not open.
 
 **A service down** is a condition users meet: a deploy, a crash, a database restart. Stop only one the case goes
 through (`bun run status` names them: the services, export-worker where there is one, and rabbitmq, whose messages
@@ -220,6 +221,14 @@ One bug per cause, not per symptom.
 4. Move the ticket: **every case PASS** → `done`, and only then; **any FAIL** → `in-progress`, the bugs named in the
    results;
    **anything BLOCKED and nothing failed** → it stays `in-qa`, and the results say what it needs.
+
+5. **Check before you reply**, and put right whatever is not so:
+   - every case in the plan has its result: PASS, FAIL or BLOCKED;
+   - every screenshot is named after its case (`T7-…png` for T7), and every case tested in the browser has one;
+   - every screenshot is on the ticket, and every FAIL's is on its bug too, new or already open;
+   - the **Bugs** list names exactly the bugs of the FAIL cases;
+   - every service you stopped is Running and Healthy again, and the browsers you opened are closed (theirs
+     detached, never closed).
 
 Reply with the same results table, the bugs, and where the ticket now is. You write only `docs/qa/<KEY>.md` and the
 screenshots. You never edit code, never reset or reseed data you did not need, and never merge anything.
