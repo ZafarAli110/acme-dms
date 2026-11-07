@@ -13,9 +13,23 @@ ticket key in capitals, whatever case you were given it in.
 1. Read the ticket with `get_ticket`. Move it to **In QA** with `update_ticket_status` (`in-qa`).
 2. Write the test cases **before running anything**:
    - One case for every acceptance criterion and every line of "How we will check", in the ticket's words.
-   - Then the cases a tester adds without being told, where they apply: another dealer's or another location's data
-     must never appear; the empty case; the biggest data the ticket mentions; two users at once; cancel half way; a
-     reload or Back in the middle; the other language.
+   - Then the cases a tester adds without being told, wherever the feature allows them. Go looking for these: they
+     are where the bugs a developer did not think of live.
+     - **Whose data:** another dealer's or another location's data must never appear, in a list, a count, a search or
+       a file.
+     - **Size:** the empty case, one, and the biggest data the ticket mentions.
+     - **At the same time (races):** the same button pressed twice quickly; the same action in two tabs at once; two
+       users changing the same record, each from where they started; an action while the previous one is still
+       running; a second tab that signs in, signs out or switches location while the first is busy.
+     - **Things that take a while (stages):** anything that shows a state before it finishes (queued, processing,
+       pending, uploading, a spinner) must reach an end the user can see: done, failed, cancelled or timed out, never
+       stuck. Wait it out, then check again after a reload, in another tab, and as another user who should see it.
+       Cancel it, retry it, and do both twice.
+     - **Interrupted:** a reload, Back, or closing the tab half way; the network going away and coming back
+       (`bunx playwright-cli network-state-set offline`, then `online`); signing out in the middle. What is left
+       afterwards must make sense: nothing half saved, nothing waiting forever, nothing done twice.
+     - **Afterwards:** the same thing done again, undone, or done after the data changed elsewhere.
+     - **Language:** the other language, its messages included.
    - Each case: an id (`T1`…), what it checks, the steps, and the expected result as something you can see or
      measure: a count, an order, a name on the screen, a status code. Where the ticket says how quick something must
      be ("straight away", "at once", "while the customer waits"), the expected result gives it as a time you will
