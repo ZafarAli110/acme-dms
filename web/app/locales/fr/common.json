@@ -87,5 +87,9 @@
   "paging": {
     "rows": "{{from}}–{{to}} sur {{total}}",
     "cappedRows": "{{from}}–{{to}} sur {{total}} (la liste affiche les {{max}} premières : recherchez ou filtrez pour la réduire)"
+  },
+  "revision": {
+    "changedElsewhere": "Quelqu'un d'autre a enregistré cette fiche pendant votre modification. Vos changements sont toujours là ; les enregistrer remplace les siens.",
+    "showLatest": "Voir sa version"
   }
 }
