@@ -2,11 +2,17 @@ import { describe, expect, it } from "vitest";
 import { readSettings, requireSetting } from "../settings";
 
 describe("readSettings", () => {
+  it("serves Swagger outside production only", () => {
+    expect(readSettings({}).serveSwagger).toBe(true);
+    expect(readSettings({ NODE_ENV: "production" }).serveSwagger).toBe(false);
+  });
+
   it("uses the defaults when nothing is set, and null for what only Aspire or a deployment provides", () => {
     expect(readSettings({})).toEqual({
       port: 3000,
       logLevel: "info",
       requestTimeoutMs: 30_000,
+      serveSwagger: true,
       databaseStatementTimeoutMs: 30_000,
       databaseMaxConnections: 10,
       databaseConnectionTimeoutMs: 10_000,

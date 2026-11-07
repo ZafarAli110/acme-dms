@@ -5,9 +5,6 @@ using System.Text.Json;
 
 namespace Acme.Gateway.BusinessLogic.Handlers.Sessions;
 
-/// <summary>The tokens a session keeps, sealed together.</summary>
-internal sealed record SessionTokens(string AccessToken, string RefreshToken);
-
 /// <summary>
 /// What is derived from a session cookie's value, which is 256 random bits. The gateway stores only its SHA-256 (the row's id)
 /// and encrypts the session's tokens with a key derived from the value (HKDF, then AES-GCM), so a copy of the sessions table
