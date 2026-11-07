@@ -1,8 +1,10 @@
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { PART_PHOTO_RULES } from "../constants/partPhotoRules";
+import { isTakingLong, msUntilTakingLong } from "../formatters/photoProcessing";
 import type { PartFormValues, PartPhoto } from "../types/part";
 import { PartPhotoTile } from "./PartPhotoTile";
 
@@ -17,6 +19,17 @@ interface PartPhotosSectionProps {
  * Save. One photo is always the default while there are photos.
  */
 export function PartPhotosSection({ savedPhotos, disabled }: PartPhotosSectionProps) {
+  // Polling stops at the limit, so nothing else renders this again: a timer shows the note when a photo reaches it.
+  const [now, setNow] = useState(() => Date.now());
+  const takingLong = isTakingLong(savedPhotos, now);
+  useEffect(() => {
+    const wait = msUntilTakingLong(savedPhotos, Date.now());
+    if (wait === null) {
+      return;
+    }
+    const timer = setTimeout(() => setNow(Date.now()), wait);
+    return () => clearTimeout(timer);
+  }, [savedPhotos]);
   const { t } = useTranslation("parts");
   const { control, getValues, setValue, formState } = useFormContext<PartFormValues>();
   const { fields, append, remove } = useFieldArray({ control, name: "photos", keyName: "fieldKey" });
@@ -79,6 +92,11 @@ export function PartPhotosSection({ savedPhotos, disabled }: PartPhotosSectionPr
           </Button>
         )}
       </Stack>
+      {takingLong && (
+        <Alert severity="info" sx={{ mb: 2 }} data-testid="photos-taking-long">
+          {t("edit.photosTakingLong")}
+        </Alert>
+      )}
       {listError && (
         <Alert severity="error" sx={{ mb: 2 }} data-testid="photos-error">
           {listError}
