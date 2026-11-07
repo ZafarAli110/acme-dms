@@ -5,6 +5,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useNavigation, useSubmit } from "react-router";
 import { FormGuards } from "../../components/FormGuards";
+import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { CustomerFields } from "./components/CustomerFields";
 import { toCustomerInput, toFormValues } from "./mappers/customerFormMapper";
 import { createCustomerSchema } from "./schemas/customerSchema";
@@ -40,6 +41,7 @@ export function CustomerForm({
 }: CustomerFormProps) {
   const { t } = useTranslation("customers");
   const { t: tCommon } = useTranslation();
+  const { location } = useSelectedLocation();
   const navigate = useNavigate();
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -55,7 +57,11 @@ export function CustomerForm({
   const disabled = !canEdit || isSubmitting;
 
   const save = methods.handleSubmit((values) =>
-    submit({ ...toCustomerInput(values) }, { method: "post", encType: "application/json" }),
+    // An edit is saved at the location the user saw when they pressed Save (the create page's action takes no location).
+    submit(
+      { ...toCustomerInput(values), ...(customer === null ? {} : { locationId: location?.id ?? null }) },
+      { method: "post", encType: "application/json" },
+    ),
   );
 
   return (
