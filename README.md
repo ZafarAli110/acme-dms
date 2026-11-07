@@ -9,6 +9,7 @@ architecture and real conventions.
 - [Branches](#branches)
 - [Working with Claude Code](#working-with-claude-code)
   - [The cost meter](#the-cost-meter)
+  - [Spending tokens wisely](#spending-tokens-wisely)
 - [The business](#the-business)
 - [What it does](#what-it-does)
 - [Architecture](#architecture)
@@ -119,6 +120,23 @@ lab 00 to see what every lab costs. Once, at the Claude Code prompt (the same on
 
 Answer `y` and pick the **user** scope. The meter shows above the prompt; `/show-meter` opens it beside the chat,
 `/show-meter reset` counts from zero just before a run, and `/show-meter budget 20` sets the budget (default $10).
+
+**Keep it open while you do each exercise.** Before you start one: `/clear`, `/show-meter reset`, then `/show-meter`,
+so the panel sits beside the chat for the whole run. When the run ends, read what it cost, which subagent spent the
+most, and how much came from the cache; `/show-meter copy` puts the figures on the clipboard. Knowing what a plan, a
+review round or a QA run costs is part of what the labs teach: compare the labs, and weigh each harness piece against
+what it spends. How to spend less: [Spending tokens wisely](#spending-tokens-wisely).
+
+### Spending tokens wisely
+
+Anthropic's own guidance says how to spend less, and keeps it current:
+
+- [Manage costs effectively](https://code.claude.com/docs/en/costs): tracking what a session costs, and the habits
+  that cut it (`/usage`, `/context`, `/compact`, `/clear`, choosing the right model, keeping context small).
+- [Model configuration](https://code.claude.com/docs/en/model-config): which model to use for what, and how to switch.
+- [Prompt caching](https://code.claude.com/docs/en/prompt-caching): why re-sent context is cheap, and what ends the
+  cache (switching models, a long break).
+- [Pricing](https://platform.claude.com/docs/en/about-claude/pricing): what each model costs per million tokens.
 
 ## The business
 
