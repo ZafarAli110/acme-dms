@@ -1,9 +1,13 @@
 # Acme DMS
 
-A small dealership management system (DMS) used for hands-on agentic engineering workshops. It is deliberately
-realistic: three services in two languages behind a gateway, a message broker, multi-tenancy, a layered architecture
-and real conventions.
+A small dealership management system (DMS) used for hands-on agentic engineering workshops with
+[Claude Code](https://claude.com/claude-code): a ticket goes from the backlog to a verified, reviewed pull request. It is
+deliberately realistic: three services in two languages behind a gateway, a message broker, multi-tenancy, a layered
+architecture and real conventions.
 
+- [The workshop: two repositories](#the-workshop-two-repositories)
+- [Branches](#branches)
+- [Working with Claude Code](#working-with-claude-code)
 - [The business](#the-business)
 - [What it does](#what-it-does)
 - [Architecture](#architecture)
@@ -12,8 +16,84 @@ and real conventions.
 - [Look around a running system](#look-around-a-running-system)
 - [Everyday commands](#everyday-commands)
 - [Conventions](#conventions)
+- [Running outside development](#running-outside-development)
 - [Where to find what](#where-to-find-what)
 - [Troubleshooting](#troubleshooting)
+
+## The workshop: two repositories
+
+| Repository                                                  | What it is                                                                                                 |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **acme-dms** (this one)                                     | the system the work is done on                                                                             |
+| [Acme Tracker](https://github.com/ZafarAli110/acme-tracker) | its backlog: a small Jira-like tracker with a board, a backlog and a page per ticket (ACME-101, ACME-102…) |
+
+People use Acme Tracker's web page; Claude Code uses its MCP server, so it can read a ticket, move it along the board,
+comment on it and attach screenshots as evidence. Everything an agent does is marked on the board. From lab 02, this
+repository's `.mcp.json` connects Claude Code to it. Run it beside Acme DMS, in a terminal of its own:
+
+```bash
+cd ~
+git clone https://github.com/ZafarAli110/acme-tracker.git
+cd acme-tracker
+bun install
+bun start            # http://localhost:4100 (the MCP server: http://localhost:4100/mcp)
+```
+
+The same in PowerShell. `bun run reset` in that folder (with the tracker stopped) puts every ticket back in To Do.
+
+## Branches
+
+`main` is the system alone, with no Claude Code setup. Each lab branch adds one piece of the harness (everything
+around the model that makes it work well here) to the one before, so checking out a lab shows the repository as it
+stands at that point of the workshop. `final` holds every piece.
+
+| Branch                 | What it adds                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `main`                 | the system, its docs and standards; no Claude Code setup                                                                 |
+| `lab/00-start`         | where the workshop starts: the system with a short README, no docs and no Claude Code setup                              |
+| `lab/01-claude-md`     | `CLAUDE.md` (what Claude reads in every session) and the written standards in `docs/`                                    |
+| `lab/02-mcp`           | `.mcp.json`: Acme Tracker's tickets as tools                                                                             |
+| `lab/03-hooks`         | hooks: protected files, every edit formatted, the fast checks when Claude stops                                          |
+| `lab/04-subagents`     | the `verifier` and `clean-code-reviewer` subagents                                                                       |
+| `lab/05-permissions`   | what runs without asking, what asks, what never runs (**.claude/settings.json**), and the git policy                     |
+| `lab/06-skills`        | skills for a form page, an API endpoint, uploads and calls between services; the web rules                               |
+| `lab/07-verification`  | checking a screen in a real browser; `/verify-ticket` writes evidence anyone can re-run                                  |
+| `lab/08-plans`         | plans that survive a restart (`/implement-ticket`), an architect review before any code, handoff notes                   |
+| `lab/09-export-before` | QA and learning: `/qa-ticket`, `/write-retro`, `/learn-from-lessons`, the `qa` subagent                                  |
+| `lab/09-export-after`  | the customer export as the lab builds it (ACME-108), and the `export-large-list` skill learnt from it                    |
+| `lab/09-export-final`  | the customer export finished: a job queue and an `export-worker`                                                         |
+| `lab/10-ticket-to-pr`  | ticket to reviewed pull request: specialist reviewers, `/ticket-to-pr`, `/review-pr`, `/resolve-pr-comments`             |
+| `final`                | every lab, the finished export, and more: row-level security, soft delete, versions with `If-Match`, and **docs/plans/** |
+
+A change to the system is made on `main` and carried to every lab branch and `final`, so they differ only in what the
+table says. Switching to a branch that adds a package (lab 09-after does) needs `bun install` once.
+
+## Working with Claude Code
+
+On a lab branch from 01 on, start `claude` in the repository folder. What it finds there:
+
+| Piece                               | What it does                                                                              | Lab |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- | --- |
+| `CLAUDE.md`                         | the project, the rules for every change, the commands, what done means; read every time   | 01  |
+| `.mcp.json`                         | Acme Tracker as tools                                                                     | 02  |
+| **.claude/hooks/**                  | scripts that run at fixed moments, every time: format, protect, check                     | 03  |
+| **.claude/agents/**                 | subagents: verifier, reviewers (code, security, performance, tests, state), QA, architect | 04+ |
+| **.claude/settings.json**           | permissions: allow, ask, deny                                                             | 05  |
+| **.claude/skills/**                 | steps Claude loads only when a task needs them, and commands a person starts (`/name`)    | 06+ |
+| `docs/evidence/`, `qa/`, `lessons/` | what verification, QA and retrospectives write                                            | 07+ |
+
+A ticket's life on lab 10 and `final`:
+
+```
+/ticket-to-pr ACME-…  → plan → architect review → build, one step and its check at a time
+                      → /verify-ticket (evidence) → pull request → specialist reviewers → fixes
+                      → /qa-ticket (a visible browser, screenshots) → a person merges → /write-retro
+```
+
+[docs/HARNESS.md](https://github.com/ZafarAli110/acme-dms/blob/final/docs/HARNESS.md) (lab 10 and `final`) lists every piece: what it does, when it runs, who starts it and the lab that
+added it. From lab 10, `/find-state-machines` sweeps the whole repository for stages nobody declared (a photo stuck in
+`pending`, an export nobody finishes); on `final`, [docs/plans/implicit-state-machines.md](https://github.com/ZafarAli110/acme-dms/blob/final/docs/plans/implicit-state-machines.md) holds what it found and what
+was fixed.
 
 ## The business
 
@@ -45,20 +125,26 @@ renews that person's token), or at their next sign-in.
 
 ## What it does
 
-| Area                         | API (through the gateway)                                                                                            | Web                                                    |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Sign-in                      | `POST`/`DELETE /api/session` (the gateway), `GET /api/identity/v1/users/me`; scripts: `POST /api/identity/v1/tokens` | sign-in page, location switcher                        |
-| Parts (stocked per location) | `GET/POST /api/dealership/v1/parts`, `GET/PATCH /api/dealership/v1/parts/{id}`                                       | list, search, create (with bin), edit page             |
-| Bins (per location)          | `GET/POST /api/dealership/v1/bins`                                                                                   | bin picker when creating a part                        |
-| Part photos                  | saved with the part (`PATCH …/parts/{id}`, multipart); `POST …/parts/{id}/photos` adds one                           | on the edit page: add, remove, default; processing     |
-| Stock (per location)         | `GET /api/dealership/v1/stock`, `PUT /api/dealership/v1/stock/{partId}`                                              | — (ticket ACME-101)                                    |
-| Customers (per location)     | `GET/POST /api/dealership/v1/customers`, `GET/PUT …/customers/{id}`, `GET …/customers/recent`                        | list, search, create, edit, recently contacted on Home |
-| Documents                    | `POST /api/documents/v1/documents`, `GET …/{id}`, `GET …/{id}/content/{variant}`                                     | images via `DocumentImage`                             |
-| Who am I                     | `GET /api/dealership/v1/system/user-context`                                                                         | —                                                      |
+| Area                              | API (through the gateway)                                                                                                         | Web                                                                     |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Sign-in                           | `POST`/`DELETE /api/session` (the gateway), `GET /api/identity/v1/users/me`; scripts: `POST /api/identity/v1/tokens`              | sign-in page, location switcher                                         |
+| Parts (stocked per location)      | `GET/POST /api/dealership/v1/parts`, `GET/PATCH /api/dealership/v1/parts/{id}`                                                    | list, search, create (with bin), edit page                              |
+| Bins (per location)               | `GET/POST /api/dealership/v1/bins`                                                                                                | bin picker when creating a part                                         |
+| Part photos                       | saved with the part (`PATCH …/parts/{id}`, multipart); `POST …/parts/{id}/photos` adds one                                        | on the edit page: add, remove, default; processing                      |
+| Stock (per location)              | `GET /api/dealership/v1/stock`, `PUT /api/dealership/v1/stock/{partId}`                                                           | — (ticket ACME-101)                                                     |
+| Customers (per location)          | `GET/POST /api/dealership/v1/customers`, `GET/PUT …/customers/{id}`, `GET …/customers/recent`                                     | list, search, create, edit, recently contacted on Home                  |
+| Documents                         | `POST /api/documents/v1/documents`, `GET …/{id}`, `GET …/{id}/content/{variant}`                                                  | images via `DocumentImage`                                              |
+| Who am I                          | `GET /api/dealership/v1/system/user-context`                                                                                      | —                                                                       |
+| Locations and people              | `GET /api/identity/v1/users`, `GET …/v1/locations`, `PUT`/`DELETE …/v1/users/{userId}/locations/{locationId}`                     | Locations page: a manager assigns people to locations                   |
+| Customer export (lab 09-after on) | `POST /api/dealership/v1/customers/exports`, `GET /api/dealership/v1/exports[/{jobId}]`, `GET …/{jobId}/file`, `DELETE …/{jobId}` | export button on the customer list: an Excel file, its progress, cancel |
 
 A part photo travels: dealership-api → document-api (stored, 202) → outbox → RabbitMQ → document-api's processor
 (WebP `display` and `thumb` variants) → `document.processed.v1` → dealership-api marks the photo ready. A file that
-cannot be processed is retried three times, then marked failed and dead-lettered.
+cannot be processed is tried three times, then marked failed. A photo still `pending` after 10 minutes is marked timed
+out, so it never waits forever, and a stored document no photo claims within a day is deleted
+(`document.unclaimed.v1`). An event a service cannot handle after its retries goes to a dead-letter queue, and the
+service logs a warning once a minute until someone replays it ([Troubleshooting](#troubleshooting)).
+`docs/contracts.md` has every message and queue.
 
 ## Architecture
 
@@ -347,33 +433,52 @@ echoed in every response and attached to every log line.
 - Folders are named for what they hold. No `common`, `utils` or `helpers`.
 - Tests: `__test__/` folders next to the code in TypeScript; `tests/` projects in .NET.
 
+## Running outside development
+
+Development needs none of this. Anywhere else, set:
+
+| Setting                          | Service        | What it is                                                                                                                                                        |
+| -------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataProtection__KeysPath`       | identity-api   | a folder outside its database, shared by every instance (in production, a key vault), for the keys that encrypt its signing keys. It refuses to start without one |
+| `ForwardedHeaders__KnownProxies` | gateway-api    | the addresses of the load balancers in front of it, so the sign-in limit counts each person, not the balancer                                                     |
+| `EXPORT_LINK_KEY`                | dealership-api | the key that signs export download links (lab 09-export-final and `final`); required unless `NODE_ENV` is unset, `development` or `test`                          |
+
+Every service applies its own migrations as it starts. Only Development gets the demo dealers, users and data.
+If identity-api ever cannot open the signing key in use (its Data Protection keys were lost), `docs/ARCHITECTURE.md`,
+"A key no instance can open", gives the way out.
+
 ## Where to find what
 
-| Path                       | What                                                                                                 |
-| -------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `docs/ARCHITECTURE.md`     | services, layers, and how they fit together                                                          |
-| `docs/standards/`          | the team's rules: handlers, errors, messaging, uploads, dealers and locations, database, web, coding |
-| `docs/contracts.md`        | what services promise each other: the health response, RabbitMQ messages and queues                  |
-| Acme Tracker               | the backlog: a separate tool, at http://localhost:4100 when it is running                            |
-| `.github/workflows/ci.yml` | CI: format, lint, typecheck and test on every pull request                                           |
+| Path                                                                                  | What                                                                                                 |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `docs/ARCHITECTURE.md`                                                                | services, layers, and how they fit together                                                          |
+| `docs/standards/`                                                                     | the team's rules: handlers, errors, messaging, uploads, dealers and locations, database, web, coding |
+| `docs/contracts.md`                                                                   | what services promise each other: the health response, RabbitMQ messages and queues                  |
+| [Acme Tracker](https://github.com/ZafarAli110/acme-tracker)                           | the backlog: a separate repository, at http://localhost:4100 when it is running                      |
+| `CLAUDE.md`, `.claude/`, `.mcp.json`                                                  | the Claude Code harness (lab branches and `final`, see [Branches](#branches))                        |
+| [docs/HARNESS.md](https://github.com/ZafarAli110/acme-dms/blob/final/docs/HARNESS.md) | every piece of the harness, when it runs and the lab that added it (lab 10 and `final`)              |
+| `docs/evidence/`, `docs/qa/`, `docs/lessons/`                                         | what `/verify-ticket`, `/qa-ticket` and `/write-retro` write (from labs 07, 09)                      |
+| [docs/plans/](https://github.com/ZafarAli110/acme-dms/tree/final/docs/plans)          | design plans and the state-machine sweep's findings (`final`)                                        |
+| `.github/workflows/ci.yml`                                                            | CI: format, lint, typecheck and test on every pull request                                           |
 
 ## Troubleshooting
 
-| Problem                                         | Fix                                                                                                                                                                                                                   |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `aspire: command not found`                     | Open a new terminal. If you installed it with `dotnet tool install -g Aspire.Cli`, add `~/.dotnet/tools` (macOS) or `%USERPROFILE%\.dotnet\tools` (Windows) to `PATH`. The .NET build needs it too.                   |
-| `You must install .NET to run this application` | .NET is in a non-standard place (e.g. `brew install dotnet`). Set `DOTNET_ROOT`, e.g. `export DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec`, or use the official installer.                                           |
-| Containers never start                          | Start Docker Desktop and wait until it says it is running (`docker info` answers).                                                                                                                                    |
-| `password authentication failed` for Postgres   | An old data volume has a different password. Stop the app, remove the volume (`docker volume ls`, then `docker volume rm <name>`), and start again.                                                                   |
-| A .NET change does not show up                  | Restarting a resource does not rebuild it. Run `dotnet build` on that project, then restart it in the dashboard, or stop and run `bun run dev` again. TypeScript services rebuild on save.                            |
-| Signing in says "Too many requests"             | identity-api allows 10 sign-ins a minute from one address. Running the whole end-to-end suite signs in more often than that from your machine: wait a minute and run the failed tests again (`--last-failed`).        |
-| Signing in answers 503                          | The gateway cannot reach identity-api: check it is Healthy (`bun run health`). A signed-in person keeps working while their token lasts.                                                                              |
-| `bun run seed` says it cannot find the gateway  | Start the system first (`bun run dev`) and wait until everything is Healthy.                                                                                                                                          |
-| `bun run dev` says packages are not installed   | You switched to a branch that adds a package (lab 09-after does). Run `bun install`, then start again.                                                                                                                |
-| A photo stays `pending`                         | Check `bun run errors` and the RabbitMQ UI (the `rabbitmq` URL in the dashboard, user `acme`/`acme`): a message in a `*.dlq` queue tells you which consumer gave up and why.                                          |
-| A resource is Unhealthy, or keeps restarting    | `bun run health`: it names the resource, prints its last log lines and, for a known cause, the fix. The same lines are on the dashboard: click the resource, then **Console logs**.                                   |
-| `bun add` finds no version old enough           | The version you asked for is less than 7 days old (`minimumReleaseAge` in `bunfig.toml`). Take the one before it. For a security fix, list the package in `minimumReleaseAgeExcludes` in the same commit and say why. |
-| Port already in use                             | Another `aspire run` is still running: `aspire stop`, or close the other terminal.                                                                                                                                    |
+| Problem                                         | Fix                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `aspire: command not found`                     | Open a new terminal. If you installed it with `dotnet tool install -g Aspire.Cli`, add `~/.dotnet/tools` (macOS) or `%USERPROFILE%\.dotnet\tools` (Windows) to `PATH`. The .NET build needs it too.                                                                                                                                                                                                          |
+| `You must install .NET to run this application` | .NET is in a non-standard place (e.g. `brew install dotnet`). Set `DOTNET_ROOT`, e.g. `export DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec`, or use the official installer.                                                                                                                                                                                                                                  |
+| Containers never start                          | Start Docker Desktop and wait until it says it is running (`docker info` answers).                                                                                                                                                                                                                                                                                                                           |
+| `password authentication failed` for Postgres   | An old data volume has a different password. Stop the app, remove the volume (`docker volume ls`, then `docker volume rm <name>`), and start again.                                                                                                                                                                                                                                                          |
+| A .NET change does not show up                  | Restarting a resource does not rebuild it. Run `dotnet build` on that project, then restart it in the dashboard, or stop and run `bun run dev` again. TypeScript services rebuild on save.                                                                                                                                                                                                                   |
+| Signing in says "Too many requests"             | identity-api allows 10 sign-ins a minute from one address. Running the whole end-to-end suite signs in more often than that from your machine: wait a minute and run the failed tests again (`--last-failed`).                                                                                                                                                                                               |
+| Signing in answers 503                          | The gateway cannot reach identity-api: check it is Healthy (`bun run health`). A signed-in person keeps working while their token lasts.                                                                                                                                                                                                                                                                     |
+| `bun run seed` says it cannot find the gateway  | Start the system first (`bun run dev`) and wait until everything is Healthy.                                                                                                                                                                                                                                                                                                                                 |
+| `bun run dev` says packages are not installed   | You switched to a branch that adds a package (lab 09-after does). Run `bun install`, then start again.                                                                                                                                                                                                                                                                                                       |
+| A photo stays `pending`, or times out           | Check `bun run errors` and the RabbitMQ UI (the `rabbitmq` URL in the dashboard, user `acme`/`acme`): a message in a `*.dlq` queue tells you which consumer gave up and why. After 10 minutes the photo is marked timed out: remove it and add it again.                                                                                                                                                     |
+| A warning about messages in a dead-letter queue | Read why they failed in the RabbitMQ UI and fix that. Then send them back: dealership-api: in `backend/dealership-api`, `RABBITMQ_URL=<amqp address> bun run replay:dead-letters` (PowerShell: `$env:RABBITMQ_URL = "<amqp address>"; bun run replay:dead-letters`), the address being the `rabbitmq` connection string in the dashboard; document-api: run it once with the argument `replay-dead-letters`. |
+| A resource is Unhealthy, or keeps restarting    | `bun run health`: it names the resource, prints its last log lines and, for a known cause, the fix. The same lines are on the dashboard: click the resource, then **Console logs**.                                                                                                                                                                                                                          |
+| `bun add` finds no version old enough           | The version you asked for is less than 7 days old (`minimumReleaseAge` in `bunfig.toml`). Take the one before it. For a security fix, list the package in `minimumReleaseAgeExcludes` in the same commit and say why.                                                                                                                                                                                        |
+| Port already in use                             | Another `aspire run` is still running: `aspire stop`, or close the other terminal.                                                                                                                                                                                                                                                                                                                           |
 
 ## Licence
 
