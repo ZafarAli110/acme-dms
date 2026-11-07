@@ -62,5 +62,9 @@
   "paging": {
     "rows": "{{from}}–{{to}} of {{total}}",
     "cappedRows": "{{from}}–{{to}} of {{total}} (the list shows the first {{max}}: search or filter to narrow it)"
+  },
+  "revision": {
+    "changedElsewhere": "Someone else saved this record while you were editing. Your changes are still here; saving them replaces theirs.",
+    "showLatest": "Show their version"
   }
 }

@@ -11,6 +11,7 @@ import {
 import { PageHeader } from "../../components/PageHeader";
 import { problemErrorMessage } from "../../core/config/apiErrors";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
+import { useFormRevision } from "../../core/hooks/useFormRevision";
 import { formatInstant } from "../../core/formatters/formatDate";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
 import { queryClient } from "../../core/queries/queryClient";
@@ -57,6 +58,7 @@ export default function CustomerEdit() {
   const { location, can } = useSelectedLocation();
   const { data: customer, isLoading } = useCustomer(location?.id ?? "", customerId);
   const actionData = useActionData<typeof clientAction>();
+  const revision = useFormRevision(customer?.updatedAt ?? "", actionData);
 
   if (isLoading) {
     return <Skeleton variant="rounded" height={420} />;
@@ -84,9 +86,12 @@ export default function CustomerEdit() {
       />
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 8 }}>
-          {/* Keyed by when the customer was saved: after a Save the form starts again from what was saved, clean. */}
+          {/* Keyed by the version it shows: a newer one replaces it only when no unsaved edit is lost (useFormRevision). */}
           <CustomerForm
-            key={customer.updatedAt}
+            key={revision.formKey}
+            onDirtyChange={revision.onDirtyChange}
+            changedElsewhere={revision.changedElsewhere}
+            onShowLatest={revision.showLatest}
             customer={customer}
             canEdit={can("customers.write")}
             error={actionData?.error ?? null}
