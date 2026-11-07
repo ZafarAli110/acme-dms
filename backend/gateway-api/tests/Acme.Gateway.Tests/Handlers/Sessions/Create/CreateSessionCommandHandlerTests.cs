@@ -51,6 +51,20 @@ public sealed class CreateSessionCommandHandlerTests
     }
 
     [TestMethod]
+    public async Task ExecuteAsync_SigningInFromSeveralTabsAtOnce_EachGetsASession_AndTheOldOneEndsOnce()
+    {
+        await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
+        var first = await ExecuteAsync(gateway, "right", replacedCookie: null);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => ExecuteAsync(gateway, "right", replacedCookie: first.CookieValue)));
+
+        await using var dbContext = gateway.NewDbContext();
+        Assert.AreEqual(4, await dbContext.Sessions.CountAsync(TestContext.CancellationToken), "every sign-in kept its session");
+        Assert.IsTrue(results.All(r => r.CookieValue is not null));
+        Assert.AreEqual("refresh-1", gateway.Identity.Revoked.Single(), "the replaced session's token ended once");
+    }
+
+    [TestMethod]
     public async Task ExecuteAsync_GivesIdentityApisRefusal_AndKeepsNoSession()
     {
         await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
