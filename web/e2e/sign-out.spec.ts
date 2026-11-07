@@ -7,15 +7,12 @@ import { MARIA, signInAsync } from "./support/demo-users";
  * in from the next request on.
  */
 test.describe("the session", () => {
-  test("keeps no token in the browser: only an httpOnly session cookie, sent to the API only", async ({
-    page,
-    context,
-  }) => {
+  test("keeps no token in the browser: only an httpOnly session cookie", async ({ page, context }) => {
     await signInAsync(page, MARIA);
 
     const cookies = await context.cookies();
     expect(cookies.map((cookie) => cookie.name)).toEqual(["acme_session"]);
-    expect(cookies[0]).toMatchObject({ httpOnly: true, sameSite: "Strict", path: "/api" });
+    expect(cookies[0]).toMatchObject({ httpOnly: true, sameSite: "Strict", path: "/" });
     const readable = await page.evaluate(() => ({
       cookie: document.cookie,
       local: JSON.stringify(window.localStorage),

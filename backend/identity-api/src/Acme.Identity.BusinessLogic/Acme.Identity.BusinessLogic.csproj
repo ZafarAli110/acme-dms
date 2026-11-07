@@ -4,7 +4,10 @@
     <ProjectReference Include="..\Acme.Identity.Persistence\Acme.Identity.Persistence.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <!-- ASP.NET Data Protection, which encrypts the signing keys: part of the shared framework, nothing to download. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
   </ItemGroup>
   <ItemGroup>

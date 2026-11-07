@@ -113,23 +113,44 @@ public sealed class RefreshTokenTests
     }
 
     [TestMethod]
-    public async Task Refresh_ARefreshTokenShownAgainWithinTheGracePeriod_GetsAnAccessTokenAndNoNewRefreshToken()
+    public async Task Refresh_ARefreshTokenShownAgainWithinTheGracePeriod_GetsTheSameReplacementAgain()
     {
         await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
         var clock = new TestClock();
         var signedIn = await SignInAsync(dbContext, clock);
-        await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
+        var first = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
         // Exactly at the end of the grace period is still inside it.
         clock.Advance(TimeSpan.FromSeconds(TokenSettings.RefreshReuseGraceSeconds));
 
         var second = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
 
         Assert.IsFalse(string.IsNullOrEmpty(second.Response.AccessToken));
-        // A copy used inside the window gets minutes, not a second chain that lasts hours.
-        Assert.IsNull(second.RefreshToken);
+        // The first answer was lost: the replacement it carried is given again, and no second one is made.
+        Assert.AreEqual(first.RefreshToken, second.RefreshToken);
         Assert.AreEqual(2, await dbContext.RefreshTokens.CountAsync(TestContext.CancellationToken));
         var sessionId = (await dbContext.RefreshTokens.FirstAsync(TestContext.CancellationToken)).FamilyId;
         Assert.IsTrue(await IsOpenAsync(dbContext, clock, sessionId));
+    }
+
+    [TestMethod]
+    public async Task Refresh_AReplacementAlreadyUsed_IsNotGivenAgain_AndAThirdUseAfterTheGraceEndsTheSignIn()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        var clock = new TestClock();
+        var signedIn = await SignInAsync(dbContext, clock);
+        var first = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
+        await Refresh(dbContext, clock).ExecuteAsync(first.RefreshToken!, TestContext.CancellationToken);
+
+        // The replacement has been used since: a copy of the old token shown inside the grace gets minutes, nothing that lasts.
+        var copy = await Refresh(dbContext, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken);
+        Assert.IsNull(copy.RefreshToken);
+
+        // Whoever shows the first replacement again after the grace has a copy: the whole sign-in ends.
+        clock.Advance(TimeSpan.FromSeconds(TokenSettings.RefreshReuseGraceSeconds) + TimeSpan.FromMilliseconds(1));
+        await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            Refresh(dbContext, clock).ExecuteAsync(first.RefreshToken!, TestContext.CancellationToken));
+        var sessionId = (await dbContext.RefreshTokens.AsNoTracking().FirstAsync(TestContext.CancellationToken)).FamilyId;
+        Assert.IsFalse(await IsOpenAsync(dbContext, clock, sessionId));
     }
 
     [TestMethod]
@@ -166,7 +187,7 @@ public sealed class RefreshTokenTests
     }
 
     [TestMethod]
-    public async Task Refresh_TwoRefreshesOfOneTokenAtOnce_BothAreAnswered_AndOnlyOneMakesTheNextToken()
+    public async Task Refresh_TwoRefreshesOfOneTokenAtOnce_BothAreAnswered_WithTheOneNextToken()
     {
         await using var first = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
         await using var second = TestPostgres.Reopen(first);
@@ -178,7 +199,8 @@ public sealed class RefreshTokenTests
             Refresh(second, clock).ExecuteAsync(signedIn.RefreshToken!, TestContext.CancellationToken));
 
         Assert.IsTrue(both.All(issued => !string.IsNullOrEmpty(issued.Response.AccessToken)));
-        Assert.AreEqual(1, both.Count(issued => issued.RefreshToken is not null));
+        Assert.IsTrue(both.All(issued => issued.RefreshToken is not null));
+        Assert.AreEqual(both[0].RefreshToken, both[1].RefreshToken);
         var chain = await first.RefreshTokens.AsNoTracking().ToListAsync(TestContext.CancellationToken);
         Assert.HasCount(2, chain);
         Assert.AreEqual(1, chain.Count(t => t.RotatedAt is null));

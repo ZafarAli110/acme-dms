@@ -57,12 +57,18 @@ public static class ServiceDefaultsExtensions
     }
 
     /// <summary>
-    /// Endpoints every service exposes: the OpenAPI document and Swagger UI. Each service answers its own
+    /// Endpoints every service exposes in Development: the OpenAPI document and Swagger UI. Each service answers its own
     /// `GET /v1/system/health` (status and version), which Aspire polls.
     /// </summary>
     public static WebApplication MapServiceDefaults(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
+
+        // Development only: elsewhere the API's map is nobody's business, and the gateway would route it to anyone.
+        if (!app.Environment.IsDevelopment())
+        {
+            return app;
+        }
 
         app.MapOpenApi().AllowAnonymous();
         app.UseSwaggerUI(options =>

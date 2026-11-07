@@ -1,6 +1,5 @@
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
+using Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.Delete;
-using Acme.Gateway.BusinessLogic.Handlers.Sessions;
 using Acme.Gateway.Persistence.Database;
 using Microsoft.EntityFrameworkCore;
 

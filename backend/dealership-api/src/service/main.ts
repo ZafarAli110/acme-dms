@@ -13,11 +13,17 @@ async function bootstrapAsync(): Promise<void> {
   const app = await NestFactory.create<NestNodeApplication>(AppModule, new NodeAdapter(), { bufferLogs: true });
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
-  setupSwagger(app);
+  if (settings.serveSwagger) {
+    setupSwagger(app);
+  }
 
   const port = settings.port;
   await app.listen(port);
-  app.get(Logger).log(`dealership-api listening on http://localhost:${port} (Swagger at /swagger)`);
+  app
+    .get(Logger)
+    .log(
+      `dealership-api listening on http://localhost:${port}${settings.serveSwagger ? " (Swagger at /swagger)" : ""}`,
+    );
 }
 
 await bootstrapAsync();

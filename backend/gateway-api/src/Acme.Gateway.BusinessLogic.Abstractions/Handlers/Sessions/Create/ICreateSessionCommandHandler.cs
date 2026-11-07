@@ -1,4 +1,4 @@
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
+using Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 using Acme.Gateway.DTO.Sessions;
 
 namespace Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.Create;
@@ -16,6 +16,3 @@ public interface ICreateSessionCommandHandler
         CallerContext caller,
         CancellationToken cancellationToken);
 }
-
-/// <summary>The cookie value of the new session (stored nowhere), or identity-api's refusal.</summary>
-public sealed record CreateSessionResult(string? CookieValue, IdentityRefusal? Refusal);
