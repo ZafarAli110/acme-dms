@@ -64,7 +64,7 @@ public sealed class TokenCommandControllerTests
 
         Assert.AreEqual(ApiErrorCategory.Forbidden, refresh.Category);
         Assert.AreEqual(ApiErrorCategory.Forbidden, revoke.Category);
-        handlers.Refresh.Verify(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        handlers.Refresh.Verify(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         handlers.Revoke.Verify(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         Assert.IsEmpty(response.Headers.SetCookie);
     }
@@ -76,7 +76,7 @@ public sealed class TokenCommandControllerTests
 
         var result = await controller.RefreshAsync(TestContext.CancellationToken);
 
-        handlers.Refresh.Verify(h => h.ExecuteAsync("refresh-1", It.IsAny<CancellationToken>()), Times.Once);
+        handlers.Refresh.Verify(h => h.ExecuteAsync("refresh-1", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         StringAssert.StartsWith(response.Headers.SetCookie.ToString(), $"{Cookie}=refresh-2;");
         Assert.AreEqual("access-2", result.Value!.AccessToken);
     }
@@ -86,7 +86,7 @@ public sealed class TokenCommandControllerTests
     {
         var (controller, response, handlers) = NewController(Environments.Production, withCookie: "refresh-1");
         handlers.Refresh
-            .Setup(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Setup(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IssuedTokens(new TokenCreateResponseDto("access-3", "Bearer", 900), null));
 
         await controller.RefreshAsync(TestContext.CancellationToken);
@@ -117,7 +117,7 @@ public sealed class TokenCommandControllerTests
         create.Setup(h => h.ExecuteAsync(It.IsAny<TokenCreateRequestDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IssuedTokens(new TokenCreateResponseDto("access-1", "Bearer", 900), "refresh-1"));
         var refresh = new Mock<IRefreshTokenCommandHandler>();
-        refresh.Setup(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+        refresh.Setup(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IssuedTokens(new TokenCreateResponseDto("access-2", "Bearer", 900), "refresh-2"));
         var revoke = new Mock<IRevokeTokenCommandHandler>();
         var hostEnvironment = new Mock<IHostEnvironment>();
