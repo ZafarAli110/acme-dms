@@ -4,10 +4,12 @@ import {
   type ClientActionFunctionArgs,
   type ClientLoaderFunctionArgs,
   Link as RouterLink,
+  useActionData,
   useParams,
 } from "react-router";
 import { problemErrorMessage } from "../../core/config/apiErrors";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
+import { useFormRevision } from "../../core/hooks/useFormRevision";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
 import { queryClient } from "../../core/queries/queryClient";
 import { i18n } from "../../i18n";
@@ -54,6 +56,7 @@ export default function PartEdit() {
   const { partId = "" } = useParams();
   const { location, can } = useSelectedLocation();
   const { data: part, error, isLoading } = usePart(location?.id ?? "", partId);
+  const revision = useFormRevision(part?.updatedAt ?? "", useActionData<typeof clientAction>());
 
   if (isLoading) {
     return <Skeleton variant="rounded" height={420} />;
@@ -70,6 +73,16 @@ export default function PartEdit() {
       </Stack>
     );
   }
-  // Keyed by when the part was saved: after a Save the form starts again from what was saved, clean.
-  return <PartForm key={part.updatedAt} part={part} locationName={location?.name ?? ""} canEdit={can("parts.write")} />;
+  // Keyed by the version it shows: it starts again from a newer one only when no unsaved edit is lost (useFormRevision).
+  return (
+    <PartForm
+      key={revision.formKey}
+      part={part}
+      locationName={location?.name ?? ""}
+      canEdit={can("parts.write")}
+      onDirtyChange={revision.onDirtyChange}
+      changedElsewhere={revision.changedElsewhere}
+      onShowLatest={revision.showLatest}
+    />
+  );
 }

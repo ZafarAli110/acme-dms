@@ -87,5 +87,9 @@
     "confirmTitle": "Export to Excel?",
     "confirmMessage": "{{total}} customers at {{location}}, with the search, sort, filter and columns shown now. A large export takes a few minutes; it runs in the background while you keep working.",
     "panel": "Exports"
+  },
+  "revision": {
+    "changedElsewhere": "Someone else saved this record while you were editing. Your changes are still here; saving them replaces theirs.",
+    "showLatest": "Show their version"
   }
 }

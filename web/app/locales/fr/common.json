@@ -87,5 +87,9 @@
     "confirmTitle": "Exporter vers Excel ?",
     "confirmMessage": "{{total}} clients de {{location}}, avec la recherche, le tri, le filtre et les colonnes affichés. Un gros export prend quelques minutes ; il tourne en arrière-plan pendant que vous continuez.",
     "panel": "Exports"
+  },
+  "revision": {
+    "changedElsewhere": "Quelqu'un d'autre a enregistré cette fiche pendant votre modification. Vos changements sont toujours là ; les enregistrer remplace les siens.",
+    "showLatest": "Voir sa version"
   }
 }

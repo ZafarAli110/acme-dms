@@ -1,6 +1,6 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useNavigation, useSubmit } from "react-router";
@@ -17,13 +17,27 @@ interface CustomerFormProps {
   /** What the page's clientAction returned: its error, and whether the last Save succeeded. */
   error: string | null;
   saved: boolean;
+  /** The edit page: told whether the form has unsaved changes, so a newer version never replaces them unasked. */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** The edit page: someone else saved a newer version while this form has unsaved changes. */
+  changedElsewhere?: boolean;
+  /** The edit page: drops the unsaved changes and shows the newer version. */
+  onShowLatest?: () => void;
 }
 
 /**
  * The customer's details, for the create and the edit page. One Save sends every field (null for an empty one)
  * through the page's clientAction as JSON; create then redirects to the new customer.
  */
-export function CustomerForm({ customer, canEdit, error, saved }: CustomerFormProps) {
+export function CustomerForm({
+  customer,
+  canEdit,
+  error,
+  saved,
+  onDirtyChange,
+  changedElsewhere = false,
+  onShowLatest,
+}: CustomerFormProps) {
   const { t } = useTranslation("customers");
   const { t: tCommon } = useTranslation();
   const navigate = useNavigate();
@@ -37,6 +51,7 @@ export function CustomerForm({ customer, canEdit, error, saved }: CustomerFormPr
     defaultValues: toFormValues(customer),
   });
   const { isDirty } = methods.formState;
+  useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
   const disabled = !canEdit || isSubmitting;
 
   const save = methods.handleSubmit((values) =>
@@ -51,6 +66,20 @@ export function CustomerForm({ customer, canEdit, error, saved }: CustomerFormPr
     <FormProvider {...methods}>
       {/* Not while a navigation is under way: a create's redirect to the new customer must not ask. */}
       <FormGuards isDirty={isDirty && navigation.state === "idle"} redirectTo="/customers" />
+      {changedElsewhere && onShowLatest && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={onShowLatest} data-testid="show-latest">
+              {tCommon("revision.showLatest")}
+            </Button>
+          }
+          data-testid="changed-elsewhere"
+        >
+          {tCommon("revision.changedElsewhere")}
+        </Alert>
+      )}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} data-testid="save-error">
           {error}
