@@ -1,27 +1,37 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common";
+import {
+  DOCUMENT_MESSAGE_PUBLISHER,
+  type IDocumentMessagePublisher,
+} from "#business-logic-abstractions/messaging/document-message.publisher.interface";
 import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
-import { sweepPhotosAsync } from "./photo-outcome";
+import { sweepPhotosAsync } from "../handlers/parts/photo-outcome";
 
 const SWEEP_MS = 60_000;
 
-/** Runs the photo sweep (`sweepPhotosAsync`) once a minute, in every instance of the API. */
+/**
+ * Runs the photo sweep (`sweepPhotosAsync`) once a minute, in every instance of the API, and tells document-api about
+ * documents no photo claimed. Registered in AppModule, beside the publisher it needs.
+ */
 @Injectable()
 export class PhotoSweeper implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly _logger = new Logger(PhotoSweeper.name);
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
   private readonly _clock: IClock;
+  private readonly _publisher: IDocumentMessagePublisher;
   private _timer: NodeJS.Timeout | null = null;
 
   public constructor(
     @Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory,
     @Inject(CLOCK) clock: IClock,
+    @Inject(DOCUMENT_MESSAGE_PUBLISHER) publisher: IDocumentMessagePublisher,
   ) {
     this._unitOfWorkFactory = unitOfWorkFactory;
     this._clock = clock;
+    this._publisher = publisher;
   }
 
   public onApplicationBootstrap(): void {
@@ -40,7 +50,11 @@ export class PhotoSweeper implements OnApplicationBootstrap, OnApplicationShutdo
   public async sweepAsync(): Promise<void> {
     try {
       await using work = await this._unitOfWorkFactory.beginAsync();
-      const { timedOut } = await sweepPhotosAsync(work.db, this._clock.now());
+      const { timedOut, unclaimed } = await sweepPhotosAsync(work.db, this._clock.now());
+      // Before the commit: when the broker cannot take them, the outcomes stay, and the next sweep tries again.
+      if (unclaimed.length > 0) {
+        await this._publisher.publishUnclaimedAsync(unclaimed);
+      }
       await work.commitAsync();
       if (timedOut > 0) {
         this._logger.warn(`Failed ${timedOut} photos still processing after the deadline: their events never came.`);
