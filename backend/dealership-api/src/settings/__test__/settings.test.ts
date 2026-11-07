@@ -41,6 +41,8 @@ describe("readSettings", () => {
 
   it("needs a shared export link key in production, of at least 32 characters, and makes one in development", () => {
     expect(() => readSettings({ NODE_ENV: "production" })).toThrow(/EXPORT_LINK_KEY/);
+    expect(() => readSettings({ NODE_ENV: "staging" })).toThrow(/EXPORT_LINK_KEY/);
+    expect(readSettings({ NODE_ENV: "development" }).exportLinkKey.length).toBeGreaterThanOrEqual(32);
     expect(() => readSettings({ EXPORT_LINK_KEY: "too-short" })).toThrow(/EXPORT_LINK_KEY/);
     const key = "a-key-every-api-instance-shares-0123456789";
     expect(readSettings({ NODE_ENV: "production", EXPORT_LINK_KEY: key }).exportLinkKey).toBe(key);

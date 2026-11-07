@@ -70,6 +70,11 @@ const SILENCE_MS = 15_000;
 /** Tries to reconnect, waiting 1, 2, 4, 8 and 16 seconds, before the card is stalled and waits for the user. */
 const MAX_RECONNECTS = 5;
 
+/** Whether a finished export's download link has run out, by this browser's clock (`expiresAt` is the service's). */
+export function isLinkExpired(job: ExportJob, nowMs: number): boolean {
+  return job.status === "completed" && job.expiresAt !== null && nowMs >= Date.parse(job.expiresAt);
+}
+
 /** Whether the export is still on its way: waiting, counting or writing, and the service still has it. */
 export function isRunning(entry: ExportEntry): boolean {
   return !FINISHED.has(entry.job.status) && entry.connection !== "lost";
@@ -218,7 +223,11 @@ export class ExportKernel {
             return;
           }
         }
-        await this.readUntilQuietAsync(jobId, start.serviceUrl, start.locationId, following);
+        const heard = await this.readUntilQuietAsync(jobId, start.serviceUrl, start.locationId, following);
+        // Events came, so the connection worked: a drop later starts the count again, never stalling a long export.
+        if (heard) {
+          tries = 0;
+        }
         const entry = this.find(jobId);
         if (!entry || following.signal.aborted || FINISHED.has(entry.job.status)) {
           return;
@@ -235,19 +244,21 @@ export class ExportKernel {
     }
   }
 
-  /** Reads the events until the stream ends, fails, or stays quiet for SILENCE_MS. */
+  /** Reads the events until the stream ends, fails, or stays quiet for SILENCE_MS; true when any event came. */
   private async readUntilQuietAsync(
     jobId: string,
     serviceUrl: string,
     locationId: string,
     following: AbortController,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    let heard = false;
     const quiet = new AbortController();
     let watchdog = setTimeout(() => quiet.abort(), SILENCE_MS);
     try {
       await apiClient.readEventsAsync<ExportJob>(
         `${serviceUrl}/v1/exports/${jobId}/events`,
         (job) => {
+          heard = true;
           clearTimeout(watchdog);
           watchdog = setTimeout(() => quiet.abort(), SILENCE_MS);
           this.update(jobId, { job, receivedAt: performance.now(), problem: null, connection: "following" });
@@ -263,6 +274,7 @@ export class ExportKernel {
     } finally {
       clearTimeout(watchdog);
     }
+    return heard;
   }
 
   /** The export's state now; false when it is gone (404) or finished, so there is nothing more to follow. */

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { session } from "../../storage/sessionStore";
-import { type ExportJob, ExportKernel, isRunning } from "../exportKernel";
+import { type ExportJob, ExportKernel, isLinkExpired, isRunning } from "../exportKernel";
 
 class FakeStorage implements Storage {
   private readonly _items = new Map<string, string>();
@@ -46,7 +46,9 @@ function fakeService() {
   const calls: { method: string; url: string; location: string | null; key: string | null }[] = [];
   const behaviour = {
     /** How the events stream answers: open until stopped, ended at once with no final state, or gone. */
-    events: "open" as "open" | "ends" | "gone",
+    events: "open" as "open" | "ends" | "gone" | "drops",
+    /** For `drops`: how many streams send one running state and then drop, before one sends the finished state. */
+    drops: 0,
     /** What a read of the export returns. */
     job: running,
     /** POSTs that never reach the service, before one does. */
@@ -78,6 +80,10 @@ function fakeService() {
           },
           { status: 404, headers: { "content-type": "application/problem+json" } },
         );
+      }
+      if (behaviour.events === "drops") {
+        const job = behaviour.drops-- > 0 ? running : { ...running, status: "completed" as const };
+        return new Response(`data: ${JSON.stringify(job)}\n\n`, { headers: { "content-type": "text/event-stream" } });
       }
       const body = behaviour.events === "ends" ? "" : new ReadableStream();
       return new Response(body, { headers: { "content-type": "text/event-stream" } });
@@ -157,5 +163,23 @@ describe("ExportKernel", () => {
     expect(posts).toHaveLength(2);
     expect(posts[0]?.key).toBeTruthy();
     expect(posts[1]?.key).toBe(posts[0]?.key);
+  });
+
+  it("does not stall a long export whose stream drops now and then: each time events came, the count starts again", async () => {
+    service.behaviour.events = "drops";
+    service.behaviour.drops = 6;
+
+    await kernel.startAsync("Customers", "/api/dealership", "v1/customers/exports", {});
+    await vi.waitFor(() => expect(kernel.getSnapshot()[0]?.job.status).toBe("completed"), { timeout: 15_000 });
+
+    expect(kernel.getSnapshot()[0]?.connection).toBe("following");
+  }, 20_000);
+
+  it("knows when a finished export's link has run out", () => {
+    const completed = { ...running, status: "completed" as const, expiresAt: "2026-11-07T10:00:00Z" };
+
+    expect(isLinkExpired(completed, Date.parse("2026-11-07T09:59:59Z"))).toBe(false);
+    expect(isLinkExpired(completed, Date.parse("2026-11-07T10:00:00Z"))).toBe(true);
+    expect(isLinkExpired(running, Date.parse("2030-01-01T00:00:00Z"))).toBe(false);
   });
 });

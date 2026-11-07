@@ -154,7 +154,7 @@ export function readSettings(environment: Environment): Settings {
     exportFileTtlMs: readWholeNumber("EXPORT_TTL_SECONDS", environment.EXPORT_TTL_SECONDS, 900) * 1000,
     exportDirectory: environment.EXPORT_DIR ?? join(tmpdir(), "acme-dealership-exports"),
     exportBatchSize: readWholeNumber("EXPORT_BATCH_SIZE", environment.EXPORT_BATCH_SIZE, 20_000),
-    exportLinkKey: readLinkKey(environment.EXPORT_LINK_KEY, environment.NODE_ENV === "production"),
+    exportLinkKey: readLinkKey(environment.EXPORT_LINK_KEY, environment.NODE_ENV),
     serveSwagger: environment.NODE_ENV !== "production",
   };
 }
@@ -170,12 +170,13 @@ export function requireSetting(value: string | null, variable: keyof Environment
   return value;
 }
 
-function readLinkKey(value: string | undefined, isProduction: boolean): string {
+function readLinkKey(value: string | undefined, nodeEnvironment: string | undefined): string {
   if (value === undefined || value.length === 0) {
-    if (isProduction) {
+    // Any named environment but development and test (production, staging) may run several instances.
+    if (nodeEnvironment !== undefined && nodeEnvironment !== "development" && nodeEnvironment !== "test") {
       throw new Error("EXPORT_LINK_KEY is not set: export download links need a key every API instance shares.");
     }
-    // Development: one process serves the links, and a restart may forget them.
+    // Development (no NODE_ENV under Aspire): one process serves the links, and a restart may forget them.
     return randomBytes(32).toString("base64url");
   }
   if (value.length < 32) {
