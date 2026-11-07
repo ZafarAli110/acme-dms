@@ -1,4 +1,3 @@
-using Acme.Gateway.BusinessLogic.Abstractions.Clients;
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.GetAccessToken;
 using Acme.Gateway.Service.Authorization;
 
@@ -9,7 +8,7 @@ namespace Acme.Gateway.Service.Middleware;
 /// sent on with <c>Authorization: Bearer</c> (the session's token, renewed first when it is about to expire) and without the
 /// cookie; one whose session is gone gets a 401 and loses the cookie. A request without the cookie (a script with its own token)
 /// is sent on as it came. A request that changes something, and every sign-in and sign-out, must carry the header only the
-/// app's own pages add.
+/// app's own pages add. identity-api being unavailable is answered by <see cref="GatewayExceptionHandler"/>.
 /// </summary>
 internal sealed class SessionMiddleware
 {
@@ -22,10 +21,10 @@ internal sealed class SessionMiddleware
         _environment = environment;
     }
 
-    public async Task InvokeAsync(HttpContext context, IGetAccessTokenCommandHandler getAccessToken)
+    public async Task InvokeAsync(HttpContext context, IGetAccessTokenCommandHandler getAccessTokenCommandHandler)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(getAccessToken);
+        ArgumentNullException.ThrowIfNull(getAccessTokenCommandHandler);
         var request = context.Request;
         if (request.Path.StartsWithSegments(SessionPaths.Session))
         {
@@ -39,7 +38,7 @@ internal sealed class SessionMiddleware
             return;
         }
 
-        var value = SessionCookie.ValueOf(request);
+        var value = SessionCookie.ValueOf(request, _environment);
         if (!request.Path.StartsWithSegments(SessionPaths.Api) || value is null)
         {
             await _next(context);
@@ -52,17 +51,7 @@ internal sealed class SessionMiddleware
             return;
         }
 
-        string? accessToken;
-        try
-        {
-            accessToken = await getAccessToken.ExecuteAsync(value, SessionProblems.CallerOf(context), context.RequestAborted);
-        }
-        catch (IdentityUnavailableException)
-        {
-            await SessionProblems.WriteAsync(context, StatusCodes.Status503ServiceUnavailable, SessionProblems.IdentityUnavailable);
-            return;
-        }
-
+        var accessToken = await getAccessTokenCommandHandler.ExecuteAsync(value, CallerContextFactory.From(context), context.RequestAborted);
         if (accessToken is null)
         {
             SessionCookie.Clear(context.Response, _environment);
@@ -71,7 +60,7 @@ internal sealed class SessionMiddleware
         }
 
         request.Headers.Authorization = $"Bearer {accessToken}";
-        WithoutTheSessionCookie(request);
+        WithoutTheSessionCookie(request, SessionCookie.NameFor(_environment));
         await _next(context);
     }
 
@@ -82,9 +71,9 @@ internal sealed class SessionMiddleware
     /// The services get the access token, never the session cookie: its value is the key to the session's tokens, so it stays
     /// between the browser and the gateway (a service that logs headers would otherwise hold it). Other cookies go on.
     /// </summary>
-    private static void WithoutTheSessionCookie(HttpRequest request)
+    private static void WithoutTheSessionCookie(HttpRequest request, string cookieName)
     {
-        var prefix = SessionCookie.Name + "=";
+        var prefix = cookieName + "=";
         var others = request.Headers.Cookie
             .SelectMany(header => (header ?? "").Split(';'))
             .Select(cookie => cookie.Trim())
@@ -99,14 +88,4 @@ internal sealed class SessionMiddleware
             request.Headers.Cookie = string.Join("; ", others);
         }
     }
-}
-
-/// <summary>Where the browser's calls go.</summary>
-internal static class SessionPaths
-{
-    /// <summary>Every call to the services, routed on by YARP.</summary>
-    public const string Api = "/api";
-
-    /// <summary>Signing in (POST) and out (DELETE): the gateway's own endpoint.</summary>
-    public const string Session = "/api/session";
 }
