@@ -16,4 +16,7 @@ public interface ISigningKeyProvider
     /// while a token they signed can still be shown. The JWKS lists these.
     /// </summary>
     Task<IReadOnlyList<RsaSecurityKey>> GetPublishedKeysAsync(CancellationToken cancellationToken);
+
+    /// <summary>Whether this instance can sign now: false when its Data Protection keys cannot open the key in use.</summary>
+    Task<bool> CanSignAsync(CancellationToken cancellationToken);
 }
