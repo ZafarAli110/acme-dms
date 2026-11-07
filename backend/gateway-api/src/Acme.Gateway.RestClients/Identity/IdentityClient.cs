@@ -56,9 +56,17 @@ internal sealed class IdentityClient : IIdentityClient
         return new IdentitySignInResult(await IssuedAsync(response, refreshToken, cancellationToken), null);
     }
 
-    public async Task<IssuedTokens?> RefreshAsync(string refreshToken, CallerContext caller, CancellationToken cancellationToken)
+    public Task<IssuedTokens?> RefreshAsync(string refreshToken, CallerContext caller, CancellationToken cancellationToken) =>
+        RefreshAsync(refreshToken, renewalKey: null, caller, cancellationToken);
+
+    public async Task<IssuedTokens?> RefreshAsync(string refreshToken, string? renewalKey, CallerContext caller, CancellationToken cancellationToken)
     {
         using var request = TokenRequest("/v1/tokens/refresh", refreshToken, caller);
+        if (renewalKey is not null)
+        {
+            request.Headers.Add("Idempotency-Key", renewalKey);
+        }
+
         using var response = await SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
