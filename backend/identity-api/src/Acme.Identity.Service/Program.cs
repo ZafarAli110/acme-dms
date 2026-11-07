@@ -71,6 +71,15 @@ var app = builder.Build();
 
 await StartupDatabase.PrepareAsync(app.Services, app.Environment, CancellationToken.None);
 
+// `replace-signing-keys`: the way out when no instance can open the signing key in use (docs/ARCHITECTURE.md, "Signing
+// in"). Run once, with the Data Protection keys every instance shares; it does its work and exits, serving nothing.
+if (args.Contains("replace-signing-keys"))
+{
+    var deleted = await app.Services.GetRequiredService<ISigningKeyProvider>().ReplaceKeysItCannotOpenAsync(CancellationToken.None);
+    Console.WriteLine($"Deleted {deleted} signing keys these Data Protection keys cannot open; a key these can open signs now.");
+    return;
+}
+
 app.UseForwardedHeaders();
 app.UseServiceDefaults();
 app.UseRateLimiter();

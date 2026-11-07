@@ -122,6 +122,22 @@ signed can live, and is then deleted. Each identity-api instance reads the keys 
 Postgres advisory lock) makes the next key. A key kept unencrypted from before is encrypted the first time identity-api
 loads it.
 
+**A key no instance can open.** Every key is published from its public half, kept beside it, so an instance whose Data
+Protection keys cannot open a key still publishes it. Outside Development such a key is never deleted automatically:
+two instances with different Data Protection keys would otherwise delete each other's. An instance that cannot open the
+key in use logs it at error, cannot sign, and its health answers 503, so it is taken out of service. When no instance
+can open it (the Data Protection keys were lost), a person replaces it, once, from a machine with the Data Protection
+keys every instance shares:
+
+```
+dotnet run --project backend/identity-api/src/Acme.Identity.Service -- replace-signing-keys
+```
+
+with the same `ConnectionStrings__identity` and `DataProtection__KeysPath` as the service (in PowerShell, set them with
+`$env:NAME = "…"` first). It deletes the keys those Data Protection keys cannot open, makes a key that signs at once, and
+exits. Tokens the old key signed stop verifying, so everyone signs in again. In Development an instance replaces such a
+key on its own (a developer who deleted their profile's folder).
+
 **Signing out.** `DELETE /api/session` deletes the session, removes the cookie and tells the browser to drop what it
 cached (`Clear-Site-Data: "cache"`): **from the next request on, that cookie signs no one in**, a copy of it included,
 on every gateway instance. A stream already open (an export's progress) runs on: its token was checked when it opened.
