@@ -1,11 +1,14 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, snakeCase, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, index, snakeCase, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { parts } from "./parts";
 
 export type PartPhotoStatus = "pending" | "ready" | "failed";
 
-/** A photo of a part. The file is a document in document-api; `status` follows its processing. */
+/**
+ * A photo of a part. The file is a document in document-api; `status` follows its processing: `pending` until
+ * document-api says `ready` or `failed`, then never again (photo-outcome.ts).
+ */
 export const partPhotos = snakeCase.table(
   "part_photos",
   {
@@ -23,7 +26,12 @@ export const partPhotos = snakeCase.table(
     isDefault: boolean().notNull(),
     ...auditColumns(),
   },
-  (table) => [index("ix_part_photos_part").on(table.partId), softDeleteCheck("part_photos", table)],
+  (table) => [
+    index("ix_part_photos_part").on(table.partId),
+    softDeleteCheck("part_photos", table),
+    // The values only: the moves (pending to ready or failed, never back) are guarded by the updates (photo-outcome.ts).
+    check("ck_part_photos_status", sql`${table.status} in ('pending', 'ready', 'failed')`),
+  ],
 );
 
 export type PartPhoto = typeof partPhotos.$inferSelect;
