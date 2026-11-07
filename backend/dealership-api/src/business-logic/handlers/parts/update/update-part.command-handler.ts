@@ -153,7 +153,14 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
             ),
           );
       }
-      // Clearing a default before setting the new one: never two defaults, even for a moment.
+      // A save that chooses the default clears every default first (one uploaded meanwhile too), then sets its own: the
+      // unique index allows one default per part, even for a moment.
+      if (kept.some((photo) => photo.isDefault) || addedPhotos.some((photo) => photo.isDefault)) {
+        await work.db
+          .update(partPhotos)
+          .set({ isDefault: false })
+          .where(and(eq(partPhotos.partId, partId), eq(partPhotos.isDefault, true)));
+      }
       for (const photo of kept.toSorted((a, b) => Number(a.isDefault) - Number(b.isDefault))) {
         await work.db
           .update(partPhotos)
