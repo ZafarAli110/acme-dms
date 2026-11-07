@@ -8,7 +8,7 @@ import { useActionData, useNavigate, useNavigation, useSubmit } from "react-rout
 import { FormGuards } from "../../components/FormGuards";
 import { PageHeader } from "../../components/PageHeader";
 import { PartPhotosSection } from "./components/PartPhotosSection";
-import { toFormValues, toUpdateFormData } from "./mappers/partFormMapper";
+import { mergePhotos, toFormValues, toUpdateFormData } from "./mappers/partFormMapper";
 import type { clientAction } from "./PartEdit";
 import { createPartUpdateSchema } from "./schemas/partSchema";
 import type { Part, PartFormValues } from "./types/part";
@@ -68,11 +68,16 @@ export function PartForm({
   const keepMine = (): void => {
     const theirs = toFormValues(part, i18n.language);
     const { dirtyFields } = methods.formState;
-    for (const field of ["description", "unitPrice", "photos"] as const) {
+    for (const field of ["description", "unitPrice"] as const) {
       if (!dirtyFields[field]) {
         methods.setValue(field, theirs[field]);
       }
     }
+    // Photos are a list: the user's changes go on top of theirs, so the other person's new photos are not deleted.
+    const openedPhotos = toFormValues(opened, i18n.language).photos;
+    methods.setValue("photos", mergePhotos(methods.getValues("photos"), openedPhotos, theirs.photos), {
+      shouldDirty: true,
+    });
     setOpened(part);
     onKeepMine();
   };

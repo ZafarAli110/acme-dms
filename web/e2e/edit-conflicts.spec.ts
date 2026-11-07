@@ -5,6 +5,12 @@ function description(page: Page) {
   return page.getByTestId("part-description").locator("input");
 }
 
+/** A 1×1 PNG, as a person would pick from their files. */
+function photo(name: string) {
+  const onePixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  return { name, mimeType: "image/png", buffer: Buffer.from(onePixel, "base64") };
+}
+
 function price(page: Page) {
   return page.getByTestId("part-unit-price").locator("input");
 }
@@ -66,6 +72,30 @@ test.describe("two people editing one record", () => {
     await expect(description(page)).toHaveValue("Oil filter, spin-on");
     await expect(price(page)).toHaveValue(/^7[.,]25$/);
     await expect(page.getByTestId("save-part")).toBeDisabled();
+  });
+
+  test("a part: keeping my edits keeps the photo the other person added, as well as mine", async ({
+    page,
+    context,
+    request,
+  }) => {
+    const part = await createPartAsync(request);
+    const other = await context.newPage();
+    await page.goto(`/parts/${part.id}`);
+    await other.goto(`/parts/${part.id}`);
+
+    await page.getByTestId("photo-input").setInputFiles(photo("mine.png"));
+    await other.getByTestId("photo-input").setInputFiles(photo("theirs.png"));
+    await other.getByTestId("save-part").click();
+    await expect(other.getByTestId("save-success")).toBeVisible();
+
+    await page.getByTestId("save-part").click();
+    await page.getByTestId("keep-mine").click();
+    await page.getByTestId("save-part").click();
+    await expect(page.getByTestId("save-success")).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByTestId("photo-tile")).toHaveCount(2);
   });
 
   test("a customer: keeping my edits puts them on top of the other person's", async ({ page, context }) => {

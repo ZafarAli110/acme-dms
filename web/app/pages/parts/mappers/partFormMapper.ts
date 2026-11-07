@@ -45,3 +45,28 @@ export function toUpdateFormData(values: PartFormValues, saved: Part, language: 
   }
   return form;
 }
+
+/**
+ * The photos after "Keep my edits": theirs (the newer version), less the ones this user removed from the version their
+ * form opened, plus this user's new files. A save sends the complete list of photos to keep, so keeping the user's list
+ * as it was would delete every photo the other person added. The default is the user's choice when they made one in
+ * this form, otherwise theirs, and there is exactly one.
+ */
+export function mergePhotos(
+  mine: PartFormValues["photos"],
+  opened: PartFormValues["photos"],
+  theirs: PartFormValues["photos"],
+): PartFormValues["photos"] {
+  const mineById = new Map(mine.filter((photo) => photo.photoId !== null).map((photo) => [photo.photoId, photo]));
+  const removedByMe = new Set(opened.filter((photo) => !mineById.has(photo.photoId)).map((photo) => photo.photoId));
+  const added = mine.filter((photo) => photo.file !== null);
+  const merged = [...theirs.filter((photo) => !removedByMe.has(photo.photoId)), ...added];
+
+  const openedDefault = opened.find((photo) => photo.isDefault)?.photoId ?? null;
+  const myDefault = mine.find((photo) => photo.isDefault) ?? null;
+  const iChoseTheDefault = myDefault !== null && (myDefault.file !== null || myDefault.photoId !== openedDefault);
+  const defaultKey = iChoseTheDefault
+    ? myDefault.key
+    : (merged.find((photo) => photo.isDefault)?.key ?? merged[0]?.key ?? null);
+  return merged.map((photo) => ({ ...photo, isDefault: photo.key === defaultKey }));
+}
