@@ -85,28 +85,25 @@ the ones whose code they have.
 | S2-SIGN-3, S2-SIGN-4         | an attempt without a verdict is not counted; a renewal unanswered twice is logged                           | `83d1497`                         |
 | S2-DOC-2                     | bad JSON is dead-lettered; a refused retry goes back to the queue                                           | `ee28fec`                         |
 | S2-WEB-2, S2-WEB-3           | the photo poll keeps one clock; an edit is saved at the location shown at Save                              | `da3ecc1`                         |
-
-Still open from the first sweep, left on purpose: PHOTO-6 (orphaned documents), the renewal attempt-key protocol,
-cancelling an export during its count, the stale save-error alert, the unique default-photo index.
+| Dead-lettered events         | both services warn while a dead-letter queue holds messages; `replay-dead-letters` sends them back          | `1e94790`, `0edb819`              |
+| PHOTO-6                      | an outcome nobody claimed in a day sends `document.unclaimed.v1`; document-api deletes the document         | `1e94790`, `0edb819`              |
+| Renewal attempt key          | a renewal is recognised by its key (`Idempotency-Key`), however late its retry comes                        | `b2f375f`                         |
+| Stale save-error alert       | a save's error goes once the user edits again                                                               | `5bbf25f`                         |
+| Unique default photo         | `uq_part_photos_default`; a save clears the old default first                                               | `211224b`                         |
+| Export queued, no worker     | failed after 30 minutes, "no export worker took it"                                                         | `5073a25`                         |
+| Cancel during the count      | a cancel or the time limit cancels the running count statement                                              | `5073a25`                         |
 
 ## Unfinished states with no sure way out
 
-| Machine             | State    | Meant to leave by | Owner              | Why it may never come                                    |
-| ------------------- | -------- | ----------------- | ------------------ | -------------------------------------------------------- |
-| dead-lettered event | parked   | nothing           | nobody             | no consumer, no replay: a person reads the `.dlq` queues |
-| export job          | `queued` | a worker          | the export workers | no worker running                                        |
-
-Given a way out since the second sweep: a document or photo whose answer never comes (the sweeps, 8 and 10 minutes), an
-active signing key no instance can open (`replace-signing-keys`, health 503), an expired export link (the card), an
-early outcome whose upload failed (pruned after a day).
+None known. Every unfinished state found by the two sweeps has an exit and an owner: a sweep or deadline (photos 10
+minutes, documents 8, queued exports 30), a person told by a warning (dead-letter queues, an unopenable signing key), or
+the user's own choice (a save conflict, a stalled export card). Run `/find-state-machines` again after the next large
+change.
 
 ## Order of work
 
-1. Run the e2e suite on `final`, `edit-conflicts.spec.ts` first (it covers S2-WEB-1 too).
-2. Left on purpose, each a later decision: PHOTO-6 (orphaned documents), the renewal attempt-key protocol, cancelling an
-   export during its count, the stale save-error alert, the unique default-photo index, a consumer for the dead-letter
-   queues.
-3. The smaller items listed under "Open findings".
+1. Run the e2e suite on `final`, `edit-conflicts.spec.ts` first.
+2. The smaller items listed under "Open findings".
 
 ## So we catch the next one in review
 
