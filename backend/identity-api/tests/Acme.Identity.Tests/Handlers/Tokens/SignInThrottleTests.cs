@@ -29,22 +29,22 @@ public sealed class SignInThrottleTests
 
         for (var i = 0; i < SignInThrottle.FreeFailures - 1; i++)
         {
-            throttle.RecordFailure("rita@northwind.test");
+            throttle.Begin("rita@northwind.test");
             Assert.AreEqual(TimeSpan.Zero, throttle.WaitFor("rita@northwind.test"));
         }
 
-        throttle.RecordFailure("rita@northwind.test");
+        throttle.Begin("rita@northwind.test");
         Assert.AreEqual(SignInThrottle.FirstWait, throttle.WaitFor("rita@northwind.test"));
 
         clock.Advance(SignInThrottle.FirstWait);
         Assert.AreEqual(TimeSpan.Zero, throttle.WaitFor("rita@northwind.test"));
-        throttle.RecordFailure("rita@northwind.test");
+        throttle.Begin("rita@northwind.test");
         Assert.AreEqual(SignInThrottle.FirstWait * 2, throttle.WaitFor("rita@northwind.test"));
 
         for (var i = 0; i < 20; i++)
         {
             clock.Advance(SignInThrottle.LongestWait);
-            throttle.RecordFailure("rita@northwind.test");
+            throttle.Begin("rita@northwind.test");
         }
 
         Assert.AreEqual(SignInThrottle.LongestWait, throttle.WaitFor("rita@northwind.test"));
@@ -57,7 +57,7 @@ public sealed class SignInThrottleTests
         var throttle = new SignInThrottle(clock);
         for (var i = 0; i < 6; i++)
         {
-            throttle.RecordFailure("rita@northwind.test");
+            throttle.Begin("rita@northwind.test");
         }
 
         Assert.AreEqual(TimeSpan.Zero, throttle.WaitFor("tom@citymotors.test"));
@@ -66,13 +66,13 @@ public sealed class SignInThrottleTests
 
         for (var i = 0; i < 5; i++)
         {
-            throttle.RecordFailure("sam@northwind.test");
+            throttle.Begin("sam@northwind.test");
         }
 
         clock.Advance(SignInThrottle.ForgetAfter + TimeSpan.FromSeconds(1));
         Assert.AreEqual(TimeSpan.Zero, throttle.WaitFor("sam@northwind.test"));
         // Counting starts again: one failure after the quiet spell is the first, not the sixth.
-        throttle.RecordFailure("sam@northwind.test");
+        throttle.Begin("sam@northwind.test");
         Assert.AreEqual(TimeSpan.Zero, throttle.WaitFor("sam@northwind.test"));
     }
 
@@ -122,11 +122,54 @@ public sealed class SignInThrottleTests
         Assert.IsNotNull(await handler.ExecuteAsync(new TokenCreateRequestDto("rita@northwind.test", DemoData.Password), TestContext.CancellationToken));
     }
 
-    private static CreateTokenCommandHandler NewHandler(Acme.Identity.Persistence.Database.IdentityDbContext dbContext, TimeProvider clock)
+    [TestMethod]
+    public async Task SignIn_TwentyWrongPasswordsSentAtOnce_AtMostFiveAreChecked()
+    {
+        await using var dbContext = await DemoDatabase.CreateAsync(TestContext.CancellationToken);
+        var clock = new TestClock();
+        var throttle = new SignInThrottle(clock);
+        var hasher = new CountingHasher();
+
+        var outcomes = await Task.WhenAll(Enumerable.Range(0, 20).Select(async _ =>
+        {
+            // Each request has its own database context, as each request of the service does.
+            await using var own = TestPostgres.Reopen(dbContext);
+            var handler = NewHandler(own, clock, throttle, hasher);
+            var refused = await Assert.ThrowsExactlyAsync<ApiException>(() =>
+                handler.ExecuteAsync(new TokenCreateRequestDto("rita@northwind.test", "wrong"), TestContext.CancellationToken));
+            return refused.Category;
+        }));
+
+        Assert.AreEqual(SignInThrottle.FreeFailures, hasher.Checks, "only the free attempts reach the password check");
+        Assert.AreEqual(20 - SignInThrottle.FreeFailures, outcomes.Count(c => c == ApiErrorCategory.TooManyRequests));
+    }
+
+    private static CreateTokenCommandHandler NewHandler(Acme.Identity.Persistence.Database.IdentityDbContext dbContext, TimeProvider clock) =>
+        NewHandler(dbContext, clock, new SignInThrottle(clock), new PasswordHasher<User>());
+
+    private static CreateTokenCommandHandler NewHandler(
+        Acme.Identity.Persistence.Database.IdentityDbContext dbContext,
+        TimeProvider clock,
+        SignInThrottle throttle,
+        IPasswordHasher<User> hasher)
     {
         var keyProvider = new Mock<ISigningKeyProvider>();
         keyProvider.Setup(p => p.GetSigningKeyAsync(It.IsAny<CancellationToken>())).ReturnsAsync(_signingKey);
-        return new CreateTokenCommandHandler(dbContext, new AccessTokenIssuer(keyProvider.Object), new PasswordHasher<User>(), new SignInThrottle(clock), clock);
+        return new CreateTokenCommandHandler(dbContext, new AccessTokenIssuer(keyProvider.Object), hasher, throttle, clock);
+    }
+
+    /// <summary>The real hasher, counting the passwords it checks; slow, as the real check is.</summary>
+    private sealed class CountingHasher : PasswordHasher<User>
+    {
+        private int _checks;
+
+        public int Checks => _checks;
+
+        public override PasswordVerificationResult VerifyHashedPassword(User user, string hashedPassword, string providedPassword)
+        {
+            Interlocked.Increment(ref _checks);
+            return base.VerifyHashedPassword(user, hashedPassword, providedPassword);
+        }
     }
 
     private sealed class TestClock : TimeProvider
