@@ -77,6 +77,7 @@ version stored. So the profile is kept from one QA run to the next, and grows li
 | What the site kept | as found; after clearing it while signed in (`localstorage-clear`, `sessionstorage-clear`); after `cookie-clear` in the middle of a task, which ends the sign-in under the page                                  |
 | Sign-in            | signed in as the user the case needs; as someone else; signed out; a sign-in that ended in another tab while this one was busy                                                                                   |
 | Network            | online; offline at the step that matters, then back (`network-state-set offline`, then `online`)                                                                                                                 |
+| Slow answers       | the answer to the request the case's main action sends, held back past the app's own wait (2 s, then 10 s), as below                                                                                             |
 | Tabs               | one tab; the same page in two tabs, with a change in one                                                                                                                                                         |
 | Screen             | a desktop width; a phone (`-s=phone open --headed --mobile <web url>/sign-in`)                                                                                                                                   |
 | Look and language  | light and dark (`set-color-scheme dark`); English and French                                                                                                                                                     |
@@ -86,19 +87,32 @@ Not every case under every condition: every condition that touches what the case
 the tabs and the services; a photo upload the network, the screen and the services; a list's sort order touches only
 the language. A difference between two conditions is a finding, and its result names both.
 
+**Slow answers.** A server can be fast while the user still waits: a busy network, a proxy, a browser that holds an
+answer back. Hold back the answer to the request the case's main action sends (the save, the sign-out, the upload):
+the request reaches the service at once, and the browser gets its answer late, in every tab:
+
+```
+bunx playwright-cli run-code "async page => { await page.context().route('**/api/<the request>', async route => { const response = await route.fetch(); await new Promise(r => setTimeout(r, 10000)); await route.fulfill({ response }); }); }"
+```
+
+Then do the case, and afterwards `bunx playwright-cli run-code "async page => { await page.context().unrouteAll(); }"`.
+Expect the page to show it is waiting, and to end in a state the user understands, with nothing done twice, nothing
+left waiting for good and every tab agreeing; check the pages that follow too (a reload, the next tab), not only the
+one that waited.
+
 **The person's own browser, only when you are told you may.** A test browser, even a kept one, is younger than a
 user's: a bug that needs years of cache, extensions or settings may only show in a real one. When the request that
-started you says you may use the person's own browser, you run the cases where the browser's state matters there as
-well: it is not optional, and passing in a test browser does not make it unnecessary, since what you are looking for
-may only show in theirs. If you cannot attach, those cases are BLOCKED in their browser, with the reason. The person
-first turns on remote debugging in it (`chrome://inspect/#remote-debugging`, "Allow remote debugging for this browser
-instance"); then `bunx playwright-cli attach --cdp=chrome`, which makes Chrome ask the person to allow the connection.
-Attach first, before you open any browser of your own, so that question is not hidden behind your windows. If it times
-out, the person may not have clicked Allow yet: try again, twice at most, before the cases in their browser are
-BLOCKED. Then use `-s=chrome` on every command for it. It is their browser: open the app in a new tab of your own
-(`-s=chrome tab-new <web url>`), never read, use or close their other tabs, read cookies and storage of the app's own
-address only, and end with `bunx playwright-cli -s=chrome detach`, never `close`. Without that permission, never
-attach to a browser you did not open.
+started you says you may use the person's own browser, you may also run the cases where the browser's state matters
+there, as an extra check: your own browsers stay the evidence every case needs, and the slow answers above cover most
+of what a real browser adds. If you try and cannot attach, say so in the results with the error you got; the cases
+themselves are judged in your browsers. The person first turns on remote debugging in it
+(`chrome://inspect/#remote-debugging`, "Allow remote debugging for this browser instance"); then `bunx playwright-cli
+attach --cdp=chrome`, which makes Chrome ask the person to allow the connection. Attach first, before you open any
+browser of your own, so that question is not hidden behind your windows. If it times out, the person may not have
+clicked Allow yet: try again, twice at most, before you leave it. Then use `-s=chrome` on every command for it. It is
+their browser: open the app in a new tab of your own (`-s=chrome tab-new <web url>`), never read, use or close their
+other tabs, read cookies and storage of the app's own address only, and end with `bunx playwright-cli -s=chrome
+detach`, never `close`. Without that permission, never attach to a browser you did not open.
 
 **A service down** is a condition users meet: a deploy, a crash, a database restart. Stop only one the case goes
 through (`bun run status` names them: the services, export-worker where there is one, and rabbitmq, whose messages
