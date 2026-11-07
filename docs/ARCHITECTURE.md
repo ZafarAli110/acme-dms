@@ -86,8 +86,10 @@ waits for it. A renewal has 10 seconds, on its own time limit rather than the br
 more at once, with 4 seconds, because identity-api may have replaced the token and lost the answer, and asked again
 inside its 20-second grace period it gives the same replacement (see "Rotation and reuse"). The lease lasts 15 seconds,
 longer than both calls and shorter than the grace, so after a gateway that stopped mid-renewal the next request can
-ask again inside the grace. A gateway that stopped and a next request more than about 20 seconds later still end the
-sign-in: the old token then looks like a stolen copy. If identity-api
+ask again inside the grace. Past the grace, a renewal is still recognised by its **renewal key**: the gateway makes one
+with a renewal's first lease, keeps it on the session until a renewal succeeds, and sends it as `Idempotency-Key`;
+identity-api stores it with the token it replaced, and the same old token with the same key gets the same unused
+replacement however late it comes. Shown without the key (a copy of the old token), it still ends the sign-in. If identity-api
 cannot be reached, a token that has not yet expired is still sent; otherwise the gateway answers 503. A renewal **reads
 the person's roles and locations again**, so a change Maria makes on the Locations page reaches a signed-in person
 within 15 minutes, and a person who was deleted cannot renew. When identity-api has ended the sign-in, the gateway

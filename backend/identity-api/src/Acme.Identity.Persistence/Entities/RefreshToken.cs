@@ -27,6 +27,12 @@ public sealed class RefreshToken
     public DateTimeOffset? RotatedAt { get; set; }
 
     /// <summary>
+    /// The renewal key the gateway sent when this token was replaced: the same old token with the same key is a retry of
+    /// that renewal, not a stolen copy, however late it comes.
+    /// </summary>
+    public string? RotationKey { get; set; }
+
+    /// <summary>
     /// The token that replaced this one, sealed with a key only this token gives. Within the grace period the holder of this
     /// token gets the same replacement again (an answer that was lost), rather than nothing it can keep using.
     /// </summary>
