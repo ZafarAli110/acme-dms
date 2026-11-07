@@ -4,7 +4,8 @@ const REVOKE_PENDING_KEY = "acme.revokePending";
 const CHANNEL_NAME = "acme.session";
 
 /** What tabs of the app tell each other about the sign-in. A tab never receives its own messages. */
-type SessionMessage = { kind: "signed-in" } | { kind: "signed-out" };
+/** What one tab tells the others: a sign-in names who signed in, so a tab already signed in as them changes nothing. */
+type SessionMessage = { kind: "signed-in"; userId: string } | { kind: "signed-out" };
 
 /** A sign-in or sign-out in another tab, for this tab to follow. */
 export type OtherTabChange = SessionMessage;
