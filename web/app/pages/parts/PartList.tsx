@@ -77,7 +77,7 @@ export default function PartList() {
         noRowsLabel={noRows}
         testId="parts-table"
       />
-      <PartCreateDialog open={creating} onClose={() => setCreating(false)} />
+      <PartCreateDialog key={location?.id ?? ""} open={creating} onClose={() => setCreating(false)} />
     </Fragment>
   );
 }
