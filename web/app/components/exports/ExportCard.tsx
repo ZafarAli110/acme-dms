@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useExports } from "../../core/contexts/exports/useExports";
 import { formatFileSize } from "../../core/formatters/formatNumber";
-import type { ExportEntry } from "../../core/kernel/exportKernel";
+import { type ExportEntry, isRunning } from "../../core/kernel/exportKernel";
 
 const TICK_MS = 500;
 
@@ -40,20 +40,22 @@ function duration(ms: number, language: string, rough = false): string {
  */
 export function ExportCard({ entry }: { entry: ExportEntry }) {
   const { t, i18n } = useTranslation();
-  const { cancelAsync, dismiss } = useExports();
+  const { cancelAsync, dismiss, retry } = useExports();
   const { job } = entry;
-  const running = job.status === "queued" || job.status === "counting" || job.status === "writing";
+  const running = isRunning(entry);
+  // The timer runs on only while the service is heard from: a card that lost touch shows that, not a climbing clock.
+  const ticking = running && entry.connection === "following";
   const [now, setNow] = useState(() => performance.now());
   useEffect(() => {
-    if (!running) {
+    if (!ticking) {
       return;
     }
     const timer = setInterval(() => setNow(performance.now()), TICK_MS);
     return () => clearInterval(timer);
-  }, [running]);
+  }, [ticking]);
 
   const number = (value: number): string => value.toLocaleString(i18n.language);
-  const sinceUpdate = running ? Math.max(0, now - entry.receivedAt) : 0;
+  const sinceUpdate = ticking ? Math.max(0, now - entry.receivedAt) : 0;
   const percent = job.totalRows ? Math.min(100, Math.floor((job.rows / job.totalRows) * 100)) : 0;
   const message = {
     queued: t("exports.queued", { position: job.queuePosition ?? 1 }),
@@ -67,6 +69,12 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
     cancelled: t("exports.cancelled"),
     expired: t("exports.expired"),
   }[job.status];
+  const connection = {
+    following: null,
+    reconnecting: t("exports.reconnecting"),
+    stalled: t("exports.stalled"),
+    lost: t("exports.lost"),
+  }[entry.connection];
 
   return (
     <Card elevation={0} sx={{ width: 360, bgcolor: "transparent" }} data-testid="export-card">
@@ -84,7 +92,7 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
           color={job.status === "failed" ? "error" : "text.secondary"}
           data-testid="export-status"
         >
-          {entry.problem ?? message}
+          {connection ?? entry.problem ?? message}
         </Typography>
         {running && (
           // Determinate from the start, at 0% until rows are written: switching from the moving indeterminate stripe to
@@ -103,6 +111,11 @@ export function ExportCard({ entry }: { entry: ExportEntry }) {
           </Typography>
         )}
         <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+          {entry.connection === "stalled" && (
+            <Button size="small" onClick={() => retry(job.id)} data-testid="export-retry">
+              {t("exports.retry")}
+            </Button>
+          )}
           {running && (
             <Button size="small" onClick={() => void cancelAsync(job.id)} data-testid="export-cancel">
               {t("exports.cancel")}

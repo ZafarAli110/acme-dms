@@ -1,5 +1,20 @@
+import { ApiError, RequestTimeoutError, ServerUnreachableError } from "../config/apiErrors";
 import { apiClient } from "../services/apiClient";
 import { session } from "../storage/sessionStore";
+
+function delayAsync(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      },
+      { once: true },
+    );
+  });
+}
 
 /** Which list an export is of. */
 export type ExportKind = "customers";
@@ -38,9 +53,27 @@ export interface ExportEntry {
   restored: boolean;
   /** The location it was started at: it is followed and cancelled there, and shown only while that one is selected. */
   locationId: string;
+  /**
+   * How the card hears from the service: `following` its events; `reconnecting` after they stopped (a dropped
+   * connection, a sleeping laptop, a stream that ended early); `stalled` after too many tries, until the user retries;
+   * `lost` when the service no longer has the export.
+   */
+  connection: ExportConnection;
 }
 
+export type ExportConnection = "following" | "reconnecting" | "stalled" | "lost";
+
 const FINISHED: ReadonlySet<ExportStatus> = new Set(["completed", "failed", "cancelled", "expired"]);
+
+/** The service sends the export's state about once a second; this long without one, the card reconnects. */
+const SILENCE_MS = 15_000;
+/** Tries to reconnect, waiting 1, 2, 4, 8 and 16 seconds, before the card is stalled and waits for the user. */
+const MAX_RECONNECTS = 5;
+
+/** Whether the export is still on its way: waiting, counting or writing, and the service still has it. */
+export function isRunning(entry: ExportEntry): boolean {
+  return !FINISHED.has(entry.job.status) && entry.connection !== "lost";
+}
 
 /**
  * The user's exports, outside React, so one keeps running and reporting while the user works on other pages. Each is
@@ -62,16 +95,32 @@ export class ExportKernel {
   }
 
   /**
-   * Starts an export and follows it. One idempotency key per press of the button: a retry of the same press gets the
-   * same export, never a second one.
+   * Starts an export and follows it. One idempotency key per press of the button, sent again when the first try got
+   * no answer (it timed out, or never reached the service): the service may have started the export already, and
+   * the same key gets that one back, never a second.
    */
   public async startAsync(title: string, serviceUrl: string, path: string, body: unknown): Promise<void> {
     const locationId = this.selectedLocationId();
-    const job = await apiClient.postAsync<ExportJob>(`${serviceUrl}/${path}`, body, {
-      headers: { "idempotency-key": crypto.randomUUID() },
+    const options = { headers: { "idempotency-key": crypto.randomUUID() }, locationId };
+    let job: ExportJob;
+    try {
+      job = await apiClient.postAsync<ExportJob>(`${serviceUrl}/${path}`, body, options);
+    } catch (error) {
+      if (!(error instanceof RequestTimeoutError || error instanceof ServerUnreachableError)) {
+        throw error;
+      }
+      job = await apiClient.postAsync<ExportJob>(`${serviceUrl}/${path}`, body, options);
+    }
+    this.put({
+      title,
+      serviceUrl,
+      job,
+      receivedAt: performance.now(),
+      problem: null,
+      restored: false,
       locationId,
+      connection: "following",
     });
-    this.put({ title, serviceUrl, job, receivedAt: performance.now(), problem: null, restored: false, locationId });
     void this.followAsync(job.id);
   }
 
@@ -96,6 +145,7 @@ export class ExportKernel {
         problem: null,
         restored: true,
         locationId,
+        connection: "following",
       });
       if (!FINISHED.has(job.status)) {
         void this.followAsync(job.id);
@@ -122,10 +172,19 @@ export class ExportKernel {
     this.commit([]);
   }
 
+  /** Follows a stalled export again, at the user's request. */
+  public retry(jobId: string): void {
+    const entry = this.find(jobId);
+    if (entry && entry.connection === "stalled") {
+      this.update(jobId, { connection: "reconnecting", problem: null });
+      void this.followAsync(jobId);
+    }
+  }
+
   /** Takes a finished export off the panel; one still running is cancelled first. */
   public dismiss(jobId: string): void {
     const entry = this.find(jobId);
-    if (entry && !FINISHED.has(entry.job.status)) {
+    if (entry && isRunning(entry)) {
       void this.cancelAsync(jobId);
     }
     this._following.get(jobId)?.abort();
@@ -133,25 +192,97 @@ export class ExportKernel {
     this.commit(this._snapshot.filter((candidate) => candidate.job.id !== jobId));
   }
 
+  /**
+   * Follows the export's events until it finishes. When they stop without a final state (the stream dropped or
+   * ended, or nothing came for SILENCE_MS), it reads the export's state and reconnects, waiting longer each time; after
+   * MAX_RECONNECTS the card is stalled until the user retries. One follower per export: a second call stops the first.
+   */
   private async followAsync(jobId: string): Promise<void> {
-    const entry = this.find(jobId);
-    if (!entry) {
+    const start = this.find(jobId);
+    if (!start) {
       return;
     }
+    this._following.get(jobId)?.abort();
     const following = new AbortController();
     this._following.set(jobId, following);
     try {
-      await apiClient.readEventsAsync<ExportJob>(
-        `${entry.serviceUrl}/v1/exports/${jobId}/events`,
-        (job) => this.update(jobId, { job, receivedAt: performance.now(), problem: null }),
-        { signal: following.signal, locationId: entry.locationId },
-      );
+      for (let tries = 0; ; tries++) {
+        if (tries > 0) {
+          if (tries > MAX_RECONNECTS) {
+            this.update(jobId, { connection: "stalled" });
+            return;
+          }
+          this.update(jobId, { connection: "reconnecting" });
+          await delayAsync(1000 * 2 ** (tries - 1), following.signal);
+          if (!(await this.refreshAsync(jobId, start.serviceUrl, start.locationId, following.signal))) {
+            return;
+          }
+        }
+        await this.readUntilQuietAsync(jobId, start.serviceUrl, start.locationId, following);
+        const entry = this.find(jobId);
+        if (!entry || following.signal.aborted || FINISHED.has(entry.job.status)) {
+          return;
+        }
+      }
     } catch (error) {
       if (!following.signal.aborted) {
-        this.update(jobId, { problem: error instanceof Error ? error.message : String(error) });
+        this.update(jobId, { problem: error instanceof Error ? error.message : String(error), connection: "stalled" });
       }
     } finally {
-      this._following.delete(jobId);
+      if (this._following.get(jobId) === following) {
+        this._following.delete(jobId);
+      }
+    }
+  }
+
+  /** Reads the events until the stream ends, fails, or stays quiet for SILENCE_MS. */
+  private async readUntilQuietAsync(
+    jobId: string,
+    serviceUrl: string,
+    locationId: string,
+    following: AbortController,
+  ): Promise<void> {
+    const quiet = new AbortController();
+    let watchdog = setTimeout(() => quiet.abort(), SILENCE_MS);
+    try {
+      await apiClient.readEventsAsync<ExportJob>(
+        `${serviceUrl}/v1/exports/${jobId}/events`,
+        (job) => {
+          clearTimeout(watchdog);
+          watchdog = setTimeout(() => quiet.abort(), SILENCE_MS);
+          this.update(jobId, { job, receivedAt: performance.now(), problem: null, connection: "following" });
+        },
+        { signal: AbortSignal.any([following.signal, quiet.signal]), locationId },
+      );
+    } catch (error) {
+      // Stopped on purpose, gone quiet or dropped: the caller reads the state and reconnects. A refusal is final.
+      if (error instanceof ApiError && error.status === 404) {
+        this.update(jobId, { connection: "lost" });
+        following.abort();
+      }
+    } finally {
+      clearTimeout(watchdog);
+    }
+  }
+
+  /** The export's state now; false when it is gone (404) or finished, so there is nothing more to follow. */
+  private async refreshAsync(
+    jobId: string,
+    serviceUrl: string,
+    locationId: string,
+    signal: AbortSignal,
+  ): Promise<boolean> {
+    try {
+      const job = await apiClient.getAsync<ExportJob>(`${serviceUrl}/v1/exports/${jobId}`, { signal, locationId });
+      this.update(jobId, { job, receivedAt: performance.now(), problem: null, connection: "following" });
+      return !FINISHED.has(job.status);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        this.update(jobId, { connection: "lost" });
+        return false;
+      }
+      // Still unreachable: the next try waits longer.
+      return !signal.aborted;
     }
   }
 

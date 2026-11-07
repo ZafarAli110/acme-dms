@@ -5,15 +5,11 @@ import { useTranslation } from "react-i18next";
 import { API_CONFIG } from "../../core/config/api";
 import { useExports } from "../../core/contexts/exports/useExports";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
-import type { ExportEntry } from "../../core/kernel/exportKernel";
+import { type ExportEntry, isRunning } from "../../core/kernel/exportKernel";
 import { ExportCard } from "./ExportCard";
 
 // Wider than the 40px button, so the ring clears the icon's corners; centred on the button, not pinned to its corner.
 const RING_SIZE = 46;
-
-function isRunning(entry: ExportEntry): boolean {
-  return entry.job.status === "queued" || entry.job.status === "counting" || entry.job.status === "writing";
-}
 
 /** How far the running exports have got together, 0–100; 0 until rows are written, so the ring never runs back. */
 function progressOf(running: ExportEntry[]): number {
