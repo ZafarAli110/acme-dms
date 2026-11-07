@@ -35,37 +35,15 @@ the export worker's writes (`heldWhere`) and the record versions behind `If-Matc
 | [Sign-in services](sign-in-lifecycle.md)            | gateway session, refresh chain, signing keys, throttle, seeding        | every branch (the files are the same)               |
 | [Web app state](web-state.md)                       | auth kernel, location kernel, save and conflict, create dialog, guards | every branch; the 412 conflict on `final` only      |
 
-## Open findings, worst first
+## Open findings
 
 Second sweep's ids are `S2-…`; the area follows (`DOC`, `PHOTO`, `SIGN`, `WEB`, `EXP`).
 
-### Blocking: data lost, wrong or stuck for good
+Every boxed finding of the second sweep is fixed (see "Fixed"), except one accepted on purpose:
 
-| Id         | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Status                     |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| S2-PHOTO-1 | **A retried document event is dropped, not dead-lettered.** It comes back to `dealership-api.document-events` with that queue's name as its routing key; the queue has no dead-letter routing key and the DLQ is bound only to `document.processed`/`document.failed`, so after five tries it matches nothing (`document-events.consumer.ts`, topology). Introduced by the retry queue (`c88fa96`); the unit test faked the routing key. Fix: bind the DLQ to the queue's name too, or give the queue `deadLetterRoutingKey`. | checked (routing inferred) |
-| S2-DOC-1   | **A `Pending` document has no exit but its own message.** When Fail throws on the last attempt, the message is dead-lettered and nothing sweeps old `Pending` documents (`ProcessDocumentConsumer.cs`); its photo stays `pending` too. The plan's "re-enqueue, then fail" was never built.                                                                                                                                                                                                                                    | checked                    |
-| S2-PHOTO-2 | **A `pending` photo has no deadline.** The 10-minute "timed out" (your answer) has no sweep behind it; the page stops asking after 2 minutes, but the record stays `pending` for good if its event never comes. Same sweep as S2-DOC-1, on the dealership side.                                                                                                                                                                                                                                                               | checked                    |
-| S2-SIGN-1  | **An active signing key no instance can open stops every sign-in, with no way out.** Outside Development it is kept (by design) and no new key is made until rotation is due, up to 30 days; nothing tells a person (S2-SIGN-2) and there is no command or runbook to recover.                                                                                                                                                                                                                                                | checked                    |
-| S2-WEB-1   | **"Keep my edits" deletes the other person's photos.** When the user touched photos, their list is kept; `update-part` treats the list it receives as the complete list to keep and soft-deletes the rest, so a photo the other person added is gone (`PartForm.tsx` keepMine, `update-part.command-handler.ts`). Fix: merge the lists (theirs, plus the user's new files, minus what the user removed).                                                                                                                      | checked                    |
-
-### Should-fix: cleared only by a person, a reload or a later request
-
-| Id         | Finding                                                                                                                                                      | Status   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| S2-SIGN-2  | identity-api's health says `degraded` with HTTP 200: Aspire and a load balancer read the code, so an instance that cannot sign keeps taking sign-ins.        | checked  |
-| S2-DOC-2   | Bad JSON (deserialised outside the `try`) or a failed republish leaves a process message neither acked nor nacked; four such stall the consumer.             | checked  |
-| S2-PHOTO-3 | `early_document_outcomes` and `processed_messages` are never pruned.                                                                                         | checked  |
-| S2-PHOTO-4 | A PATCH that adds photos counts and sets the default before its transaction, not under the part lock: with a concurrent upload, 11 photos or two defaults.   | inferred |
-| S2-PHOTO-5 | A handler finishing after its channel closed (a reconnect) acks on a dead channel; the throw escapes `void handleAsync` as an unhandled rejection.           | inferred |
-| S2-EXP-1   | `EXPORT_LINK_KEY` is required only when `NODE_ENV=production`; a staging or second instance still makes its own key.                                         | checked  |
-| S2-EXP-2   | A card's reconnect counter is never reset: six brief drops over a long export leave it `stalled` while it runs fine.                                         | checked  |
-| S2-EXP-3   | A completed card never notices `expiresAt`: Download leads to a 410.                                                                                         | checked  |
-| S2-WEB-2   | The photo poll compares the server's `createdAt` with the browser's clock: a fast laptop never polls.                                                        | inferred |
-| S2-WEB-3   | Saves still send the selected location, not the one the form opened at; the form guard is off while submitting.                                              | inferred |
-| S2-SIGN-3  | The throttle counts an attempt that a database error or a cancelled request ends as a wrong password: a user retrying through an outage gets 429 afterwards. | checked  |
-| S2-SIGN-4  | When both renewal calls time out after identity-api committed, the user is signed out on the next request more than 20 s later (the interim's limit).        | inferred |
-| S2-DOC-3   | Two document-api instances publish the same outbox rows (no row lock); published rows are never pruned.                                                      | checked  |
+- **S2-DOC-3, the outbox row lock:** two document-api instances can publish the same message. Accepted: every consumer
+  drops a duplicate (dealership-api's inbox; document-api's `Pending` check and row version). Its other half, pruning
+  published rows, is done.
 
 Smaller, noted in the searches and not boxed: a cancelled export card's failure is swallowed; a second Save click
 during the post-save navigation sends the old version; an expired renewal answer with no cookie keeps the rotated
@@ -77,54 +55,58 @@ token; a stale comment in `AccessTokenIssuer.cs` about services asking identity-
 Each with a test that fails on the old code where one could be written. Commits on `final`; the labs and `main` carry
 the ones whose code they have.
 
-| Finding                    | Fix                                                                                                         | Commit on `final`                 |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| SIGN-1                     | migrations everywhere, demo data in Development only                                                        | `ff71a88`                         |
-| SIGN-4, SIGN-6             | a session or token already gone is not an error                                                             | `722bc53` and the three before it |
-| SIGN-3                     | one immediate retry of a lost renewal (interim; S2-SIGN-4 remains)                                          | same range                        |
-| SIGN-2                     | keys published from a stored public half; never deleted outside Development; health degraded                | `722bc53`, `2e13b7b`              |
-| SIGN-5                     | an attempt is reserved before the password check                                                            | `e1d81d3`                         |
-| DOC-1, DOC-2               | `xmin` row version; Delete re-reads; confirmed republish; Fail in a fresh scope                             | `930d73a`                         |
-| DOC-3                      | the outbox saves each message once confirmed and skips one that is not JSON (row lock still open: S2-DOC-3) | `53452a3`                         |
-| EXP-2, EXP-4, EXP-5        | writes and files fenced by attempt; orphan sweep; shared link key; status CHECK                             | `c353253`                         |
-| EXP-1, EXP-6               | a card is followed and cancelled at its own location; a change of user clears them                          | `94e4183`                         |
-| EXP-3, EXP-7               | reconnect, stall with Retry, a start resent with its key                                                    | `172fd92`                         |
-| WEB-1                      | a query asks for the location its key names                                                                 | `703b705`                         |
-| PHOTO-1, PHOTO-2, PHOTO-4  | moves only from `pending`; early outcomes kept and applied; uploads take turns                              | `2743a15`                         |
-| PHOTO-5                    | retry queue (hole: S2-PHOTO-1)                                                                              | `c88fa96`                         |
-| PHOTO-3                    | the part GET is never a 304                                                                                 | `b375b03`                         |
-| WEB-8                      | the photo poll stops after 2 minutes and says so; a failed photo shows its reason                           | `4a15811`                         |
-| WEB-3, WEB-4, WEB-5, WEB-7 | same user keeps the tab; another reloads it; sign-out leaves itself; the dialog resets                      | `cddb717`                         |
-| WEB-6                      | a newer version never wipes unsaved edits                                                                   | `15e03db`                         |
-| WEB-2                      | a stale save is refused and fetches theirs; keep my edits (photo hole: S2-WEB-1)                            | `0d51e68`                         |
+| Finding                      | Fix                                                                                                         | Commit on `final`                 |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| SIGN-1                       | migrations everywhere, demo data in Development only                                                        | `ff71a88`                         |
+| SIGN-4, SIGN-6               | a session or token already gone is not an error                                                             | `722bc53` and the three before it |
+| SIGN-3                       | one immediate retry of a lost renewal (interim; S2-SIGN-4 remains)                                          | same range                        |
+| SIGN-2                       | keys published from a stored public half; never deleted outside Development; health degraded                | `722bc53`, `2e13b7b`              |
+| SIGN-5                       | an attempt is reserved before the password check                                                            | `e1d81d3`                         |
+| DOC-1, DOC-2                 | `xmin` row version; Delete re-reads; confirmed republish; Fail in a fresh scope                             | `930d73a`                         |
+| DOC-3                        | the outbox saves each message once confirmed and skips one that is not JSON (row lock still open: S2-DOC-3) | `53452a3`                         |
+| EXP-2, EXP-4, EXP-5          | writes and files fenced by attempt; orphan sweep; shared link key; status CHECK                             | `c353253`                         |
+| EXP-1, EXP-6                 | a card is followed and cancelled at its own location; a change of user clears them                          | `94e4183`                         |
+| EXP-3, EXP-7                 | reconnect, stall with Retry, a start resent with its key                                                    | `172fd92`                         |
+| WEB-1                        | a query asks for the location its key names                                                                 | `703b705`                         |
+| PHOTO-1, PHOTO-2, PHOTO-4    | moves only from `pending`; early outcomes kept and applied; uploads take turns                              | `2743a15`                         |
+| PHOTO-5                      | retry queue (hole: S2-PHOTO-1)                                                                              | `c88fa96`                         |
+| PHOTO-3                      | the part GET is never a 304                                                                                 | `b375b03`                         |
+| WEB-8                        | the photo poll stops after 2 minutes and says so; a failed photo shows its reason                           | `4a15811`                         |
+| WEB-3, WEB-4, WEB-5, WEB-7   | same user keeps the tab; another reloads it; sign-out leaves itself; the dialog resets                      | `cddb717`                         |
+| WEB-6                        | a newer version never wipes unsaved edits                                                                   | `15e03db`                         |
+| WEB-2                        | a stale save is refused and fetches theirs; keep my edits (photo hole: S2-WEB-1)                            | `0d51e68`                         |
+| S2-WEB-1                     | keep my edits merges the photo lists                                                                        | `854e204`                         |
+| S2-PHOTO-1                   | the dead-letter queue takes an event dead-lettered after its retries                                        | `c31b5c1`                         |
+| S2-PHOTO-2, S2-PHOTO-3       | a photo pending past 10 minutes is failed, timed out; early outcomes and inbox rows pruned                  | `e96fe4c`                         |
+| S2-DOC-1                     | a document pending past 8 minutes is failed and says so; old outbox rows pruned                             | `363acdf`                         |
+| S2-SIGN-1, S2-SIGN-2         | health is 503 when degraded; `replace-signing-keys`, with its runbook in `ARCHITECTURE.md`                  | `7e05e56`                         |
+| S2-EXP-1, S2-EXP-2, S2-EXP-3 | link key needed outside development; reconnects counted afresh; no expired link offered                     | `41838d2`                         |
+| S2-PHOTO-4, S2-PHOTO-5       | a save counts again under the part lock; nothing escapes a closed channel                                   | `6283f58`                         |
+| S2-SIGN-3, S2-SIGN-4         | an attempt without a verdict is not counted; a renewal unanswered twice is logged                           | `83d1497`                         |
+| S2-DOC-2                     | bad JSON is dead-lettered; a refused retry goes back to the queue                                           | `ee28fec`                         |
+| S2-WEB-2, S2-WEB-3           | the photo poll keeps one clock; an edit is saved at the location shown at Save                              | `da3ecc1`                         |
 
 Still open from the first sweep, left on purpose: PHOTO-6 (orphaned documents), the renewal attempt-key protocol,
 cancelling an export during its count, the stale save-error alert, the unique default-photo index.
 
 ## Unfinished states with no sure way out
 
-| Machine             | State                      | Meant to leave by               | Owner                             | Why it may never come                                                    |
-| ------------------- | -------------------------- | ------------------------------- | --------------------------------- | ------------------------------------------------------------------------ |
-| document            | `Pending`                  | the processing message          | document-api                      | Fail throws on the last try; the message is lost (S2-DOC-1)              |
-| part photo          | `pending`                  | `document.processed` / `failed` | document-api, then dealership-api | a dropped retry (S2-PHOTO-1), a stuck document; no deadline (S2-PHOTO-2) |
-| dead-lettered event | parked                     | nothing                         | nobody                            | no consumer, no replay                                                   |
-| signing key         | active, unopenable here    | rotation in up to 30 days       | nobody                            | no command, no runbook, health says 200 (S2-SIGN-1)                      |
-| export job          | `queued`                   | a worker                        | the export workers                | no worker running                                                        |
-| export card         | completed past `expiresAt` | nothing                         | nobody                            | the card never checks (S2-EXP-3)                                         |
-| early outcome       | stored                     | its upload                      | the upload                        | the upload failed or was refused (S2-PHOTO-3)                            |
+| Machine             | State    | Meant to leave by | Owner              | Why it may never come                                    |
+| ------------------- | -------- | ----------------- | ------------------ | -------------------------------------------------------- |
+| dead-lettered event | parked   | nothing           | nobody             | no consumer, no replay: a person reads the `.dlq` queues |
+| export job          | `queued` | a worker          | the export workers | no worker running                                        |
 
-Fixed since the first sweep: an export card left "running", a tab stuck `resolving`, a form stuck on a 412, a document
-overwritten by a racing Delete.
+Given a way out since the second sweep: a document or photo whose answer never comes (the sweeps, 8 and 10 minutes), an
+active signing key no instance can open (`replace-signing-keys`, health 503), an expired export link (the card), an
+early outcome whose upload failed (pruned after a day).
 
 ## Order of work
 
-1. **S2-PHOTO-1**: one binding, and the dead-letter path works again. A test against a real broker would have caught it.
-2. **S2-WEB-1**: merge the photo lists on "Keep my edits".
-3. **S2-DOC-1 and S2-PHOTO-2**: one sweep in each service, with the 10-minute deadline you chose; S2-PHOTO-3's pruning
-   rides on the same sweep.
-4. **S2-SIGN-1 and S2-SIGN-2**: health answers 503 when it cannot sign, and a decided way out (a command, or a successor
-   key published at once), with a runbook.
-5. The should-fix list, starting with S2-DOC-2, S2-EXP-1 and S2-SIGN-3.
+1. Run the e2e suite on `final`, `edit-conflicts.spec.ts` first (it covers S2-WEB-1 too).
+2. Left on purpose, each a later decision: PHOTO-6 (orphaned documents), the renewal attempt-key protocol, cancelling an
+   export during its count, the stale save-error alert, the unique default-photo index, a consumer for the dead-letter
+   queues.
+3. The smaller items listed under "Open findings".
 
 ## So we catch the next one in review
 
