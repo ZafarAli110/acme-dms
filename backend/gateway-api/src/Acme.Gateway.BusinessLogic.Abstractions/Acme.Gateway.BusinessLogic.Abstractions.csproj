@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Acme.Gateway.DTO\Acme.Gateway.DTO.csproj" />
+  </ItemGroup>
+</Project>
