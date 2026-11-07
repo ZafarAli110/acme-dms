@@ -158,8 +158,8 @@ describe("AuthKernel", () => {
   });
 
   it("shows the sign-in page at once when a sign-out is still pending, and ends it in the background", async () => {
-    let answerSignOut: (response: Response) => void = () => undefined;
-    gateway.signOut = () => new Promise((resolve) => (answerSignOut = resolve));
+    const signOutAnswer = Promise.withResolvers<Response>();
+    gateway.signOut = () => signOutAnswer.promise;
     session.setRevokePending(true);
     const kernel = new AuthKernel();
 
@@ -168,13 +168,13 @@ describe("AuthKernel", () => {
     expect(auth.status).toBe("signed-out");
     expect(gateway.requests).toContain("DELETE /api/session");
     expect(session.isRevokePending()).toBe(true);
-    answerSignOut(new Response(null, { status: 204 }));
+    signOutAnswer.resolve(new Response(null, { status: 204 }));
     await vi.waitFor(() => expect(session.isRevokePending()).toBe(false));
   });
 
   it("signs in only once a sign-out still ending in the background has its answer, so it cannot remove the new cookie", async () => {
-    let answerSignOut: (response: Response) => void = () => undefined;
-    gateway.signOut = () => new Promise((resolve) => (answerSignOut = resolve));
+    const signOutAnswer = Promise.withResolvers<Response>();
+    gateway.signOut = () => signOutAnswer.promise;
     session.setRevokePending(true);
     const kernel = new AuthKernel();
     await kernel.waitForResolvedAuthAsync();
@@ -182,7 +182,7 @@ describe("AuthKernel", () => {
     const signingIn = kernel.signInAsync("rita@northwind.test", "Acme123!");
     await Promise.resolve();
     expect(gateway.requests).not.toContain("POST /api/session");
-    answerSignOut(new Response(null, { status: 204 }));
+    signOutAnswer.resolve(new Response(null, { status: 204 }));
     await signingIn;
 
     expect(gateway.requests.indexOf("POST /api/session")).toBeGreaterThan(
