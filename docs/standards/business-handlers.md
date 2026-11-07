@@ -56,13 +56,17 @@ await work.commitAsync();
 | NestJS | `NotFoundException`, `ConflictException`, …    | problem details (`standards/api-errors.md`) |
 | .NET   | `ApiException(ApiErrorCategory.NotFound, "…")` | problem details via `ApiExceptionHandler`   |
 
+The gateway is the exception: its handlers return results, because the refusal it gets from identity-api goes to the
+browser unchanged, and `IdentityUnavailableException` becomes `503`.
+
 ## What business-logic-abstractions holds
 
 In dealership-api, `business-logic-abstractions/` holds the contracts between the layers: interfaces, their injection
 tokens, and the plain types and constants they use. Every interface has an implementation: a handler in
 `business-logic/handlers/`, the clock in `business-logic/time/`, a REST client in `rest-clients/`. A test fails when a
 handler interface has no handler. A type two layers share (an error, a constant) may live here too; its comment says
-what it means, never behaviour that another layer is supposed to have.
+what it means, never behaviour that another layer is supposed to have. In .NET the same holds by project:
+`Acme.Gateway.BusinessLogic.Abstractions` declares `IIdentityClient`, and `Acme.Gateway.RestClients` implements it.
 
 ## Calling another service: the client carries, the handler decides
 

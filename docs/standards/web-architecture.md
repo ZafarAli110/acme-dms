@@ -61,7 +61,8 @@ and which location is selected. They are plain classes outside React, so middlew
 
 - The page holds no token: the gateway keeps the sign-in, and the browser sends its session cookie (httpOnly; the page never
   sees it) with every request. `apiClient` adds `X-Requested-With: acme-web` to every request (the gateway refuses a change
-  without it), and a 401 for a signed-in tab ends the session (`sessionExpiry`, the auth kernel). A new tab or a reload is
+  without it), and the gateway's own 401 for a signed-in tab (`X-Acme-Session: ended`) ends the session
+  (`sessionExpiry`, the auth kernel); any other 401 is an error to show. A new tab or a reload is
   signed in by the same cookie. Signing in and out are `POST` and `DELETE /api/session` (`docs/ARCHITECTURE.md`,
   "Signing in"). A page never handles a token.
 - React reads them with `useAuth()` (`user`) and `useSelectedLocation()` (`location`, `locations`, `can(permission)`,
