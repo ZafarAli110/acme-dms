@@ -10,9 +10,16 @@ function getSnapshot(): AuthSnapshot {
   return authKernel.getSnapshot();
 }
 
-/** The signed-in user, from the auth kernel. */
+/**
+ * Ends the sign-in and leaves for the sign-in page. Not a route action: its code is loaded with the app, so signing out
+ * works even when no more of the app can be loaded (offline).
+ */
+function signOutAsync(): Promise<void> {
+  return authKernel.signOutAsync();
+}
+
+/** The signed-in user, from the auth kernel, and signing out. Signing in is a route action (pages/SignIn.tsx). */
 export function useAuth() {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot);
-  // Signing in and out are route actions (pages/SignIn.tsx, pages/SignOut.tsx), not functions of this hook.
-  return { user: snapshot.user };
+  return { user: snapshot.user, signOutAsync };
 }

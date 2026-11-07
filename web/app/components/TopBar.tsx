@@ -21,11 +21,11 @@ import {
   Toolbar,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
-import { useColorScheme } from "@mui/material/styles";
+import { useColorScheme, useTheme } from "@mui/material/styles";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Form, useNavigation } from "react-router";
 import { useAuth } from "../core/contexts/auth/useAuth";
 import { useLocationChangeGuard } from "../core/contexts/location/LocationChangeGuardContext";
 import { useSelectedLocation } from "../core/contexts/location/useSelectedLocation";
@@ -36,15 +36,16 @@ import { APPBAR_HEIGHT, TRANSITION } from "./Sidebar";
 
 export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, signOutAsync } = useAuth();
   const { location, locations, switchLocation } = useSelectedLocation();
   const { requestSwitch } = useLocationChangeGuard();
   const { mode, systemMode, setMode } = useColorScheme();
   const [locationAnchor, setLocationAnchor] = useState<HTMLElement | null>(null);
   const [profileAnchor, setProfileAnchor] = useState<HTMLElement | null>(null);
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
-  const navigation = useNavigation();
-  const signingOut = navigation.state !== "idle" && navigation.formAction === "/sign-out";
+  const [signingOut, setSigningOut] = useState(false);
+  // On a phone the bar keeps only the location, exports and the profile menu; the rest moves into that menu.
+  const isPhone = useMediaQuery(useTheme().breakpoints.down("sm"));
 
   const dark = (mode === "system" ? systemMode : mode) === "dark";
   const initials = (user?.displayName ?? "?")
@@ -68,9 +69,11 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
       }}
     >
       <Toolbar sx={{ gap: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }} noWrap>
-          {user?.dealerName}
-        </Typography>
+        {!isPhone && (
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }} noWrap>
+            {user?.dealerName}
+          </Typography>
+        )}
         {/* Always a dropdown, so every user finds the location switch in the same place. */}
         {location && (
           <Button
@@ -81,10 +84,11 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
             aria-haspopup="menu"
             aria-expanded={locationAnchor !== null}
             sx={{
-              ml: 1.5,
+              ml: isPhone ? 0 : 1.5,
               px: 1.5,
               height: 36,
-              minWidth: 160,
+              minWidth: isPhone ? 0 : 160,
+              maxWidth: isPhone ? 150 : "none",
               justifyContent: "space-between",
               border: "1px solid rgba(255, 255, 255, 0.45)",
               borderRadius: 1.5,
@@ -93,7 +97,16 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
             }}
             data-testid="location-switcher"
           >
-            <Box component="span" sx={{ flexGrow: 1, textAlign: "left" }}>
+            <Box
+              component="span"
+              sx={{
+                flexGrow: 1,
+                textAlign: "left",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {location.name}
             </Box>
           </Button>
@@ -127,16 +140,18 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
         <Box sx={{ flexGrow: 1 }} />
 
         <ExportsButton />
-        <LanguageSwitcher />
-        <Tooltip title={dark ? t("topBar.lightMode") : t("topBar.darkMode")}>
-          <IconButton
-            color="inherit"
-            onClick={() => setMode(dark ? "light" : "dark")}
-            aria-label={dark ? t("topBar.lightMode") : t("topBar.darkMode")}
-          >
-            {dark ? <LightModeIcon /> : <DarkModeIcon />}
-          </IconButton>
-        </Tooltip>
+        {!isPhone && <LanguageSwitcher />}
+        {!isPhone && (
+          <Tooltip title={dark ? t("topBar.lightMode") : t("topBar.darkMode")}>
+            <IconButton
+              color="inherit"
+              onClick={() => setMode(dark ? "light" : "dark")}
+              aria-label={dark ? t("topBar.lightMode") : t("topBar.darkMode")}
+            >
+              {dark ? <LightModeIcon /> : <DarkModeIcon />}
+            </IconButton>
+          </Tooltip>
+        )}
         <Tooltip title={user?.displayName ?? ""}>
           <IconButton
             color="inherit"
@@ -168,6 +183,19 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
             )}
           </Box>
           <Divider />
+          {isPhone && (
+            <MenuItem onClick={() => setMode(dark ? "light" : "dark")}>
+              <ListItemIcon>
+                {dark ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+              </ListItemIcon>
+              {dark ? t("topBar.lightMode") : t("topBar.darkMode")}
+            </MenuItem>
+          )}
+          {isPhone && (
+            <Box sx={{ px: 1, py: 0.5 }}>
+              <LanguageSwitcher />
+            </Box>
+          )}
           <MenuItem
             onClick={() => {
               setProfileAnchor(null);
@@ -193,11 +221,18 @@ export function TopBar({ sidebarWidth }: { sidebarWidth: number }) {
           <Button onClick={() => setConfirmingSignOut(false)} disabled={signingOut}>
             {t("actions.cancel")}
           </Button>
-          <Form method="post" action="/sign-out" replace>
-            <Button type="submit" variant="contained" disabled={signingOut} data-testid="confirm-sign-out">
-              {signingOut ? t("topBar.signingOut") : t("topBar.signOut")}
-            </Button>
-          </Form>
+          <Button
+            variant="contained"
+            disabled={signingOut}
+            onClick={() => {
+              // Disabled from the first press; the kernel also joins a second one, so the gateway is asked once.
+              setSigningOut(true);
+              void signOutAsync();
+            }}
+            data-testid="confirm-sign-out"
+          >
+            {signingOut ? t("topBar.signingOut") : t("topBar.signOut")}
+          </Button>
         </DialogActions>
       </Dialog>
     </AppBar>

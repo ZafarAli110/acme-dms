@@ -26,18 +26,24 @@ The same shape everywhere, with every field always present. Aspire polls it to s
 
 Anonymous: no token, no location. Each service's tests check the shape.
 
-### `POST` and `DELETE /api/session` (the gateway, for the web app)
+### `/api/session` (the gateway, for the web app)
 
-The web app's sign-in. Both need the header `X-Requested-With: acme-web` (403 without it).
+The web app's sign-in. Every method needs the header `X-Requested-With: acme-web` (403 without it).
 
 - `POST` with `{ "email": "…", "password": "…" }`: `204` and the session cookie, `__Host-acme_session` (`acme_session` in
   local development): `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`. Otherwise identity-api's own answer, unchanged
   (`400`, `401`, or `429` with `Retry-After`); `503` when identity-api cannot be reached or answers anything else. It
   ends the session the browser had.
-- `DELETE`: always `204`, with the cookie removed and `Clear-Site-Data: "cache"`.
+- `GET`: always `200`, `{ "isSignedIn": true | false }`: whether the cookie names a session that can still give a
+  token (renewed first when it is about to expire; a session that has ended loses its cookie). The page asks this, not
+  a service, so a signed-out visit logs no 401.
+- `DELETE`: always `204`, with the cookie removed.
+- `DELETE /api/session/cache`: always `204`, with `Clear-Site-Data: "cache"`. The sign-in page sends it whenever nobody is
+  signed in and does not wait for it: a browser holds that answer back until it has cleared, which can take seconds.
 
 With the cookie, a request to `/api/…` reaches the service with `Authorization: Bearer` and without the cookie. When the
-session is gone the gateway answers `401` itself, with `X-Acme-Session: ended`: the only 401 that signs the page out.
+session is gone, or the page's own request comes with no cookie at all, the gateway answers `401` itself, with
+`X-Acme-Session: ended`: the only 401 that signs the page out.
 
 ## Messages
 

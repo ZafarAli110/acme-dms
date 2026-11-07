@@ -81,6 +81,52 @@ public sealed class SessionMiddlewareTests
     }
 
     [TestMethod]
+    public async Task InvokeAsync_AnswersThePagesRequestWithNoCookie_WithTheGatewaysMarked401()
+    {
+        await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
+        using var page = gateway.NewClient();
+
+        using var response = await page.SendAsync(GatewayUnderTest.FromThePage(HttpMethod.Get, _customers.ToString()), TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.AreEqual("ended", response.Headers.GetValues("X-Acme-Session").Single(), "the page signs the tab out on this 401");
+        Assert.IsEmpty(gateway.Service.Authorizations, "nothing reaches the service");
+    }
+
+    [TestMethod]
+    public async Task GetSession_SaysWhetherTheBrowserIsSignedIn_With200EitherWay()
+    {
+        await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
+
+        using var before = await gateway.Browser.SendAsync(GatewayUnderTest.FromThePage(HttpMethod.Get, "/api/session"), TestContext.CancellationToken);
+        using var signIn = await gateway.SignInAsync("right", TestContext.CancellationToken);
+        using var during = await gateway.Browser.SendAsync(GatewayUnderTest.FromThePage(HttpMethod.Get, "/api/session"), TestContext.CancellationToken);
+        using var signOut = await gateway.Browser.SendAsync(GatewayUnderTest.FromThePage(HttpMethod.Delete, "/api/session"), TestContext.CancellationToken);
+        using var after = await gateway.Browser.SendAsync(GatewayUnderTest.FromThePage(HttpMethod.Get, "/api/session"), TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.OK, before.StatusCode);
+        Assert.AreEqual("{\"isSignedIn\":false}", await before.Content.ReadAsStringAsync(TestContext.CancellationToken));
+        Assert.AreEqual("{\"isSignedIn\":true}", await during.Content.ReadAsStringAsync(TestContext.CancellationToken));
+        Assert.AreEqual(HttpStatusCode.OK, after.StatusCode);
+        Assert.AreEqual("{\"isSignedIn\":false}", await after.Content.ReadAsStringAsync(TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task SignOut_AnswersWithoutClearSiteData_AndTheCacheIsClearedOnARequestOfItsOwn()
+    {
+        await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);
+        using var signIn = await gateway.SignInAsync("right", TestContext.CancellationToken);
+
+        using var signOut = await gateway.Browser.SendAsync(GatewayUnderTest.FromThePage(HttpMethod.Delete, "/api/session"), TestContext.CancellationToken);
+        using var forget = await gateway.Browser.SendAsync(GatewayUnderTest.FromThePage(HttpMethod.Delete, "/api/session/cache"), TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.NoContent, signOut.StatusCode);
+        Assert.IsFalse(signOut.Headers.Contains("Clear-Site-Data"), "a browser holds that answer back until it has cleared");
+        Assert.AreEqual(HttpStatusCode.NoContent, forget.StatusCode);
+        Assert.AreEqual("\"cache\"", forget.Headers.GetValues("Clear-Site-Data").Single());
+    }
+
+    [TestMethod]
     public async Task InvokeAsync_Answers503_WhenTheTokenHasExpiredAndIdentityApiIsDown()
     {
         await using var gateway = await GatewayUnderTest.NewAsync(TestContext.CancellationToken);

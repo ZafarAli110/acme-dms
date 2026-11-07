@@ -170,7 +170,7 @@ renews that person's token), or at their next sign-in.
 
 | Area                              | API (through the gateway)                                                                                                         | Web                                                                     |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Sign-in                           | `POST`/`DELETE /api/session` (the gateway), `GET /api/identity/v1/users/me`; scripts: `POST /api/identity/v1/tokens`              | sign-in page, location switcher                                         |
+| Sign-in                           | `GET`/`POST`/`DELETE /api/session` (the gateway), `GET /api/identity/v1/users/me`; scripts: `POST /api/identity/v1/tokens`        | sign-in page, location switcher                                         |
 | Parts (stocked per location)      | `GET/POST /api/dealership/v1/parts`, `GET/PATCH /api/dealership/v1/parts/{id}`                                                    | list, search, create (with bin), edit page                              |
 | Bins (per location)               | `GET/POST /api/dealership/v1/bins`                                                                                                | bin picker when creating a part                                         |
 | Part photos                       | saved with the part (`PATCH …/parts/{id}`, multipart); `POST …/parts/{id}/photos` adds one                                        | on the edit page: add, remove, default; processing                      |

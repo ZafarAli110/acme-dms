@@ -65,8 +65,33 @@ async function ritasTabAsync(): Promise<AuthKernel> {
   return kernel;
 }
 
+/** The gateway the tab talks to: who is signed in, and what each sign-out does. Every request is recorded. */
+class FakeGateway {
+  public isSignedIn = true;
+  public readonly requests: string[] = [];
+  /** How a sign-out is answered: at once, by default. */
+  public signOut: () => Promise<Response> = async () => new Response(null, { status: 204 });
+
+  public readonly fetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const method = init?.method ?? "GET";
+    const path = String(url);
+    this.requests.push(`${method} ${path}`);
+    if (path === "/api/session" && method === "GET") {
+      return Response.json({ isSignedIn: this.isSignedIn });
+    }
+    if (path === "/api/session" && method === "DELETE") {
+      return this.signOut();
+    }
+    if (path.endsWith("/users/me")) {
+      return Response.json(rita);
+    }
+    return new Response(null, { status: 204 });
+  };
+}
+
 describe("AuthKernel", () => {
   let replace: ReturnType<typeof vi.fn>;
+  let gateway: FakeGateway;
 
   beforeEach(() => {
     replace = vi.fn();
@@ -76,12 +101,8 @@ describe("AuthKernel", () => {
       location: { replace },
     });
     vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string | URL | Request) =>
-        String(url).endsWith("/users/me") ? Response.json(rita) : new Response(null, { status: 204 }),
-      ),
-    );
+    gateway = new FakeGateway();
+    vi.stubGlobal("fetch", vi.fn(gateway.fetch));
   });
 
   afterEach(() => {
@@ -114,5 +135,59 @@ describe("AuthKernel", () => {
 
     expect(FakeBroadcastChannel.last!.posted).toContainEqual({ kind: "signed-out" });
     expect(replace).toHaveBeenCalledWith("/sign-in");
+  });
+
+  it("asks the gateway once when Sign out is pressed twice", async () => {
+    const kernel = await ritasTabAsync();
+
+    await Promise.all([kernel.signOutAsync(), kernel.signOutAsync()]);
+
+    expect(gateway.requests.filter((request) => request === "DELETE /api/session")).toHaveLength(1);
+    expect(replace).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks the gateway, not a service, whether anyone is signed in: a signed-out visit logs no 401", async () => {
+    gateway.isSignedIn = false;
+    const kernel = new AuthKernel();
+
+    const auth = await kernel.waitForResolvedAuthAsync();
+
+    expect(auth.status).toBe("signed-out");
+    expect(gateway.requests).not.toContain("GET /api/identity/v1/users/me");
+    expect(gateway.requests).toContain("DELETE /api/session/cache");
+  });
+
+  it("shows the sign-in page at once when a sign-out is still pending, and ends it in the background", async () => {
+    let answerSignOut: (response: Response) => void = () => undefined;
+    gateway.signOut = () => new Promise((resolve) => (answerSignOut = resolve));
+    session.setRevokePending(true);
+    const kernel = new AuthKernel();
+
+    const auth = await kernel.waitForResolvedAuthAsync();
+
+    expect(auth.status).toBe("signed-out");
+    expect(gateway.requests).toContain("DELETE /api/session");
+    expect(session.isRevokePending()).toBe(true);
+    answerSignOut(new Response(null, { status: 204 }));
+    await vi.waitFor(() => expect(session.isRevokePending()).toBe(false));
+  });
+
+  it("signs in only once a sign-out still ending in the background has its answer, so it cannot remove the new cookie", async () => {
+    let answerSignOut: (response: Response) => void = () => undefined;
+    gateway.signOut = () => new Promise((resolve) => (answerSignOut = resolve));
+    session.setRevokePending(true);
+    const kernel = new AuthKernel();
+    await kernel.waitForResolvedAuthAsync();
+
+    const signingIn = kernel.signInAsync("rita@northwind.test", "Acme123!");
+    await Promise.resolve();
+    expect(gateway.requests).not.toContain("POST /api/session");
+    answerSignOut(new Response(null, { status: 204 }));
+    await signingIn;
+
+    expect(gateway.requests.indexOf("POST /api/session")).toBeGreaterThan(
+      gateway.requests.indexOf("DELETE /api/session"),
+    );
+    expect(kernel.getSnapshot()).toMatchObject({ status: "signed-in", user: { id: rita.id } });
   });
 });

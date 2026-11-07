@@ -20,6 +20,11 @@ export interface CurrentUser {
   defaultLocationId: string | null;
 }
 
+/** What the gateway says about this browser's sign-in, without asking a service who it is. */
+export interface SessionStatus {
+  isSignedIn: boolean;
+}
+
 /** Sign-in and the signed-in user. Used by the auth kernel, outside React. */
 export const identityQueries = {
   /**
@@ -30,5 +35,9 @@ export const identityQueries = {
     apiClient.postAsync<void>(API_CONFIG.sessionUrl, { email, password }, { anonymous: true }),
   /** Signing out: the gateway ends the sign-in and removes the cookie. True when the gateway answered. */
   revokeAsync: (): Promise<boolean> => apiClient.signOutAsync(),
+  /** Whether the session cookie signs someone in: 200 either way, so a signed-out visit logs no error. */
+  getSessionAsync: () => apiClient.getAsync<SessionStatus>(API_CONFIG.sessionUrl, { anonymous: true }),
+  /** Asks the browser to drop what it cached; nobody waits for it. */
+  forgetCache: (): void => apiClient.forgetCache(),
   getCurrentUserAsync: () => apiClient.getAsync<CurrentUser>(`${API_CONFIG.identityUrl}/v1/users/me`),
 };

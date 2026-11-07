@@ -10,6 +10,6 @@ internal static class SessionPaths
     /// <summary>Every call to the services, routed on by YARP.</summary>
     public const string Api = "/api";
 
-    /// <summary>Signing in (POST) and out (DELETE): the gateway's own endpoint.</summary>
+    /// <summary>Signing in (POST), out (DELETE), whether signed in (GET), and clearing the cache (DELETE …/cache): the gateway's own endpoint.</summary>
     public const string Session = "/api/session";
 }

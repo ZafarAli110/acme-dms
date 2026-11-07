@@ -43,7 +43,8 @@
     "serverUnreachable": "The server cannot be reached. Check that the system is running and try again.",
     "timeout": "The server took too long to answer. Try again.",
     "traceId": "Trace id: {{traceId}}",
-    "accountNotLoaded": "You are signed in, but your account could not be loaded. Try again."
+    "accountNotLoaded": "You are signed in, but your account could not be loaded. Try again.",
+    "pageNotLoaded": "This page could not be loaded. Check your connection, then reload."
   },
   "notFound": {
     "title": "Page not found",

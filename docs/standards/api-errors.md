@@ -43,8 +43,9 @@ A record people edit (a customer, a part) has a `version`, one more with every s
   `If-None-Match` itself. The server still runs the query and checks who is asking before it says 304: this saves the
   body, not the work. Every other answer, saves included,
   stays `Cache-Control: no-store` (one dealer's data, one user's: nothing is kept).
-  Sign-out also asks the browser to drop what it kept: the gateway's `DELETE /api/session` answers with
-  `Clear-Site-Data: "cache"`; one answer saying it is enough, so no service repeats it (Chrome, Edge and Firefox, on
+  After a sign-out the sign-in page asks the browser to drop what it kept: the gateway's `DELETE /api/session/cache`
+  answers with `Clear-Site-Data: "cache"`, on a request nobody waits for (a browser holds that answer back while it
+  clears); one answer saying it is enough, so no service repeats it (Chrome, Edge and Firefox, on
   HTTPS or localhost; Safari ignores it, and there a kept copy is still only shown after the service agrees, which needs
   a signed-in session).
 - A save (`PUT`, `PATCH`) sends `If-Match` with the version it started from: `428` without it, `412` when it is not

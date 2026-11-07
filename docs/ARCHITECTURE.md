@@ -140,15 +140,19 @@ with the same `ConnectionStrings__identity` and `DataProtection__KeysPath` as th
 exits. Tokens the old key signed stop verifying, so everyone signs in again. In Development an instance replaces such a
 key on its own (a developer who deleted their profile's folder).
 
-**Signing out.** `DELETE /api/session` deletes the session, removes the cookie and tells the browser to drop what it
-cached (`Clear-Site-Data: "cache"`): **from the next request on, that cookie signs no one in**, a copy of it included,
+**Signing out.** `DELETE /api/session` deletes the session and removes the cookie: **from the next request on, that
+cookie signs no one in**, a copy of it included,
 on every gateway instance. A stream already open (an export's progress) runs on: its token was checked when it opened.
 The gateway then asks identity-api to revoke the chain (`POST /v1/tokens/revoke`); that can fail without harm, because
 nothing outside the deleted session had the refresh token. If the page cannot reach the gateway the cookie is still
 good, so the sign-out is remembered in `localStorage` (`acme.revokePending`) and the next load ends that sign-in first
-and signs no one in with it. The page keeps its screen, with the dialog saying it is signing out, until the gateway has
-answered; then every open tab loads the sign-in page afresh (a full navigation, so no data or form of the old sign-in
-survives), even one with unsaved changes, which nothing could save any more. Unknown email and wrong password cost the same time at sign-in (a hash is checked either
+and signs no one in with it: the sign-in page shows at once and ends it in the background, and a new sign-in waits for
+that first, so its answer cannot remove the new cookie. The page keeps its screen, with the dialog saying it is signing
+out, until the gateway has answered (at most `signOutWaitMs`); then every open tab loads the sign-in page afresh (a full
+navigation, so no data or form of the old sign-in survives), even one with unsaved changes, which nothing could save any
+more. The sign-out runs from code loaded with the app, not a page loaded on demand, so it works offline too. The
+sign-in page then asks the browser to drop what it cached (`DELETE /api/session/cache`, `Clear-Site-Data: "cache"`)
+without waiting: a browser holds that answer back while it clears, and on a well-used one that takes seconds. Unknown email and wrong password cost the same time at sign-in (a hash is checked either
 way).
 
 **An access token is not taken back (a decision).** Signing out of the browser is immediate, because the session is

@@ -3,6 +3,16 @@ import { Box, Button, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { isRouteErrorResponse, useRouteError } from "react-router";
 
+/**
+ * A page's code that could not be fetched (offline, or a deploy replaced it): the browser's message names a file, which
+ * means nothing to the user. Chrome, Firefox and Safari each word it their own way.
+ */
+function isPageNotLoaded(error: Error): boolean {
+  return /dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(
+    error.message,
+  );
+}
+
 /** The last line of defence: an error no page handled. In-page errors (failed queries, saves) are shown inline. */
 export function RootErrorBoundary() {
   const { t } = useTranslation();
@@ -13,7 +23,7 @@ export function RootErrorBoundary() {
     title = `${error.status} ${error.statusText}`;
     detail = String(error.data ?? "");
   } else if (error instanceof Error) {
-    detail = error.message;
+    detail = isPageNotLoaded(error) ? t("errors.pageNotLoaded") : error.message;
   }
 
   return (

@@ -155,6 +155,14 @@ class ApiClient {
     }
   }
 
+  /**
+   * Asks the browser to drop what it cached, so a shared computer shows the next person nothing. Nobody waits for it: the
+   * browser holds that answer back until it has cleared, which can take seconds. A failure changes nothing that matters.
+   */
+  public forgetCache(): void {
+    this.sendOnceAsync(API_CONFIG.sessionCacheUrl, { method: "DELETE" }, { anonymous: true }).catch(() => undefined);
+  }
+
   private async sendOnceAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
     // Stops at the timeout or when the caller cancels (TanStack Query, when a query is no longer needed).
     const timeout = options?.timeout === false ? null : AbortSignal.timeout(API_CONFIG.timeoutMs);

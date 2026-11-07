@@ -51,8 +51,9 @@ public sealed class SessionCommandController : ControllerBase
     }
 
     /// <summary>
-    /// Always 204: the session is deleted (if there was one), the cookie removed, and the browser told to drop what it cached
-    /// (<c>Clear-Site-Data</c>), so a shared computer shows the next person nothing.
+    /// Always 204: the session is deleted (if there was one) and the cookie removed. It does not ask the browser to clear its
+    /// cache: a browser holds that answer back until it has cleared, which on a well-used one takes seconds, and the page
+    /// waits for this answer. <see cref="ForgetCache"/> does that, on a request nobody waits for.
     /// </summary>
     [HttpDelete]
     public async Task<ActionResult> DeleteAsync(CancellationToken cancellationToken)
@@ -63,6 +64,17 @@ public sealed class SessionCommandController : ControllerBase
         }
 
         SessionCookie.Clear(Response, _environment);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// <c>DELETE /api/session/cache</c>, always 204: asks the browser to drop what it cached (<c>Clear-Site-Data</c>), so a
+    /// shared computer shows the next person nothing. The sign-in page sends it whenever nobody is signed in, and does not
+    /// wait for it: the browser may take seconds to clear.
+    /// </summary>
+    [HttpDelete("cache")]
+    public ActionResult ForgetCache()
+    {
         Response.Headers["Clear-Site-Data"] = "\"cache\"";
         return NoContent();
     }

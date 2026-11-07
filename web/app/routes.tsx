@@ -6,7 +6,6 @@ import { index, layout, prefix, route } from "@react-router/dev/routes";
 export default [
   // Public
   route("sign-in", "./pages/SignIn.tsx"),
-  route("sign-out", "./pages/SignOut.tsx"),
 
   // Protected: ProtectedLayout's clientMiddleware resolves the user and the location before any loader or action runs.
   layout("./pages/ProtectedLayout.tsx", [

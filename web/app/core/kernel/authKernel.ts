@@ -26,6 +26,10 @@ export class AuthKernel {
   // A browser tab starts by finding its sign-in: the session cookie every tab shares, if there is one.
   private _snapshot: AuthSnapshot = typeof window === "undefined" ? SIGNED_OUT : RESOLVING;
   private _resolving: Promise<void> | null = null;
+  /** A sign-out the gateway did not get, being ended in the background while the sign-in page shows (resolveUserAsync). */
+  private _endingPendingSignOut: Promise<void> | null = null;
+  /** This tab's sign-out while it runs: pressing Sign out again joins it, so the gateway is asked once. */
+  private _signingOut: Promise<void> | null = null;
   /** Counts sign-ins and sign-outs, so a check started for an earlier one never commits over a later one. */
   private _generation = 0;
   private readonly _listeners = new Set<() => void>();
@@ -58,6 +62,9 @@ export class AuthKernel {
 
   /** Throws the identity-api problem (for example 401) when the email or password is wrong. */
   public async signInAsync(email: string, password: string): Promise<void> {
+    // A sign-out still ending in the background removes the cookie when its answer lands: it must land before this
+    // sign-in's cookie, never after it.
+    await this._endingPendingSignOut;
     await identityQueries.signInAsync(email, password);
     // Start from a clean session: a location left by an earlier user must never be sent with the new sign-in.
     session.clear();
@@ -76,17 +83,21 @@ export class AuthKernel {
 
   /**
    * Ends the sign-in at the gateway, which deletes the session: its cookie signs no one in from then on, at once. Then this
-   * tab forgets its sign-in and tells the other tabs, which go to the sign-in page. The caller (the sign-out action) loads
-   * the sign-in page afresh.
+   * tab forgets its sign-in and tells the other tabs, which go to the sign-in page, and loads the sign-in page afresh.
    *
    * The page keeps showing what it showed until then: forgetting first would empty the screen behind the sign-out dialog
    * while the gateway answers. The gateway is given `signOutWaitMs`; a sign-out it did not get is remembered
    * (`setRevokePending`), before asking, so even a tab closed meanwhile has the next load end the sign-in first.
    *
    * Then it leaves for the sign-in page itself, answered or not, so a Back pressed while it waited cannot leave this tab
-   * on a page whose sign-in has ended.
+   * on a page whose sign-in has ended. A second call while it runs joins the first.
    */
-  public async signOutAsync(): Promise<void> {
+  public signOutAsync(): Promise<void> {
+    this._signingOut ??= this.endSignInAsync();
+    return this._signingOut;
+  }
+
+  private async endSignInAsync(): Promise<void> {
     const generation = this._generation;
     session.setRevokePending(true);
     const ended = await identityQueries.revokeAsync();
@@ -159,17 +170,23 @@ export class AuthKernel {
     // Another tab may sign out or in while this check waits: then this check is stale and changes nothing.
     const isCurrent = (): boolean => generation === this._generation;
     try {
-      // A sign-out that did not reach the service left its cookie good: end that sign-in first, and sign no one in with it.
+      // A sign-out that did not reach the service left its cookie good: sign no one in with it. The sign-in page shows at
+      // once, and the sign-out is ended in the background: the gateway may be slow or down, and nobody should wait for it.
       if (session.isRevokePending()) {
-        const ended = await identityQueries.revokeAsync();
-        if (!isCurrent()) {
-          return;
-        }
-        session.setRevokePending(!ended);
-        this.commit(SIGNED_OUT);
+        this.signedOut();
+        this._endingPendingSignOut ??= this.endPendingSignOutAsync();
         return;
       }
-      // A new tab or a reload is signed in by the session cookie, if there is one: the gateway answers 401 when there is not.
+      // A new tab or a reload is signed in by the session cookie, if there is one. The gateway says which with a 200 either
+      // way, so a signed-out visit asks no service "who am I" and logs no 401.
+      const { isSignedIn } = await identityQueries.getSessionAsync();
+      if (!isCurrent()) {
+        return;
+      }
+      if (!isSignedIn) {
+        this.signedOut();
+        return;
+      }
       const user = await identityQueries.getCurrentUserAsync();
       if (isCurrent()) {
         session.setSignedIn(true);
@@ -184,12 +201,29 @@ export class AuthKernel {
         throw error;
       }
       // No sign-in, or one that ended: back to the sign-in page, in this tab only.
-      session.clear();
-      this.commit(SIGNED_OUT);
+      this.signedOut();
     } finally {
       if (isCurrent()) {
         this._resolving = null;
       }
+    }
+  }
+
+  /** Nobody is signed in in this tab: and whatever the browser cached is dropped, without waiting for it. */
+  private signedOut(): void {
+    session.clear();
+    this.commit(SIGNED_OUT);
+    identityQueries.forgetCache();
+  }
+
+  /** Ends a sign-out the gateway did not get. Still unreached, it stays remembered for the next load. */
+  private async endPendingSignOutAsync(): Promise<void> {
+    try {
+      const ended = await identityQueries.revokeAsync();
+      // A sign-in since then waited for this, and clears the flag itself after.
+      session.setRevokePending(!ended);
+    } finally {
+      this._endingPendingSignOut = null;
     }
   }
 

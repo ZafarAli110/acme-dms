@@ -43,7 +43,8 @@
     "serverUnreachable": "Le serveur est injoignable. Vérifiez que le système fonctionne et réessayez.",
     "timeout": "Le serveur a mis trop de temps à répondre. Réessayez.",
     "traceId": "Identifiant de trace : {{traceId}}",
-    "accountNotLoaded": "Vous êtes connecté, mais votre compte n'a pas pu être chargé. Réessayez."
+    "accountNotLoaded": "Vous êtes connecté, mais votre compte n'a pas pu être chargé. Réessayez.",
+    "pageNotLoaded": "Cette page n'a pas pu être chargée. Vérifiez votre connexion, puis rechargez."
   },
   "notFound": {
     "title": "Page introuvable",

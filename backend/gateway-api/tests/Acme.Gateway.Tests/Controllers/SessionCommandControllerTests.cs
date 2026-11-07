@@ -71,7 +71,7 @@ public sealed class SessionCommandControllerTests
     }
 
     [TestMethod]
-    public async Task DeleteAsync_RemovesTheCookie_AndAsksTheBrowserToDropItsCache()
+    public async Task DeleteAsync_RemovesTheCookie_WithoutHoldingTheAnswerOnTheBrowsersCache()
     {
         var (controller, response) = NewController(Environments.Production, new CreateSessionResult("the-value", null));
         controller.HttpContext.Request.Headers.Cookie = "__Host-acme_session=the-value";
@@ -79,8 +79,19 @@ public sealed class SessionCommandControllerTests
         var result = await controller.DeleteAsync(TestContext.CancellationToken);
 
         Assert.IsInstanceOfType<NoContentResult>(result);
-        Assert.AreEqual("\"cache\"", response.Headers["Clear-Site-Data"].ToString());
+        Assert.IsFalse(response.Headers.ContainsKey("Clear-Site-Data"));
         StringAssert.StartsWith(response.Headers.SetCookie.ToString(), "__Host-acme_session=;");
+    }
+
+    [TestMethod]
+    public void ForgetCache_AsksTheBrowserToDropItsCache()
+    {
+        var (controller, response) = NewController(Environments.Production, new CreateSessionResult("the-value", null));
+
+        var result = controller.ForgetCache();
+
+        Assert.IsInstanceOfType<NoContentResult>(result);
+        Assert.AreEqual("\"cache\"", response.Headers["Clear-Site-Data"].ToString());
     }
 
     private static (SessionCommandController Controller, HttpResponse Response) NewController(string environmentName, CreateSessionResult createResult)
