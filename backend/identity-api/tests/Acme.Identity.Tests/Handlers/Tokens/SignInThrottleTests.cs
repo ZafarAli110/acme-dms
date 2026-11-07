@@ -144,6 +144,25 @@ public sealed class SignInThrottleTests
         Assert.AreEqual(20 - SignInThrottle.FreeFailures, outcomes.Count(c => c == ApiErrorCategory.TooManyRequests));
     }
 
+    [TestMethod]
+    public void AnAttemptAbandonedWithoutAVerdict_IsNotCounted()
+    {
+        var clock = new TestClock();
+        var throttle = new SignInThrottle(clock);
+        for (var i = 0; i < SignInThrottle.FreeFailures - 1; i++)
+        {
+            throttle.Begin("rita@northwind.test");
+        }
+
+        // The fifth attempt would start the wait; it ends in a database error instead, with no verdict on the password.
+        Assert.AreEqual(TimeSpan.Zero, throttle.Begin("rita@northwind.test"));
+        Assert.AreEqual(SignInThrottle.FirstWait, throttle.WaitFor("rita@northwind.test"));
+        throttle.Abandon("rita@northwind.test");
+
+        Assert.AreEqual(TimeSpan.Zero, throttle.WaitFor("rita@northwind.test"), "the wait it started is gone too");
+        Assert.AreEqual(TimeSpan.Zero, throttle.Begin("rita@northwind.test"), "it is still the fifth attempt");
+    }
+
     private static CreateTokenCommandHandler NewHandler(Acme.Identity.Persistence.Database.IdentityDbContext dbContext, TimeProvider clock) =>
         NewHandler(dbContext, clock, new SignInThrottle(clock), new PasswordHasher<User>());
 
