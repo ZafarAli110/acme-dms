@@ -17,6 +17,6 @@ export const customerQueries = {
     apiClient.getAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, options),
   createCustomerAsync: (input: CustomerInput) => apiClient.postAsync<Customer>(CUSTOMERS_URL, input),
   /** PUT: every field is sent. */
-  updateCustomerAsync: (customerId: string, input: CustomerInput) =>
-    apiClient.putAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, input),
+  updateCustomerAsync: (customerId: string, input: CustomerInput, options?: RequestOptions) =>
+    apiClient.putAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, input, options),
 };
