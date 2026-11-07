@@ -1,6 +1,6 @@
 import { localized } from "#i18n/messages";
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import type { IUpdatePartCommandHandler } from "#business-logic-abstractions/handlers/parts/update/update-part.command-handler.interface";
 import {
   DOCUMENT_API_CLIENT,
@@ -13,6 +13,7 @@ import type { PartResponseDto } from "#dto/parts/part-response.dto";
 import type { PartUpdateRequestDto } from "#dto/parts/part-update-request.dto";
 import { type NewPartPhoto, partPhotos } from "#persistence/schema/part-photos";
 import { parts } from "#persistence/schema/parts";
+import type { Database } from "#persistence/unit-of-work/unit-of-work";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -169,6 +170,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
         await work.db.insert(partPhotos).values(addedPhotos);
         await applyEarlyOutcomesAsync(work.db, uploadedDocumentIds, now);
       }
+      await this.checkPhotosUnderLockAsync(work.db, userContext.dealerId, partId, kept, uploadedDocumentIds);
       await work.commitAsync();
     } catch (error) {
       await this.deleteDocumentsAsync(userContext, uploadedDocumentIds);
@@ -183,6 +185,35 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
 
     const { stocked, existing: photos } = await this.readPartAsync(userContext.dealerId, locationId, partId);
     return toPartResponseDto(stocked.part, stocked.inventory, stocked.bin, photos);
+  }
+
+  /**
+   * Once more, under the part's lock (the `UPDATE parts` above took it): a photo uploaded meanwhile through the photo
+   * endpoint counts too. More than the limit refuses the save; two defaults leave the one this save chose.
+   */
+  private async checkPhotosUnderLockAsync(
+    db: Database,
+    dealerId: string,
+    partId: string,
+    kept: { id: string; isDefault: boolean }[],
+    addedDocumentIds: string[],
+  ): Promise<void> {
+    const photos = await findPhotosAsync(db, dealerId, partId);
+    if (photos.length > MAX_PHOTOS_PER_PART) {
+      throw new BadRequestException(localized("errors.tooManyPhotos", { max: MAX_PHOTOS_PER_PART }));
+    }
+    const defaults = photos.filter((photo) => photo.isDefault);
+    if (defaults.length <= 1) {
+      return;
+    }
+    const chosen =
+      kept.find((photo) => photo.isDefault)?.id ??
+      defaults.find((photo) => addedDocumentIds.includes(photo.documentId))?.id ??
+      defaults[0]!.id;
+    await db
+      .update(partPhotos)
+      .set({ isDefault: false })
+      .where(and(eq(partPhotos.partId, partId), eq(partPhotos.isDefault, true), ne(partPhotos.id, chosen)));
   }
 
   /** The part as this location stocks it, with its photos; a part the location doesn't stock is not found. */
