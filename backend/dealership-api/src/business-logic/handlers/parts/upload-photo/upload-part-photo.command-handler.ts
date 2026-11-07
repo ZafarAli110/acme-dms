@@ -20,6 +20,7 @@ import {
 import { createdAudit } from "../../../audit/audit-fields";
 import { toPartPhotoResponseDto } from "../part.mapper";
 import { findPhotosAsync } from "../part.queries";
+import { applyEarlyOutcomesAsync } from "../photo-outcome";
 import {
   MAX_PHOTOS_PER_PART,
   PART_PHOTO_OWNER_TYPE,
@@ -68,22 +69,54 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
       variants: PART_PHOTO_VARIANTS,
     });
 
+    try {
+      return await this.savePhotoAsync(userContext, partId, request, document.id);
+    } catch (error) {
+      // The photo was not saved: its file is nobody's. Best effort; a failure to delete is only logged by the client.
+      await this._documentApiClient.deleteDocumentAsync(userContext, document.id).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  /**
+   * Saves the photo with the part locked, so uploads to one part take turns: the count and the default are read
+   * again under the lock (the first count, before the upload, only spares a needless upload). Applies anything
+   * document-api already said about the document.
+   */
+  private async savePhotoAsync(
+    userContext: UserContext,
+    partId: string,
+    request: PartPhotoUploadRequestDto,
+    documentId: string,
+  ): Promise<PartPhotoResponseDto> {
+    const now = this._clock.now();
     await using work = await this._unitOfWorkFactory.beginAsync();
+    await work.db
+      .select({ id: parts.id })
+      .from(parts)
+      .where(and(eq(parts.dealerId, userContext.dealerId), eq(parts.id, partId)))
+      .for("update");
+    const count = (await findPhotosAsync(work.db, userContext.dealerId, partId)).length;
+    if (count >= MAX_PHOTOS_PER_PART) {
+      throw new BadRequestException(localized("errors.tooManyPhotos", { max: MAX_PHOTOS_PER_PART }));
+    }
     const [photo] = await work.db
       .insert(partPhotos)
       .values({
         dealerId: userContext.dealerId,
         partId,
-        documentId: document.id,
+        documentId,
         originalFileName: request.fileName,
         status: "pending",
         failureReason: null,
-        isDefault: existingCount === 0,
-        ...createdAudit(userContext.userId, this._clock.now()),
+        isDefault: count === 0,
+        ...createdAudit(userContext.userId, now),
       })
       .returning();
+    await applyEarlyOutcomesAsync(work.db, [documentId], now);
+    const [saved] = await work.db.select().from(partPhotos).where(eq(partPhotos.id, photo!.id));
     await work.commitAsync();
-    return toPartPhotoResponseDto(photo!);
+    return toPartPhotoResponseDto(saved!);
   }
 
   /** How many photos the part has; a part that doesn't exist is not found. */
