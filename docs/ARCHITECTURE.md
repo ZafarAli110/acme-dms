@@ -45,7 +45,7 @@ rest-clients (typed clients for other services)                    ← implement
 | dto                         | `Acme.<X>.DTO`                        | `src/dto/`                         |
 | persistence                 | `Acme.<X>.Persistence`                | `src/persistence/`                 |
 | messaging (.NET)            | `Acme.<X>.Messaging`                  | `src/service/consumers/`           |
-| rest-clients                | (none yet)                            | `src/rest-clients/`                |
+| rest-clients                | `Acme.<X>.RestClients`                | `src/rest-clients/`                |
 
 See `standards/business-handlers.md` for how a use case is built, and the other standards for the rules each area
 follows.
@@ -71,17 +71,22 @@ can use. The browser gets **`acme_session`**: 256 random bits, `HttpOnly` (out o
 `SameSite=Strict`, `Path=/api`, `Secure` everywhere but local development, and no expiry (gone when the browser closes).
 The answer is 204 with the cookie, or identity-api's own refusal (401, or 429 with `Retry-After`) as it gave it.
 
-**Every request.** A request to `/api/…` with the cookie is sent on with the session's access token
-(`Authorization: Bearer`, `SessionMiddleware`), and **without the session cookie**, whose value is the key to the session's
-tokens: it never goes past the gateway. The services check the token's signature and expiry, as before. Within a minute of
-its expiry the gateway first renews it (`POST /v1/tokens/refresh`), **one renewal per session at a time on every gateway
-instance** (the row is locked, then read again). A renewal runs to the end on its own time limit, not the browser's: a tab
-closed midway must not leave the session holding a refresh token identity-api has already replaced. If identity-api cannot
-be reached, a token that has not yet expired is still sent; signing in then answers 503. A renewal **reads the person's roles and locations again**, so a change
-Maria makes on the Locations page reaches a signed-in person within 15 minutes, and a person who was deleted cannot renew.
-When identity-api has ended the sign-in, the gateway deletes the session and answers 401 with `X-Acme-Session: ended`; on
-that answer only, the page goes to the sign-in page (a service's own 401 is an error to show, not a sign-out). Signing in
-again ends the session the browser had. A request without the cookie is sent on as it came: a script's own token reaches the services unchanged.
+**Every request.** A request to `/api/…` with the cookie is sent on with the session's access token (`Authorization:
+Bearer`, `SessionMiddleware`), and **without the session cookie**, whose value is the key to the session's tokens: it
+never goes past the gateway. The services check the token's signature and expiry, as before. Within a minute of its
+expiry the gateway first renews it (`POST /v1/tokens/refresh`), **one renewal per session at a time on every gateway
+instance**, with no transaction held across the call to identity-api: a renewal takes a lease on the session
+(`renewing_until`, one short `UPDATE` that only one request can win), calls identity-api, then saves the new tokens and
+gives the lease back. A request that finds a renewal running sends the token it has while that still works, and
+otherwise waits for it; a lease left by a gateway that stopped runs out after 20 seconds. A renewal runs to the end on
+its own time limit, not the browser's: a tab closed midway must not leave the session holding a refresh token
+identity-api has already replaced. If identity-api cannot be reached, a token that has not yet expired is still sent;
+signing in then answers 503. A renewal **reads the person's roles and locations again**, so a change Maria makes on the
+Locations page reaches a signed-in person within 15 minutes, and a person who was deleted cannot renew. When
+identity-api has ended the sign-in, the gateway deletes the session and answers 401 with `X-Acme-Session: ended`; on
+that answer only, the page goes to the sign-in page (a service's own 401 is an error to show, not a sign-out). Signing
+in again ends the session the browser had. A request without the cookie is sent on as it came: a script's own token
+reaches the services unchanged.
 
 **Requests made from another site.** The browser sends the cookie with every request to `/api`, so the gateway refuses
 (403) a request that changes something (anything but `GET`, `HEAD` and `OPTIONS`), and any sign-in or sign-out, without
