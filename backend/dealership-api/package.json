@@ -24,7 +24,8 @@
     "test": "vitest run",
     "generate:clients": "bun scripts/generate-rest-clients.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun scripts/migrate.ts"
+    "db:migrate": "bun scripts/migrate.ts",
+    "replay:dead-letters": "bun scripts/replay-dead-letters.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.4.0",
