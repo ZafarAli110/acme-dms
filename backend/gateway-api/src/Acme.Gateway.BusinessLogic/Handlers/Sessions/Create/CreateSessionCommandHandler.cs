@@ -44,15 +44,16 @@ internal sealed class CreateSessionCommandHandler : ICreateSessionCommandHandler
         // Sessions that ran out are cleared as people sign in: the table stays as small as the people at work.
         await _dbContext.Sessions.Where(s => s.ExpiresAt <= now).ExecuteDeleteAsync(cancellationToken);
 
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         string? replacedRefreshToken = null;
         if (replacedCookie is not null)
         {
             var replacedId = SessionSecrets.IdOf(replacedCookie);
-            var replaced = await _dbContext.Sessions.SingleOrDefaultAsync(s => s.Id == replacedId, cancellationToken);
-            if (replaced is not null)
+            var replacedTokens = await _dbContext.Sessions.AsNoTracking().Where(s => s.Id == replacedId).Select(s => s.Tokens).SingleOrDefaultAsync(cancellationToken);
+            // A session another request already ended is not an error; only the request that deleted it ends its token.
+            if (replacedTokens is not null && await _dbContext.Sessions.Where(s => s.Id == replacedId).ExecuteDeleteAsync(cancellationToken) == 1)
             {
-                replacedRefreshToken = SessionSecrets.Open(replacedCookie, replaced.Tokens)?.RefreshToken;
-                _dbContext.Sessions.Remove(replaced);
+                replacedRefreshToken = SessionSecrets.Open(replacedCookie, replacedTokens)?.RefreshToken;
             }
         }
 
@@ -67,6 +68,7 @@ internal sealed class CreateSessionCommandHandler : ICreateSessionCommandHandler
             ExpiresAt = now.Add(SessionSettings.Lifetime),
         });
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         if (replacedRefreshToken is not null)
         {
