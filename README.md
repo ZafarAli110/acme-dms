@@ -39,7 +39,8 @@ Demo users, all with the password **`Acme123!`**:
 | `maria@northwind.test` | Northwind Motors | Northside + Riverside + Westgate: Service Manager |
 | `tom@citymotors.test`  | City Motors      | Central: Service Manager                          |
 
-Maria assigns people to locations on the **Locations** page; a change shows within 15 minutes (the next token refresh), or at that person's next sign-in.
+Maria assigns people to locations on the **Locations** page; a change shows within 15 minutes (the next time the gateway
+renews that person's token), or at their next sign-in.
 `bun run reset` puts everyone back on the locations above.
 
 ## What it does
@@ -65,6 +66,7 @@ cannot be processed is retried three times, then marked failed and dead-lettered
                              ┌─► identity-api (.NET)     ── Postgres: identity
 web (React) ──► gateway-api ─┼─► dealership-api (NestJS) ── Postgres: dealership
                 (YARP)       └─► document-api (.NET)     ── Postgres: documents
+                  │
                   └── Postgres: gateway (the browsers' sign-ins)
                                        │     ▲
                                        └HTTP─┘   events via RabbitMQ
@@ -79,7 +81,10 @@ web (React) ──► gateway-api ─┼─► dealership-api (NestJS) ── Po
 | `web`            | TypeScript (React)  | the dealership UI; talks only to the gateway                                                  |
 
 Each service owns its database, and no service reads another's. Services validate tokens with identity-api's public
-keys (`/.well-known/openid-configuration`). [Aspire](https://aspire.dev) runs all of it locally and shows logs, traces
+keys (`/.well-known/openid-configuration`). The browser never holds a token: the gateway is the web app's backend (the
+"backend for frontend" pattern). It signs the browser in at identity-api, keeps the tokens in a session of its own, gives
+the browser only an httpOnly session cookie, and adds the access token to each request it sends on
+(`docs/ARCHITECTURE.md`, "Signing in"). [Aspire](https://aspire.dev) runs all of it locally and shows logs, traces
 and metrics for every service in one dashboard.
 
 ```
@@ -89,8 +94,8 @@ acme-dms/
     identity-api/         .NET: Acme.Identity.{Service, BusinessLogic.Abstractions, BusinessLogic, DTO, Persistence}
     document-api/         .NET: Acme.Documents.{same layers}
     dealership-api/src/   NestJS, same layers: service/, business-logic-abstractions/, business-logic/, dto/, persistence/
-    gateway-api/          .NET: Acme.Gateway.{same layers, and RestClients}: a YARP reverse proxy (routes in
-                          appsettings.json) and the web app's sign-in
+    gateway-api/          .NET: Acme.Gateway.{Service, BusinessLogic.Abstractions, BusinessLogic, DTO, Persistence,
+                          RestClients}: a YARP reverse proxy (routes in appsettings.json) that keeps the web app's sign-in
     service-defaults/     .NET platform code every .NET service uses (telemetry, auth, problem details, correlation)
   web/                    React single-page app (Vite)
   scripts/                helper scripts (see "Look around a running system")
@@ -236,7 +241,8 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run reset`                                     | empty business data and queues, reset demo users' locations, then seed |
 
 `bun run api` signs in as a demo user, starts at their default location (or the one given with `--location`), and
-calls the gateway exactly as the web app does:
+calls the gateway as a script does: with an access token of its own (`POST /api/identity/v1/tokens`), which the gateway
+passes on unchanged. The web app sends a session cookie instead, and the gateway adds the same kind of token:
 
 ```bash
 bun run api as maria --location riverside GET /api/dealership/v1/stock
@@ -285,8 +291,9 @@ Every service, the gateway included, answers `GET /v1/system/health` in the same
 { "service": "dealership-api", "status": "ok", "version": "26.11.0", "databaseReachable": true }
 ```
 
-`status` is `degraded` when the service cannot reach its database; the gateway's is its sessions database. The version is set once, in the root `package.json`: .NET reads it through `Directory.Build.props`, and
-dealership-api's build writes it in.
+`status` is `degraded` when the service cannot reach its database; the gateway's is its sessions database. The version
+is set once, in the root `package.json`: .NET reads it through `Directory.Build.props`, and dealership-api's build
+writes it in.
 
 ## Conventions
 
@@ -349,6 +356,8 @@ echoed in every response and attached to every log line.
 | Containers never start                          | Start Docker Desktop and wait until it says it is running (`docker info` answers).                                                                                                                                    |
 | `password authentication failed` for Postgres   | An old data volume has a different password. Stop the app, remove the volume (`docker volume ls`, then `docker volume rm <name>`), and start again.                                                                   |
 | A .NET change does not show up                  | Restarting a resource does not rebuild it. Run `dotnet build` on that project, then restart it in the dashboard, or stop and run `bun run dev` again. TypeScript services rebuild on save.                            |
+| Signing in says "Too many requests"             | identity-api allows 10 sign-ins a minute from one address. Running the whole end-to-end suite signs in more often than that from your machine: wait a minute and run the failed tests again (`--last-failed`).        |
+| Signing in answers 503                          | The gateway cannot reach identity-api: check it is Healthy (`bun run health`). A signed-in person keeps working while their token lasts.                                                                              |
 | `bun run seed` says it cannot find the gateway  | Start the system first (`bun run dev`) and wait until everything is Healthy.                                                                                                                                          |
 | `bun run dev` says packages are not installed   | You switched to a branch that adds a package (lab 09-after does). Run `bun install`, then start again.                                                                                                                |
 | A photo stays `pending`                         | Check `bun run errors` and the RabbitMQ UI (the `rabbitmq` URL in the dashboard, user `acme`/`acme`): a message in a `*.dlq` queue tells you which consumer gave up and why.                                          |
