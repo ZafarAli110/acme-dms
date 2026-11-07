@@ -7,7 +7,9 @@ using Acme.Identity.Tests.Support;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace Acme.Identity.Tests.Signing;
 
@@ -98,18 +100,55 @@ public sealed class SigningKeyProviderTests
     }
 
     [TestMethod]
-    public async Task GetSigningKeyAsync_ReplacesAKeyThatCanNoLongerBeOpened_InsteadOfFailing()
+    public async Task GetSigningKeyAsync_InDevelopment_ReplacesAKeyThatCanNoLongerBeOpened_InsteadOfFailing()
     {
         var keys = await KeysAsync();
+        keys.Environment = Environments.Development;
         var lost = await keys.NewProvider().GetSigningKeyAsync(TestContext.CancellationToken);
 
-        // Data Protection's keys are gone (a new machine, a deleted folder): the stored key can no longer be opened.
+        // A developer's Data Protection keys are gone (a deleted folder): the stored key can no longer be opened.
         keys.DataProtection = new EphemeralDataProtectionProvider();
         var signingKey = await keys.NewProvider().GetSigningKeyAsync(TestContext.CancellationToken);
 
         Assert.AreNotEqual(lost.KeyId, signingKey.KeyId);
         await using var dbContext = keys.NewDbContext();
         Assert.AreEqual(signingKey.KeyId, (await dbContext.SigningKeys.SingleAsync(TestContext.CancellationToken)).Id);
+    }
+
+    [TestMethod]
+    public async Task TwoInstancesWithDifferentDataProtectionKeys_DeleteNothing_AndBothPublishEveryKey()
+    {
+        var keys = await KeysAsync();
+        var signing = await keys.NewProvider().GetSigningKeyAsync(TestContext.CancellationToken);
+
+        // A second instance whose DataProtection__KeysPath is not the shared folder: it cannot open the key.
+        var misconfigured = keys.NewProvider(new EphemeralDataProtectionProvider());
+        var published = await misconfigured.GetPublishedKeysAsync(TestContext.CancellationToken);
+
+        Assert.AreEqual(signing.KeyId, published.Single().KeyId, "it still publishes the key, so tokens the other signed verify");
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => misconfigured.GetSigningKeyAsync(TestContext.CancellationToken));
+        await using var dbContext = keys.NewDbContext();
+        Assert.AreEqual(signing.KeyId, (await dbContext.SigningKeys.SingleAsync(TestContext.CancellationToken)).Id, "nothing was deleted or made");
+        Assert.AreEqual(signing.KeyId, (await keys.NewProvider().GetSigningKeyAsync(TestContext.CancellationToken)).KeyId, "the right instance still signs with it");
+    }
+
+    [TestMethod]
+    public async Task GetPublishedKeysAsync_KeepsTheKeysPublicHalf_FillingItInForAKeyFromBefore()
+    {
+        var keys = await KeysAsync();
+        await keys.NewProvider().GetSigningKeyAsync(TestContext.CancellationToken);
+        await using (var dbContext = keys.NewDbContext())
+        {
+            await dbContext.SigningKeys.ExecuteUpdateAsync(set => set.SetProperty(k => k.PublicKeySpki, (byte[]?)null), TestContext.CancellationToken);
+        }
+
+        var published = await keys.NewProvider().GetPublishedKeysAsync(TestContext.CancellationToken);
+
+        await using var check = keys.NewDbContext();
+        var stored = await check.SigningKeys.SingleAsync(TestContext.CancellationToken);
+        using var rsa = RSA.Create();
+        rsa.ImportSubjectPublicKeyInfo(stored.PublicKeySpki!, out _);
+        Assert.AreEqual(Convert.ToBase64String(published.Single().Rsa.ExportParameters(false).Modulus!), Convert.ToBase64String(rsa.ExportParameters(false).Modulus!));
     }
 
     private async Task<Keys> KeysAsync() => new(await TestPostgres.NewDatabaseAsync(TestContext.CancellationToken));
@@ -122,17 +161,23 @@ public sealed class SigningKeyProviderTests
 
         public TestClock Clock { get; } = new();
 
+        /// <summary>The environment the providers run in; outside Development a key that cannot be opened is kept.</summary>
+        public string Environment { get; set; } = Environments.Production;
+
         public IdentityDbContext NewDbContext() => new(options);
 
         /// <summary>A provider with nothing in memory yet: what a freshly started identity-api instance has.</summary>
-        public SigningKeyProvider NewProvider()
+        public SigningKeyProvider NewProvider(IDataProtectionProvider? dataProtection = null)
         {
             var services = new ServiceCollection();
             services.AddScoped(_ => new IdentityDbContext(options));
+            var environment = new Mock<IHostEnvironment>();
+            environment.SetupGet(e => e.EnvironmentName).Returns(Environment);
             return new SigningKeyProvider(
                 services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
                 Clock,
-                DataProtection,
+                dataProtection ?? DataProtection,
+                environment.Object,
                 NullLogger<SigningKeyProvider>.Instance);
         }
     }
