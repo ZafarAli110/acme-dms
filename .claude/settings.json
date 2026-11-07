@@ -31,6 +31,7 @@
       "mcp__acme-tracker__add_comment",
       "mcp__acme-tracker__attach_file",
       "Bash(bun run reset)",
+      "Bash(bun run resource *)",
       "Bash(bun run seed)",
       "Bash(bun add *)",
       "Bash(bun install *)",
