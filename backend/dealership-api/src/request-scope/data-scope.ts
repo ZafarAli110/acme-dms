@@ -20,6 +20,11 @@ export interface RequestInfo {
    * the whole request, however many units of work it opens, so "busy" comes within one wait (ACME-121). Null at first.
    */
   connectBy: number | null;
+  /**
+   * The request has committed a change: from then on its units of work are never told "busy" (that would say "nothing
+   * was changed" about a change already saved); they wait as background work does (the ACME-121 verifier's finding).
+   */
+  committed: boolean;
 }
 
 interface ScopeStore {

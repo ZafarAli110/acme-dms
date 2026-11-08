@@ -103,8 +103,9 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
     }
     const pool = request && !request.saves ? this._pools.lists : this._pools.saves;
     // One wait for the whole request (its ids, then its rows, are two units of work): "busy" within one wait.
+    // After the request has committed, it is never told "busy": the answer must say what was saved.
     let waitMs = this._waits.backgroundMs;
-    if (request) {
+    if (request && !request.committed) {
       request.connectBy ??= performance.now() + (request.saves ? this._waits.saveMs : this._waits.listMs);
       waitMs = Math.max(LEAST_WAIT_MS, request.connectBy - performance.now());
     }
@@ -126,7 +127,7 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
       (late) => late.release(),
       () => null,
     );
-    if (request) {
+    if (request && !request.committed) {
       throw new DatabaseBusyError(Math.round(waitMs));
     }
     throw new Error(`No database connection came free within ${waitMs} ms.`);
@@ -140,6 +141,9 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
     if (!request || pid === null) {
       return new UnitOfWork(client);
     }
+    const committed = (): void => {
+      request.committed = true;
+    };
     let cancelling: Promise<void> = Promise.resolve();
     const cancel = (): void => {
       cancelling = this.cancelStatementAsync(pid);
@@ -149,10 +153,14 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
     } else {
       request.signal.addEventListener("abort", cancel, { once: true });
     }
-    return new UnitOfWork(client, async () => {
-      request.signal.removeEventListener("abort", cancel);
-      await cancelling;
-    });
+    return new UnitOfWork(
+      client,
+      async () => {
+        request.signal.removeEventListener("abort", cancel);
+        await cancelling;
+      },
+      committed,
+    );
   }
 
   private async cancelStatementAsync(pid: number): Promise<void> {

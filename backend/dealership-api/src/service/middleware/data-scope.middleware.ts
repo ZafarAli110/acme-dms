@@ -24,6 +24,7 @@ export class DataScopeMiddleware implements NestMiddleware {
       saves: !READS.has(request.method ?? "GET"),
       signal: callerGone.signal,
       connectBy: null,
+      committed: false,
     });
   }
 }

@@ -26,15 +26,21 @@ export class UnitOfWork implements AsyncDisposable {
   public readonly db: Database;
   private readonly _client: PoolClient;
   private readonly _beforeRelease: () => Promise<void>;
+  private readonly _afterCommit: () => void;
   private _committed = false;
 
   /**
    * `beforeRelease` runs when the unit of work ends, before its connection goes back to the pool: the factory stops
    * listening for the request's abort there, so a late abort can never cancel another request's statement on it.
    */
-  public constructor(client: PoolClient, beforeRelease: () => Promise<void> = () => Promise.resolve()) {
+  public constructor(
+    client: PoolClient,
+    beforeRelease: () => Promise<void> = () => Promise.resolve(),
+    afterCommit: () => void = () => null,
+  ) {
     this._client = client;
     this._beforeRelease = beforeRelease;
+    this._afterCommit = afterCommit;
     this.db = drizzle({ client });
   }
 
@@ -55,6 +61,7 @@ export class UnitOfWork implements AsyncDisposable {
     }
     await this._client.query("COMMIT");
     this._committed = true;
+    this._afterCommit();
   }
 
   public async [Symbol.asyncDispose](): Promise<void> {

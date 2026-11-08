@@ -116,14 +116,15 @@ describe("UnitOfWork", () => {
 });
 
 const asRequest = <T>(saves: boolean, run: () => Promise<T>, signal = new AbortController().signal): Promise<T> =>
-  runWithDataScope(run, { saves, signal, connectBy: null });
+  runWithDataScope(run, { saves, signal, connectBy: null, committed: false });
 
 // ACME-121: which connections a unit of work may use, how long it waits, and stopping the work of a caller who left.
 describe("UnitOfWorkFactory on a busy system", () => {
   let database: TestDatabase;
   let pools: DatabasePools;
   let factory: UnitOfWorkFactory;
-  const waits = { listMs: 300, saveMs: 300, backgroundMs: 300 };
+  // A request waits 300 ms; work outside a request (and a request after its commit) waits 1 s.
+  const waits = { listMs: 300, saveMs: 300, backgroundMs: 1_000 };
 
   beforeAll(async () => {
     database = await createTestDatabaseAsync();
@@ -177,6 +178,26 @@ describe("UnitOfWorkFactory on a busy system", () => {
 
     expect(failure).toBeInstanceOf(DatabaseBusyError);
     expect(performance.now() - started).toBeLessThan(800);
+  });
+
+  // The verifier's finding: a save's read after its commit shared the request's one wait, and could be answered busy,
+  // "Nothing was changed", after the change was saved. After a commit, a request waits as background work does.
+  it("never answers busy after the request has committed: its next unit of work waits", async () => {
+    const outcome = await asRequest(true, async () => {
+      {
+        await using first = await factory.beginAsync();
+        await first.db.execute(sql`select 1`);
+        await first.commitAsync();
+      }
+      const held = await pools.saves.connect();
+      setTimeout(() => held.release(), 600);
+      // Past the request's wait (300 ms), with the only save connection held for 600 ms.
+      await using after = await factory.beginAsync({ readOnly: true });
+      await after.db.execute(sql`select 1`);
+      return "answered";
+    });
+
+    expect(outcome).toBe("answered");
   });
 
   it("lets a save, its reads included, through on the connections kept for saves while every list one is busy", async () => {
