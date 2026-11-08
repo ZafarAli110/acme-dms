@@ -13,6 +13,9 @@
 - A design gate in `/implement-ticket`: a screen the ticket shows is built from that design; one that follows an
   existing screen copies it; an open one gets two or three static prototypes in `docs/prototypes/<KEY>/` and a pick
   before any UI code.
+- A hook that checks each plan after every edit (`.claude/hooks/check-plan.ts`): Status is one of the template's,
+  Now says Done, Next and Blocked, the Log runs forward with the clock, and nothing is built before it is loaded.
+  What does not match goes back to Claude, which fixes the plan in the same turn.
 - A session-start hook (`.claude/hooks/open-plans.ts`) lists the plans that still have unchecked steps, and says when
   a handoff note is waiting.
 - `/write-handoff` and `/resume-handoff`: a short note of where your session stopped (`.claude/handoff.md`, not
