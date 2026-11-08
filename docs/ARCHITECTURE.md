@@ -190,3 +190,31 @@ What this does not do, on purpose:
   identity-api about every 14 minutes for each person who keeps working.
 - **The limits are per instance of identity-api.** A shared store (Redis, or the database) would make them exact across
   instances; with one instance, or a few, an attacker still gets a small fraction of the guesses.
+
+## Handling load
+
+The target (ACME-117) is a busy Saturday morning: 200,000 requests in the peak minute, about 3,300 a second, with
+pages answering within about a third of a second at Northside's size. `bun run load-test` measures it against the
+running system; `bun run load-test --target-rps 3300 --target-p95 300` fails when it is missed.
+
+- **More copies, not a faster language.** A Node process runs JavaScript on one core, and almost every request spends
+  its time waiting on Postgres, which one process does for thousands of requests at once. More processes use the other
+  cores and other machines: `DEALERSHIP_API_INSTANCES=4 bun run dev` starts four copies, and the gateway spreads
+  requests across them (service discovery gives its proxy one destination per copy). The service keeps nothing between
+  requests, so any copy can answer any request; sessions and leases live in Postgres.
+- **Starting together is safe.** Each copy migrates the database when it starts, under one Postgres advisory lock: one
+  migrates, the others wait and find nothing to do. A rolling deploy relies on the same lock.
+- **Connections are counted.** Each copy holds up to `DATABASE_MAX_CONNECTIONS` (10); the AppHost gives Postgres room
+  for 300. In production, with many copies, put PgBouncer in transaction mode in front of Postgres: the request's
+  scope is set per transaction (`set_config(..., true)`), so a pooled connection never carries one request's dealer and
+  location into the next.
+- **A fair share each.** The gateway gives every sign-in a bucket of requests (`RateLimit:Burst`, 100, refilled at
+  `RateLimit:RequestsPerSecond`, 20) and every address a larger one (`RateLimit:AddressBurst`, 2,000, at 500 a
+  second: a made-up cookie on every request cannot escape it, and a whole dealership may share one address). Past
+  either it answers 429 with `Retry-After`, before it looks the session up. The address is the browser's only when the
+  proxy in front is trusted (`ForwardedHeaders__KnownProxies`). The buckets are in each gateway's memory, so a client
+  spread over several gateways gets a little more: fine for fairness, not for a billed quota.
+- **The slow part at Northside is the lists**, not the code around them: a count and a page of 1.6 million customers
+  need indexes that fit the list's queries (ACME-110). Measure before adding more: keyset paging, an estimated count, or
+  a read replica (only for reads that may lag a moment, never a save, a version or a session) come after a load test
+  shows they are the limit.

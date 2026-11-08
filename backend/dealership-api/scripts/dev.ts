@@ -3,15 +3,18 @@
 //
 //   bun scripts/dev.ts          the API (dist/main.js): builds, watches the sources, runs and restarts the API
 //   bun scripts/dev.ts worker   the export worker (dist/worker.js): runs and restarts on the API's builds
+//   bun scripts/dev.ts replica  one more API instance (DEALERSHIP_API_INSTANCES): runs and restarts on those builds
 //
 // The API's loop is the only one that builds: both bundles come out of one build, and two watchers writing the same
-// dist/ would restart each other's process. The worker's loop builds once only if there is no bundle yet (started on
-// its own), then lets node --watch pick up the API loop's rebuilds.
-const worker = process.argv[2] === "worker";
-const name = worker ? "export worker" : "dealership-api";
-const entry = worker ? "dist/worker.js" : "dist/main.js";
+// dist/ would restart each other's process. The worker's and the replicas' loops build once only if there is no bundle
+// yet (started on their own), then let node --watch pick up the API loop's rebuilds.
+const mode = process.argv[2] === "worker" || process.argv[2] === "replica" ? process.argv[2] : "api";
+// The worker and the replicas run the bundle the API loop builds.
+const followsBuilds = mode !== "api";
+const name = { api: "dealership-api", worker: "export worker", replica: "dealership-api replica" }[mode];
+const entry = mode === "worker" ? "dist/worker.js" : "dist/main.js";
 
-if (!worker || !(await Bun.file(entry).exists())) {
+if (!followsBuilds || !(await Bun.file(entry).exists())) {
   const firstBuild = Bun.spawnSync(["bun", "run", "build"], { stdout: "inherit", stderr: "inherit" });
   if (firstBuild.exitCode !== 0) {
     console.error(`${name}: the build failed, not starting. Fix the error above and restart the resource.`);
@@ -19,7 +22,9 @@ if (!worker || !(await Bun.file(entry).exists())) {
   }
 }
 
-const build = worker ? null : Bun.spawn(["bun", "run", "build", "--watch"], { stdout: "inherit", stderr: "inherit" });
+const build = followsBuilds
+  ? null
+  : Bun.spawn(["bun", "run", "build", "--watch"], { stdout: "inherit", stderr: "inherit" });
 const run = Bun.spawn(
   // --env-file-if-exists: Node reads .env itself (no dotenv); a variable already set, by Aspire or your shell, wins.
   [

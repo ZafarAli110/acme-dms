@@ -69,6 +69,8 @@ builder.Services
     })
     .AddServiceDiscoveryDestinationResolver();
 
+builder.Services.AddPerUserRateLimit(builder.Configuration);
+
 var app = builder.Build();
 
 await app.Services.MigrateDatabaseAsync(CancellationToken.None);
@@ -83,6 +85,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseServiceDefaults();
+// Before the session lookup: a request over its user's share costs nothing more than the 429.
+app.UseRateLimiter();
 app.UseMiddleware<SessionMiddleware>();
 app.MapControllers();
 app.MapReverseProxy();

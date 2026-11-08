@@ -25,7 +25,7 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
 
     private readonly WebApplicationFactory<Program> _factory;
 
-    private GatewayUnderTest(string connectionString)
+    private GatewayUnderTest(string connectionString, IReadOnlyDictionary<string, string> settings)
     {
         ConnectionString = connectionString;
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -34,6 +34,10 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
             builder.UseSetting("services:identity-api:http:0", "http://identity.test");
             builder.UseSetting("services:dealership-api:http:0", "http://dealership.test");
             builder.UseSetting("services:document-api:http:0", "http://documents.test");
+            foreach (var (key, value) in settings)
+            {
+                builder.UseSetting(key, value);
+            }
             builder.ConfigureServices(services =>
             {
                 services.AddHttpClient<IIdentityClient, IdentityClient>()
@@ -60,7 +64,11 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
     public IServiceProvider Services => _factory.Services;
 
     public static async Task<GatewayUnderTest> NewAsync(CancellationToken cancellationToken) =>
-        new(await TestPostgres.NewDatabaseAsync(cancellationToken));
+        new(await TestPostgres.NewDatabaseAsync(cancellationToken), new Dictionary<string, string>());
+
+    /// <summary>The gateway with settings of its own, such as a small <c>RateLimit:Burst</c>.</summary>
+    public static async Task<GatewayUnderTest> NewAsync(IReadOnlyDictionary<string, string> settings, CancellationToken cancellationToken) =>
+        new(await TestPostgres.NewDatabaseAsync(cancellationToken), settings);
 
     /// <summary>A second client, with no cookies of its own: a script, or someone else's browser.</summary>
     public HttpClient NewClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

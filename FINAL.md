@@ -8,24 +8,25 @@ the board to a reviewed pull request, then `/qa-ticket`, then a person merges in
 
 ## The tickets
 
-| Ticket   | What                                                         | Status                                                                                                  |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| ACME-101 | Find the customer's car by its plate or VIN                  | built                                                                                                   |
-| ACME-102 | Check-in photos of the customer's car                        | to build                                                                                                |
-| ACME-103 | Log a call or visit with a customer                          | to build                                                                                                |
-| ACME-104 | Is the part in stock? (customer on the phone)                | to build                                                                                                |
-| ACME-105 | Customers due a service call-back                            | to build                                                                                                |
-| ACME-106 | "Recently contacted" shows customers from another location   | built: recent customers of this location only (row-level security)                                      |
-| ACME-107 | Add a new part, with its photos, on its own page             | to build                                                                                                |
-| ACME-108 | Export the customer list to Excel                            | built: a job queue and a separate worker                                                                |
-| ACME-109 | Two people edit the same customer and one change disappears  | built by hand: a version as ETag, If-Match, 412 / 428, 304                                              |
-| ACME-110 | The customer list stays quick at our biggest location        | to build: indexes that fit the list's queries                                                           |
-| ACME-111 | A change in one service never breaks another unnoticed       | to build: a written contract both sides test against                                                    |
-| ACME-112 | One way of writing the rules for what a request may contain  | to build: Valibot through Nest 12's Standard Schema pipe                                                |
-| ACME-113 | An export can be downloaded whichever server answers         | to build: export files on shared storage (`@nestjs/storage`)                                            |
-| ACME-114 | Messages from the server in the user's language              | built by hand: `@nestjs/i18n`, English and French                                                       |
-| ACME-115 | Signing out ends my sign-in in every open tab, straight away | built; QA found sign-out bugs, all fixed (a slow sign-out, offline, cookie gone, phone, a double press) |
-| ACME-116 | Prices and stock value, right to the cent                    | built by hand: whole cents in code, USD, a money input, each part's and the location's stock value      |
+| Ticket   | What                                                         | Status                                                                                                    |
+| -------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| ACME-101 | Find the customer's car by its plate or VIN                  | built                                                                                                     |
+| ACME-102 | Check-in photos of the customer's car                        | to build                                                                                                  |
+| ACME-103 | Log a call or visit with a customer                          | to build                                                                                                  |
+| ACME-104 | Is the part in stock? (customer on the phone)                | to build                                                                                                  |
+| ACME-105 | Customers due a service call-back                            | to build                                                                                                  |
+| ACME-106 | "Recently contacted" shows customers from another location   | built: recent customers of this location only (row-level security)                                        |
+| ACME-107 | Add a new part, with its photos, on its own page             | to build                                                                                                  |
+| ACME-108 | Export the customer list to Excel                            | built: a job queue and a separate worker                                                                  |
+| ACME-109 | Two people edit the same customer and one change disappears  | built by hand: a version as ETag, If-Match, 412 / 428, 304                                                |
+| ACME-110 | The customer list stays quick at our biggest location        | to build: indexes that fit the list's queries                                                             |
+| ACME-111 | A change in one service never breaks another unnoticed       | to build: a written contract both sides test against                                                      |
+| ACME-112 | One way of writing the rules for what a request may contain  | to build: Valibot through Nest 12's Standard Schema pipe                                                  |
+| ACME-113 | An export can be downloaded whichever server answers         | to build: export files on shared storage (`@nestjs/storage`)                                              |
+| ACME-114 | Messages from the server in the user's language              | built by hand: `@nestjs/i18n`, English and French                                                         |
+| ACME-115 | Signing out ends my sign-in in every open tab, straight away | built; QA found sign-out bugs, all fixed (a slow sign-out, offline, cookie gone, phone, a double press)   |
+| ACME-116 | Prices and stock value, right to the cent                    | built by hand: whole cents in code, USD, a money input, each part's and the location's stock value        |
+| ACME-117 | The system holds a busy Saturday morning                     | built by hand, not yet measured: more API copies, a migration lock, a share per user, `bun run load-test` |
 
 ## Build the next one
 

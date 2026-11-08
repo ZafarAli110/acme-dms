@@ -17,6 +17,20 @@ describe("migrateDatabaseAsync", () => {
     );
   });
 
+  it("lets several instances start at once: one migrates, the others wait and find nothing left to do", async () => {
+    await using database = await createTestDatabaseAsync({ empty: true });
+
+    const starts = Array.from({ length: 4 }, () => migrateDatabaseAsync(database.connectionString, MIGRATIONS_FOLDER));
+
+    await expect(Promise.all(starts)).resolves.toHaveLength(4);
+    // Each migration recorded once: nobody applied one twice.
+    const applied = await database.db.execute<{ total: number; distinct: number }>(
+      sql`select count(*)::int as total, count(distinct hash)::int as distinct from drizzle.__drizzle_migrations`,
+    );
+    expect(applied.rows[0]?.total).toBeGreaterThan(0);
+    expect(applied.rows[0]?.total).toBe(applied.rows[0]?.distinct);
+  });
+
   it("brings an up-to-date database up to date without complaint", async () => {
     await using database = await createTestDatabaseAsync();
 

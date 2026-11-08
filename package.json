@@ -40,6 +40,7 @@
     "coverage": "bun scripts/coverage.ts",
     "docs:check": "bun scripts/check-docs.ts",
     "audit": "bun scripts/audit-sessions.ts",
+    "load-test": "bun scripts/load-test.ts",
     "gate:fast": "bun scripts/gate.ts",
     "gate:slow": "nx run @acme/web:e2e"
   },
