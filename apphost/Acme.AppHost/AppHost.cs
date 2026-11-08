@@ -8,9 +8,13 @@ var password = builder.AddParameter("dev-password", "acme", secret: true);
 // Infrastructure (containers)
 // Room for every instance's pool: each dealership-api holds up to DATABASE_MAX_CONNECTIONS (10), and the .NET services
 // their own. Postgres allows 100 by default.
+// pg_stat_statements: Postgres's own record of which statements took its time (`bun run sql:top`). Loaded at start, so
+// it is an argument here; managed Postgres (Azure, RDS, Cloud SQL) offers the same extension.
 var postgres = builder.AddPostgres("postgres", username, password)
     .WithDataVolume()
-    .WithArgs("-c", "max_connections=300");
+    .WithArgs("-c", "max_connections=300")
+    .WithArgs("-c", "shared_preload_libraries=pg_stat_statements")
+    .WithArgs("-c", "pg_stat_statements.track=top");
 var identityDb = postgres.AddDatabase("identity");
 var dealershipDb = postgres.AddDatabase("dealership");
 var documentsDb = postgres.AddDatabase("documents");

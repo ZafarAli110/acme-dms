@@ -30,6 +30,7 @@
     "errors": "aspire otel traces --has-error true",
     "api": "bun scripts/api.ts",
     "sql:explain": "bun scripts/explain.ts",
+    "sql:top": "bun scripts/sql-top.ts",
     "seed": "bun scripts/seed.ts",
     "seed:bulk": "bun scripts/seed-bulk.ts",
     "xlsx:inspect": "bun scripts/inspect-xlsx.ts",

@@ -389,6 +389,7 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run errors`                                    | only failed (5xx) traces, across all services                          |
 | `bun run sql:explain "select …"`                    | how Postgres runs one query: its plan, rows and time (read-only)       |
 | `bun run sql:explain --as maria "select …"`         | the same as maria's request runs it: row-level security in the plan    |
+| `bun run sql:top`                                   | which statements took the database's time (`--reset` before a test)    |
 | `bun run xlsx:inspect <file>`                       | an Excel file's sheets, row counts, header and first and last rows     |
 | `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)                             |
 | `bun run seed`                                      | add the sample parts, stock, photos, customers                         |
