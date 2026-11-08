@@ -27,6 +27,24 @@ describe("GetPartListQueryHandler", () => {
     expect(list.total).toBe(1);
   });
 
+  // "Equals" on text is exact with the case ignored, and % and _ are the characters (ACME-117 rewrites it from ILIKE to
+  // lower() = lower(), for the city's index: the same parts before and after).
+  it("filters by an exact part number, case ignored, with % as the character", async () => {
+    await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "PCT-50%" });
+    await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "PCT-500" });
+    const handler = database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory));
+
+    const list = await handler.executeAsync(AT_NORTHSIDE, {
+      page: 1,
+      pageSize: 25,
+      filterField: "partNumber",
+      filterOperator: "equals",
+      filterValue: "pct-50%",
+    });
+
+    expect(list.items.map((item) => item.partNumber)).toEqual(["PCT-50%"]);
+  });
+
   it("searches part number and description", async () => {
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "BRK-777" });
 

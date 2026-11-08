@@ -1,0 +1,89 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7eee8c9c-f311-4bb1-be69-e7898a347ec0",
+  "prevIds": ["f3394317-840d-4d53-b3ca-bd50d32e8e83"],
+  "footprints": [
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_by_city"],
+      "writes": [
+        "s|idx|public.ix_customers_by_city",
+        "n|idx|public.ix_customers_by_city",
+        "e|idx|public.ix_customers_by_city",
+        "n|rel|public.ix_customers_by_city"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.surname",
+        "n|col|public.customers.first_name",
+        "n|col|public.customers.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_by_city",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "lower(\"city\")",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "surname",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "first_name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}

@@ -58,6 +58,12 @@ export const customers = snakeCase.table(
         table.firstName,
       )
       .where(sql`${table.isDeleted} = false`),
+    // A city filter (ACME-117): the location, the city as "equals" compares it (lower case), then the list's name order
+    // and the id, so a city few customers have is found without reading the location's whole index, its page comes
+    // in order and its count from the index alone.
+    index("ix_customers_by_city")
+      .on(table.dealerId, table.locationId, sql`lower(${table.city})`, table.surname, table.firstName, table.id)
+      .where(sql`${table.isDeleted} = false`),
     // The search box (a match anywhere in the name, company, email or phone): trigrams find the few matching rows
     // among millions; an ordinary index cannot serve `ilike '%…%'`. It needs pg_trgm, and three letters or more.
     index("ix_customers_search")

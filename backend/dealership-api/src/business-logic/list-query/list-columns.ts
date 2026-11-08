@@ -118,7 +118,9 @@ export function listFilter(columns: ListColumns, query: ListQueryDto): SQL | und
     case "endsWith":
       return ilike(source, likePattern(String(value), "%", ""));
     case "equals":
-      return ilike(source, likePattern(String(value), "", ""));
+      // Exact with the case ignored, as ILIKE without wildcards was; in this form an index on lower(column) can serve
+      // it (the city's, ACME-117). Both sides folded by Postgres, as ILIKE folds them.
+      return sql`lower(${source}) = lower(${String(value)})`;
     case "=":
     case "is":
       return eq(source, value);

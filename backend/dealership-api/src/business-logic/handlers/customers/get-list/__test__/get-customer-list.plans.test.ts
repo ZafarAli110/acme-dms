@@ -32,6 +32,8 @@ interface Plan {
   /** The page's ids (it has a limit) or its rows: never a read of the whole table. The count is the planner's call. */
   isPage: boolean;
   nodes: PlanNode[];
+  /** The SQL it is the plan of. */
+  text: string;
 }
 
 interface PlanNode {
@@ -89,6 +91,13 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
              now(), ${TEST_USER_ID}::uuid, now(), ${TEST_USER_ID}::uuid, g % 75 = 0,
              case when g % 75 = 0 then now() end, case when g % 75 = 0 then ${TEST_USER_ID}::uuid end
       from generate_series(1, ${AT_LOCATION + 30_000}) as g`);
+    // A city only 3 Northside customers have, as Hillcrest is at the real Northside (ACME-117's city index).
+    await database.db.execute(sql`
+      insert into customers (dealer_id, location_id, first_name, surname, city, status, created_at, created_by,
+                             updated_at, updated_by)
+      select ${NORTHWIND}::uuid, ${NORTHSIDE}::uuid, 'Hill' || g, 'Crest' || g, 'Hillcrest', 'active', now(),
+             ${TEST_USER_ID}::uuid, now(), ${TEST_USER_ID}::uuid
+      from generate_series(1, 3) as g`);
     // As autovacuum would on a real table: statistics for the planner, and the visibility map index-only scans need.
     await database.db.execute(sql`vacuum analyze customers`);
 
@@ -133,9 +142,13 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
   });
 
   /** The plans of every query the list ran for `query`, each as it ran: as the request, or as the owner. */
-  async function plansAsync(query: ListQueryDto): Promise<Plan[]> {
+  async function plansAsync(query: ListQueryDto, handler: "list" | "count" = "list"): Promise<Plan[]> {
     recorded.length = 0;
-    await asRequest(new GetCustomerListQueryHandler(factory)).executeAsync(AT_NORTHSIDE, query);
+    if (handler === "list") {
+      await asRequest(new GetCustomerListQueryHandler(factory)).executeAsync(AT_NORTHSIDE, query);
+    } else {
+      await asRequest(new CountCustomersQueryHandler(factory)).executeAsync(AT_NORTHSIDE, query);
+    }
     const queries = [...recorded];
     const plans: Plan[] = [];
     const client = await pool.connect();
@@ -158,7 +171,11 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
           values,
         );
         await client.query("rollback");
-        plans.push({ isPage: !/count\(\*\)/i.test(text), nodes: nodesOf(result.rows[0]!["QUERY PLAN"][0]!.Plan) });
+        plans.push({
+          isPage: !/count\(\*\)/i.test(text),
+          nodes: nodesOf(result.rows[0]!["QUERY PLAN"][0]!.Plan),
+          text,
+        });
       }
       return plans;
     } finally {
@@ -214,7 +231,7 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
     }
   });
 
-  it("counts Northside up to 10,001, not its 118,400 live customers", async () => {
+  it("counts Northside up to 10,001, not its 118,403 live customers", async () => {
     const counted = await asRequest(new CountCustomersQueryHandler(factory)).executeAsync(AT_NORTHSIDE, {
       page: 1,
       pageSize: 25,
@@ -270,6 +287,25 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
 
     expect(page.hasMore).toBe(true);
     expect(page.items).toHaveLength(25);
+  });
+
+  // ACME-117: a city few customers have was found by reading the location's whole index (Hillcrest at Northside:
+  // 372 ms for the page, 231 ms for the count). An index that starts with the location and the city finds them, in
+  // the list's name order.
+  it("finds a rare city's page and count through the city index", async () => {
+    const hillcrest = {
+      page: 1,
+      pageSize: 25,
+      filterField: "city",
+      filterOperator: "equals",
+      filterValue: "hillcrest",
+    } as const;
+
+    const page = await plansAsync(hillcrest);
+    const count = await plansAsync(hillcrest, "count");
+
+    expect(indexesUsed(page.filter((plan) => !/"id" in/i.test(plan.text)))).toContain("ix_customers_by_city");
+    expect(indexesUsed(count)).toContain("ix_customers_by_city");
   });
 
   it("finds a surname, and counts the matches, through the trigram index", async () => {
