@@ -19,16 +19,25 @@ import { toListQueryBody } from "../../core/paging/listParams";
 import { prefetchListPage } from "../../core/paging/prefetchListPage";
 import { queryClient } from "../../core/queries/queryClient";
 import { customerColumns } from "./columns/customerColumns";
+import { useCustomerCount } from "./hooks/useCustomerCount";
 import { useCustomerList } from "./hooks/useCustomerList";
 import { customerQueryOptions } from "./queries/customerQueryOptions";
-import type { CustomerListItem } from "./types/customer";
+import { type CustomerListItem, questionOf } from "./types/customer";
 
 /** Fetches the page of customers the URL asks for (search, page, sort, filter) before the list shows it. */
 export async function clientLoader({ request, context }: ClientLoaderFunctionArgs) {
   const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
   if (resolved) {
+    // The page and its question's total together, so the footer has its number on the first paint. The total is
+    // cached per question: paging and sorting fetch only the page (ACME-117).
     await prefetchListPage(request, (params) =>
-      queryClient.query({ ...customerQueryOptions.list(resolved.locationId, params), staleTime: "static" }),
+      Promise.all([
+        queryClient.query({ ...customerQueryOptions.list(resolved.locationId, params), staleTime: "static" }),
+        queryClient.query({
+          ...customerQueryOptions.count(resolved.locationId, questionOf(params)),
+          staleTime: "static",
+        }),
+      ]),
     );
   }
   return null;
@@ -46,6 +55,8 @@ export default function CustomerList() {
   // A new page, sort or filter loads in the route's clientLoader; meanwhile the grid keeps its rows and shows a bar.
   const isLoadingPage = useNavigation().state === "loading";
   const { data, error, isLoading } = useCustomerList(location?.id ?? "", params);
+  const count = useCustomerCount(location?.id ?? "", questionOf(params));
+  const total = count.data ?? 0;
   const visibility = useColumnVisibility("customers");
   const columns = useMemo(() => customerColumns(t, i18n.language), [t, i18n.language]);
   const noRows = params.search
@@ -75,16 +86,16 @@ export default function CustomerList() {
   return (
     <Fragment>
       <PageHeader title={t("title")} subtitle={t("subtitle", { location: location?.name ?? "" })} />
-      <ErrorAlert error={error ?? exportProblem} />
+      <ErrorAlert error={error ?? count.error ?? exportProblem} />
       <AppDataGrid<CustomerListItem>
         columns={columns}
         rows={data?.items ?? []}
         loading={isLoading || isLoadingPage}
         server={{
           params,
-          rowCount: data?.total ?? 0,
+          rowCount: total,
           update,
-          totalLabel: formatListTotal(data?.total ?? 0, i18n.language),
+          totalLabel: formatListTotal(total, i18n.language),
         }}
         columnVisibilityModel={visibility.columnVisibilityModel}
         onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}
@@ -119,7 +130,7 @@ export default function CustomerList() {
         open={confirmingExport}
         title={tCommon("exports.confirmTitle")}
         message={tCommon("exports.confirmMessage", {
-          total: formatListTotal(data?.total ?? 0, i18n.language),
+          total: formatListTotal(total, i18n.language),
           location: location?.name ?? "",
         })}
         onCancel={() => setConfirmingExport(false)}

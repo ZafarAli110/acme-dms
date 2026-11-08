@@ -19,9 +19,9 @@ describe("GetCustomerListQueryHandler", () => {
     const found = await handler.executeAsync(AT_NORTHSIDE, { page: 1, pageSize: 25, search: "hopper" });
 
     expect(all.items.map((customer) => customer.surname)).toEqual(["Hopper", "Lovelace"]);
-    expect(all.total).toBe(2);
+    expect(all.hasMore).toBe(false);
     expect(found.items.map((customer) => customer.companyName)).toEqual(["Hopper Logistics"]);
-    expect(found.total).toBe(1);
+    expect(found.hasMore).toBe(false);
   });
 
   it("pages the list", async () => {
@@ -31,10 +31,13 @@ describe("GetCustomerListQueryHandler", () => {
     const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
     const riverside = { ...AT_NORTHSIDE, locationId: RIVERSIDE };
 
+    const first = await handler.executeAsync(riverside, { page: 1, pageSize: 2, search: undefined });
     const second = await handler.executeAsync(riverside, { page: 2, pageSize: 2, search: undefined });
 
+    // A page says whether another follows; the total is the count's (ACME-117).
+    expect(first).toMatchObject({ hasMore: true, page: 1, pageSize: 2 });
     expect(second.items.map((customer) => customer.surname)).toEqual(["Clark", "Hopper"]);
-    expect(second).toMatchObject({ total: 4, page: 2, pageSize: 2 });
+    expect(second).toMatchObject({ hasMore: false, page: 2, pageSize: 2 });
   });
 
   it("refuses a page deeper than a list can reach, before it reads anything", async () => {

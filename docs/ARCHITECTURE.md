@@ -214,6 +214,11 @@ API copies in front of a full database only queue more queries on it. Measure, t
   sign-ins a minute, the gateway's 500 requests a second), so the test would measure the limiter, not the system.
   `bun run start:prod --load-test` raises those two; the share per sign-in stays, so a 429 still means one person
   asked for more than a person would. Production keeps every limit: there the load comes from many addresses.
+- **Count once per question, not once per page (ACME-117).** The customer list's page says whether another follows
+  (`hasMore`, one id more than the page); its total comes from `GET /v1/customers/count`, which the web keeps per
+  search and filter, so paging and sorting count nothing. Counting had been 88% of the database's time (`bun run
+sql:top`). A search's page still counts first, because its count decides whether the trigram index or the name
+  order finds the page (ACME-119).
 - **Past capacity, answer quickly and do the saves first (ACME-121).** Each dealership-api copy has 5 connections, as
   many queries as Postgres's cores run well once there are 4 copies (more only run slower), and keeps 2 of them for saves (any request but GET and HEAD, its reads included), so lists can never take them all; a list
   waits at most 1.5 s for a connection and a save 5 s, then is answered 503 `urn:acme:error:busy` with `Retry-After`

@@ -8,6 +8,7 @@ import { asRequest } from "#test-setup/postgres/as-request";
 import { NORTHSIDE, NORTHWIND, RIVERSIDE, TEST_USER_ID } from "#test-setup/postgres/seed-kit";
 import { createTestDatabaseAsync, type TestDatabase } from "#test-setup/postgres/test-database";
 import { AT_NORTHSIDE } from "#test-setup/users/test-users";
+import { CountCustomersQueryHandler } from "../../count/count-customers.query-handler";
 import { GetCustomerListQueryHandler } from "../get-customer-list.query-handler";
 
 /**
@@ -214,13 +215,26 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
   });
 
   it("counts Northside up to 10,001, not its 118,400 live customers", async () => {
-    recorded.length = 0;
-    const page = await asRequest(new GetCustomerListQueryHandler(factory)).executeAsync(AT_NORTHSIDE, {
+    const counted = await asRequest(new CountCustomersQueryHandler(factory)).executeAsync(AT_NORTHSIDE, {
       page: 1,
       pageSize: 25,
     });
 
-    expect(page.total).toBe(10_001);
+    expect(counted.total).toBe(10_001);
+  });
+
+  // ACME-117: the total is asked once per question (the count endpoint), so paging and sorting count nothing.
+  it("runs no count for a plain page, a later page, a sort or a filter", async () => {
+    for (const query of [
+      { page: 1, pageSize: 25 },
+      { page: 2, pageSize: 25 },
+      { page: 1, pageSize: 25, sort: "lastContactDate", direction: "desc" },
+      { page: 1, pageSize: 25, filterField: "city", filterOperator: "equals", filterValue: "York" },
+    ] as const) {
+      await plansAsync(query);
+
+      expect(recorded.filter((recordedQuery) => /count\(\*\)/i.test(recordedQuery.text))).toEqual([]);
+    }
   });
 
   // ILIKE is not leakproof: under the policy no index can serve it, so a text filter is found as the owner with the
@@ -247,14 +261,14 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
     expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_search")).toBe(true);
   });
 
-  it("still counts and pages a search with more than 10,000 matches", async () => {
+  it("still pages a search with more than 10,000 matches", async () => {
     const page = await asRequest(new GetCustomerListQueryHandler(factory)).executeAsync(AT_NORTHSIDE, {
       page: 1,
       pageSize: 25,
       search: "example.test",
     });
 
-    expect(page.total).toBe(10_001);
+    expect(page.hasMore).toBe(true);
     expect(page.items).toHaveLength(25);
   });
 

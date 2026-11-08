@@ -32,6 +32,7 @@ import { RESOLVED_LOCATION_CONTEXT } from "../core/middleware/routerContext";
 import { queryClient } from "../core/queries/queryClient";
 import { CustomerStatusChip } from "./customers/components/CustomerStatusChip";
 import { useCustomerCount } from "./customers/hooks/useCustomerCount";
+import { EVERY_CUSTOMER } from "./customers/types/customer";
 import { useRecentCustomers } from "./customers/hooks/useRecentCustomers";
 import { customerQueryOptions } from "./customers/queries/customerQueryOptions";
 import { usePartCount } from "./parts/hooks/usePartCount";
@@ -50,7 +51,7 @@ export async function clientLoader({ context }: ClientLoaderFunctionArgs) {
   }
   if (permissions.includes("customers.read")) {
     prefetches.push(
-      queryClient.query({ ...customerQueryOptions.count(locationId), staleTime: "static" }),
+      queryClient.query({ ...customerQueryOptions.count(locationId, EVERY_CUSTOMER), staleTime: "static" }),
       queryClient.query({ ...customerQueryOptions.recent(locationId), staleTime: "static" }),
     );
   }
@@ -114,7 +115,7 @@ export default function Home() {
 
   const locationId = location?.id ?? "";
   const partCount = usePartCount(locationId, can("parts.read"));
-  const customerCount = useCustomerCount(locationId, can("customers.read"));
+  const customerCount = useCustomerCount(locationId, EVERY_CUSTOMER, can("customers.read"));
   const recent = useRecentCustomers(locationId, can("customers.read"));
 
   return (

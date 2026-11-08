@@ -2,9 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { and, asc, count, eq, ilike, inArray, sql, type SQL } from "drizzle-orm";
 import type { IGetCustomerListQueryHandler } from "#business-logic-abstractions/handlers/customers/get-list/get-customer-list.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
-import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
+import type { CustomerPageResponseDto } from "#dto/customers/customer-page-response.dto";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
-import type { PageResponseDto } from "#dto/paging/page-response.dto";
 import { customerSearchText, customers } from "#persistence/schema/customers";
 import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
@@ -47,10 +46,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     this._unitOfWorkFactory = unitOfWorkFactory;
   }
 
-  public async executeAsync(
-    userContext: UserContext,
-    query: ListQueryDto,
-  ): Promise<PageResponseDto<CustomerListItemDto>> {
+  public async executeAsync(userContext: UserContext, query: ListQueryDto): Promise<CustomerPageResponseDto> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     const locationId = requireLocation(userContext);
@@ -60,7 +56,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     // The page's ids first, from an index alone, then only those rows: a later page skips its offset in the index
     // instead of reading every customer before it from the table (ACME-110).
     // A search or a text filter matches with ILIKE, which no index can serve under row-level security (ACME-110, 119).
-    const { ids, total } =
+    const { ids, hasMore } =
       query.search || matchesText(CUSTOMER_LIST_COLUMNS, query)
         ? await this.findScopedAsync(
             userContext.dealerId,
@@ -83,7 +79,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
             .from(customers)
             .where(inArray(customers.id, ids))
             .orderBy(...order);
-    return { items: items.map(toCustomerListItemDto), total, page, pageSize };
+    return { items: items.map(toCustomerListItemDto), page, pageSize, hasMore };
   }
 
   private async findListedAsync(
@@ -91,17 +87,17 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     order: SQL[],
     page: number,
     pageSize: number,
-  ): Promise<{ ids: string[]; total: number }> {
+  ): Promise<PageOfIds> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     // Awaited here: returned unawaited, the unit of work would close (and drop the request's scope) before it ran.
     return await findPageAsync(work.db, where, order, page, pageSize);
   }
 
   /**
-   * A search's or a text filter's ids and count, as the table's owner with the dealer, the location and live rows
+   * A search's or a text filter's ids, as the table's owner with the dealer, the location and live rows
    * written out (as the export does). Under row-level security Postgres must apply the policy before a filter that is
    * not leakproof, and ILIKE is not, so no index could serve it; as the owner with these conditions one does. Only ids
-   * and a count come from here: the rows are read as the request.
+   * come from here: the rows are read as the request.
    */
   private async findScopedAsync(
     dealerId: string,
@@ -111,18 +107,23 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     page: number,
     pageSize: number,
     searching: boolean,
-  ): Promise<{ ids: string[]; total: number }> {
+  ): Promise<PageOfIds> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
-    const scoped = and(
-      eq(customers.dealerId, dealerId),
-      eq(customers.locationId, locationId),
-      notDeleted(customers),
-      where,
-    );
-    return await findPageAsync(work.db, scoped, order, page, pageSize, searching);
+    return await findPageAsync(work.db, ownerScoped(dealerId, locationId, where), order, page, pageSize, searching);
   }
 }
 
+/** A page's customer ids, and whether another page follows it. */
+interface PageOfIds {
+  ids: string[];
+  hasMore: boolean;
+}
+
+/**
+ * A page's ids, one more than the page to know whether another follows (within the list's depth). No count: the total
+ * is the count endpoint's, asked once per search and filter (ACME-117). A search still counts first, because its count
+ * decides how to find its page.
+ */
 async function findPageAsync(
   db: Database,
   where: SQL | undefined,
@@ -130,18 +131,8 @@ async function findPageAsync(
   page: number,
   pageSize: number,
   searching = false,
-): Promise<{ ids: string[]; total: number }> {
-  // Counted up to one past the list's depth: past it the screen says "10,000+", and the exact number would cost a read
-  // of the whole location on every page (ACME-119).
-  const upToDepth = db
-    .select({ one: sql`1` })
-    .from(customers)
-    .where(where)
-    .limit(MAX_LIST_DEPTH + 1)
-    .as("up_to_depth");
-  const [counted] = await db.select({ total: count() }).from(upToDepth);
-  const total = counted?.total ?? 0;
-  if (searching && total <= MAX_LIST_DEPTH) {
+): Promise<PageOfIds> {
+  if (searching && (await countUpToDepthAsync(db, where)) <= MAX_LIST_DEPTH) {
     // Postgres guesses ILIKE's matches poorly. For a term few or none have, it would walk the name index in order
     // looking for a page, and at a big location read every customer ("ahed" at Northside: 6.5 s). With an exact count
     // the matches are few enough to sort: find them through the trigram index only. Past 10,000 they are dense, and
@@ -154,9 +145,35 @@ async function findPageAsync(
     .from(customers)
     .where(where)
     .orderBy(...order)
-    .limit(pageSize)
+    .limit(pageSize + 1)
     .offset(pageOffset(page, pageSize));
-  return { ids: rows.map((row) => row.id), total };
+  return {
+    ids: rows.slice(0, pageSize).map((row) => row.id),
+    hasMore: rows.length > pageSize && page * pageSize < MAX_LIST_DEPTH,
+  };
+}
+
+/**
+ * How many customers match, up to one past the list's depth: past it the screen says "10,000+", and the exact number
+ * would cost a read of the whole location (ACME-119). Shared with the count endpoint (ACME-117).
+ */
+export async function countUpToDepthAsync(db: Database, where: SQL | undefined): Promise<number> {
+  const upToDepth = db
+    .select({ one: sql`1` })
+    .from(customers)
+    .where(where)
+    .limit(MAX_LIST_DEPTH + 1)
+    .as("up_to_depth");
+  const [counted] = await db.select({ total: count() }).from(upToDepth);
+  return counted?.total ?? 0;
+}
+
+/**
+ * The query's conditions with the dealer, the location and live rows written out, for a read as the table's owner
+ * (a search or a text filter: ACME-110, 119; docs/standards/multi-tenancy.md).
+ */
+export function ownerScoped(dealerId: string, locationId: string, where: SQL | undefined): SQL | undefined {
+  return and(eq(customers.dealerId, dealerId), eq(customers.locationId, locationId), notDeleted(customers), where);
 }
 
 /**

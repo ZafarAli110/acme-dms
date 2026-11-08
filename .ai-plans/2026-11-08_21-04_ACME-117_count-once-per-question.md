@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-08 21:04
 
-**Status:** Draft
+**Status:** In progress
 
 **Ticket:** ACME-117 · **Branch:** final
 
@@ -11,8 +11,9 @@
 **Design:** No screen change: the customer list, its footer ("1–25 of 10,000+"), Home's tile and the export dialog
 look exactly as after ACME-119, with the total there when the page first shows (the route prefetches it).
 
-**Now:** Done: plan revised for the architect's findings · Next: step 1, after ACME-121's step 1 (both touch the
-customer list's tests) · Blocked: None
+**Now:** Done: the list pages without counting, the count per question, the web and the load test; at 200 a second
+none fail, p95 89 ms; gates pass · Next: step 3's browser check (the totals on first paint) and `verify-ticket` ·
+Blocked: None
 
 ## Requirement
 
@@ -37,33 +38,33 @@ Done means every box is ticked, each by a check whose result is in the Log.
 
 Happy
 
-- [ ] Page 2 of the plain list, a sort, a filtered page → the handler runs no `count(*)` (the handler test's recorded
+- [x] Page 2 of the plain list, a sort, a filtered page → the handler runs no `count(*)` (the handler test's recorded
       SQL)
 - [ ] Open Customers, change the search or the filter → the web asks for the count once for that question; going back
       to a question asked within five minutes uses the total already fetched (the web query test)
 - [ ] The footer, Home's tile and the export dialog → the same numbers as before ("10,000+" past 10,000), there when
       the page first shows
-- [ ] Save a customer → the pages and the totals are fetched again
-- [ ] A search for a term nobody has ("ahed") → its page still comes from the trigram index, never a walk of the
+- [x] Save a customer → the pages and the totals are fetched again
+- [x] A search for a term nobody has ("ahed") → its page still comes from the trigram index, never a walk of the
       location (ACME-119's plans test, kept)
-- [ ] The busy-morning check at 200 a second, against `start:prod --load-test` → none fail, p95 within a second; the
+- [x] The busy-morning check at 200 a second, against `start:prod --load-test` → none fail, p95 within a second; the
       highest rate that holds, and `sql:top`'s new top statement, in the Log
 
 Failure: invalid input, absent data, not allowed, another service down
 
-- [ ] The count with a field the list does not have → 400, as the list does today
-- [ ] The count without `customers.read` → 403; Riverside's and deleted customers never counted at Northside; at
+- [x] The count with a field the list does not have → 400, as the list does today
+- [x] The count without `customers.read` → 403; Riverside's and deleted customers never counted at Northside; at
       another dealer, nothing of Northwind's counted
-- [ ] The last page → `hasMore` false; a page past 10,000 → 400 as today
+- [x] The last page → `hasMore` false; a page past 10,000 → 400 as today
 
 ## Load before building
 
 | Item                                                                        | Kind     | Why                                                 | Loaded? |
 | --------------------------------------------------------------------------- | -------- | --------------------------------------------------- | ------- |
-| `build-api-endpoint`                                                        | Skill    | the count endpoint                                  | [ ]     |
-| `tanstack-query`                                                            | Skill    | the count query per question, its key, invalidation | [ ]     |
-| `docs/standards/multi-tenancy.md` "The database enforces it too"            | Standard | the count handler joins the owner-path exception    | [ ]     |
-| `docs/standards/web-architecture.md` "Routes, …clientLoader", "Server data" | Standard | the loader prefetches the count; the four layers    | [ ]     |
+| `build-api-endpoint`                                                        | Skill    | the count endpoint                                  | [x]     |
+| `tanstack-query`                                                            | Skill    | the count query per question, its key, invalidation | [x]     |
+| `docs/standards/multi-tenancy.md` "The database enforces it too"            | Standard | the count handler joins the owner-path exception    | [x]     |
+| `docs/standards/web-architecture.md` "Routes, …clientLoader", "Server data" | Standard | the loader prefetches the count; the four layers    | [x]     |
 
 ## Shape
 
@@ -131,15 +132,15 @@ costs its count on each page, as today (13% of the database's time at 200 a seco
 
 ## Steps
 
-- [ ] 1. Tests first: the list without a count, the count handler's totals, the web key → verify: they fail on today's
+- [x] 1. Tests first: the list without a count, the count handler's totals, the web key → verify: they fail on today's
       code
-- [ ] 2. API: the list's page, the count handler and endpoint → verify: the handler and plans tests
+- [x] 2. API: the list's page, the count handler and endpoint → verify: the handler and plans tests
 - [ ] 3. Web: the count per question, the loaders' prefetch, the grid, the export dialog, Home → verify: web tests and
       typecheck; the footer, Home and the dialog in a browser (`check-in-browser`) show the totals on first paint
-- [ ] 4. Load test: totals from the count, views count once → verify: `bun run load-test --rate 25` and `sql:top`:
+- [x] 4. Load test: totals from the count, views count once → verify: `bun run load-test --rate 25` and `sql:top`:
       plain-list counts about one per list view, none on paging
-- [ ] 5. Docs and gates → verify: `bun run gate:fast`
-- [ ] 6. Measured: `sql:top --reset`, `load-test --rate 200`, then higher → verify: none fail at 200, p95 ≤ 1 s
+- [x] 5. Docs and gates → verify: `bun run gate:fast`
+- [x] 6. Measured: `sql:top --reset`, `load-test --rate 200`, then higher → verify: none fail at 200, p95 ≤ 1 s
 
 ## Questions
 
@@ -165,3 +166,18 @@ None: nothing a person sees changes.
   it); the Requirement in the ticket's words with every criterion In or Out; Home and the list loader's prefetch in
   Files (the total on first paint); multi-tenancy.md names the count handler; the load test's last page from the count
   endpoint; checks that exist (recorded SQL, the guard's test for 403, a new web key test).
+- 2026-11-08 22:05 Loaded: build-api-endpoint, tanstack-query, multi-tenancy.md, web-architecture.md (loaders, server data).
+  In progress.
+- 2026-11-08 22:16 Steps 1, 2, 4, 5: tests first (the list's `hasMore`, the count handler's totals, Riverside, deleted, another
+  dealer, 400; no `count(*)` recorded for a plain page, page 2, a sort or a filter) failed on the old code, then pass:
+  dealership-api 242 tests. `CountCustomersQueryHandler` reuses the list's `customerListWhere`, `matchesText`,
+  `countUpToDepthAsync` and `ownerScoped`; `GET /v1/customers/count`. Web: `CustomerPage`, `CustomerQuestion`, the
+  count key per question (a new test: one key while paging and sorting), both loaders prefetch it; 64 web tests,
+  typecheck. Load test: totals from the count endpoint (a missing total is an error), a "customers count" kind (8 of
+  100). `gate:fast` 19 of 19.
+- 2026-11-08 22:16 Step 6, measured by Claude: `load-test --rate 200`: 12,000 of 12,000, p50 15 ms, p95 89 ms; Postgres 267% (was
+  572%), 1.6 queries running (was 14.6); `sql:top`'s total about 107 s (was 840 s). Top now: the city filter's count
+  34% (the rare city, ACME-119 D3), the search's count 27%, its page 15%, the plain count 11%, last-contact sort 9%.
+  `--rate 400`: 148 a second answered, 15,132 busy, 0 failed, p95 1.8 s (ACME-121 holds), Postgres 763%. `--rate 800`:
+  nothing answered while Postgres idled at 7% with 25,000 requests in flight: the test rig (one laptop sending and
+  serving) is the limit there, not the system. Capacity on the laptop: about 200 to 250 a second.

@@ -1,3 +1,5 @@
+import type { ListFilter, ListParams } from "../../../core/paging/listParams";
+
 export type CustomerStatus = "active" | "prospect" | "inactive";
 
 /** Every field is always sent; a value the customer does not have is `null`. */
@@ -36,3 +38,28 @@ export interface CustomerFormValues {
   /** `YYYY-MM-DD` from the date input, or empty. */
   lastContactDate: string;
 }
+
+/**
+ * A page of the customer list: whether another follows, not how many there are. The total is the count's, asked once
+ * per question (ACME-117).
+ */
+export interface CustomerPage {
+  items: CustomerListItem[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+/** What a total depends on: the search and the filter. The page and the sort don't change it. */
+export interface CustomerQuestion {
+  search: string;
+  filter: ListFilter | null;
+}
+
+/** The question a list page asks. */
+export function questionOf(params: ListParams): CustomerQuestion {
+  return { search: params.search, filter: params.filter };
+}
+
+/** Every customer at the location: Home's count. */
+export const EVERY_CUSTOMER: CustomerQuestion = { search: "", filter: null };

@@ -47,8 +47,9 @@ location is refused (the `row_level_security` migration). This is the rule, not 
   email, phone or city) is the other exception. Under a policy, Postgres must check the policy before any condition
   that is not _leakproof_, and `ILIKE` is not (nor are trigram `%` or full-text `@@`), so no index could serve them.
   So only the page's ids and the count are found as the owner, with the dealer, the location and `notDeleted(…)`
-  written out (`GetCustomerListQueryHandler.findScopedAsync`, chosen by `matchesText`); the rows are then read as the
-  request, so the policy still decides what comes back. The count is not re-read, so its hand-written scope has its
+  written out (`GetCustomerListQueryHandler.findScopedAsync`, chosen by `matchesText`, and the list's count,
+  `CountCustomersQueryHandler`, by the same rule and `ownerScoped`); the rows are then read as the request, so the
+  policy still decides what comes back. The count is not re-read, so its hand-written scope has its
   own test (another location's and deleted rows never counted). Anything else stays under the policy: a status or
   date filter uses `=`, `<` or `>`, which are leakproof.
 - The policies, by kind of table: location-scoped (`customers`, `bins`, `part_inventories`): dealer and location;

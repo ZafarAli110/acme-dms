@@ -140,8 +140,23 @@ function someCustomer(person: Person): KnownCustomer | undefined {
 const READS: Kind[] = [
   {
     name: "customers list",
-    weight: 35,
+    weight: 30,
     call: (person) => ({ method: "GET", path: customers(`page=${pickPage(person.place.lastPage)}`) }),
+  },
+  {
+    // A list view asks its total once (ACME-117): the plain list, or a filter (a search's page counts for itself).
+    name: "customers count",
+    weight: 8,
+    call: (person) => {
+      const city = someCustomer(person)?.city;
+      return {
+        method: "GET",
+        path:
+          Math.random() < 0.6 || !city
+            ? "/api/dealership/v1/customers/count"
+            : `/api/dealership/v1/customers/count?filterField=city&filterOperator=equals&filterValue=${encodeURIComponent(city)}`,
+      };
+    },
   },
   {
     name: "customer search",
@@ -187,12 +202,12 @@ const READS: Kind[] = [
   { name: "recent customers", weight: 5, call: () => ({ method: "GET", path: "/api/dealership/v1/customers/recent" }) },
   {
     name: "parts list",
-    weight: 10,
+    weight: 9,
     call: () => ({ method: "GET", path: `/api/dealership/v1/parts?page=${pick(1, 3)}&pageSize=${PAGE_SIZE}` }),
   },
   {
     name: "one part",
-    weight: 7,
+    weight: 6,
     call: (person) => {
       const partId = oneOf(person.place.partIds);
       return {
@@ -201,7 +216,7 @@ const READS: Kind[] = [
       };
     },
   },
-  { name: "stock value", weight: 5, call: () => ({ method: "GET", path: "/api/dealership/v1/parts/stock-value" }) },
+  { name: "stock value", weight: 4, call: () => ({ method: "GET", path: "/api/dealership/v1/parts/stock-value" }) },
   { name: "who am I", weight: 3, call: () => ({ method: "GET", path: "/api/identity/v1/users/me" }) },
 ];
 
@@ -363,9 +378,19 @@ async function getJsonAsync<T>(gateway: string, cookie: string, location: Locati
 
 /** Some of a location's customers (from the first, a middle and the last page) and parts, and its last page. */
 async function placeAsync(gateway: string, cookie: string, location: Location): Promise<Place> {
-  type Page = { items?: KnownCustomer[]; total?: number };
+  type Page = { items?: KnownCustomer[] };
   const first = await getJsonAsync<Page>(gateway, cookie, location, customers("page=1"));
-  const total = typeof first.total === "number" ? first.total : PAGE_SIZE;
+  // The total is the count endpoint's (ACME-117); without one the test would never send a deep page.
+  const counted = await getJsonAsync<{ total?: number }>(
+    gateway,
+    cookie,
+    location,
+    "/api/dealership/v1/customers/count",
+  );
+  if (typeof counted.total !== "number") {
+    throw new Error(`The customer count at ${location.name} gave no total.`);
+  }
+  const total = counted.total;
   const lastPage = Math.max(1, Math.min(LAST_REACHABLE_PAGE, Math.ceil(total / PAGE_SIZE)));
   const later = await Promise.all(
     [...new Set([Math.ceil(lastPage / 2), pick(1, lastPage), lastPage])]

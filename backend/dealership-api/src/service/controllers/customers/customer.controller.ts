@@ -12,11 +12,16 @@ import {
   GET_CUSTOMER_QUERY_HANDLER,
   type IGetCustomerQueryHandler,
 } from "#business-logic-abstractions/handlers/customers/get/get-customer.query-handler.interface";
+import {
+  COUNT_CUSTOMERS_QUERY_HANDLER,
+  type ICountCustomersQueryHandler,
+} from "#business-logic-abstractions/handlers/customers/count/count-customers.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
+import type { CustomerCountResponseDto } from "#dto/customers/customer-count-response.dto";
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
+import type { CustomerPageResponseDto } from "#dto/customers/customer-page-response.dto";
 import type { CustomerResponseDto } from "#dto/customers/customer-response.dto";
 import { ListQuerySchema, type ListQueryDto } from "#dto/paging/list-query.dto";
-import type { PageResponseDto } from "#dto/paging/page-response.dto";
 import { CurrentUser } from "../../authorization/current-user.decorator";
 import { RequirePermission } from "../../authorization/require-permission.decorator";
 import { Timeout } from "@nestjs/resilience";
@@ -28,15 +33,18 @@ export class CustomerController {
   private readonly _getCustomerListQueryHandler: IGetCustomerListQueryHandler;
   private readonly _getRecentCustomersQueryHandler: IGetRecentCustomersQueryHandler;
   private readonly _getCustomerQueryHandler: IGetCustomerQueryHandler;
+  private readonly _countCustomersQueryHandler: ICountCustomersQueryHandler;
 
   public constructor(
     @Inject(GET_CUSTOMER_LIST_QUERY_HANDLER) getCustomerListQueryHandler: IGetCustomerListQueryHandler,
     @Inject(GET_RECENT_CUSTOMERS_QUERY_HANDLER) getRecentCustomersQueryHandler: IGetRecentCustomersQueryHandler,
     @Inject(GET_CUSTOMER_QUERY_HANDLER) getCustomerQueryHandler: IGetCustomerQueryHandler,
+    @Inject(COUNT_CUSTOMERS_QUERY_HANDLER) countCustomersQueryHandler: ICountCustomersQueryHandler,
   ) {
     this._getCustomerListQueryHandler = getCustomerListQueryHandler;
     this._getRecentCustomersQueryHandler = getRecentCustomersQueryHandler;
     this._getCustomerQueryHandler = getCustomerQueryHandler;
+    this._countCustomersQueryHandler = countCustomersQueryHandler;
   }
 
   @Get()
@@ -44,8 +52,22 @@ export class CustomerController {
   public findAllAsync(
     @CurrentUser() userContext: UserContext,
     @Query({ schema: ListQuerySchema }) query: ListQueryDto,
-  ): Promise<PageResponseDto<CustomerListItemDto>> {
+  ): Promise<CustomerPageResponseDto> {
     return this._getCustomerListQueryHandler.executeAsync(userContext, query);
+  }
+
+  /**
+   * How many customers the search and filter match: exact up to 10,000, 10,001 past it ("10,000+"). Asked once per
+   * search and filter, not on every page (ACME-117); the page and the sort do not change it. Declared before
+   * `:customerId` so it matches first.
+   */
+  @Get("count")
+  @RequirePermission("customers.read")
+  public countAsync(
+    @CurrentUser() userContext: UserContext,
+    @Query({ schema: ListQuerySchema }) query: ListQueryDto,
+  ): Promise<CustomerCountResponseDto> {
+    return this._countCustomersQueryHandler.executeAsync(userContext, query);
   }
 
   /** The customers contacted most recently, for the home page. Declared before `:customerId` so it matches first. */

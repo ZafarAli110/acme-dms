@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
-import { FIRST_PAGE, type ListParams } from "../../../core/paging/listParams";
+import type { ListParams } from "../../../core/paging/listParams";
+import type { CustomerQuestion } from "../types/customer";
 import { customerQueries } from "./customerQueries";
 import { CUSTOMER_QUERY_KEYS } from "./customerQueryKey";
 
@@ -13,12 +14,11 @@ export const customerQueryOptions = {
       queryKey: CUSTOMER_QUERY_KEYS.list(locationId, params),
       queryFn: ({ signal }) => customerQueries.getCustomersAsync(params, { signal, locationId }),
     }),
-  /** The first page of one: its `total` is how many customers the location has. */
-  count: (locationId: string) =>
+  /** How many customers a question matches, asked once per question rather than with every page (ACME-117). */
+  count: (locationId: string, question: CustomerQuestion) =>
     queryOptions({
-      queryKey: CUSTOMER_QUERY_KEYS.count(locationId),
-      queryFn: ({ signal }) =>
-        customerQueries.getCustomersAsync({ ...FIRST_PAGE, pageSize: 1 }, { signal, locationId }),
+      queryKey: CUSTOMER_QUERY_KEYS.count(locationId, question),
+      queryFn: ({ signal }) => customerQueries.countCustomersAsync(question, { signal, locationId }),
     }),
   recent: (locationId: string) =>
     queryOptions({
