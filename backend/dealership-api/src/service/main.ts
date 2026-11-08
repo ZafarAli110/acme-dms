@@ -10,7 +10,12 @@ import { settings } from "#settings/settings";
 
 // The HTTP adapter is chosen here and nowhere else.
 async function bootstrapAsync(): Promise<void> {
-  const app = await NestFactory.create<NestNodeApplication>(AppModule, new NodeAdapter(), { bufferLogs: true });
+  // return503OnClosing: once shutting down (SIGTERM), new requests get 503 at once, so a load balancer moves them, while
+  // those in flight finish (the NestJS production checklist, 3; ACME-121).
+  const app = await NestFactory.create<NestNodeApplication>(AppModule, new NodeAdapter(), {
+    bufferLogs: true,
+    return503OnClosing: true,
+  });
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
   if (settings.serveSwagger) {

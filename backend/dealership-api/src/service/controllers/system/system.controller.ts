@@ -29,7 +29,21 @@ export class SystemController {
     this._getUserContextQueryHandler = getUserContextQueryHandler;
   }
 
-  /** 200 when it can do its work, 503 when degraded: the status code is what Aspire and a load balancer read. */
+  /**
+   * Liveness: 200 while the process answers at all. It never touches the database, so an orchestrator restarts a copy
+   * only when the process itself is stuck, never because the database is slow or down: that would restart every copy
+   * at once (the NestJS production checklist, 17; ACME-121). Readiness is `health`.
+   */
+  @Public()
+  @Get("alive")
+  public findAlive(): { service: string; status: "alive" } {
+    return { service: "dealership-api", status: "alive" };
+  }
+
+  /**
+   * Readiness: 200 when it can do its work, 503 when degraded: the status code is what Aspire and a load balancer read.
+   * The database check runs on a connection of its own, so a full pool on a busy morning does not make it red.
+   */
   @Public()
   @Get("health")
   public async findHealthAsync(@Res({ passthrough: true }) response: ServerResponse): Promise<HealthCheckResponseDto> {

@@ -62,7 +62,7 @@ export class GetHealthQueryHandler implements IGetHealthQueryHandler {
   /** How many exports have waited too long, or "unreachable". As the owner: a health check has no dealer to scope to. */
   private async checkAsync(): Promise<number | "unreachable"> {
     try {
-      await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
+      await using work = await this._unitOfWorkFactory.beginHealthCheckAsync();
       const [row] = await work.db
         .select({ waiting: sql<number>`count(*)::int` })
         .from(exportJobs)

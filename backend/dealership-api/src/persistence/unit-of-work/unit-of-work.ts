@@ -25,10 +25,16 @@ export type Database = NodePgDatabase;
 export class UnitOfWork implements AsyncDisposable {
   public readonly db: Database;
   private readonly _client: PoolClient;
+  private readonly _beforeRelease: () => Promise<void>;
   private _committed = false;
 
-  public constructor(client: PoolClient) {
+  /**
+   * `beforeRelease` runs when the unit of work ends, before its connection goes back to the pool: the factory stops
+   * listening for the request's abort there, so a late abort can never cancel another request's statement on it.
+   */
+  public constructor(client: PoolClient, beforeRelease: () => Promise<void> = () => Promise.resolve()) {
     this._client = client;
+    this._beforeRelease = beforeRelease;
     this.db = drizzle({ client });
   }
 
@@ -52,6 +58,7 @@ export class UnitOfWork implements AsyncDisposable {
   }
 
   public async [Symbol.asyncDispose](): Promise<void> {
+    await this._beforeRelease();
     if (this._committed) {
       this._client.release();
       return;

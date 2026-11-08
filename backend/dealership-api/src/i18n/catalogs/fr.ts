@@ -74,6 +74,7 @@ export const fr: Messages = {
     invalidValue: "Une valeur est manquante ou n'est pas autorisée.",
     changedConcurrently: "L'enregistrement a été modifié au même moment par quelqu'un d'autre. Réessayez.",
     unavailable: "La base de données est occupée ou indisponible. Réessayez dans un instant.",
+    busy: "Le système est occupé. Rien n’a été modifié : réessayez dans un instant.",
     unexpected: "Une erreur inattendue s'est produite",
     partNumberExists: "Une pièce avec cette référence existe déjà dans votre catalogue.",
     binCodeExists: "Un emplacement avec ce code existe déjà sur ce site.",

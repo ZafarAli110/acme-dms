@@ -9,6 +9,12 @@ export interface IUnitOfWorkFactory {
    * anything a user's own token could reach.
    */
   beginAsync(options?: { readOnly: boolean; asOwner?: boolean }): Promise<UnitOfWork>;
+
+  /**
+   * A read-only unit of work as the owner on the health check's own connection (ACME-121): it answers whether the
+   * database does, never whether the pools are full.
+   */
+  beginHealthCheckAsync(): Promise<UnitOfWork>;
 }
 
 export const UNIT_OF_WORK_FACTORY = Symbol("IUnitOfWorkFactory");

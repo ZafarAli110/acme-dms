@@ -7,6 +7,10 @@
 //   bun run load-test --target-rps 3300 --target-p95 300     sends at 3,300 a second; exits 1 when fewer are answered,
 //                                                            p95 is over 300 ms, or more than 1% fail
 //   bun run load-test --writes 5                             5% of requests add or edit a customer (they stay)
+//   bun run load-test --rate 260 --writes 5 --calm 10        10 s at a tenth of the rate before and after: recovery
+//
+// A 503 that says the system is busy (`urn:acme:error:busy`, ACME-121) is counted as "busy", apart from failures: it
+// is an answer within its wait, which the web tries again.
 //
 // It sends at a fixed rate, as a busy morning arrives: people do not wait for each other, so a slow answer does not
 // slow the next request down, it only waits longer itself. A request's time counts from when it was due, so a test
@@ -33,6 +37,8 @@ interface Options {
   rate: number;
   seconds: number;
   warmUp: number;
+  /** Seconds at a tenth of the rate before and after the rush, each timed on its own: does it recover? (ACME-121) */
+  calm: number;
   timeoutMs: number;
   writes: number;
   targetRps: number | null;
@@ -77,6 +83,9 @@ interface Kind {
   weight: number;
   call: (person: Person) => Call;
 }
+
+/** The parts of a run: a calm phase before and after the rush (`--calm`), the warm-up, the rush that is counted. */
+type Phase = "calm before" | "warm-up" | "rush" | "calm after";
 
 interface Tally {
   times: number[];
@@ -251,7 +260,7 @@ const WRITES: Kind[] = [
 ];
 
 const USAGE =
-  "Usage: bun run load-test [--rate N] [--people N] [--seconds N] [--warm-up N] [--timeout ms] [--writes %] " +
+  "Usage: bun run load-test [--rate N] [--people N] [--seconds N] [--warm-up N] [--calm N] [--timeout ms] [--writes %] " +
   "[--target-rps N] [--target-p95 ms]";
 
 function parseOptions(argv: string[]): Options {
@@ -260,6 +269,7 @@ function parseOptions(argv: string[]): Options {
     rate: 0,
     seconds: 60,
     warmUp: 10,
+    calm: 0,
     timeoutMs: 10_000,
     writes: 0,
     targetRps: null,
@@ -272,7 +282,7 @@ function parseOptions(argv: string[]): Options {
       console.error(`--in-flight is gone: the test now sends at a fixed rate (--rate N a second). ${USAGE}`);
       process.exit(1);
     }
-    const allowsZero = flag === "--warm-up" || flag === "--writes";
+    const allowsZero = flag === "--warm-up" || flag === "--writes" || flag === "--calm";
     if (!Number.isFinite(value) || value < 0 || (value === 0 && !allowsZero)) {
       console.error(`${flag} takes a ${allowsZero ? "" : "positive "}number. ${USAGE}`);
       process.exit(1);
@@ -289,6 +299,9 @@ function parseOptions(argv: string[]): Options {
         break;
       case "--warm-up":
         options.warmUp = value;
+        break;
+      case "--calm":
+        options.calm = value;
         break;
       case "--timeout":
         options.timeoutMs = value;
@@ -434,8 +447,31 @@ function tallyOf(tallies: Map<string, Tally>, name: string): Tally {
   return created;
 }
 
+/**
+ * What a status says: "busy" for a 503 that is the system saying so (`urn:acme:error:busy`, ACME-121: an answer within
+ * its wait, worth trying again), apart from failures; any other status as its number.
+ */
+export function classify(status: number, body: string): string {
+  if (status === 503) {
+    try {
+      if ((JSON.parse(body) as { type?: unknown }).type === "urn:acme:error:busy") {
+        return "busy";
+      }
+    } catch {
+      // Not a problem document: an ordinary 503.
+    }
+  }
+  return String(status);
+}
+
 function failures(tally: Tally): number {
-  return [...tally.statuses].filter(([status]) => !status.startsWith("2")).reduce((sum, [, count]) => sum + count, 0);
+  return [...tally.statuses]
+    .filter(([status]) => !status.startsWith("2") && status !== "busy")
+    .reduce((sum, [, count]) => sum + count, 0);
+}
+
+function busy(tally: Tally): number {
+  return tally.statuses.get("busy") ?? 0;
 }
 
 function row(name: string, tally: Tally): string {
@@ -444,7 +480,20 @@ function row(name: string, tally: Tally): string {
   return `| ${name} | ${sorted.length} | ${failures(tally)} | ${times.join(" | ")} | ${(sorted.at(-1) ?? 0).toFixed(0)} |`;
 }
 
+/**
+ * Bun's fetch sends at most 256 requests at once unless told otherwise (`BUN_CONFIG_MAX_HTTP_REQUESTS`): past that the
+ * test queues its own requests and counts the wait as the system's (at 300 a second it showed 7 s where the services
+ * took 1). `bun run load-test` sets it; run directly, the test says so.
+ */
+const CLIENT_MAX_REQUESTS = 8192;
+
 async function main(): Promise<void> {
+  if (Number(process.env.BUN_CONFIG_MAX_HTTP_REQUESTS ?? 256) < CLIENT_MAX_REQUESTS) {
+    console.warn(
+      `Bun sends at most ${process.env.BUN_CONFIG_MAX_HTTP_REQUESTS ?? 256} requests at once: run it as \`bun run load-test\`, ` +
+        `which sets BUN_CONFIG_MAX_HTTP_REQUESTS=${CLIENT_MAX_REQUESTS}, or the times include the test's own queue.`,
+    );
+  }
   const options = parseOptions(process.argv.slice(2));
   const gateway = resourceUrl("gateway-api", "http");
   // Now, not when watching starts: the lookup blocks while it asks the Aspire CLI, and the test would fall behind.
@@ -467,9 +516,16 @@ async function main(): Promise<void> {
   const writes = WRITES.flatMap((kind) => Array.from({ length: kind.weight }, () => kind));
   const byKind = new Map<string, Tally>();
   const byLocation = new Map<string, Tally>();
-  const total = Math.floor(options.rate * (options.warmUp + options.seconds));
   const started = performance.now();
-  const countFrom = started + options.warmUp * 1000;
+  const calmTallies = new Map<Phase, Tally>(
+    options.calm > 0
+      ? [
+          ["calm before", { times: [], statuses: new Map() }],
+          ["calm after", { times: [], statuses: new Map() }],
+        ]
+      : [],
+  );
+  let phaseNow: Phase = "warm-up";
   const inFlight = new Set<Promise<void>>();
   let sent = 0;
   let answered = 0;
@@ -479,13 +535,13 @@ async function main(): Promise<void> {
   const watching: { watch: LoadWatch | null } = { watch: null };
   const cpuAtStart = process.cpuUsage();
 
-  const sendAsync = async (dueAt: number): Promise<void> => {
+  const sendAsync = async (dueAt: number, phase: Phase): Promise<void> => {
     const person = oneOf(people);
     const kind = options.writes > 0 && Math.random() * 100 < options.writes ? oneOf(writes) : oneOf(reads);
     if (!person || !kind) {
       return;
     }
-    const counted = dueAt >= countFrom;
+    const counted = phase === "rush";
     if (counted) {
       mostBehindMs = Math.max(mostBehindMs, performance.now() - dueAt);
     }
@@ -505,7 +561,7 @@ async function main(): Promise<void> {
         signal: AbortSignal.timeout(options.timeoutMs),
       });
       const text = await response.text();
-      status = String(response.status);
+      status = classify(response.status, text);
       if (response.ok && call.remember) {
         call.remember(JSON.parse(text));
       }
@@ -513,11 +569,16 @@ async function main(): Promise<void> {
       status = error instanceof Error && error.name === "TimeoutError" ? "timeout" : "no answer";
     }
     answered += 1;
+    // From when it was due, not when it went: a test that fell behind cannot hide it in the times.
+    const time = performance.now() - dueAt;
+    const calm = calmTallies.get(phase);
+    if (calm) {
+      calm.times.push(time);
+      calm.statuses.set(status, (calm.statuses.get(status) ?? 0) + 1);
+    }
     if (!counted) {
       return;
     }
-    // From when it was due, not when it went: a test that fell behind cannot hide it in the times.
-    const time = performance.now() - dueAt;
     for (const tally of [tallyOf(byKind, kind.name), tallyOf(byLocation, person.place.location.name)]) {
       tally.times.push(time);
       tally.statuses.set(status, (tally.statuses.get(status) ?? 0) + 1);
@@ -526,36 +587,50 @@ async function main(): Promise<void> {
 
   const ticker = setInterval(() => {
     const elapsed = (performance.now() - started) / 1000;
-    const phase = elapsed < options.warmUp ? " (warming up, not counted)" : "";
+    const label = phaseNow === "rush" ? "" : ` (${phaseNow}${phaseNow === "warm-up" ? ", not counted" : ""})`;
     const resources = watching.watch?.nowLine() ?? "";
     console.log(
-      `  ${elapsed.toFixed(0)} s${phase}: ${sent} sent, ${answered} answered, ${inFlight.size} in flight` +
+      `  ${elapsed.toFixed(0)} s${label}: ${sent} sent, ${answered} answered, ${inFlight.size} in flight` +
         (resources ? ` | ${resources}` : ""),
     );
   }, 5000);
-  const startWatch = setTimeout(() => {
-    watching.watch = watchLoad(postgresUrl);
-  }, options.warmUp * 1000);
 
-  await new Promise<void>((resolve) => {
-    const sender = setInterval(() => {
-      const due = Math.min(total, Math.floor(((performance.now() - started) / 1000) * options.rate));
-      while (sent < due) {
-        const dueAt = started + (sent * 1000) / options.rate;
-        sent += 1;
-        const request = sendAsync(dueAt).finally(() => inFlight.delete(request));
-        inFlight.add(request);
-        mostInFlight = Math.max(mostInFlight, inFlight.size);
-      }
-      if (sent >= total) {
-        clearInterval(sender);
-        resolve();
-      }
-    }, 5);
-  });
+  // Each phase at its own rate, one after the other; a request's time counts from when it was due.
+  const sendPhaseAsync = (phase: Phase, rate: number, seconds: number): Promise<void> =>
+    new Promise<void>((resolve) => {
+      phaseNow = phase;
+      const phaseStarted = performance.now();
+      const phaseTotal = Math.floor(rate * seconds);
+      let phaseSent = 0;
+      const sender = setInterval(() => {
+        const due = Math.min(phaseTotal, Math.floor(((performance.now() - phaseStarted) / 1000) * rate));
+        while (phaseSent < due) {
+          const dueAt = phaseStarted + (phaseSent * 1000) / rate;
+          phaseSent += 1;
+          sent += 1;
+          const request = sendAsync(dueAt, phase).finally(() => inFlight.delete(request));
+          inFlight.add(request);
+          mostInFlight = Math.max(mostInFlight, inFlight.size);
+        }
+        if (phaseSent >= phaseTotal) {
+          clearInterval(sender);
+          resolve();
+        }
+      }, 5);
+    });
+
+  const calmRate = Math.max(1, options.rate / 10);
+  if (options.calm > 0) {
+    await sendPhaseAsync("calm before", calmRate, options.calm);
+  }
+  await sendPhaseAsync("warm-up", options.rate, options.warmUp);
+  watching.watch = watchLoad(postgresUrl);
+  await sendPhaseAsync("rush", options.rate, options.seconds);
+  if (options.calm > 0) {
+    await sendPhaseAsync("calm after", calmRate, options.calm);
+  }
   await Promise.all(inFlight);
   clearInterval(ticker);
-  clearTimeout(startWatch);
   const whereTheTimeWent = (await watching.watch?.stopAsync()) ?? [];
   const cpu = process.cpuUsage(cpuAtStart);
   const wallSeconds = (performance.now() - started) / 1000;
@@ -568,7 +643,8 @@ async function main(): Promise<void> {
     }
   }
   const failed = failures(all);
-  const answeredInTime = all.times.length - failed;
+  const toldBusy = busy(all);
+  const answeredInTime = all.times.length - failed - toldBusy;
   const answeredRate = answeredInTime / options.seconds;
   const p95 = percentile(
     all.times.toSorted((a, b) => a - b),
@@ -577,8 +653,8 @@ async function main(): Promise<void> {
 
   console.log(
     `\nCounted ${options.seconds} s after a ${options.warmUp} s warm-up: ${all.times.length} requests sent at ` +
-      `${options.rate} a second; ${answeredInTime} answered well (${answeredRate.toFixed(0)} a second), ${failed} failed ` +
-      `(an error, or no answer within ${options.timeoutMs} ms).`,
+      `${options.rate} a second; ${answeredInTime} answered well (${answeredRate.toFixed(0)} a second), ` +
+      `${toldBusy} told "busy", ${failed} failed (an error, or no answer within ${options.timeoutMs} ms).`,
   );
   console.log(
     "\n| What | Requests | Failed | p50 ms | p95 ms | p99 ms | max ms |\n| --- | --- | --- | --- | --- | --- | --- |",
@@ -593,6 +669,16 @@ async function main(): Promise<void> {
     for (const [name, tally] of failing) {
       const statuses = [...tally.statuses].filter(([status]) => !status.startsWith("2"));
       console.log(`  ${name}: ${statuses.map(([status, count]) => `${status} × ${count}`).join(", ")}`);
+    }
+  }
+  if (calmTallies.size > 0) {
+    // Does it recover? The same calm rate before and after the rush (ACME-121: within 10 s, as fast as before).
+    console.log(
+      `\n| Calm, ${calmRate.toFixed(0)} a second | Requests | Failed | p50 ms | p95 ms | p99 ms | max ms |\n` +
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    );
+    for (const [name, tally] of calmTallies) {
+      console.log(row(name, tally));
     }
   }
   console.log(
@@ -632,4 +718,6 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+if (import.meta.main) {
+  await main();
+}

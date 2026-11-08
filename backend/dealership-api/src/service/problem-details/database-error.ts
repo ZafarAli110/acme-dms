@@ -40,6 +40,10 @@ export interface DatabaseProblem {
   status: number;
   key: MessageKey;
   detail: string;
+  /** A problem type of its own, when the status's is not precise enough ("busy" is a 503 that will pass). */
+  type?: string;
+  /** Sent as `Retry-After`: when trying again makes sense. */
+  retryAfterSeconds?: number;
 }
 
 function problem(status: number, key: MessageKey): DatabaseProblem {
@@ -51,6 +55,18 @@ const REFERENCE_PROBLEM = problem(HttpStatus.CONFLICT, "database.referenceProble
 const INVALID_VALUE = problem(HttpStatus.BAD_REQUEST, "database.invalidValue");
 const CHANGED_CONCURRENTLY = problem(HttpStatus.CONFLICT, "database.changedConcurrently");
 const DATABASE_UNAVAILABLE = problem(HttpStatus.SERVICE_UNAVAILABLE, "database.unavailable");
+/**
+ * Every connection a request may use was taken for longer than its wait (ACME-121): the system is busy, not down. Said
+ * before the transaction began, so nothing was written; worth trying again in a second.
+ */
+const DATABASE_BUSY: DatabaseProblem = {
+  ...problem(HttpStatus.SERVICE_UNAVAILABLE, "database.busy"),
+  type: "urn:acme:error:busy",
+  retryAfterSeconds: 1,
+};
+
+/** What persistence throws for "busy" (`DatabaseBusyError`), recognised by its name: the service may not import it. */
+const BUSY_ERROR_NAME = "DatabaseBusyError";
 
 const PROBLEM_BY_CODE: Readonly<Record<string, DatabaseProblem>> = {
   [POSTGRES_ERROR.UNIQUE_VIOLATION]: ALREADY_EXISTS,
@@ -90,6 +106,9 @@ const SQLSTATE = /^[0-9A-Z]{5}$/;
  * (it is then a 500 like any unexpected error).
  */
 export function resolveDatabaseProblem(exception: unknown): DatabaseProblem | null {
+  if (isBusy(exception)) {
+    return DATABASE_BUSY;
+  }
   const postgresError = findPostgresError(exception);
   if (!postgresError) {
     return null;
@@ -121,4 +140,16 @@ function findPostgresError(exception: unknown): PostgresDriverError | null {
     current = current.cause;
   }
   return null;
+}
+
+/** The exception is, or was caused by, persistence's "busy": no connection came free in time. */
+function isBusy(exception: unknown): boolean {
+  let current: unknown = exception;
+  for (let depth = 0; depth <= MAX_CAUSE_DEPTH && current instanceof Error; depth++) {
+    if (current.name === BUSY_ERROR_NAME) {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
 }

@@ -79,8 +79,12 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     });
 
     response.setHeader("content-type", "application/problem+json");
-    if (exception instanceof TooManyRequestsException) {
-      response.setHeader("retry-after", String(exception.retryAfterSeconds));
+    const retryAfterSeconds =
+      exception instanceof TooManyRequestsException
+        ? exception.retryAfterSeconds
+        : resolveDatabaseProblem(exception)?.retryAfterSeconds;
+    if (retryAfterSeconds) {
+      response.setHeader("retry-after", String(retryAfterSeconds));
     }
     response.status(status).end(JSON.stringify(problem));
   }
@@ -95,7 +99,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
   private buildProblemDetails(exception: unknown, request: ProblemRequest, status: number): ProblemDetailsDto {
     const location = request.headers["x-location-id"];
     return {
-      type: PROBLEM_TYPE_BY_STATUS[status] ?? DEFAULT_PROBLEM_TYPE,
+      type: this.resolveType(exception, status),
       title: STATUS_CODES[status] ?? "Error",
       status,
       detail: this.resolveDetail(exception),
@@ -105,6 +109,12 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       traceId: trace.getActiveSpan()?.spanContext().traceId ?? null,
       timestamp: toIsoString(this._clock.now()),
     };
+  }
+
+  /** The status's type, unless a database problem has a more precise one ("busy"). */
+  private resolveType(exception: unknown, status: number): string {
+    const precise = exception instanceof HttpException ? undefined : resolveDatabaseProblem(exception)?.type;
+    return precise ?? PROBLEM_TYPE_BY_STATUS[status] ?? DEFAULT_PROBLEM_TYPE;
   }
 
   /** The detail in the request's language (`Accept-Language`); the log keeps the English one. */

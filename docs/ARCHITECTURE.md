@@ -214,6 +214,15 @@ API copies in front of a full database only queue more queries on it. Measure, t
   sign-ins a minute, the gateway's 500 requests a second), so the test would measure the limiter, not the system.
   `bun run start:prod --load-test` raises those two; the share per sign-in stays, so a 429 still means one person
   asked for more than a person would. Production keeps every limit: there the load comes from many addresses.
+- **Past capacity, answer quickly and do the saves first (ACME-121).** Each dealership-api copy has 5 connections, as
+  many queries as Postgres's cores run well once there are 4 copies (more only run slower), and keeps 2 of them for saves (any request but GET and HEAD, its reads included), so lists can never take them all; a list
+  waits at most 1.5 s for a connection and a save 5 s, then is answered 503 `urn:acme:error:busy` with `Retry-After`
+  before anything is written. When a caller goes away (a closed page, a client's timeout), its running statement is
+  cancelled, so the queue holds no answers nobody will read. The health check (readiness) and the cancels have a
+  connection each, so a full pool never looks like a slow database; liveness (`/v1/system/alive`) never touches the
+  database, so an outage does not restart every copy; a copy shutting down answers new requests 503 at once while
+  those in flight finish. The gateway gives a service 15 s. Without this, past capacity the system answered fewer
+  requests than at capacity (45 a second at 300 sent, against 150 at 150).
 - **A laptop says before against after, not the absolute number.** On one machine the database is a loopback call
   away (in the cloud each round trip costs about a millisecond, and a request makes about three), the disk has no IOPS
   cap, Postgres keeps its container defaults, and the load test shares the CPU with the system it measures. Use local
@@ -227,7 +236,7 @@ API copies in front of a full database only queue more queries on it. Measure, t
   requests, so any copy can answer any request; sessions and leases live in Postgres.
 - **Starting together is safe.** Each copy migrates the database when it starts, under one Postgres advisory lock: one
   migrates, the others wait and find nothing to do. A rolling deploy relies on the same lock.
-- **Connections are counted.** Each copy holds up to `DATABASE_MAX_CONNECTIONS` (10); the AppHost gives Postgres room
+- **Connections are counted.** Each copy holds up to `DATABASE_MAX_CONNECTIONS` (5) plus 2 for health and cancels; the AppHost gives Postgres room
   for 300. In production, with many copies, put PgBouncer in transaction mode in front of Postgres: the request's
   scope is set per transaction (`set_config(..., true)`), so a pooled connection never carries one request's dealer and
   location into the next.

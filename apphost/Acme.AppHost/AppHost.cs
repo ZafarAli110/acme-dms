@@ -6,7 +6,7 @@ var username = builder.AddParameter("dev-username", "acme");
 var password = builder.AddParameter("dev-password", "acme", secret: true);
 
 // Infrastructure (containers)
-// Room for every instance's pool: each dealership-api holds up to DATABASE_MAX_CONNECTIONS (10), and the .NET services
+// Room for every instance's pool: each dealership-api holds up to DATABASE_MAX_CONNECTIONS (5) plus 2 control connections, and the .NET services
 // their own. Postgres allows 100 by default.
 // pg_stat_statements: Postgres's own record of which statements took its time (`bun run sql:top`). Loaded at start, so
 // it is an argument here; managed Postgres (Azure, RDS, Cloud SQL) offers the same extension.

@@ -76,6 +76,7 @@ export const en = {
     invalidValue: "A value is missing or not allowed.",
     changedConcurrently: "The record was changed at the same time by someone else. Try again.",
     unavailable: "The database is busy or unavailable. Try again shortly.",
+    busy: "The system is busy. Nothing was changed: try again in a moment.",
     unexpected: "An unexpected error occurred",
     partNumberExists: "A part with this part number already exists in your catalogue.",
     binCodeExists: "A bin with this code already exists at this location.",

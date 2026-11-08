@@ -5,6 +5,9 @@ import { fixedClock } from "#test-setup/time/fixed-clock";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { GetHealthQueryHandler } from "../get-health.query-handler";
 
+const refused = (): Promise<never> => Promise.reject(new Error("connection refused"));
+const never = (): Promise<never> => new Promise<never>(() => undefined);
+
 describe("GetHealthQueryHandler", () => {
   const database = useTestDatabase();
 
@@ -18,7 +21,7 @@ describe("GetHealthQueryHandler", () => {
   });
 
   it("reports degraded when the database does not answer", async () => {
-    const unreachable: IUnitOfWorkFactory = { beginAsync: () => Promise.reject(new Error("connection refused")) };
+    const unreachable: IUnitOfWorkFactory = { beginAsync: refused, beginHealthCheckAsync: refused };
 
     await expect(new GetHealthQueryHandler(unreachable, fixedClock()).executeAsync()).resolves.toMatchObject({
       status: "degraded",
@@ -27,13 +30,26 @@ describe("GetHealthQueryHandler", () => {
   });
 
   it("reports degraded when the database takes too long to answer: barely answering is as bad as down", async () => {
-    const hanging: IUnitOfWorkFactory = { beginAsync: () => new Promise(() => undefined) };
+    const hanging: IUnitOfWorkFactory = { beginAsync: never, beginHealthCheckAsync: never };
 
     await expect(new GetHealthQueryHandler(hanging, fixedClock()).executeAsync()).resolves.toMatchObject({
       status: "degraded",
       databaseReachable: false,
     });
   }, 10_000);
+
+  // ACME-121: on a busy morning every request connection can be taken; the check asks only its own connection.
+  it("asks only the health check's own connection, never the request connections, which may all be busy", async () => {
+    const busyRequests: IUnitOfWorkFactory = {
+      beginAsync: never,
+      beginHealthCheckAsync: () => database.unitOfWorkFactory.beginHealthCheckAsync(),
+    };
+
+    await expect(new GetHealthQueryHandler(busyRequests, fixedClock()).executeAsync()).resolves.toMatchObject({
+      status: "ok",
+      databaseReachable: true,
+    });
+  });
 
   // Last: the export it queues stays in this file's database.
   it("reports degraded when an export has waited minutes for the worker: background work has stopped", async () => {

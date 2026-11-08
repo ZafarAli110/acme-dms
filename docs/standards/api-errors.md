@@ -27,6 +27,7 @@ exactly these fields (always present; `null` when unknown):
 | `urn:acme:error:too-many-requests`   | 429    |
 | `urn:acme:error:internal`            | 500    |
 | `urn:acme:error:service-unavailable` | 503    |
+| `urn:acme:error:busy`                | 503    |
 
 - Unexpected errors (500) never expose internals: `detail` is "An unexpected error occurred". The real error is in the
   logs and the trace — search the dashboard for the `traceId`.

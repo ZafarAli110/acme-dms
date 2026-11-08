@@ -1,10 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runWithDataScope } from "#request-scope/data-scope";
 import { createTestDatabaseAsync, type TestDatabase } from "#test-setup/postgres/test-database";
 import { NORTHSIDE, NORTHWIND, SEEDED_AT, TEST_USER_ID } from "#test-setup/postgres/seed-kit";
 import { bins } from "#persistence/schema/bins";
-import { createDatabasePool } from "../database-pool";
+import { DatabaseBusyError } from "../database-busy.error";
+import { createDatabasePool, createDatabasePools, type DatabasePools } from "../database-pool";
 import { UnitOfWorkFactory } from "../unit-of-work.factory";
 
 const AUDIT = { createdAt: SEEDED_AT, createdBy: TEST_USER_ID, updatedAt: SEEDED_AT, updatedBy: TEST_USER_ID };
@@ -110,5 +112,156 @@ describe("UnitOfWork", () => {
     await work.db.insert(bins).values(newBin("I-01"));
     await work.commitAsync();
     expect(await binExistsAsync("I-01")).toBe(true);
+  });
+});
+
+const asRequest = <T>(saves: boolean, run: () => Promise<T>, signal = new AbortController().signal): Promise<T> =>
+  runWithDataScope(run, { saves, signal, connectBy: null });
+
+// ACME-121: which connections a unit of work may use, how long it waits, and stopping the work of a caller who left.
+describe("UnitOfWorkFactory on a busy system", () => {
+  let database: TestDatabase;
+  let pools: DatabasePools;
+  let factory: UnitOfWorkFactory;
+  const waits = { listMs: 300, saveMs: 300, backgroundMs: 300 };
+
+  beforeAll(async () => {
+    database = await createTestDatabaseAsync();
+    // One connection for lists, one kept for saves.
+    pools = createDatabasePools(database.connectionString, {
+      maxConnections: 2,
+      saveConnections: 1,
+      connectionTimeoutMs: 10_000,
+      statementTimeoutMs: null,
+    });
+    factory = new UnitOfWorkFactory(pools, waits);
+  });
+
+  afterAll(async () => {
+    await Promise.all(Object.values(pools).map((pool) => pool.end()));
+    await database[Symbol.asyncDispose]();
+  });
+
+  it("answers a list busy when no list connection comes free within its wait", async () => {
+    const held = await pools.lists.connect();
+    try {
+      const started = performance.now();
+      await expect(asRequest(false, () => factory.beginAsync({ readOnly: true }))).rejects.toBeInstanceOf(
+        DatabaseBusyError,
+      );
+      expect(performance.now() - started).toBeLessThan(1_000);
+    } finally {
+      held.release();
+    }
+  });
+
+  it("gives a request one wait for all its units of work, so busy comes within one wait, not one per unit", async () => {
+    const started = performance.now();
+    const held = await pools.lists.connect();
+    setTimeout(() => held.release(), 250);
+    const failure = await asRequest(false, async () => {
+      {
+        // Waits about 250 ms of its 300, until the held connection comes back.
+        await using first = await factory.beginAsync({ readOnly: true });
+        await first.db.execute(sql`select pg_sleep(0.1)`);
+      }
+      const second = await pools.lists.connect();
+      try {
+        // The connection is taken again: the second unit of work has only what is left of the wait.
+        await factory.beginAsync({ readOnly: true });
+        return null;
+      } finally {
+        second.release();
+      }
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(DatabaseBusyError);
+    expect(performance.now() - started).toBeLessThan(800);
+  });
+
+  it("lets a save, its reads included, through on the connections kept for saves while every list one is busy", async () => {
+    const held = await pools.lists.connect();
+    try {
+      const read = await asRequest(true, async () => {
+        // A save handler reads before and after it writes (update-part does): a read-only unit of work in a save.
+        await using work = await factory.beginAsync({ readOnly: true });
+        const result = await work.db.execute<{ one: number }>(sql`select 1 as one`);
+        return result.rows[0];
+      });
+
+      expect(read).toEqual({ one: 1 });
+    } finally {
+      held.release();
+    }
+  });
+
+  it("never answers work outside a request busy: it waits, and fails plainly when nothing comes free", async () => {
+    const held = await pools.saves.connect();
+    try {
+      const failure = await factory.beginAsync().catch((error: unknown) => error);
+
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure).not.toBeInstanceOf(DatabaseBusyError);
+    } finally {
+      held.release();
+    }
+  });
+
+  it("opens the health check within 2 s while every list and save connection is held and cancels are running", async () => {
+    const held = await Promise.all([pools.lists.connect(), pools.saves.connect()]);
+    const cancels = Array.from({ length: 20 }, () =>
+      pools.cancels.query("SELECT pg_sleep(0.05), pg_cancel_backend(0)"),
+    );
+    try {
+      const started = performance.now();
+      {
+        await using work = await factory.beginHealthCheckAsync();
+        await work.db.execute(sql`select 1`);
+      }
+      expect(performance.now() - started).toBeLessThan(2_000);
+    } finally {
+      for (const client of held) {
+        client.release();
+      }
+      await Promise.all(cancels);
+    }
+  });
+
+  it("cancels the running statement when the caller goes away", async () => {
+    const callerGone = new AbortController();
+    const started = performance.now();
+    const sleeping = asRequest(
+      false,
+      async () => {
+        await using work = await factory.beginAsync({ readOnly: true });
+        await work.db.execute(sql`select pg_sleep(30)`);
+      },
+      callerGone.signal,
+    );
+    setTimeout(() => callerGone.abort(), 200);
+
+    await expect(sleeping).rejects.toThrow();
+    expect(performance.now() - started).toBeLessThan(3_000);
+  });
+
+  it("cancels nothing once the unit of work has ended, though the next request now uses its connection", async () => {
+    const firstCaller = new AbortController();
+    await asRequest(
+      false,
+      async () => {
+        await using work = await factory.beginAsync({ readOnly: true });
+        await work.db.execute(sql`select 1`);
+      },
+      firstCaller.signal,
+    );
+
+    const next = asRequest(false, async () => {
+      await using work = await factory.beginAsync({ readOnly: true });
+      await work.db.execute(sql`select pg_sleep(0.5)`);
+      return "finished";
+    });
+    setTimeout(() => firstCaller.abort(), 100);
+
+    await expect(next).resolves.toBe("finished");
   });
 });

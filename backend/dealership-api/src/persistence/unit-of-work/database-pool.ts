@@ -42,3 +42,42 @@ export function createDatabasePool(
   });
   return pool;
 }
+
+/**
+ * The service's pools (ACME-121). Lists and searches use `lists`; saves (a request that is not a GET or HEAD) and work
+ * outside a request (the export worker, the message consumer) use `saves`, so a busy morning's lists can never take
+ * the connections a save needs. The health check and the cancelling of abandoned statements have one connection
+ * each, so neither waits behind the others, nor behind each other.
+ */
+export interface DatabasePools {
+  lists: Pool;
+  saves: Pool;
+  health: Pool;
+  cancels: Pool;
+}
+
+export interface DatabasePoolsOptions {
+  /** All of lists and saves: `DATABASE_MAX_CONNECTIONS`. */
+  maxConnections: number;
+  /** Of those, kept for saves: `DATABASE_SAVE_CONNECTIONS`. */
+  saveConnections: number;
+  /** The longest anything waits for a connection (the wait outside a request): `DATABASE_CONNECTION_TIMEOUT`. */
+  connectionTimeoutMs: number;
+  statementTimeoutMs: number | null;
+}
+
+export function createDatabasePools(connectionString: string, options: DatabasePoolsOptions): DatabasePools {
+  const pool = (maxConnections: number): Pool =>
+    createDatabasePool(connectionString, {
+      maxConnections,
+      connectionTimeoutMs: options.connectionTimeoutMs,
+      statementTimeoutMs: options.statementTimeoutMs,
+    });
+  const saveConnections = Math.min(options.saveConnections, options.maxConnections - 1);
+  return {
+    lists: pool(options.maxConnections - saveConnections),
+    saves: pool(saveConnections),
+    health: pool(1),
+    cancels: pool(1),
+  };
+}

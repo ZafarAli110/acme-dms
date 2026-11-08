@@ -32,6 +32,9 @@ export interface Environment {
   DATABASE_MAX_CONNECTIONS?: string;
   /** A duration (`10s`): how long a request waits for a free database connection before it fails. */
   DATABASE_CONNECTION_TIMEOUT?: string;
+  DATABASE_SAVE_CONNECTIONS?: string;
+  DATABASE_LIST_WAIT?: string;
+  DATABASE_SAVE_WAIT?: string;
   /** Aspire: the dealership database, as a .NET connection string. */
   ConnectionStrings__dealership?: string;
   /** Aspire: RabbitMQ's address. */
@@ -82,8 +85,14 @@ export interface Settings {
   databaseStatementTimeoutMs: number;
   /** Connections this instance keeps to the database; every running unit of work holds one. */
   databaseMaxConnections: number;
-  /** How long a unit of work waits for a free connection before failing, instead of hanging. */
+  /** How long work outside a request (the export worker, the consumer) waits for a free connection, instead of hanging. */
   databaseConnectionTimeoutMs: number;
+  /** Of `databaseMaxConnections`, the ones kept for saves, so lists can never take them all (ACME-121). */
+  databaseSaveConnections: number;
+  /** How long a request that reads waits for a connection before it is answered "busy" (503). */
+  databaseListWaitMs: number;
+  /** How long a request that saves waits for one of the save connections before it is answered "busy". */
+  databaseSaveWaitMs: number;
   /** What Aspire provides. Null outside Aspire (in a unit test); the module that needs one says so when it starts. */
   dealershipDatabase: string | null;
   rabbitmq: string | null;
@@ -124,12 +133,18 @@ export function readSettings(environment: Environment): Settings {
       environment.DATABASE_STATEMENT_TIMEOUT,
       "30s",
     ),
-    databaseMaxConnections: readWholeNumber("DATABASE_MAX_CONNECTIONS", environment.DATABASE_MAX_CONNECTIONS, 10),
+    // 5 a copy (3 for lists, 2 for saves): Postgres's CPU is the limit, and queries beyond its cores only run slower.
+    // At 300 requests a second with 4 copies, 20 connections answered every request (an answer or "busy"); 40 left
+    // 8,059 unanswered and saves failing (ACME-121).
+    databaseMaxConnections: readWholeNumber("DATABASE_MAX_CONNECTIONS", environment.DATABASE_MAX_CONNECTIONS, 5),
     databaseConnectionTimeoutMs: readDuration(
       "DATABASE_CONNECTION_TIMEOUT",
       environment.DATABASE_CONNECTION_TIMEOUT,
       "10s",
     ),
+    databaseSaveConnections: readWholeNumber("DATABASE_SAVE_CONNECTIONS", environment.DATABASE_SAVE_CONNECTIONS, 2),
+    databaseListWaitMs: readDuration("DATABASE_LIST_WAIT", environment.DATABASE_LIST_WAIT, "1500ms"),
+    databaseSaveWaitMs: readDuration("DATABASE_SAVE_WAIT", environment.DATABASE_SAVE_WAIT, "5s"),
     dealershipDatabase: environment.ConnectionStrings__dealership ?? null,
     rabbitmq: environment.ConnectionStrings__rabbitmq ?? null,
     identityApiUrl: environment["services__identity-api__http__0"] ?? null,

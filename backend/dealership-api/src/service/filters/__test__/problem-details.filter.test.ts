@@ -73,6 +73,31 @@ describe("ProblemDetailsFilter", () => {
     expect(headers["retry-after"]).toBe("30");
   });
 
+  // ACME-121: no database connection came free within the request's wait. Built by its shape: the service recognises
+  // persistence's DatabaseBusyError by name, as it may not import persistence.
+  it("answers busy with 503, its own type and Retry-After, also when the busy error is a cause", () => {
+    const busy = Object.assign(new Error("No database connection came free within 1500 ms."), {
+      name: "DatabaseBusyError",
+    });
+
+    for (const exception of [busy, new Error("Failed query", { cause: busy })]) {
+      const { status, headers, body } = captureProblem(exception);
+
+      expect(status).toBe(503);
+      expect(body.type).toBe("urn:acme:error:busy");
+      expect(body.detail).toBe("The system is busy. Nothing was changed: try again in a moment.");
+      expect(headers["retry-after"]).toBe("1");
+    }
+  });
+
+  it("keeps a database that is down apart from busy: 503 service-unavailable, no Retry-After", () => {
+    const { status, headers, body } = captureProblem(failedQuery({ code: "57P03" }));
+
+    expect(status).toBe(503);
+    expect(body.type).toBe("urn:acme:error:service-unavailable");
+    expect(headers["retry-after"]).toBeUndefined();
+  });
+
   it("hides the details of unexpected errors", () => {
     const { status, body } = captureProblem(new Error("connection string leaked here"));
 
