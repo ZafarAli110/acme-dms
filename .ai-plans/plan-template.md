@@ -3,14 +3,16 @@ The plan template. `/implement-ticket <KEY>` copies it to .ai-plans/<YYYY-MM-DD>
 example .ai-plans/2026-11-04_15-30_ACME-107_new-part-page.md, and fills it in. Every plan has this shape, in this order:
 what a reader needs first comes first. About 200 lines, a soft limit: longer means check whether it is two tickets.
 Every date and time comes from the clock (`date '+%Y-%m-%d %H:%M'`; PowerShell: `Get-Date -Format 'yyyy-MM-dd HH:mm'`), never from memory. Delete this comment and every
-<placeholder> line that does not apply ("N/A: <reason>" when a whole section does not).
+<placeholder> line that does not apply ("N/A: <reason>" when a whole section does not). The check-plan hook reads the
+plan after every edit and sends back what does not match: Status, Now, the Log's times, and what is loaded.
 -->
 
 # <KEY>: <title>
 
 **Created:** <YYYY-MM-DD HH:MM>
 
-**Status:** Draft | Waiting on answers | Waiting on a design pick | In progress | Verifying | Done
+**Status:** Draft | Waiting on answers | Waiting on a design pick | In progress | Verifying | Done (one of these, nothing
+after it: what comes next goes in Now)
 
 **Ticket:** <KEY> · **Branch:** <branch>
 
@@ -19,8 +21,8 @@ Every date and time comes from the clock (`date '+%Y-%m-%d %H:%M'`; PowerShell: 
 **Design:** No screen | Given: <the image or link on the ticket> | Follows: <existing screen> | Open: prototypes in
 `docs/prototypes/<KEY>/` → Picked: <variant>, by <who>, <date>
 
-**Now:** Done: <what a person can already see or run> · Next: <step number and what> · Blocked: None | <what, and who
-answers>
+**Now:** Done: <what a person can already see or run> · Next: <step number and what, or who does what after this plan>
+· Blocked: None | <what, and who answers> (each once, in this order)
 
 ## Requirement
 
@@ -42,6 +44,9 @@ Failure: invalid input, absent data, not allowed, another service down
 - [ ] <do X wrong> → <it refuses, and what the user sees; nothing half saved>
 
 ## Load before building
+
+Load each one and tick it before step 1: a plan In progress with a row unticked is refused. If a row turns out not
+to apply, take it out and say why in Decisions.
 
 | Item                                   | Kind     | Why                          | Loaded? |
 | -------------------------------------- | -------- | ---------------------------- | ------- |
@@ -104,5 +109,7 @@ decision; leave it out. Usually a handful; "None" is fine.
 - D1 <what was chosen, over what, and why: one line>
 
 ## Log
+
+One line per event, added at the end as it happens, each starting with the time `date` prints just then.
 
 - <YYYY-MM-DD HH:MM> <what happened, what was run, what it returned; an acceptance box's evidence goes here>
