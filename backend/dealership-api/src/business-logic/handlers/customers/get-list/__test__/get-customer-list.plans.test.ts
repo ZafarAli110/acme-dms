@@ -43,15 +43,18 @@ function nodesOf(node: PlanNode): PlanNode[] {
 }
 
 /**
- * A page never reads the table whole. The count may: to count most of a table (Northside is most of it, here and in
- * the real data) Postgres reads it in parallel, which it prices cheaper than walking that many index entries, and
- * which is right. Whether that count is quick enough at 1.6 million is the running system's to measure.
+ * A page never reads the table whole, and neither does the count (ACME-119): it stops at one row past the list's
+ * depth, so whatever Postgres reads it from, a limit ends the read. Counting Northside exactly read all 1.6 million
+ * rows on every page, and on a busy morning that took the whole database.
  */
 function expectNoFullRead(plans: Plan[]): void {
   for (const { nodes } of plans.filter((plan) => plan.isPage)) {
     expect(nodes.filter((node) => node["Node Type"] === "Seq Scan" && node["Relation Name"] === "customers")).toEqual(
       [],
     );
+  }
+  for (const { nodes } of plans.filter((plan) => !plan.isPage)) {
+    expect(nodes.some((node) => node["Node Type"] === "Limit")).toBe(true);
   }
 }
 
@@ -194,6 +197,29 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
 
       expectNoFullRead(plans);
     }
+  });
+
+  it("counts Northside up to 10,001, not its 118,400 live customers", async () => {
+    recorded.length = 0;
+    const page = await asRequest(new GetCustomerListQueryHandler(factory)).executeAsync(AT_NORTHSIDE, {
+      page: 1,
+      pageSize: 25,
+    });
+
+    expect(page.total).toBe(10_001);
+  });
+
+  // ILIKE is not leakproof: under the policy no index can serve it, so a text filter is found as the owner with the
+  // scope written out (as a search is). `=` is, so a status filter stays under the policy.
+  it("finds a text filter's ids and count as the owner, and keeps a status filter under the policy", async () => {
+    await plansAsync({ page: 1, pageSize: 25, filterField: "city", filterOperator: "equals", filterValue: "York" });
+    const city = recorded.filter((query) => !/"id" in|"id" = any/i.test(query.text));
+    await plansAsync({ page: 1, pageSize: 25, filterField: "status", filterOperator: "is", filterValue: "prospect" });
+    const status = [...recorded];
+
+    expect(city.length).toBeGreaterThan(0);
+    expect(city.every((query) => !query.asRequest)).toBe(true);
+    expect(status.every((query) => query.asRequest)).toBe(true);
   });
 
   it("finds a surname, and counts the matches, through the trigram index", async () => {

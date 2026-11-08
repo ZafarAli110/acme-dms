@@ -2,6 +2,7 @@
  * Numbers as the user's language writes them, read back the same way. Built on Intl: the separators come from
  * Intl.NumberFormat for the language (`formatToParts`), never from a list of our own.
  */
+import { MAX_LIST_DEPTH } from "../paging/listParams";
 
 /**
  * A number in the user's language: 1600 is "1,600" in English, "1 600" in French. A decimal given as text ("45.50") is
@@ -13,6 +14,14 @@ export function formatNumber(
   options?: Intl.NumberFormatOptions,
 ): string {
   return new Intl.NumberFormat(language, options).format(value);
+}
+
+/**
+ * A list's total for display, from an API that counts up to one past the list's depth: "1,234", and "10,000+" past
+ * 10,000 (the customer list, ACME-119). Only for a list whose API stops counting; another list's total is a number.
+ */
+export function formatListTotal(total: number, language: string): string {
+  return total > MAX_LIST_DEPTH ? `${formatNumber(MAX_LIST_DEPTH, language)}+` : formatNumber(total, language);
 }
 
 /** A file size in megabytes, one decimal: "12.5 MB", "12,5 Mo". */

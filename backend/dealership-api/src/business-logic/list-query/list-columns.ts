@@ -22,6 +22,20 @@ export type ListColumns = Readonly<Record<string, ListColumn>>;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** The text operators `listFilter` turns into `ILIKE`. */
+const TEXT_MATCHES: readonly string[] = ["contains", "equals", "startsWith", "endsWith"];
+
+/**
+ * Whether the query's filter matches text with `ILIKE`. `ILIKE` is not leakproof, so under row-level security Postgres
+ * applies the policy before it and no index can serve it; a list that must stay quick finds such a filter's ids as the
+ * table's owner, with the scope written out (docs/standards/multi-tenancy.md). `=`, `<` and `>` on a status or a date
+ * are leakproof and stay under the policy.
+ */
+export function matchesText(columns: ListColumns, query: ListQueryDto): boolean {
+  const column = query.filterField ? columns[query.filterField] : undefined;
+  return column?.type === "text" && TEXT_MATCHES.includes(query.filterOperator ?? "");
+}
+
 function columnFor(
   columns: ListColumns,
   field: string,

@@ -12,8 +12,8 @@ import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
-import { listFilter, listOrderBy, type ListColumns } from "../../../list-query/list-columns";
-import { pageOffset } from "../../../list-query/page-offset";
+import { listFilter, listOrderBy, matchesText, type ListColumns } from "../../../list-query/list-columns";
+import { MAX_LIST_DEPTH, pageOffset } from "../../../list-query/page-offset";
 import { requireLocation } from "../../../user-context/require-location";
 import { toCustomerListItemDto } from "../customer.mapper";
 
@@ -35,7 +35,9 @@ export const CUSTOMER_LIST_COLUMNS: ListColumns = {
 
 /**
  * Customers of the user's selected location, by name unless the query sorts otherwise; `search` matches name,
- * company, email or phone, and the query's filter narrows it further.
+ * company, email or phone, and the query's filter narrows it further. `total` is exact up to `MAX_LIST_DEPTH` (10,000)
+ * and `MAX_LIST_DEPTH + 1` past it, which the web app shows as "10,000+": the list cannot page further anyway, and the
+ * exact number at a big location cost a read of the whole location on every page (ACME-119).
  */
 @Injectable()
 export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler {
@@ -57,9 +59,11 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
 
     // The page's ids first, from an index alone, then only those rows: a later page skips its offset in the index
     // instead of reading every customer before it from the table (ACME-110).
-    const { ids, total } = query.search
-      ? await this.findSearchedAsync(userContext.dealerId, locationId, where, order, page, pageSize)
-      : await this.findListedAsync(where, order, page, pageSize);
+    // A search or a text filter matches with ILIKE, which no index can serve under row-level security (ACME-110, 119).
+    const { ids, total } =
+      query.search || matchesText(CUSTOMER_LIST_COLUMNS, query)
+        ? await this.findScopedAsync(userContext.dealerId, locationId, where, order, page, pageSize)
+        : await this.findListedAsync(where, order, page, pageSize);
 
     // The rows are always read as the request: row-level security decides what comes back, whatever found the ids.
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
@@ -86,12 +90,12 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
   }
 
   /**
-   * A search's ids and count, as the table's owner with the dealer, the location and live rows written out (as the
-   * export does). Under row-level security Postgres must apply the policy before a filter that is not leakproof, and
-   * ILIKE is not, so the trigram index could never serve the search; as the owner with these conditions it does. Only
-   * ids and a count come from here: the rows are read as the request.
+   * A search's or a text filter's ids and count, as the table's owner with the dealer, the location and live rows
+   * written out (as the export does). Under row-level security Postgres must apply the policy before a filter that is
+   * not leakproof, and ILIKE is not, so no index could serve it; as the owner with these conditions one does. Only ids
+   * and a count come from here: the rows are read as the request.
    */
-  private async findSearchedAsync(
+  private async findScopedAsync(
     dealerId: string,
     locationId: string,
     where: SQL | undefined,
@@ -124,7 +128,15 @@ async function findPageAsync(
     .orderBy(...order)
     .limit(pageSize)
     .offset(pageOffset(page, pageSize));
-  const [counted] = await db.select({ total: count() }).from(customers).where(where);
+  // Counted up to one past the list's depth: past it the screen says "10,000+", and the exact number would cost a read
+  // of the whole location on every page (ACME-119).
+  const upToDepth = db
+    .select({ one: sql`1` })
+    .from(customers)
+    .where(where)
+    .limit(MAX_LIST_DEPTH + 1)
+    .as("up_to_depth");
+  const [counted] = await db.select({ total: count() }).from(upToDepth);
   return { ids: rows.map((row) => row.id), total: counted?.total ?? 0 };
 }
 

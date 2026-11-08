@@ -26,6 +26,7 @@ import { PageHeader } from "../components/PageHeader";
 import { useAuth } from "../core/contexts/auth/useAuth";
 import { useSelectedLocation } from "../core/contexts/location/useSelectedLocation";
 import { formatDaysAgo, formatPlainDate } from "../core/formatters/formatDate";
+import { formatListTotal } from "../core/formatters/formatNumber";
 import { formatRole } from "../core/formatters/formatRole";
 import { RESOLVED_LOCATION_CONTEXT } from "../core/middleware/routerContext";
 import { queryClient } from "../core/queries/queryClient";
@@ -62,7 +63,8 @@ interface ShortcutProps {
   to: string;
   icon: ReactElement;
   title: string;
-  count: number | undefined;
+  /** As shown: a number, or a list total that stops counting ("10,000+"); skeleton while it loads. */
+  count: number | string | undefined;
   caption: string;
   testId: string;
 }
@@ -130,7 +132,7 @@ export default function Home() {
               to="/customers"
               icon={<PeopleIcon />}
               title={t("customersAt", { location: location?.name ?? "" })}
-              count={customerCount.data}
+              count={customerCount.isSuccess ? formatListTotal(customerCount.data, i18n.language) : undefined}
               caption={t("customersCaption")}
               testId="home-customers"
             />

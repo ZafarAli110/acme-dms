@@ -24,6 +24,11 @@ export interface ServerList {
   params: ListParams;
   rowCount: number;
   update: (changes: Partial<ListParams>, options: { replace: boolean }) => void;
+  /**
+   * The total as the footer shows it, for a list whose API stops counting past its depth ("10,000+", the customer
+   * list: `formatListTotal`). Left out, the footer shows `rowCount` as a number.
+   */
+  totalLabel?: string;
 }
 
 interface AppDataGridProps<Row extends GridValidRowModel> {
@@ -136,13 +141,21 @@ export function AppDataGrid<Row extends GridValidRowModel>({
           // The grid's rowCount stops at the API's depth limit, so it cannot say how many rows there are: the footer says.
           ...(server
             ? {
-                paginationDisplayedRows: ({ from, to }: { from: number; to: number }) =>
-                  t(server.rowCount > MAX_LIST_DEPTH ? "paging.cappedRows" : "paging.rows", {
+                paginationDisplayedRows: ({ from, to }: { from: number; to: number }) => {
+                  // Past the depth: a list that stops counting says "10,000+"; one that counts says its number.
+                  const pastDepth = server.rowCount > MAX_LIST_DEPTH;
+                  const key = pastDepth
+                    ? server.totalLabel
+                      ? "paging.limitedRows"
+                      : "paging.cappedRows"
+                    : "paging.rows";
+                  return t(key, {
                     from: from.toLocaleString(i18n.language),
                     to: to.toLocaleString(i18n.language),
-                    total: server.rowCount.toLocaleString(i18n.language),
+                    total: server.totalLabel ?? server.rowCount.toLocaleString(i18n.language),
                     max: MAX_LIST_DEPTH.toLocaleString(i18n.language),
-                  }),
+                  });
+                },
               }
             : {}),
         }}

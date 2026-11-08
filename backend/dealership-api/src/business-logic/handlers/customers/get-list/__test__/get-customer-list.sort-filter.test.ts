@@ -1,7 +1,8 @@
 import { BadRequestException } from "@nestjs/common";
+import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { AT_NORTHSIDE } from "#test-setup/users/test-users";
-import { NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
+import { AT_CENTRAL, AT_NORTHSIDE } from "#test-setup/users/test-users";
+import { CENTRAL, CITY_MOTORS, NORTHSIDE, RIVERSIDE, TEST_USER_ID } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { GetCustomerListQueryHandler } from "../get-customer-list.query-handler";
 
@@ -124,5 +125,57 @@ describe("GetCustomerListQueryHandler: sorting and filtering as the data grid as
     await expect(
       handler.executeAsync(AT_NORTHSIDE, { ...page, filterField: "city", filterOperator: "contains" }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  // A text filter finds its ids and count as the table's owner (ACME-119): the count is written by hand there, so it
+  // must leave out another location's customers and deleted ones itself.
+  it("counts and shows only this location's live customers on a text filter", async () => {
+    const seed = database.seed;
+    await seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Here", city: "Ripon" });
+    await seed.addCustomerAsync({ locationId: NORTHSIDE, surname: "Gone", city: "Ripon", deleted: true });
+    await seed.addCustomerAsync({ locationId: RIVERSIDE, surname: "Elsewhere", city: "Ripon" });
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
+
+    const ripon = await handler.executeAsync(AT_NORTHSIDE, {
+      page: 1,
+      pageSize: 25,
+      filterField: "city",
+      filterOperator: "equals",
+      filterValue: "ripon",
+    });
+
+    expect(ripon.items.map((c) => c.surname)).toEqual(["Here"]);
+    expect(ripon.total).toBe(1);
+  });
+
+  // The list counts up to one past its depth (ACME-119): 10,001 means "more than 10,000". Central has no other test's
+  // customers, so its count is exactly what this test adds.
+  it("counts exactly up to 10,000 and stops at 10,001; nothing matching counts 0", async () => {
+    const addAtCentralAsync = (from: number, to: number) =>
+      database.db.execute(sql`
+        insert into customers (dealer_id, location_id, first_name, surname, status, created_at, created_by, updated_at,
+                               updated_by)
+        select ${CITY_MOTORS}::uuid, ${CENTRAL}::uuid, 'First', 'Surname' || g, 'active', now(), ${TEST_USER_ID}::uuid,
+               now(), ${TEST_USER_ID}::uuid
+        from generate_series(${from}::int, ${to}::int) as g`);
+    const handler = database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
+    const page = { page: 1, pageSize: 25 };
+
+    await addAtCentralAsync(1, 10_000);
+    const exactly = await handler.executeAsync(AT_CENTRAL, page);
+    await addAtCentralAsync(10_001, 10_002);
+    const more = await handler.executeAsync(AT_CENTRAL, page);
+    const none = await handler.executeAsync(AT_CENTRAL, {
+      ...page,
+      filterField: "city",
+      filterOperator: "equals",
+      filterValue: "Nowhere",
+    });
+
+    expect(exactly.total).toBe(10_000);
+    expect(more.total).toBe(10_001);
+    expect(more.items).toHaveLength(25);
+    expect(none.total).toBe(0);
+    expect(none.items).toEqual([]);
   });
 });

@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { formatFileSize, formatNumber, parseDecimal } from "../formatNumber";
+import { formatFileSize, formatListTotal, formatNumber, parseDecimal } from "../formatNumber";
 
 describe("formatNumber", () => {
   it("groups thousands the way the user's language does", () => {
     expect(formatNumber(1600000, "en")).toBe("1,600,000");
     expect(formatNumber(1600000, "fr")).toMatch(/^1\s600\s000$/);
+  });
+
+  it("shows a list's total exactly up to 10,000 and as 10,000+ past it", () => {
+    expect(formatListTotal(0, "en")).toBe("0");
+    expect(formatListTotal(10_000, "en")).toBe("10,000");
+    expect(formatListTotal(10_001, "en")).toBe("10,000+");
+    expect(formatListTotal(10_001, "fr")).toMatch(/^10\s000\+$/);
   });
 
   it("shows a file size in megabytes with the language's decimal separator and unit", () => {

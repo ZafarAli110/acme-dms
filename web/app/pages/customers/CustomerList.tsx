@@ -14,6 +14,7 @@ import { useSelectedLocation } from "../../core/contexts/location/useSelectedLoc
 import { useColumnVisibility } from "../../core/hooks/useColumnVisibility";
 import { useListParams } from "../../core/hooks/useListParams";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
+import { formatListTotal } from "../../core/formatters/formatNumber";
 import { toListQueryBody } from "../../core/paging/listParams";
 import { prefetchListPage } from "../../core/paging/prefetchListPage";
 import { queryClient } from "../../core/queries/queryClient";
@@ -79,7 +80,12 @@ export default function CustomerList() {
         columns={columns}
         rows={data?.items ?? []}
         loading={isLoading || isLoadingPage}
-        server={{ params, rowCount: data?.total ?? 0, update }}
+        server={{
+          params,
+          rowCount: data?.total ?? 0,
+          update,
+          totalLabel: formatListTotal(data?.total ?? 0, i18n.language),
+        }}
         columnVisibilityModel={visibility.columnVisibilityModel}
         onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}
         onRowClick={openCustomer}
@@ -113,7 +119,7 @@ export default function CustomerList() {
         open={confirmingExport}
         title={tCommon("exports.confirmTitle")}
         message={tCommon("exports.confirmMessage", {
-          total: (data?.total ?? 0).toLocaleString(i18n.language),
+          total: formatListTotal(data?.total ?? 0, i18n.language),
           location: location?.name ?? "",
         })}
         onCancel={() => setConfirmingExport(false)}

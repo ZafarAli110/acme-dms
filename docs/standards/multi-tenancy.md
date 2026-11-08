@@ -43,12 +43,14 @@ location is refused (the `row_level_security` migration). This is the rule, not 
   never set (a route that is public, a guard that did not run) works as the same role with no scope and sees nothing.
   The one exception is the signed export download: no token, so it asks for `beginAsync({ asOwner: true })`. (`softDeleteAsync`
   also runs one statement outside the role, naming the dealer and location itself: `database.md`, "Soft delete".)
-- **A search that needs a trigram index** (the customer list's search box) is the other exception. Under a policy,
-  Postgres must check the policy before any condition that is not _leakproof_, and `ILIKE` is not, so the search could
-  never use its index. So only the page's ids and the count are found as the owner, with the dealer, the location and
-  `notDeleted(…)` written out (`GetCustomerListQueryHandler.findSearchedAsync`); the rows are then read as the
-  request, so the policy still decides what comes back, and a mistake in the hand-written filters shows nothing it
-  should not. Anything else stays under the policy.
+- **A search, or a text filter, on a big list** (the customer list's search box, and its filters on name, company,
+  email, phone or city) is the other exception. Under a policy, Postgres must check the policy before any condition
+  that is not _leakproof_, and `ILIKE` is not (nor are trigram `%` or full-text `@@`), so no index could serve them.
+  So only the page's ids and the count are found as the owner, with the dealer, the location and `notDeleted(…)`
+  written out (`GetCustomerListQueryHandler.findScopedAsync`, chosen by `matchesText`); the rows are then read as the
+  request, so the policy still decides what comes back. The count is not re-read, so its hand-written scope has its
+  own test (another location's and deleted rows never counted). Anything else stays under the policy: a status or
+  date filter uses `=`, `<` or `>`, which are leakproof.
 - The policies, by kind of table: location-scoped (`customers`, `bins`, `part_inventories`): dealer and location;
   `export_jobs`: dealer, location and its owner; dealer-scoped (`parts`, `part_photos`): dealer; no dealer at all
   (`processed_messages`): none. With no location selected, location-scoped tables return nothing.
