@@ -69,7 +69,7 @@ stands at that point of the workshop. `final` holds every piece.
 | `lab/09-export-after`  | the customer export as the lab builds it (ACME-108), and the `export-large-list` skill learnt from it                    |
 | `lab/09-export-final`  | the customer export finished: a job queue and an `export-worker`                                                         |
 | `lab/10-ticket-to-pr`  | ticket to reviewed pull request: specialist reviewers, `/ticket-to-pr`, `/review-pr`, `/resolve-pr-comments`             |
-| `final`                | every lab, the finished export, and more: row-level security, soft delete, versions with `If-Match`, and **docs/plans/** |
+| `final`                | every lab, the finished export, and more: row-level security, soft delete, `If-Match` versions, plans, the session audit |
 
 A change to the system is made on `main` and carried to every lab branch and `final`, so they differ only in what the
 table says. Switching to a branch that adds a package (lab 09-after does) needs `bun install` once.
@@ -103,8 +103,8 @@ A ticket's life on lab 10 and `final`:
 
 [docs/HARNESS.md](https://github.com/ZafarAli110/acme-dms/blob/final/docs/HARNESS.md) (lab 10 and `final`) lists every piece: what it does, when it runs, who starts it and the lab that
 added it. From lab 10, `/find-state-machines` sweeps the whole repository for stages nobody declared (a photo stuck in
-`pending`, an export nobody finishes); on `final`, [docs/plans/implicit-state-machines.md](https://github.com/ZafarAli110/acme-dms/blob/final/docs/plans/implicit-state-machines.md) holds what it found and what
-was fixed.
+`pending`, an export nobody finishes); it writes what it finds, and what was fixed, to `.ai-plans/implicit-state-machines.md`, beside the ticket plans. On `final`,
+`bun run audit` reads the agent's own session logs: standards read before edits, context and cost (`.ai-observability/`).
 
 ### The cost meter
 
@@ -510,7 +510,8 @@ If identity-api ever cannot open the signing key in use (its Data Protection key
 | `CLAUDE.md`, `.claude/`, `.mcp.json`                                                  | the Claude Code harness (lab branches and `final`, see [Branches](#branches))                        |
 | [docs/HARNESS.md](https://github.com/ZafarAli110/acme-dms/blob/final/docs/HARNESS.md) | every piece of the harness, when it runs and the lab that added it (lab 10 and `final`)              |
 | `docs/evidence/`, `docs/qa/`, `docs/lessons/`                                         | what `/verify-ticket`, `/qa-ticket` and `/write-retro` write (from labs 07, 09)                      |
-| [docs/plans/](https://github.com/ZafarAli110/acme-dms/tree/final/docs/plans)          | design plans and the state-machine sweep's findings (`final`)                                        |
+| `.ai-plans/`                                                                          | one plan per ticket, from `plan-template.md` (from lab 08); example plans on `final`                 |
+| `.ai-observability/`                                                                  | what `bun run audit` writes: drift and cost of the agent's sessions (`final`)                        |
 | `.github/workflows/ci.yml`                                                            | CI: format, lint, typecheck and test on every pull request                                           |
 
 ## Troubleshooting
