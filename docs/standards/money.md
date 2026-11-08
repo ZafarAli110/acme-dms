@@ -36,6 +36,17 @@ type (TC39's Decimal proposal is at an early stage), and Acme adds no money libr
 10. **Screens show and read pounds in the user's language** (`£45.50`, `45,50 £`) through the web app's price
     formatter, and parse what the user typed straight into pence: never `parseFloat`.
 
+## Where it lives
+
+| Piece                                                                   | What it does                                                                   |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `backend/dealership-api/src/persistence/schema/columns/money-column.ts` | the `money` column; `centsFromDecimalText`, `decimalTextFromCents` (rule 3)    |
+| `backend/dealership-api/src/business-logic/money/money.ts`              | `timesCents`, `sumCents`, `rateOfCents`, `splitCents`, `roundHalfAwayFromZero` |
+| `web/app/pages/parts/formatters/formatPrice.ts`                         | `formatPrice`, `formatPriceInput`, `parsePriceCents` (rule 10)                 |
+
+The stock value (ACME-116) shows both kinds of sum: each part's value in the list is `timesCents` in the handler, and the
+location's total (`GET /v1/parts/stock-value`) is summed by Postgres (rule 7). A test checks the two agree.
+
 ## Checks
 
 - A test for every calculation with amounts that a float gets wrong: 0.10 × 3, 0.10 + 0.20, 1.005, a split of 1000

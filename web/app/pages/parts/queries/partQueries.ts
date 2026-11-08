@@ -2,7 +2,7 @@ import { API_CONFIG } from "../../../core/config/api";
 import { apiClient, type RequestOptions } from "../../../core/services/apiClient";
 import { type ListParams, toListApiQuery } from "../../../core/paging/listParams";
 import type { Page } from "../../../core/types/page";
-import type { Bin, Part, PartInput, PartListItem } from "../types/part";
+import type { Bin, Part, PartInput, PartListItem, StockValue } from "../types/part";
 import { ifMatch } from "../../../core/services/ifMatch";
 
 const PARTS_URL = `${API_CONFIG.dealershipUrl}/v1/parts`;
@@ -12,6 +12,8 @@ export const partQueries = {
   /** One page of the list, searched, sorted and filtered as `params` says. */
   getPartsAsync: (params: ListParams, options?: RequestOptions) =>
     apiClient.getAsync<Page<PartListItem>>(`${PARTS_URL}?${toListApiQuery(params)}`, options),
+  /** What the location's stock is worth: every part, not only the page shown. */
+  getStockValueAsync: (options?: RequestOptions) => apiClient.getAsync<StockValue>(`${PARTS_URL}/stock-value`, options),
   getPartAsync: (partId: string, options?: RequestOptions) =>
     apiClient.getAsync<Part>(`${PARTS_URL}/${partId}`, options),
   createPartAsync: (input: PartInput) => apiClient.postAsync<Part>(PARTS_URL, input),

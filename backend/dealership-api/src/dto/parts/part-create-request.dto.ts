@@ -2,14 +2,17 @@ import * as v from "valibot";
 
 const wholeNumberFromZero = v.pipe(v.number(), v.integer(), v.minValue(0));
 
-/** A price in pounds and pence: not negative, at most two decimals. */
-export const unitPrice = v.pipe(
+/**
+ * A price in whole pence (4999 = £49.99): never a pound amount with decimals, so no client parses money through a float
+ * (docs/standards/money.md). At most £9,999,999,999.99, what the database's `numeric(12, 2)` holds.
+ */
+export const unitPriceCents = v.pipe(
   v.number(),
+  v.integer(),
   v.minValue(0),
-  v.check((price) => Math.abs(price * 100 - Math.round(price * 100)) < 1e-6),
-  v.description("In pounds, at most two decimals"),
-  // `check` is a function and cannot be written as JSON; `multipleOf` says the same to Swagger.
-  v.metadata({ example: 49.99, multipleOf: 0.01 }),
+  v.maxValue(999_999_999_999),
+  v.description("In pence: 4999 is £49.99"),
+  v.metadata({ example: 4999 }),
 );
 
 /**
@@ -25,7 +28,7 @@ export const PartCreateRequestSchema = v.strictObject({
     v.metadata({ example: "BRK-PAD-001" }),
   ),
   description: v.pipe(v.string(), v.nonEmpty(), v.maxLength(500), v.metadata({ example: "Front brake pads, ceramic" })),
-  unitPrice,
+  unitPriceCents,
   binId: v.pipe(v.string(), v.uuid(), v.description("A bin of the selected location (GET /v1/bins)")),
   quantityOnHand: v.pipe(wholeNumberFromZero, v.metadata({ example: 6 })),
   reorderLevel: v.pipe(wholeNumberFromZero, v.metadata({ example: 4 })),

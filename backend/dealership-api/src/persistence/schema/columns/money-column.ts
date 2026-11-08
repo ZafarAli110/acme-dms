@@ -1,14 +1,39 @@
 import { customType } from "drizzle-orm/pg-core";
 
-/** `numeric(12,2)` as a number. Postgres sends numerics as text so nothing is lost on the way; amounts fit a double. */
+const DECIMAL_TEXT = /^(-?)(\d+)(?:\.(\d{1,2}))?$/;
+
+/**
+ * Pounds as Postgres writes a numeric ("45.50", "0.1", "-3") → whole pence (4550, 10, -300). By text, never by
+ * multiplying: `1.005 * 100` is 100.49999999999999 (docs/standards/money.md, rule 3).
+ */
+export function centsFromDecimalText(text: string): number {
+  const match = DECIMAL_TEXT.exec(text.trim());
+  if (!match) {
+    throw new Error(`"${text}" is not an amount with at most two decimals.`);
+  }
+  const [, sign, pounds = "0", pence = ""] = match;
+  const cents = Number(pounds) * 100 + Number(pence.padEnd(2, "0"));
+  return sign === "-" ? -cents : cents;
+}
+
+/** Whole pence → pounds with two decimals, the way Postgres reads a numeric: 4550 → "45.50", -5 → "-0.05". */
+export function decimalTextFromCents(cents: number): string {
+  if (!Number.isSafeInteger(cents)) {
+    throw new Error(`${cents} is not a whole number of pence.`);
+  }
+  const absolute = Math.abs(cents);
+  const pence = String(absolute % 100).padStart(2, "0");
+  return `${cents < 0 ? "-" : ""}${Math.trunc(absolute / 100)}.${pence}`;
+}
+
+/**
+ * `numeric(12, 2)` in the database, whole pence in TypeScript. The database keeps an exact, readable decimal that SQL
+ * can sum exactly; code only ever sees an integer it can add and multiply exactly.
+ */
 export const money = customType<{ data: number; driverData: string }>({
   dataType() {
     return "numeric(12, 2)";
   },
-  toDriver(value) {
-    return value.toFixed(2);
-  },
-  fromDriver(value: string) {
-    return Number(value);
-  },
+  toDriver: decimalTextFromCents,
+  fromDriver: centsFromDecimalText,
 });

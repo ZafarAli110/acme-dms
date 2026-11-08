@@ -8,6 +8,7 @@ export const PART_QUERY_KEYS = {
   all: (locationId: string) => ["parts", locationId] as const,
   list: (locationId: string, params: ListParams) => ["parts", locationId, "list", params] as const,
   count: (locationId: string) => ["parts", locationId, "count"] as const,
+  stockValue: (locationId: string) => ["parts", locationId, "stock-value"] as const,
   detail: (locationId: string, partId: string) => ["parts", locationId, "detail", partId] as const,
   bins: (locationId: string) => ["bins", locationId] as const,
 } as const;

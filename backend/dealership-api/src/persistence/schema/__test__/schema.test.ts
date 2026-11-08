@@ -41,25 +41,27 @@ describe("the dealership schema", () => {
     const rows = await database.db
       .insert(parts)
       .values([
-        { partNumber: "MONEY-1", description: "Pads", unitPrice: 49.99, ...AUDIT },
-        { partNumber: "MONEY-2", description: "Washer", unitPrice: 0.1, ...AUDIT },
+        { partNumber: "MONEY-1", description: "Pads", unitPriceCents: 4999, ...AUDIT },
+        { partNumber: "MONEY-2", description: "Washer", unitPriceCents: 10, ...AUDIT },
+        { partNumber: "MONEY-3", description: "Engine", unitPriceCents: 999_999_999_999, ...AUDIT },
       ])
       .returning({ id: parts.id });
 
     const read = await database.db
-      .select({ unitPrice: parts.unitPrice })
+      .select({ unitPriceCents: parts.unitPriceCents, stored: sql<string>`${parts.unitPriceCents}::text` })
       .from(parts)
-      .where(sql`${parts.id} in (${rows[0]!.id}, ${rows[1]!.id})`)
+      .where(sql`${parts.id} in (${rows[0]!.id}, ${rows[1]!.id}, ${rows[2]!.id})`)
       .orderBy(parts.partNumber);
 
-    expect(read.map((row) => row.unitPrice)).toEqual([49.99, 0.1]);
-    expect(typeof read[0]?.unitPrice).toBe("number");
+    // Whole pence in code, pounds in the database (docs/standards/money.md).
+    expect(read.map((row) => row.unitPriceCents)).toEqual([4999, 10, 999_999_999_999]);
+    expect(read.map((row) => row.stored)).toEqual(["49.99", "0.10", "9999999999.99"]);
   });
 
   it("generates uuidv7 ids", async () => {
     const [row] = await database.db
       .insert(parts)
-      .values({ partNumber: "ID-1", description: "Filter", unitPrice: 5, ...AUDIT })
+      .values({ partNumber: "ID-1", description: "Filter", unitPriceCents: 500, ...AUDIT })
       .returning({ id: parts.id });
 
     expect(row?.id).toMatch(UUID_V7);
@@ -68,27 +70,31 @@ describe("the dealership schema", () => {
   it("lets a soft-deleted part number be used again, and refuses a live duplicate", async () => {
     const [first] = await database.db
       .insert(parts)
-      .values({ partNumber: "BRK-001", description: "Pads", unitPrice: 45, ...AUDIT })
+      .values({ partNumber: "BRK-001", description: "Pads", unitPriceCents: 4500, ...AUDIT })
       .returning({ id: parts.id });
     await database.db
       .update(parts)
       .set({ isDeleted: true, deletedAt: SEEDED_AT, deletedBy: TEST_USER_ID })
       .where(eq(parts.id, first!.id));
 
-    await database.db.insert(parts).values({ partNumber: "BRK-001", description: "Pads", unitPrice: 45, ...AUDIT });
+    await database.db
+      .insert(parts)
+      .values({ partNumber: "BRK-001", description: "Pads", unitPriceCents: 4500, ...AUDIT });
 
     await expect(
-      database.db.insert(parts).values({ partNumber: "BRK-001", description: "Pads", unitPrice: 45, ...AUDIT }),
+      database.db.insert(parts).values({ partNumber: "BRK-001", description: "Pads", unitPriceCents: 4500, ...AUDIT }),
     ).rejects.toMatchObject({ cause: { code: "23505", constraint: "uq_parts_dealer_part_number" } });
   });
 
   it("lets another dealer use the same part number", async () => {
-    await database.db.insert(parts).values({ partNumber: "SHARED-1", description: "Pads", unitPrice: 45, ...AUDIT });
+    await database.db
+      .insert(parts)
+      .values({ partNumber: "SHARED-1", description: "Pads", unitPriceCents: 4500, ...AUDIT });
 
     await expect(
       database.db
         .insert(parts)
-        .values({ partNumber: "SHARED-1", description: "Pads", unitPrice: 45, ...AUDIT, dealerId: CITY_MOTORS }),
+        .values({ partNumber: "SHARED-1", description: "Pads", unitPriceCents: 4500, ...AUDIT, dealerId: CITY_MOTORS }),
     ).resolves.toBeDefined();
   });
 

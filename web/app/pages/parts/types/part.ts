@@ -11,9 +11,17 @@ export interface PartListItem {
   id: string;
   partNumber: string;
   description: string;
-  unitPrice: number;
+  /** In pence: 4999 is £49.99. */
+  unitPriceCents: number;
   thumbnailDocumentId: string | null;
   inventory: PartInventory;
+  /** What this location's stock of the part is worth, in pence: on hand × price. */
+  stockValueCents: number;
+}
+
+/** What the stock at the selected location is worth. */
+export interface StockValue {
+  stockValueCents: number;
 }
 
 export interface PartPhoto {
@@ -30,7 +38,7 @@ export interface Part {
   id: string;
   partNumber: string;
   description: string;
-  unitPrice: number;
+  unitPriceCents: number;
   inventory: PartInventory;
   photos: PartPhoto[];
   createdAt: string;
@@ -43,7 +51,7 @@ export interface Part {
 export interface PartInput {
   partNumber: string;
   description: string;
-  unitPrice: number;
+  unitPriceCents: number;
   binId: string;
   quantityOnHand: number;
   reorderLevel: number;

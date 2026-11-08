@@ -8,6 +8,7 @@ import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { timesCents } from "../../../money/money";
 import { requireLocation } from "../../../user-context/require-location";
 import { toPartInventoryDto } from "../part.mapper";
 import { findStockedPartsAsync, findThumbnailsAsync } from "../part.queries";
@@ -37,9 +38,10 @@ export class GetPartListQueryHandler implements IGetPartListQueryHandler {
         id: part.id,
         partNumber: part.partNumber,
         description: part.description,
-        unitPrice: part.unitPrice,
+        unitPriceCents: part.unitPriceCents,
         thumbnailDocumentId: thumbnails.get(part.id)?.documentId ?? null,
         inventory: toPartInventoryDto(inventory, bin),
+        stockValueCents: timesCents(part.unitPriceCents, inventory.quantityOnHand),
       })),
       total,
       page,

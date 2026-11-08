@@ -69,6 +69,7 @@ export function seedKit(db: NodePgDatabase) {
   async function addStockedPartAsync(stocked: {
     locationId: string;
     partNumber: string;
+    unitPriceCents?: number;
     quantityOnHand?: number;
     reorderLevel?: number;
     deleted?: boolean;
@@ -79,7 +80,7 @@ export function seedKit(db: NodePgDatabase) {
         dealerId: dealerOf(stocked.locationId),
         partNumber: stocked.partNumber,
         description: `Part ${stocked.partNumber}`,
-        unitPrice: 10,
+        unitPriceCents: stocked.unitPriceCents ?? 1000,
         ...SEEDED_AUDIT,
         ...(stocked.deleted ? DELETED_AUDIT : {}),
       })

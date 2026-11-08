@@ -5,7 +5,8 @@ export interface PartResponseDto {
   id: string;
   partNumber: string;
   description: string;
-  unitPrice: number;
+  /** In pence: 4999 is £49.99. */
+  unitPriceCents: number;
   /** The part at the selected location: bin and quantity. */
   inventory: PartInventoryDto;
   photos: PartPhotoResponseDto[];

@@ -22,7 +22,7 @@ export const STOCKED_PART_COLUMNS: ListColumns = {
   bin: { source: bins.code, type: "text" },
   onHand: { source: partInventories.quantityOnHand, type: "number" },
   reorderLevel: { source: partInventories.reorderLevel, type: "number" },
-  unitPrice: { source: parts.unitPrice, type: "number" },
+  unitPriceCents: { source: parts.unitPriceCents, type: "number" },
 };
 
 /**

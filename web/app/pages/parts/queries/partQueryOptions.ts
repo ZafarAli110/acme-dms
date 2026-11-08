@@ -19,6 +19,12 @@ export const partQueryOptions = {
       queryKey: PART_QUERY_KEYS.count(locationId),
       queryFn: ({ signal }) => partQueries.getPartsAsync({ ...FIRST_PAGE, pageSize: 1 }, { signal, locationId }),
     }),
+  /** Under the location's key, so a part saved there refreshes it with the list. */
+  stockValue: (locationId: string) =>
+    queryOptions({
+      queryKey: PART_QUERY_KEYS.stockValue(locationId),
+      queryFn: ({ signal }) => partQueries.getStockValueAsync({ signal, locationId }),
+    }),
   detail: (locationId: string, partId: string) =>
     queryOptions({
       queryKey: PART_QUERY_KEYS.detail(locationId, partId),

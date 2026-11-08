@@ -130,6 +130,6 @@ export const fr: Messages = {
     sort: "Tri",
     status: "Statut",
     surname: "Nom",
-    unitPrice: "Prix unitaire",
+    unitPriceCents: "Prix unitaire",
   },
 };

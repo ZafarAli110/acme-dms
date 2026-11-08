@@ -2,7 +2,7 @@
 //
 //   bun run api as rita GET /api/dealership/v1/system/user-context
 //   bun run api as maria --location riverside GET /api/dealership/v1/stock
-//   bun run api as maria POST /api/dealership/v1/parts '{"partNumber":"BP-100","description":"Brake pads","unitPrice":49}'
+//   bun run api as maria POST /api/dealership/v1/parts '{"partNumber":"BP-100","description":"Brake pads","unitPriceCents":4900}'
 //   bun run api as sam --body GET /api/dealership/v1/customers/recent | jq '.[].id'
 //   bun run api as rita --if-match 3 PUT /api/dealership/v1/customers/<id> '{…every field…}'
 //   bun run api as rita --lang fr POST /api/dealership/v1/customers '{"surname":""}'

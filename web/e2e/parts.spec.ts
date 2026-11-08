@@ -25,7 +25,7 @@ test.describe("parts", () => {
     const onHand = page.getByTestId("parts-table").locator('[role="gridcell"][data-field="onHand"]');
     await expect(onHand.first()).toBeVisible();
     const quantities = (await onHand.allTextContents()).map((text) => Number(text.replace(/\D/g, "")));
-    expect(quantities).toEqual([...quantities].sort((a, b) => b - a));
+    expect(quantities).toEqual(quantities.toSorted((a, b) => b - a));
   });
 
   test("the next page goes into the URL", async ({ page }) => {

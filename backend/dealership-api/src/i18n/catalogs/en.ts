@@ -25,7 +25,7 @@ export const en = {
     partNumberExists: "Part number {partNumber} already exists in your catalogue.",
     partNotFound: "Part {partId} was not found.",
     partNotStocked: "Part {partId} is not stocked at this location.",
-    partNoChanges: "Send at least one change: description, unitPrice, photos or new photos.",
+    partNoChanges: "Send at least one change: description, unitPriceCents, photos or new photos.",
     photoTypeNotAllowed: "{fileName}: file type {contentType} not allowed. Allowed: {allowed}.",
     photoTooLarge: "{fileName}: file too large. Maximum size: {maxMegabytes} MB.",
     tooManyPhotos: "A part can have at most {max} photos.",
@@ -134,7 +134,7 @@ export const en = {
     sort: "Sort",
     status: "Status",
     surname: "Surname",
-    unitPrice: "Unit price",
+    unitPriceCents: "Unit price",
   },
 };
 

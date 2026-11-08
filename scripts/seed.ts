@@ -8,48 +8,49 @@
 import { deflateSync } from "node:zlib";
 import { callAsync, type Location, resourceUrl, type Session, signInAsync } from "./running-system";
 
-type PartSeed = [partNumber: string, description: string, unitPrice: number];
+/** A part as the seed adds it; the price in whole pence (docs/standards/money.md). */
+type PartSeed = [partNumber: string, description: string, unitPriceCents: number];
 
 /**
  * City Motors, another dealer with one rooftop. Some part numbers are the same as Northwind's, at other prices: a part
  * number is unique within a dealer, not across dealers.
  */
 const CITY_MOTORS_PARTS: PartSeed[] = [
-  ["BRK-PAD-001", "Front brake pads, ceramic", 52.5],
-  ["OIL-FLT-001", "Oil filter, spin-on", 9.5],
-  ["AIR-FLT-001", "Engine air filter", 15.0],
-  ["WIP-BLD-600", "Wiper blade, 600 mm", 17.99],
+  ["BRK-PAD-001", "Front brake pads, ceramic", 5250],
+  ["OIL-FLT-001", "Oil filter, spin-on", 950],
+  ["AIR-FLT-001", "Engine air filter", 1500],
+  ["WIP-BLD-600", "Wiper blade, 600 mm", 1799],
 ];
 
 const NORTHWIND_PARTS: PartSeed[] = [
-  ["BRK-PAD-001", "Front brake pads, ceramic", 49.99],
-  ["BRK-PAD-002", "Rear brake pads, semi-metallic", 39.5],
-  ["BRK-DSC-001", "Front brake disc, vented 300 mm", 64.0],
-  ["BRK-FLD-001", "Brake fluid DOT 4, 1 L", 12.75],
-  ["OIL-FLT-001", "Oil filter, spin-on", 8.99],
-  ["OIL-ENG-530", "Engine oil 5W-30 synthetic, 5 L", 42.0],
-  ["AIR-FLT-001", "Engine air filter", 14.5],
-  ["CAB-FLT-001", "Cabin air filter, activated carbon", 18.25],
-  ["FUL-FLT-001", "Fuel filter, inline", 22.0],
-  ["SPK-PLG-001", "Spark plug, iridium", 11.4],
-  ["IGN-COL-001", "Ignition coil", 58.9],
-  ["WIP-BLD-600", "Wiper blade, 600 mm", 16.99],
-  ["WIP-BLD-450", "Wiper blade, 450 mm", 14.99],
-  ["BAT-12V-070", "Battery 12 V 70 Ah", 129.0],
-  ["ALT-BLT-001", "Alternator belt, ribbed", 24.6],
-  ["TIM-BLT-KIT", "Timing belt kit with water pump", 189.0],
-  ["CLT-KIT-001", "Clutch kit, three-piece", 245.0],
-  ["SHK-ABS-FR", "Shock absorber, front", 86.5],
-  ["SHK-ABS-RR", "Shock absorber, rear", 72.0],
-  ["CV-JNT-001", "CV joint, outer", 54.3],
-  ["RAD-HOS-001", "Radiator hose, upper", 19.8],
-  ["CLN-ANT-001", "Coolant, long-life, 5 L", 27.5],
-  ["HDL-BLB-H7", "Headlight bulb H7", 9.95],
-  ["TL-BLB-P21", "Tail light bulb P21/5W", 3.2],
-  ["EXH-GSK-001", "Exhaust manifold gasket", 13.1],
-  ["O2-SNS-001", "Oxygen sensor, upstream", 74.0],
-  ["TPMS-SNS-01", "Tyre pressure sensor", 46.0],
-  ["WSH-FLD-005", "Windscreen washer fluid, 5 L", 7.5],
+  ["BRK-PAD-001", "Front brake pads, ceramic", 4999],
+  ["BRK-PAD-002", "Rear brake pads, semi-metallic", 3950],
+  ["BRK-DSC-001", "Front brake disc, vented 300 mm", 6400],
+  ["BRK-FLD-001", "Brake fluid DOT 4, 1 L", 1275],
+  ["OIL-FLT-001", "Oil filter, spin-on", 899],
+  ["OIL-ENG-530", "Engine oil 5W-30 synthetic, 5 L", 4200],
+  ["AIR-FLT-001", "Engine air filter", 1450],
+  ["CAB-FLT-001", "Cabin air filter, activated carbon", 1825],
+  ["FUL-FLT-001", "Fuel filter, inline", 2200],
+  ["SPK-PLG-001", "Spark plug, iridium", 1140],
+  ["IGN-COL-001", "Ignition coil", 5890],
+  ["WIP-BLD-600", "Wiper blade, 600 mm", 1699],
+  ["WIP-BLD-450", "Wiper blade, 450 mm", 1499],
+  ["BAT-12V-070", "Battery 12 V 70 Ah", 12900],
+  ["ALT-BLT-001", "Alternator belt, ribbed", 2460],
+  ["TIM-BLT-KIT", "Timing belt kit with water pump", 18900],
+  ["CLT-KIT-001", "Clutch kit, three-piece", 24500],
+  ["SHK-ABS-FR", "Shock absorber, front", 8650],
+  ["SHK-ABS-RR", "Shock absorber, rear", 7200],
+  ["CV-JNT-001", "CV joint, outer", 5430],
+  ["RAD-HOS-001", "Radiator hose, upper", 1980],
+  ["CLN-ANT-001", "Coolant, long-life, 5 L", 2750],
+  ["HDL-BLB-H7", "Headlight bulb H7", 995],
+  ["TL-BLB-P21", "Tail light bulb P21/5W", 320],
+  ["EXH-GSK-001", "Exhaust manifold gasket", 1310],
+  ["O2-SNS-001", "Oxygen sensor, upstream", 7400],
+  ["TPMS-SNS-01", "Tyre pressure sensor", 4600],
+  ["WSH-FLD-005", "Windscreen washer fluid, 5 L", 750],
 ];
 
 type Category = "brakes" | "filters" | "electrical" | "engine" | "chassis" | "fluids";
@@ -246,7 +247,7 @@ async function ensurePartAsync(
   gateway: string,
   session: Session,
   location: Location,
-  [partNumber, description, unitPrice]: PartSeed,
+  [partNumber, description, unitPriceCents]: PartSeed,
   stock: { binId: string; quantityOnHand: number; reorderLevel: number },
 ): Promise<string> {
   const created = await callAsync(
@@ -255,7 +256,7 @@ async function ensurePartAsync(
     location,
     "POST",
     "/api/dealership/v1/parts",
-    JSON.stringify({ partNumber, description, unitPrice, ...stock }),
+    JSON.stringify({ partNumber, description, unitPriceCents, ...stock }),
   );
   if (created.ok) {
     return ((await created.json()) as { id: string }).id;

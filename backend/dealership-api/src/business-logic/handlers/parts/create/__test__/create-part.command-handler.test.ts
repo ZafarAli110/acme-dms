@@ -14,7 +14,7 @@ describe("CreatePartCommandHandler", () => {
   }
 
   function request(partNumber: string, binId: string) {
-    return { partNumber, description: "Brake pads", unitPrice: 49.99, binId, quantityOnHand: 6, reorderLevel: 4 };
+    return { partNumber, description: "Brake pads", unitPriceCents: 4999, binId, quantityOnHand: 6, reorderLevel: 4 };
   }
 
   it("adds the part and stocks it in a bin of the selected location", async () => {
@@ -22,7 +22,7 @@ describe("CreatePartCommandHandler", () => {
 
     const part = await handler().executeAsync(AT_NORTHSIDE, request("BRK-001", bin.id));
 
-    expect(part).toMatchObject({ partNumber: "BRK-001", unitPrice: 49.99, photos: [] });
+    expect(part).toMatchObject({ partNumber: "BRK-001", unitPriceCents: 4999, photos: [] });
     expect(part.inventory).toEqual({
       binId: bin.id,
       binCode: "A-01",

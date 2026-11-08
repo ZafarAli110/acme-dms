@@ -3,8 +3,15 @@
  * Intl.NumberFormat for the language (`formatToParts`), never from a list of our own.
  */
 
-/** A number in the user's language: 1600 is "1,600" in English, "1 600" in French. */
-export function formatNumber(value: number, language: string, options?: Intl.NumberFormatOptions): string {
+/**
+ * A number in the user's language: 1600 is "1,600" in English, "1 600" in French. A decimal given as text ("45.50") is
+ * formatted exactly, never through a float.
+ */
+export function formatNumber(
+  value: number | `${number}`,
+  language: string,
+  options?: Intl.NumberFormatOptions,
+): string {
   return new Intl.NumberFormat(language, options).format(value);
 }
 
@@ -24,6 +31,16 @@ export function formatFileSize(bytes: number, language: string): string {
  * the text is not a number.
  */
 export function parseDecimal(text: string, language: string): number | null {
+  const normalized = normalizeDecimal(text, language);
+  return normalized === null ? null : Number(normalized);
+}
+
+/**
+ * What the user typed, rewritten with a dot as the decimal point and no grouping ("1 234,50" in French → "1234.50"),
+ * still as text, so an amount can be read exactly (into pence) without passing through a float. Null when the text is
+ * not a number.
+ */
+export function normalizeDecimal(text: string, language: string): string | null {
   const parts = new Intl.NumberFormat(language).formatToParts(12345.6);
   const group = parts.find((part) => part.type === "group")?.value ?? ",";
   const decimal = parts.find((part) => part.type === "decimal")?.value ?? ".";
@@ -34,5 +51,5 @@ export function parseDecimal(text: string, language: string): number | null {
   if (decimal !== ".") {
     normalized = normalized.replace(decimal, ".");
   }
-  return /^-?\d+(\.\d+)?$/.test(normalized) ? Number(normalized) : null;
+  return /^-?\d+(\.\d+)?$/.test(normalized) ? normalized : null;
 }

@@ -56,7 +56,7 @@ export async function createPartAsync(request: APIRequestContext): Promise<{ id:
     data: {
       partNumber,
       description: "Oil filter, spin-on",
-      unitPrice: 1,
+      unitPriceCents: 100,
       binId: bins[0]!.id,
       quantityOnHand: 1,
       reorderLevel: 0,

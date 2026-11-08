@@ -80,6 +80,13 @@ export const RULES: readonly Rule[] = [
     skills: ["call-other-service"],
   },
   {
+    id: "money",
+    label: "Prices and amounts",
+    paths: /^(backend\/[^/]+\/src|web\/app)\/.*([Mm]oney|[Pp]rice|[Ss]tock-?[Vv]alue)/,
+    standards: ["docs/standards/money.md"],
+    skills: [],
+  },
+  {
     id: "uploads",
     label: "File uploads",
     paths: /^(backend|web\/app)\/.*(upload|photo|Upload|Photo)/,

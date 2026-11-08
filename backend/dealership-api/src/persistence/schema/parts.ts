@@ -16,7 +16,8 @@ export const parts = snakeCase.table(
     dealerId: uuid().notNull(),
     partNumber: varchar({ length: 50 }).notNull(),
     description: varchar({ length: 500 }).notNull(),
-    unitPrice: money().notNull(),
+    /** Whole pence in code; pounds, `numeric(12, 2)`, in the database (docs/standards/money.md). */
+    unitPriceCents: money("unit_price").notNull(),
     /**
      * Goes up by one with every change. It is the record's ETag: a save says which version it started from
      * (If-Match), and one that started from an older version is refused (412) instead of undoing someone's change.

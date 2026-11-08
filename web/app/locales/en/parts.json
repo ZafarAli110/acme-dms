@@ -1,5 +1,6 @@
 {
   "title": "Parts",
+  "subtitleWithValue": "Parts stocked at {{location}} · stock value {{value}}",
   "subtitle": "Parts stocked at {{location}}",
   "newPart": "New part",
   "search": "Search part number or description",
@@ -9,7 +10,8 @@
     "bin": "Bin",
     "onHand": "On hand",
     "unitPrice": "Unit price",
-    "reorderLevel": "Reorder level"
+    "reorderLevel": "Reorder level",
+    "stockValue": "Stock value"
   },
   "noMatch": "No parts match \"{{search}}\".",
   "noneStocked": "{{location}} does not stock any parts yet.",

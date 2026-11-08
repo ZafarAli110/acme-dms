@@ -1,5 +1,6 @@
 {
   "title": "Pièces",
+  "subtitleWithValue": "Pièces en stock à {{location}} · valeur du stock {{value}}",
   "subtitle": "Pièces en stock à {{location}}",
   "newPart": "Nouvelle pièce",
   "search": "Rechercher une référence ou une désignation",
@@ -9,7 +10,8 @@
     "bin": "Casier",
     "onHand": "En stock",
     "unitPrice": "Prix unitaire",
-    "reorderLevel": "Seuil de réappro."
+    "reorderLevel": "Seuil de réappro.",
+    "stockValue": "Valeur du stock"
   },
   "noMatch": "Aucune pièce ne correspond à « {{search}} ».",
   "noneStocked": "{{location}} n'a encore aucune pièce en stock.",

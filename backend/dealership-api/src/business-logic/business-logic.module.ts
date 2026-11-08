@@ -3,6 +3,7 @@ import { MARK_PART_PHOTO_FAILED_COMMAND_HANDLER } from "#business-logic-abstract
 import { MARK_PART_PHOTO_READY_COMMAND_HANDLER } from "#business-logic-abstractions/handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler.interface";
 import { CREATE_PART_COMMAND_HANDLER } from "#business-logic-abstractions/handlers/parts/create/create-part.command-handler.interface";
 import { GET_PART_LIST_QUERY_HANDLER } from "#business-logic-abstractions/handlers/parts/get-list/get-part-list.query-handler.interface";
+import { GET_STOCK_VALUE_QUERY_HANDLER } from "#business-logic-abstractions/handlers/parts/get-stock-value/get-stock-value.query-handler.interface";
 import { GET_PART_QUERY_HANDLER } from "#business-logic-abstractions/handlers/parts/get/get-part.query-handler.interface";
 import { UPDATE_PART_COMMAND_HANDLER } from "#business-logic-abstractions/handlers/parts/update/update-part.command-handler.interface";
 import { UPLOAD_PART_PHOTO_COMMAND_HANDLER } from "#business-logic-abstractions/handlers/parts/upload-photo/upload-part-photo.command-handler.interface";
@@ -31,6 +32,7 @@ import { MarkPartPhotoFailedCommandHandler } from "./handlers/parts/mark-photo-f
 import { MarkPartPhotoReadyCommandHandler } from "./handlers/parts/mark-photo-ready/mark-part-photo-ready.command-handler";
 import { CreatePartCommandHandler } from "./handlers/parts/create/create-part.command-handler";
 import { GetPartListQueryHandler } from "./handlers/parts/get-list/get-part-list.query-handler";
+import { GetStockValueQueryHandler } from "./handlers/parts/get-stock-value/get-stock-value.query-handler";
 import { GetPartQueryHandler } from "./handlers/parts/get/get-part.query-handler";
 import { UpdatePartCommandHandler } from "./handlers/parts/update/update-part.command-handler";
 import { UploadPartPhotoCommandHandler } from "./handlers/parts/upload-photo/upload-part-photo.command-handler";
@@ -49,6 +51,7 @@ const HANDLERS = [
   { provide: GET_HEALTH_QUERY_HANDLER, useClass: GetHealthQueryHandler },
   { provide: GET_USER_CONTEXT_QUERY_HANDLER, useClass: GetUserContextQueryHandler },
   { provide: GET_PART_LIST_QUERY_HANDLER, useClass: GetPartListQueryHandler },
+  { provide: GET_STOCK_VALUE_QUERY_HANDLER, useClass: GetStockValueQueryHandler },
   { provide: GET_PART_QUERY_HANDLER, useClass: GetPartQueryHandler },
   { provide: CREATE_PART_COMMAND_HANDLER, useClass: CreatePartCommandHandler },
   { provide: UPDATE_PART_COMMAND_HANDLER, useClass: UpdatePartCommandHandler },

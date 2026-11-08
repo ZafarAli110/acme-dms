@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import * as v from "valibot";
 import { PART_PHOTO_RULES } from "../constants/partPhotoRules";
-import { parsePrice } from "../formatters/formatPrice";
+import { parsePriceCents } from "../formatters/formatPrice";
 import type { PartFormValues } from "../types/part";
 
 const DESCRIPTION_MAX = 500;
@@ -45,7 +45,7 @@ export function createPartUpdateSchema(t: TFunction<"parts">, language: string) 
       v.trim(),
       v.nonEmpty(t("edit.validation.priceRequired")),
       // Read the user's way: "45,50" in French, "45.50" in English.
-      v.check((value) => parsePrice(value, language) !== null, t("edit.validation.priceInvalid")),
+      v.check((value) => parsePriceCents(value, language) !== null, t("edit.validation.priceInvalid")),
     ),
     photos: v.pipe(
       v.array(photo),

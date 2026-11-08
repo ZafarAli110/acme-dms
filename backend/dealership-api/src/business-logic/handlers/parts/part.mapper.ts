@@ -39,7 +39,7 @@ export function toPartResponseDto(
     id: part.id,
     partNumber: part.partNumber,
     description: part.description,
-    unitPrice: part.unitPrice,
+    unitPriceCents: part.unitPriceCents,
     inventory: toPartInventoryDto(inventory, bin),
     photos: photos.map(toPartPhotoResponseDto),
     createdAt: toIsoString(part.createdAt),

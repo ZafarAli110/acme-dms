@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { unitPrice } from "./part-create-request.dto";
+import { unitPriceCents } from "./part-create-request.dto";
 
 /** A photo the part already has, kept by this save. */
 export const PartPhotoUpdateSchema = v.strictObject({ id: v.pipe(v.string(), v.uuid()), isDefault: v.boolean() });
@@ -22,7 +22,7 @@ export const PartUpdateRequestSchema = v.strictObject({
   description: v.optional(
     v.pipe(v.string(), v.nonEmpty(), v.maxLength(500), v.metadata({ example: "Front brake pads, ceramic" })),
   ),
-  unitPrice: v.optional(unitPrice),
+  unitPriceCents: v.optional(unitPriceCents),
   photos: v.optional(v.array(PartPhotoUpdateSchema)),
   newPhotos: v.optional(v.array(PartNewPhotoSchema)),
 });

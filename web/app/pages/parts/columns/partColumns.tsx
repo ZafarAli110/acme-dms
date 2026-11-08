@@ -47,10 +47,20 @@ export function partColumns(t: TFunction<"parts">, language: string): GridColDef
       renderCell: renderOnHand,
     },
     {
-      field: "unitPrice",
+      field: "unitPriceCents",
       headerName: t("columns.unitPrice"),
       type: "number",
       width: 120,
+      valueFormatter: (value: number) => formatPrice(value, language),
+    },
+    {
+      // Worked out by the API for this location; it sorts and filters by neither.
+      field: "stockValueCents",
+      headerName: t("columns.stockValue"),
+      type: "number",
+      width: 140,
+      sortable: false,
+      filterable: false,
       valueFormatter: (value: number) => formatPrice(value, language),
     },
   ].map((column) => serverColumn<PartListItem>(column as GridColDef<PartListItem>));

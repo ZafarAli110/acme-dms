@@ -13,7 +13,9 @@ import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
 import { prefetchListPage } from "../../core/paging/prefetchListPage";
 import { queryClient } from "../../core/queries/queryClient";
 import { partColumns } from "./columns/partColumns";
+import { formatPrice } from "./formatters/formatPrice";
 import { usePartList } from "./hooks/usePartList";
+import { useStockValue } from "./hooks/useStockValue";
 import { PartCreateDialog } from "./PartCreateDialog";
 import { partQueryOptions } from "./queries/partQueryOptions";
 import type { PartListItem } from "./types/part";
@@ -37,6 +39,7 @@ export default function PartList() {
   // A new page, sort or filter loads in the route's clientLoader; meanwhile the grid keeps its rows and shows a bar.
   const isLoadingPage = useNavigation().state === "loading";
   const { data, error, isLoading } = usePartList(location?.id ?? "", params);
+  const stockValue = useStockValue(location?.id ?? "");
   const visibility = useColumnVisibility("parts");
   const columns = useMemo(() => partColumns(t, i18n.language), [t, i18n.language]);
   // Creating a part opens PartCreateDialog, which predates the web standard: its own form state, not a route.
@@ -51,7 +54,17 @@ export default function PartList() {
 
   return (
     <Fragment>
-      <PageHeader title={t("title")} subtitle={t("subtitle", { location: location?.name ?? "" })} />
+      <PageHeader
+        title={t("title")}
+        subtitle={
+          stockValue.isSuccess
+            ? t("subtitleWithValue", {
+                location: location?.name ?? "",
+                value: formatPrice(stockValue.data, i18n.language),
+              })
+            : t("subtitle", { location: location?.name ?? "" })
+        }
+      />
       <ErrorAlert error={error} />
       <AppDataGrid<PartListItem>
         columns={columns}

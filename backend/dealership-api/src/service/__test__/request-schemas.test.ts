@@ -39,7 +39,7 @@ const UUID = "30000000-0000-0000-0000-0000000000aa";
 const PART = {
   partNumber: "BRK-1",
   description: "Pads",
-  unitPrice: 49.99,
+  unitPriceCents: 4999,
   binId: UUID,
   quantityOnHand: 6,
   reorderLevel: 4,
@@ -84,8 +84,14 @@ describe("request schemas", () => {
     expect(problems(BinCreateRequestSchema, { code: "a-1", description: "x" })).toEqual([
       "Code may only contain capital letters, digits and dashes.",
     ]);
-    expect(problems(PartCreateRequestSchema, { ...PART, unitPrice: 1.234 })).toEqual(["Unit price must be a number."]);
-    expect(problems(PartCreateRequestSchema, { ...PART, unitPrice: -1 })).toEqual(["Unit price must be at least 0."]);
+    // A price in pence with a fraction is a pound amount sent by mistake (49.99): refused, never rounded.
+    expect(problems(PartCreateRequestSchema, { ...PART, unitPriceCents: 49.99 })).toEqual([
+      "Unit price must be a whole number.",
+    ]);
+    expect(problems(PartCreateRequestSchema, { ...PART, unitPriceCents: -1 })).toEqual([
+      "Unit price must be at least 0.",
+    ]);
+    expect(problems(PartCreateRequestSchema, { ...PART, unitPriceCents: 1_000_000_000_000 })).toHaveLength(1);
     expect(problems(PartCreateRequestSchema, { ...PART, binId: "nope" })).toEqual(["Bin must be a valid id."]);
     expect(problems(PartCreateRequestSchema, { ...PART, quantityOnHand: 1.5 })).toEqual([
       "Quantity on hand must be a whole number.",
@@ -93,11 +99,12 @@ describe("request schemas", () => {
     expect(problems(PartCreateRequestSchema, { ...PART, description: undefined })).toEqual([
       "Description is required.",
     ]);
-    expect(problems(PartCreateRequestSchema, { ...PART, unitPrice: "49" })).toEqual(["Unit price must be a number."]);
+    expect(problems(PartCreateRequestSchema, { ...PART, unitPriceCents: "4999" })).toEqual([
+      "Unit price must be a number.",
+    ]);
     expect(problems(StockLevelSetRequestSchema, { binId: UUID, quantityOnHand: -1, reorderLevel: 0 })).toEqual([
       "Quantity on hand must be at least 0.",
     ]);
-    expect(v.parse(PartCreateRequestSchema, { ...PART, unitPrice: 0.1 + 0.2 }).unitPrice).toBeCloseTo(0.3);
   });
 
   it("take a part update with only what changes, and refuse null, a bad photo, or an unknown field", () => {
@@ -140,15 +147,15 @@ describe("the OpenAPI schemas", () => {
   const openApi = (schema: v.GenericSchema) =>
     valibotToOpenApi(schema).schema as { properties: Record<string, Record<string, unknown>>; required?: string[] };
 
-  it("say a price has at most two decimals", () => {
+  it("say a price is whole pence", () => {
     const { properties } = openApi(PartCreateRequestSchema);
 
-    expect(properties["unitPrice"]).toEqual({
-      type: "number",
+    expect(properties["unitPriceCents"]).toEqual({
+      type: "integer",
       minimum: 0,
-      multipleOf: 0.01,
-      description: "In pounds, at most two decimals",
-      example: 49.99,
+      maximum: 999_999_999_999,
+      description: "In pence: 4999 is £49.99",
+      example: 4999,
     });
   });
 

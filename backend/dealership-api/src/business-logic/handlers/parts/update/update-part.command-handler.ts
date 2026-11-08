@@ -72,7 +72,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     // PATCH: a field that was not sent (undefined) is left as it is.
     if (
       request.description === undefined &&
-      request.unitPrice === undefined &&
+      request.unitPriceCents === undefined &&
       request.photos === undefined &&
       newPhotos.length === 0
     ) {
@@ -143,7 +143,7 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
         .update(parts)
         .set({
           ...(request.description === undefined ? {} : { description: request.description }),
-          ...(request.unitPrice === undefined ? {} : { unitPrice: request.unitPrice }),
+          ...(request.unitPriceCents === undefined ? {} : { unitPriceCents: request.unitPriceCents }),
           version: sql`${parts.version} + 1`,
           ...updatedAudit(userContext.userId, now),
         })

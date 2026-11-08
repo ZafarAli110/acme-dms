@@ -12,7 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { parsePrice } from "./formatters/formatPrice";
+import { parsePriceCents } from "./formatters/formatPrice";
 import { useNavigate } from "react-router";
 import { partQueries } from "./queries/partQueries";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
@@ -46,7 +46,7 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
       partQueries.createPartAsync({
         partNumber: form.partNumber,
         description: form.description,
-        unitPrice: parsePrice(form.unitPrice, i18n.language) ?? 0,
+        unitPriceCents: parsePriceCents(form.unitPrice, i18n.language) ?? 0,
         binId: form.binId,
         quantityOnHand: Number(form.quantityOnHand),
         reorderLevel: Number(form.reorderLevel),
@@ -70,7 +70,7 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
 
   const set = (field: keyof typeof EMPTY) => (event: { target: { value: string } }) =>
     setForm({ ...form, [field]: field === "partNumber" ? event.target.value.toUpperCase() : event.target.value });
-  const priceIsValid = parsePrice(form.unitPrice, i18n.language) !== null;
+  const priceIsValid = parsePriceCents(form.unitPrice, i18n.language) !== null;
   const complete = form.partNumber && form.description && priceIsValid && form.binId;
 
   return (

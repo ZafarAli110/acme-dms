@@ -53,7 +53,7 @@ export const scrollMemory = {
       const keys = Object.keys(entries);
       if (keys.length > MAX_ENTRIES) {
         keys
-          .sort((first, second) => (entries[first]?.at ?? 0) - (entries[second]?.at ?? 0))
+          .toSorted((first, second) => (entries[first]?.at ?? 0) - (entries[second]?.at ?? 0))
           .slice(0, keys.length - MAX_ENTRIES)
           .forEach((stale) => delete entries[stale]);
       }

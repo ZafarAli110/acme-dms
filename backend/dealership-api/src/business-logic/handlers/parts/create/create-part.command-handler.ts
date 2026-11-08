@@ -56,7 +56,7 @@ export class CreatePartCommandHandler implements ICreatePartCommandHandler {
         dealerId: userContext.dealerId,
         partNumber: request.partNumber,
         description: request.description,
-        unitPrice: request.unitPrice,
+        unitPriceCents: request.unitPriceCents,
         ...audit,
       })
       .returning();
