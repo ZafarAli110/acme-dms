@@ -22,7 +22,8 @@ describe("formatMoney", () => {
     expect(parseMoneyCents("45,50", "fr")).toBe(4550);
     expect(parseMoneyCents("45.50", "en")).toBe(4550);
     expect(parseMoneyCents("1,234,567.89", "en")).toBe(123_456_789);
-    expect(parseMoneyCents("1.15", "en")).toBe(115); // 1.15 * 100 is 114.99999999999999
+    // 1.15 is stored as 1.1499999999999999…, so 1.15 * 100 is 114.99999999999999: cutting off the fraction gives 114.
+    expect(parseMoneyCents("1.15", "en")).toBe(115);
     expect(parseMoneyCents("0.1", "en")).toBe(10);
     expect(parseMoneyCents("0", "en")).toBe(0);
     expect(parseMoneyCents("49.999", "en")).toBeNull();
