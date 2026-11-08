@@ -36,9 +36,10 @@
     "format:check": "bun fmt --check .",
     "lint": "nx run-many -t lint && oxlint scripts",
     "typecheck": "nx run-many -t typecheck && tsc --noEmit -p scripts/tsconfig.json",
-    "test": "nx run-many -t test",
+    "test": "nx run-many -t test && bun test scripts",
     "coverage": "bun scripts/coverage.ts",
     "docs:check": "bun scripts/check-docs.ts",
+    "audit": "bun scripts/audit-sessions.ts",
     "gate:fast": "bun scripts/gate.ts",
     "gate:slow": "nx run @acme/web:e2e"
   },

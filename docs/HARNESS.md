@@ -105,6 +105,7 @@ included.
 | Folder                   | Written by                             | Holds                                                                     |
 | ------------------------ | -------------------------------------- | ------------------------------------------------------------------------- |
 | `.ai-plans/`             | `/implement-ticket`, `/ticket-to-pr`   | one plan per ticket, from `plan-template.md`                              |
+| `.ai-observability/`     | `bun run audit`                        | what sessions did: drift and cost; git keeps one line of counts each      |
 | `docs/prototypes/<KEY>/` | the design gate                        | two or three static prototypes when a screen has no design                |
 | `docs/evidence/`         | `/verify-ticket`                       | each requirement, the command that checks it, and what it returned        |
 | `docs/qa/`               | `/qa-ticket`                           | the test cases and what happened (and on the ticket, with screenshots)    |

@@ -27,5 +27,10 @@ test-results/
 playwright-report/
 # playwright-cli snapshots and screenshots
 .playwright-cli/
+# The session audit (`bun run audit`): its reports quote prompts and paths, so only the folder's README and
+# summary.jsonl (one line of counts per session, no text) are kept
+.ai-observability/*
+!.ai-observability/README.md
+!.ai-observability/summary.jsonl
 # A session's handoff note (/handoff): personal, one per checkout or worktree
 .claude/handoff.md
