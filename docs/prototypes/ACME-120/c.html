@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ACME-120 prototype C</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter Variable", Roboto, Helvetica, Arial, sans-serif;
+        background: #f5f7fa;
+        color: #1f2933;
+      }
+      main {
+        max-width: 1180px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 4px;
+      }
+      .sub {
+        color: #5f6b7a;
+        margin: 0 0 16px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e4e8ee;
+      }
+      .search {
+        flex: 1;
+        max-width: 360px;
+        border: 1px solid #c9d1db;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      .btn {
+        border: 1px solid #1565c0;
+        color: #1565c0;
+        background: #fff;
+        border-radius: 8px;
+        padding: 7px 14px;
+        font-size: 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th {
+        text-align: left;
+        color: #5f6b7a;
+        font-weight: 600;
+        padding: 10px 16px;
+        border-bottom: 1px solid #e4e8ee;
+      }
+      td {
+        padding: 10px 16px;
+        border-bottom: 1px solid #eef1f5;
+      }
+      .chip {
+        display: inline-block;
+        border-radius: 12px;
+        padding: 2px 10px;
+        font-size: 12px;
+        background: #e3f2e6;
+        color: #1b5e20;
+      }
+      .footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 16px;
+        padding: 10px 16px;
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .note {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .panel {
+        margin: 16px;
+        border: 1px dashed #c9d1db;
+        border-radius: 10px;
+      }
+      .panel h2 {
+        font-size: 15px;
+        margin: 0;
+        padding: 12px 16px;
+        color: #1565c0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- C: the grid shows exact matches only; close spellings sit in a separate "Did you mean" panel under it, as a short list (up to 10), clearly apart from the list itself. -->
+    <main>
+      <h1>Customers</h1>
+      <p class="sub">Customers at Northside</p>
+      <div class="card">
+        <div class="toolbar">
+          <input class="search" value="penwod" aria-label="Search" /><span style="flex: 1"></span
+          ><button class="btn">Export</button
+          ><button class="btn" style="background: #1565c0; color: #fff">New customer</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Surname, First name</th>
+              <th>Company</th>
+              <th>Email</th>
+              <th>City</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="note" style="padding: 24px 16px; text-align: center">No customers are called "penwod".</div>
+        <div class="footer"><span>0–0 of 0</span></div>
+        <div class="panel">
+          <h2>Did you mean… (closest spellings first)</h2>
+          <table>
+            <tbody>
+              <tr>
+                <td>Penwood, Yusuf</td>
+                <td>Dales Veterinary Practice</td>
+                <td>yusuf.penwood38@outlook.com</td>
+                <td>Leeds</td>
+                <td><span class="chip">Active</span></td>
+              </tr>
+              <tr>
+                <td>Penwood, Amy</td>
+                <td>—</td>
+                <td>amy.penwood12@gmail.com</td>
+                <td>York</td>
+                <td><span class="chip">Active</span></td>
+              </tr>
+              <tr>
+                <td>Penwood, Bilal</td>
+                <td>Penwood Haulage</td>
+                <td>bilal.penwood@outlook.com</td>
+                <td>Halifax</td>
+                <td><span class="chip">Active</span></td>
+              </tr>
+              <tr>
+                <td>Penworth, Ava</td>
+                <td>—</td>
+                <td>ava.penworth@hotmail.co.uk</td>
+                <td>Harrogate</td>
+                <td><span class="chip">Active</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
