@@ -42,6 +42,12 @@ describe("GetCustomerListQueryHandler: close spellings", () => {
     await seed.addCustomerAsync({ locationId: NORTHSIDE, firstName: "Ava", surname: "Penworth" });
     await seed.addCustomerAsync({ locationId: NORTHSIDE, firstName: "Cara", surname: "Whitworth" });
     await seed.addCustomerAsync({ locationId: RIVERSIDE, firstName: "Dev", surname: "Riverlyn" });
+    // A rare name beside a common one the same plain distance away: "hpoper" is one swap from Hopper, two edits from
+    // Harper (the verifier's finding).
+    await seed.addCustomerAsync({ locationId: NORTHSIDE, firstName: "Grace", surname: "Hopper" });
+    for (let index = 0; index < 30; index++) {
+      await seed.addCustomerAsync({ locationId: NORTHSIDE, firstName: `Harp${index}`, surname: "Harper" });
+    }
   });
 
   const handler = () => database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
@@ -53,6 +59,20 @@ describe("GetCustomerListQueryHandler: close spellings", () => {
       expect(found.items.every((item) => item.match === "close")).toBe(true);
       expect(named(found.items).slice(0, 2).toSorted()).toEqual(["Amy Penwood (close)", "Yusuf Penwood (close)"]);
     }
+  });
+
+  it("ranks a swap of two letters as one edit, and lets no one name fill the page", async () => {
+    const found = await handler().executeAsync(AT_NORTHSIDE, { ...page, search: "hpoper" });
+
+    expect(named(found.items)[0]).toBe("Grace Hopper (close)");
+    expect(found.items.filter((item) => item.surname === "Harper").length).toBeLessThanOrEqual(10);
+  });
+
+  // A part of an email or a phone is not a name: exact, as today (Zafar Ali, 8 Nov).
+  it("keeps a search with @, a dot or a digit exact", async () => {
+    const found = await handler().executeAsync(AT_NORTHSIDE, { ...page, search: "amy@outl" });
+
+    expect(named(found.items)).toEqual(["Amy Penwood (exact)"]);
   });
 
   it("finds the customers of a company whose word is misspelt", async () => {

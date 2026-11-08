@@ -14,7 +14,10 @@
   "closeMatch": {
     "note": "Aucun client ne s’appelle « {{search}} ».",
     "divider": "Vouliez-vous dire… (orthographes les plus proches d’abord)",
-    "footer": "{{exact}} correspondances exactes · {{close}} orthographes proches"
+    "exact_one": "{{count}} correspondance exacte",
+    "exact_other": "{{count}} correspondances exactes",
+    "close_one": "{{count}} orthographe proche",
+    "close_other": "{{count}} orthographes proches"
   },
   "none": "Aucun client à {{location}} pour l'instant.",
   "fields": {

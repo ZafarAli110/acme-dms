@@ -69,7 +69,9 @@ export default function CustomerList() {
   const rows = useMemo(() => withCloseMatchRows(items), [items]);
   const closeCount = items.filter((item) => item.match === "close").length;
   const footerLabel =
-    closeCount > 0 ? t("closeMatch.footer", { exact: items.length - closeCount, close: closeCount }) : null;
+    closeCount > 0
+      ? `${t("closeMatch.exact", { count: items.length - closeCount })} · ${t("closeMatch.close", { count: closeCount })}`
+      : null;
   const noRows = params.search
     ? t("noMatch", { search: params.search })
     : t("none", { location: location?.name ?? "" });

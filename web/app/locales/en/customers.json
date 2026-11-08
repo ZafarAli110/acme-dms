@@ -14,7 +14,10 @@
   "closeMatch": {
     "note": "No customers are called \"{{search}}\".",
     "divider": "Did you mean… (closest spellings first)",
-    "footer": "{{exact}} exact matches · {{close}} close spellings"
+    "exact_one": "1 exact match",
+    "exact_other": "{{count}} exact matches",
+    "close_one": "1 close spelling",
+    "close_other": "{{count}} close spellings"
   },
   "none": "No customers at {{location}} yet.",
   "fields": {

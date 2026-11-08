@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-08 22:41
 
-**Status:** Verifying
+**Status:** Done
 
 **Ticket:** ACME-120 · **Branch:** final
 
@@ -11,8 +11,8 @@
 **Design:** Open: prototypes in `docs/prototypes/ACME-120/` → Picked: a.html (close spellings as rows in the same grid,
 under a "Did you mean…" divider row, after the exact matches), by Zafar Ali, 2026-11-08
 
-**Now:** Done: the name list and its triggers, close spellings on page 1, the grid's note, divider and footer; gates
-pass; measured · Next: `verify-ticket`; Zafar Ali agrees the footer's wording (D6) · Blocked: None
+**Now:** Done: verified, evidence in `docs/evidence/ACME-120.md` · Next: Zafar Ali moves ACME-120 to in-review ·
+Blocked: None
 
 ## Requirement
 
@@ -170,7 +170,9 @@ known name is a correct spelling (today's list, no close rows); several words ar
   the counts once, not 1.6 million times.
 
 - D6 The footer reads "0 exact matches · 25 close spellings", over a.html's "0 exact matches · 1–25 of close spellings":
-  the shorter wording says the same; to be agreed by Zafar Ali.
+  the shorter wording says the same, with plurals ("1 exact match"); agreed by Zafar Ali, 8 Nov.
+- D7 Only a word of letters (a name may have ' and -) gets close rows; a part of an email or a phone stays exact
+  (Zafar Ali, 8 Nov, after the verifier found "aaron.penwood6@" filled with Penwoods).
 
 ## Log
 
@@ -203,3 +205,10 @@ known name is a correct spelling (today's list, no close rows); several words ar
   edits 31 → 24 ms; close names 3.1 ms a call (3% of `sql:top`).
 - 2026-11-08 23:08 Also, on Zafar Ali's word: explicit `null` over `undefined` where the API takes it (`.catch(() => null)` in
   migrate-database, the export queue, the consumer, upload-photo, apiClient; the factory; the filter; `body: null`).
+- 2026-11-08 23:27 Verifier: FAIL on two rows, both fixed. (1) "hpoper" missed Grace Hopper: plain levenshtein counts a swap as 2,
+  so Hopper tied with Harper, whose 8,998 customers filled the page. Now ranked by optimal string alignment (a swap is
+  one edit) over 30 candidates, and each close name gives at most 10 customers. (2) "aaron.penwood6@" got 24 close
+  rows: Zafar Ali chose letters only (D7). Also the footer's plural ("1 exact match", D6 agreed). Tests first (a swap
+  beside 30 Harpers; an email fragment); list tests 32, web 67, `gate:fast` 19 of 19. Re-checked live by Claude:
+  hpoper → Grace Hopper first; aaron.penwood6@ → 1 exact only; penwod 25 close; oppe 1 exact + 20 close, footer "1
+  exact match · 20 close spellings". Evidence: [docs/evidence/ACME-120.md](../docs/evidence/ACME-120.md). Done.

@@ -19,6 +19,13 @@ import { type CloseName, closeNamesAsync, isKnownNameAsync } from "./close-names
 
 /** A search shorter than this stays exact: too few letters to compare spellings (ACME-120). */
 const MIN_CLOSE_LETTERS = 3;
+/**
+ * Only a word of letters (a name may have ' and -) is compared with names: anything with @, a dot, a digit or a space
+ * is part of an email or a phone, or several words, and stays exact as today (Zafar Ali, 8 Nov).
+ */
+const NAME_WORD = /^[\p{L}'-]+$/u;
+/** At most this many customers a close name, so one common name cannot fill the page (the verifier's "hpoper"). */
+const MAX_PER_CLOSE_NAME = 10;
 
 /** What the customer list can be sorted and filtered by: the grid's field names. */
 export const CUSTOMER_LIST_COLUMNS: ListColumns = {
@@ -110,7 +117,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     room: number,
   ): Promise<string[]> {
     const word = (query.search ?? "").trim().toLowerCase();
-    if (word.length < MIN_CLOSE_LETTERS || /\s/.test(word)) {
+    if (word.length < MIN_CLOSE_LETTERS || !NAME_WORD.test(word)) {
       return [];
     }
     let names: CloseName[];
@@ -153,7 +160,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
           ),
         )
         .orderBy(asc(customers.surname), asc(customers.firstName), asc(customers.id))
-        .limit(room - found.length);
+        .limit(Math.min(room - found.length, MAX_PER_CLOSE_NAME));
       found.push(...rows.map((row) => row.id));
     }
     return found;
