@@ -199,6 +199,17 @@ running system; `bun run load-test --target-rps 3300 --target-p95 300` fails whe
 time went: Postgres (its CPU, its running queries, what waits on locks) or the API processes (their CPU), because more
 API copies in front of a full database only queue more queries on it. Measure, then scale what is full.
 
+- **Measure the production build, not dev mode.** `bun run dev` watches and rebuilds, runs .NET in Debug and logs
+  every request; `bun run start:prod` runs the same system as production does: each Bun app's bundle built once and
+  run by Node, the .NET services in Release, the web app's production build served as files
+  (`scripts/serve-web.ts`), warnings and errors only in the logs. It keeps Development settings (demo users, dev
+  credentials, plain HTTP), so sign-in and the seed work as usual. A change needs a restart.
+- **A laptop says before against after, not the absolute number.** On one machine the database is a loopback call
+  away (in the cloud each round trip costs about a millisecond, and a request makes about three), the disk has no IOPS
+  cap, Postgres keeps its container defaults, and the load test shares the CPU with the system it measures. Use local
+  runs to compare a change with the build before it; the 3,300 a second is proven on an environment shaped like
+  production (the same instance sizes, managed Postgres, the load sent from another machine).
+
 - **More copies, not a faster language.** A Node process runs JavaScript on one core, and almost every request spends
   its time waiting on Postgres, which one process does for thousands of requests at once. More processes use the other
   cores and other machines: `DEALERSHIP_API_INSTANCES=4 bun run dev` starts four copies, and the gateway spreads

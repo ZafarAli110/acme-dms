@@ -379,12 +379,15 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run status`                                    | every resource, its state and URL                                      |
 | `bun run health`                                    | what is not healthy, its last log lines, and the likely fix            |
 | `bun run start` / `bun run stop`                    | start the whole system in the background / stop it                     |
+| `bun run start:prod`                                | run it as production does (built, Release, quiet logs) to measure it   |
 | `bun run rebuild identity-api`                      | rebuild one .NET service after a change (the rest reload themselves)   |
 | `bun run resource dealership-api stop`              | stop one service (or `start`, `restart`): how the rest copes           |
 | `bun run logs dealership-api`                       | console output of one service                                          |
 | `bun run traces dealership-api`                     | recent traces of one service                                           |
+| `bun run spans dealership-api --format Json`        | its spans, with the SQL each query ran (`--search customers`)          |
 | `bun run errors`                                    | only failed (5xx) traces, across all services                          |
 | `bun run sql:explain "select …"`                    | how Postgres runs one query: its plan, rows and time (read-only)       |
+| `bun run sql:explain --as maria "select …"`         | the same as maria's request runs it: row-level security in the plan    |
 | `bun run xlsx:inspect <file>`                       | an Excel file's sheets, row counts, header and first and last rows     |
 | `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)                             |
 | `bun run seed`                                      | add the sample parts, stock, photos, customers                         |

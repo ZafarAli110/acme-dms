@@ -34,8 +34,18 @@ var documentApi = builder.AddProject<Projects.Acme_Documents_Service>("document-
     .WaitFor(rabbitmq)
     .WaitFor(identityApi);
 
+// `bun run start:prod` (scripts/start-production-like.ts): the same system run as production runs it, to measure it.
+// The Bun apps run their built bundle once instead of watching and rebuilding, the web app its production build, and
+// logs say warnings and errors only. Development settings stay (demo users, dev credentials, plain HTTP).
+var productionLike = builder.Configuration["ACME_PRODUCTION_LIKE"] == "1";
+
+// One key signs every export download link for all dealership-api copies: a link one copy made must open on whichever
+// copy the gateway sends the download to. A deployment sets EXPORT_LINK_KEY; here it lasts until the next start.
+var exportLinkKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+
 // The Bun apps run as plain executables: `bun install` at the repo root already installs every workspace.
-var dealershipApi = builder.AddExecutable("dealership-api", "bun", "../../backend/dealership-api", "run", "dev")
+var dealershipApi = builder.AddExecutable("dealership-api", "bun", "../../backend/dealership-api", "run", productionLike ? "serve" : "dev")
+    .WithEnvironment("EXPORT_LINK_KEY", exportLinkKey)
     .WithHttpEndpoint(env: "PORT")
     .WithHttpHealthCheck("/v1/system/health")
     .WithOtlpExporter()
@@ -55,7 +65,8 @@ var dealershipApi = builder.AddExecutable("dealership-api", "bun", "../../backen
 // makes even a race safe). The gateway spreads requests across all of them.
 var instances = int.TryParse(builder.Configuration["DEALERSHIP_API_INSTANCES"], out var wanted) ? Math.Max(1, wanted) : 1;
 var dealershipApiReplicas = Enumerable.Range(2, instances - 1)
-    .Select(number => builder.AddExecutable($"dealership-api-{number}", "bun", "../../backend/dealership-api", "run", "dev", "replica")
+    .Select(number => builder.AddExecutable($"dealership-api-{number}", "bun", "../../backend/dealership-api", productionLike ? ["run", "start"] : ["run", "dev", "replica"])
+        .WithEnvironment("EXPORT_LINK_KEY", exportLinkKey)
         .WithHttpEndpoint(env: "PORT")
         .WithHttpHealthCheck("/v1/system/health")
         .WithOtlpExporter()
@@ -70,7 +81,7 @@ var dealershipApiReplicas = Enumerable.Range(2, instances - 1)
 // API down. It waits for the API, which applies the database migrations when it starts and builds the bundle this runs
 // (dist/worker.js). Both use the same EXPORT_DIR default (the temp folder of this machine): the worker writes a file,
 // the API serves it.
-builder.AddExecutable("export-worker", "bun", "../../backend/dealership-api", "run", "worker")
+builder.AddExecutable("export-worker", "bun", "../../backend/dealership-api", "run", productionLike ? "start:worker" : "worker")
     .WithOtlpExporter()
     .WithReference(dealershipDb)
     .WaitFor(dealershipApi);
@@ -98,10 +109,24 @@ builder.AddExecutable("seed", "bun", "../..", "scripts/seed.ts")
     .WithReference(gateway)
     .WaitFor(gateway);
 
-builder.AddExecutable("web", "bun", "../../web", "run", "dev")
+var web = productionLike
+    ? builder.AddExecutable("web", "bun", "../..", "scripts/serve-web.ts")
+    : builder.AddExecutable("web", "bun", "../../web", "run", "dev");
+web
     .WithHttpEndpoint(env: "PORT")
     .WithExternalHttpEndpoints()
     .WithReference(gateway)
     .WaitFor(gateway);
+
+// Warnings and errors only when measuring: an info line per request is work the production log level would not do.
+if (productionLike)
+{
+    foreach (var service in builder.Resources.OfType<IResourceWithEnvironment>().Where(resource => resource is ProjectResource or ExecutableResource))
+    {
+        builder.CreateResourceBuilder(service)
+            .WithEnvironment("LOG_LEVEL", "warn")
+            .WithEnvironment("Logging__LogLevel__Default", "Warning");
+    }
+}
 
 await builder.Build().RunAsync();

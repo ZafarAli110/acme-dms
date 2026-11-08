@@ -7,6 +7,8 @@
 //
 // It only reads (lists, a part, the stock value, recent customers), so it can run on the sample data again and again.
 // Load the real sizes first (`bun run seed:bulk`): a slow query only shows at Northside's 1.6 million customers.
+// Measure `bun run start:prod` (built code, Release, quiet logs), not `bun run dev`, and compare runs on the same
+// machine: a laptop's numbers say before against after, not what production will do.
 // More dealership-api copies: `DEALERSHIP_API_INSTANCES=4 bun run dev`. Each person has a share of requests at the
 // gateway (RateLimit:RequestsPerSecond, RateLimit:Burst): a 429 here means one person asked for more than a person
 // would; add people rather than raising it. At the end it says where the time went: the database or the API processes.

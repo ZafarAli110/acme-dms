@@ -18,6 +18,8 @@
   "scripts": {
     "build": "bun scripts/build.ts",
     "start": "node --env-file-if-exists=.env --enable-source-maps --import ./dist/observability/telemetry.js dist/main.js",
+    "serve": "bun run build && bun run start",
+    "start:worker": "node --env-file-if-exists=.env --enable-source-maps --import ./dist/observability/telemetry.js dist/worker.js",
     "dev": "bun scripts/dev.ts",
     "worker": "bun scripts/dev.ts worker",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p scripts/tsconfig.json",

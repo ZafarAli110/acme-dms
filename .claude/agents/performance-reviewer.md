@@ -199,9 +199,13 @@ A read uses `beginAsync({ readOnly: true })`. Independent reads outside a transa
 A query you are not sure of is run, not judged by eye: before you report a missing index, a full scan or a slow query,
 get its plan. On the seeded data (`bun run seed:bulk` for 1.6 million customers), when the system is running:
 
-- **A query:** `bun run sql:explain "<the handler's query, with real ids>"` (read-only). The plan shows whether an
-  index is used (`Index Scan`) or every row is read (`Seq Scan`), and the real time. Quote that line and the time in
-  the finding.
+- **A query:** the SQL the handler really sends is in its database span: call the endpoint once
+  (`bun run api as <user> …`), then `bun run spans dealership-api --format Json --search <table>` and copy the
+  statement. Run it as that user's request, so row-level security adds its filters to the plan as it does for real:
+  `bun run sql:explain --as <user> "<the statement>"` (read-only). With its `$1` placeholders you get the plan for any
+  values; put the real ids in to get row counts and the time. The plan shows whether an index is used (`Index Scan`)
+  or every row is read (`Seq Scan`): quote that line and the time in the finding. Without `--as` the query runs as the
+  table's owner, which no policy filters, and the plan can say fast (or slow) for the wrong reason.
 - **An endpoint:** `bun run api as <user> …`, a few calls before and after; a gap smaller than the spread between
   calls is noise, not a finding.
 - **An N+1:** call the list endpoint with a small page and a big one (`pageSize=5`, then `pageSize=50`), then

@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "bun scripts/check-node.ts && bun scripts/check-install.ts && aspire run",
     "start": "bun scripts/check-node.ts && bun scripts/check-install.ts && aspire start",
+    "start:prod": "bun scripts/check-node.ts && bun scripts/check-install.ts && bun scripts/start-production-like.ts",
     "stop": "aspire stop",
     "rebuild": "bun scripts/rebuild.ts",
     "resource": "aspire resource",
@@ -25,6 +26,7 @@
     "logs": "aspire logs",
     "health": "bun scripts/health.ts",
     "traces": "aspire otel traces",
+    "spans": "aspire otel spans",
     "errors": "aspire otel traces --has-error true",
     "api": "bun scripts/api.ts",
     "sql:explain": "bun scripts/explain.ts",
