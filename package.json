@@ -36,7 +36,7 @@
     "format:check": "bun fmt --check .",
     "lint": "nx run-many -t lint && oxlint scripts",
     "typecheck": "nx run-many -t typecheck && tsc --noEmit -p scripts/tsconfig.json",
-    "test": "nx run-many -t test && bun test scripts",
+    "test": "nx run-many -t test && bun test scripts ./.claude/hooks/check-plan.test.ts",
     "coverage": "bun scripts/coverage.ts",
     "docs:check": "bun scripts/check-docs.ts",
     "audit": "bun scripts/audit-sessions.ts",
