@@ -195,7 +195,12 @@ What this does not do, on purpose:
 
 The target (ACME-117) is a busy Saturday morning: 200,000 requests in the peak minute, about 3,300 a second, with
 pages answering within about a third of a second at Northside's size. `bun run load-test` measures it against the
-running system; `bun run load-test --target-rps 3300 --target-p95 300` fails when it is missed. It also says where the
+running system; `bun run load-test --target-rps 3300 --target-p95 300` sends at that rate and fails when it is missed.
+It sends at a fixed rate, as a busy morning arrives (a slow answer does not slow the next request, it only waits
+longer itself), counts each time from when the request was due, skips a warm-up, and gives up on a request after 10
+seconds. Its mix includes deep pages, searches (some misspelt), filters and sorts, spread over the locations as a busy
+morning is, with writes behind `--writes`. Live and at the end it shows what each part used (CPU, memory, database
+connections busy) and says where the
 time went: Postgres (its CPU, its running queries, what waits on locks) or the API processes (their CPU), because more
 API copies in front of a full database only queue more queries on it. Measure, then scale what is full.
 

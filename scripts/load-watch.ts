@@ -1,28 +1,49 @@
-// Where a load test's time goes: while it runs, once a second, how busy Postgres is (its connections and their waits,
-// its container's CPU) and how busy the dealership-api processes are (their CPU). At the end, which of them was the
-// limit, so nobody adds API copies to a database that is already full ("more servers in front of the same database
-// only queue more requests on it").
+// What a load test used, and where its time went: once a second, how busy Postgres is (its connections, what waits on
+// a lock, its container's CPU and memory) and what each part of the system uses (the CPU and memory of every
+// dealership-api copy, the export worker and the .NET services). `nowLine` gives a short live line while the test runs;
+// `stopAsync` the report and which part was the limit, so nobody adds API copies to a database that is already full
+// ("more servers in front of the same database only queue more requests on it").
 //
 // Postgres comes from its own statistics (pg_stat_activity), over the development connection `bun run sql:explain`
-// uses. CPU comes from `docker stats` and `ps`: where they are missing (Windows has no `ps`), that line says
+// uses. CPU and memory come from `docker stats` and `ps`: where they are missing (Windows has no `ps`), that line says
 // "not measured", never a guess.
 import { SQL } from "bun";
-import { resourceUrl } from "./running-system";
+
+/** One process's use: CPU in percent of one core, resident memory in MB. */
+interface Use {
+  cpu: number;
+  memoryMb: number;
+}
 
 interface Sample {
   activeConnections: number;
+  openConnections: number;
   waitingOnLocks: number;
-  postgresCpu: number | null;
-  apiCpu: number[] | null;
+  postgres: Use | null;
+  /** By part of the system ("dealership-api", "gateway-api" …), one entry per process; null when `ps` is missing. */
+  processes: Map<string, Use[]> | null;
 }
 
 export interface LoadWatch {
+  /** The latest sample in one line, for the live progress. */
+  nowLine: () => string;
   stopAsync: () => Promise<string[]>;
 }
 
 /** What each API process may use before it is the limit: one core, as Node runs JavaScript on one. */
 const BUSY_PROCESS_CPU = 85;
 const BUSY_POSTGRES_CPU = 80;
+/** Connections count as all busy when this share of the open ones runs a query, on average. */
+const BUSY_CONNECTIONS = 0.9;
+
+/** The parts of the system, by what their command line contains; the order is the report's. */
+const PARTS: { name: string; matches: (command: string) => boolean }[] = [
+  { name: "dealership-api", matches: (command) => command.includes("node") && command.includes("dist/main.js") },
+  { name: "export-worker", matches: (command) => command.includes("node") && command.includes("dist/worker.js") },
+  { name: "gateway-api", matches: (command) => command.includes("Acme.Gateway.Service") },
+  { name: "identity-api", matches: (command) => command.includes("Acme.Identity.Service") },
+  { name: "document-api", matches: (command) => command.includes("Acme.Documents.Service") },
+];
 
 async function outputAsync(command: string[]): Promise<string | null> {
   try {
@@ -34,34 +55,72 @@ async function outputAsync(command: string[]): Promise<string | null> {
   }
 }
 
-/** The CPU of the Postgres container, in percent of one core, or null when Docker cannot tell. */
-async function postgresCpuAsync(): Promise<number | null> {
-  const text = await outputAsync(["docker", "stats", "--no-stream", "--format", "{{.Name}} {{.CPUPerc}}"]);
-  const line = text?.split("\n").find((candidate) => candidate.startsWith("postgres"));
-  const percent = Number(line?.split(" ")[1]?.replace("%", ""));
-  return Number.isFinite(percent) ? percent : null;
+/** "183.4MiB" → 183.4; Docker writes B, kB, KiB, MB, MiB, GB or GiB. */
+function megabytes(text: string): number {
+  const match = /^([\d.]+)\s*([kKMG]?i?B)$/.exec(text.trim());
+  if (!match) {
+    return Number.NaN;
+  }
+  const value = Number(match[1]);
+  const unit = (match[2] ?? "B").toUpperCase().replace("I", "");
+  const factor: Record<string, number> = { B: 1 / 1_048_576, KB: 1 / 1024, MB: 1, GB: 1024 };
+  return value * (factor[unit] ?? Number.NaN);
 }
 
-/** The CPU of each dealership-api process (node dist/main.js), or null when `ps` is missing. */
-async function apiCpuAsync(): Promise<number[] | null> {
-  const text = await outputAsync(["ps", "-A", "-o", "%cpu=,command="]);
+/** The Postgres container's CPU (percent of one core) and memory, or null when Docker cannot tell. */
+async function postgresUseAsync(): Promise<Use | null> {
+  const text = await outputAsync([
+    "docker",
+    "stats",
+    "--no-stream",
+    "--format",
+    "{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}",
+  ]);
+  const line = text?.split("\n").find((candidate) => candidate.startsWith("postgres"));
+  const [, cpuText, memoryText] = line?.split("|") ?? [];
+  const cpu = Number(cpuText?.replace("%", ""));
+  const memoryMb = megabytes(memoryText?.split("/")[0] ?? "");
+  return Number.isFinite(cpu) && Number.isFinite(memoryMb) ? { cpu, memoryMb } : null;
+}
+
+/** Each part's processes and what each uses, or null when `ps` is missing. */
+async function processUseAsync(): Promise<Map<string, Use[]> | null> {
+  const text = await outputAsync(["ps", "-A", "-o", "%cpu=,rss=,command="]);
   if (text === null) {
     return null;
   }
-  return text
-    .split("\n")
-    .filter((line) => line.includes("dist/main.js") && line.includes("node"))
-    .map((line) => Number(line.trim().split(/\s+/)[0]))
-    .filter((percent) => Number.isFinite(percent));
+  const byPart = new Map<string, Use[]>(PARTS.map((part) => [part.name, []]));
+  for (const line of text.split("\n")) {
+    const [cpuText, rssText, ...words] = line.trim().split(/\s+/);
+    const command = words.join(" ");
+    // `dotnet run --project …` only starts the service (bun run dev); the service is its own process.
+    if (command.includes(" run --project ")) {
+      continue;
+    }
+    const part = PARTS.find((candidate) => candidate.matches(command));
+    const cpu = Number(cpuText);
+    const memoryMb = Number(rssText) / 1024;
+    if (part && Number.isFinite(cpu) && Number.isFinite(memoryMb)) {
+      byPart.get(part.name)?.push({ cpu, memoryMb });
+    }
+  }
+  return byPart;
 }
 
 function average(values: number[]): number {
   return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-/** Starts watching; `stopAsync` ends it and gives the report's lines. */
-export function watchLoad(): LoadWatch {
-  const postgres = new URL(resourceUrl("postgres", "tcp").replace("tcp://", "http://"));
+function most(values: number[]): number {
+  return values.length === 0 ? 0 : Math.max(...values);
+}
+
+/**
+ * Starts watching; `stopAsync` ends it and gives the report's lines. `postgresUrl` is `resourceUrl("postgres", "tcp")`,
+ * looked up before the test starts sending: looking it up asks the Aspire CLI and blocks for a second or two.
+ */
+export function watchLoad(postgresUrl: string): LoadWatch {
+  const postgres = new URL(postgresUrl.replace("tcp://", "http://"));
   const sql = new SQL(`postgres://acme:acme@${postgres.hostname}:${postgres.port}/dealership`, { max: 1 });
   const samples: Sample[] = [];
   let busy = false;
@@ -74,15 +133,21 @@ export function watchLoad(): LoadWatch {
     try {
       const [activity] = (await sql`
         select count(*) filter (where state = 'active')::int as active,
+               count(*)::int as open,
                count(*) filter (where wait_event_type = 'Lock')::int as locks
         from pg_stat_activity
-        where datname = 'dealership' and pid <> pg_backend_pid()`) as { active: number; locks: number }[];
-      const [postgresCpu, apiCpu] = await Promise.all([postgresCpuAsync(), apiCpuAsync()]);
+        where datname = 'dealership' and backend_type = 'client backend' and pid <> pg_backend_pid()`) as {
+        active: number;
+        open: number;
+        locks: number;
+      }[];
+      const [postgresUse, processes] = await Promise.all([postgresUseAsync(), processUseAsync()]);
       samples.push({
         activeConnections: activity?.active ?? 0,
+        openConnections: activity?.open ?? 0,
         waitingOnLocks: activity?.locks ?? 0,
-        postgresCpu,
-        apiCpu,
+        postgres: postgresUse,
+        processes,
       });
     } catch {
       // One missed sample changes nothing; the report counts the samples it has.
@@ -93,6 +158,18 @@ export function watchLoad(): LoadWatch {
   const timer = setInterval(() => void sampleAsync(), 1000);
 
   return {
+    nowLine: () => {
+      const latest = samples.at(-1);
+      if (!latest) {
+        return "";
+      }
+      const api = latest.processes?.get("dealership-api") ?? [];
+      return (
+        `Postgres ${latest.postgres ? `CPU ${latest.postgres.cpu.toFixed(0)}%` : "CPU ?"}, ` +
+        `${latest.activeConnections} of ${latest.openConnections} connections busy; ` +
+        `dealership-api CPU ${api.length > 0 ? `${average(api.map((use) => use.cpu)).toFixed(0)}% each` : "?"}`
+      );
+    },
     stopAsync: async () => {
       clearInterval(timer);
       await sql.close();
@@ -100,34 +177,64 @@ export function watchLoad(): LoadWatch {
         return ["Where the time went: not measured (Postgres could not be read)."];
       }
       const active = samples.map((sample) => sample.activeConnections);
+      const open = samples.map((sample) => sample.openConnections);
       const locks = samples.map((sample) => sample.waitingOnLocks);
-      const postgresCpu = samples.flatMap((sample) => (sample.postgresCpu === null ? [] : [sample.postgresCpu]));
-      const perProcess = samples.flatMap((sample) => sample.apiCpu ?? []);
-      const processes = Math.max(0, ...samples.map((sample) => sample.apiCpu?.length ?? 0));
+      const postgresUse = samples.flatMap((sample) => (sample.postgres === null ? [] : [sample.postgres]));
+      const postgresCpu = postgresUse.map((use) => use.cpu);
+      const apiCpu = samples.flatMap((sample) => (sample.processes?.get("dealership-api") ?? []).map((use) => use.cpu));
 
       const lines = [
-        `Postgres: ${average(active).toFixed(1)} queries running on average (at most ${Math.max(...active)}), ` +
-          `${Math.max(...locks)} at most waiting on a lock; CPU ` +
-          (postgresCpu.length > 0 ? `${average(postgresCpu).toFixed(0)}% on average` : "not measured"),
-        `dealership-api: ${processes} process(es); CPU ` +
-          (perProcess.length > 0 ? `${average(perProcess).toFixed(0)}% of a core each on average` : "not measured"),
+        "| Part | Processes | CPU, % of a core (average / most) | Memory, MB (most) |",
+        "| --- | --- | --- | --- |",
+        postgresUse.length > 0
+          ? `| Postgres (whole container) | 1 | ${average(postgresCpu).toFixed(0)} / ${most(postgresCpu).toFixed(0)} | ` +
+            `${most(postgresUse.map((use) => use.memoryMb)).toFixed(0)} |`
+          : "| Postgres (whole container) | 1 | not measured | not measured |",
       ];
+      for (const part of PARTS) {
+        const uses = samples.flatMap((sample) => sample.processes?.get(part.name) ?? []);
+        const count = most(samples.map((sample) => sample.processes?.get(part.name)?.length ?? 0));
+        lines.push(
+          uses.length > 0
+            ? `| ${part.name} | ${count} | ${average(uses.map((use) => use.cpu)).toFixed(0)} / ` +
+                `${most(uses.map((use) => use.cpu)).toFixed(0)} each | ${most(uses.map((use) => use.memoryMb)).toFixed(0)} each |`
+            : `| ${part.name} | not measured | | |`,
+        );
+      }
+      lines.push(
+        "",
+        `Postgres: ${average(active).toFixed(1)} queries running on average (at most ${most(active)}) on ` +
+          `${average(open).toFixed(0)} open connections; ${most(locks)} at most waiting on a lock.`,
+      );
+
+      const connectionsFull = average(open) > 0 && average(active) / average(open) >= BUSY_CONNECTIONS;
+      if (connectionsFull) {
+        lines.push(
+          "Every open connection was busy: requests queued inside the API for a free one, and that wait is in the " +
+            "times above. Slow queries hold connections longest; look at the slowest kinds first.",
+        );
+      }
       const postgresFull = postgresCpu.length > 0 && average(postgresCpu) >= BUSY_POSTGRES_CPU;
-      const lockBound = Math.max(...locks) > 0 && average(locks) >= 1;
-      const apiFull = perProcess.length > 0 && average(perProcess) >= BUSY_PROCESS_CPU;
+      const lockBound = most(locks) > 0 && average(locks) >= 1;
+      const apiFull = apiCpu.length > 0 && average(apiCpu) >= BUSY_PROCESS_CPU;
       if (postgresFull || lockBound) {
         lines.push(
           "The limit: the database. More API copies would only queue more queries on it. Look at the slowest kinds " +
-            "above with `bun run sql:explain` (indexes, ACME-110), and at what waits on locks.",
+            "above with `bun run sql:explain --as <user>` (indexes, row-level security), and at what waits on locks.",
+        );
+      } else if (connectionsFull) {
+        lines.push(
+          "The limit: the connections, not the database's CPU. Queries hold them while they wait (locks, disk); more " +
+            "connections help only while Postgres has CPU to spare.",
         );
       } else if (apiFull) {
         lines.push(
-          "The limit: the API processes, each near a full core. More copies help: DEALERSHIP_API_INSTANCES=<n> bun run dev.",
+          "The limit: the API processes, each near a full core. More copies help: DEALERSHIP_API_INSTANCES=<n> bun run start:prod.",
         );
-      } else if (postgresCpu.length > 0 && perProcess.length > 0) {
+      } else if (postgresCpu.length > 0 && apiCpu.length > 0) {
         lines.push(
           "Neither the database nor the API processes were full: the limit is elsewhere (the gateway, this machine " +
-            "running the test as well) or the load was not high enough. Raise --in-flight and --people.",
+            "running the test as well) or the load was not high enough. Raise --rate.",
         );
       }
       return lines;
