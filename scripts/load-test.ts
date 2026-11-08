@@ -9,7 +9,8 @@
 // Load the real sizes first (`bun run seed:bulk`): a slow query only shows at Northside's 1.6 million customers.
 // More dealership-api copies: `DEALERSHIP_API_INSTANCES=4 bun run dev`. Each person has a share of requests at the
 // gateway (RateLimit:RequestsPerSecond, RateLimit:Burst): a 429 here means one person asked for more than a person
-// would; add people rather than raising it.
+// would; add people rather than raising it. At the end it says where the time went: the database or the API processes.
+import { watchLoad } from "./load-watch";
 import { DEMO_PASSWORD, DEMO_USERS, type Location, resourceUrl } from "./running-system";
 
 interface Options {
@@ -135,6 +136,7 @@ async function main(): Promise<void> {
   const times = new Map<string, number[]>(KINDS.map((kind) => [kind.name, []]));
   const statuses = new Map<string, number>();
   let done = 0;
+  const watch = watchLoad();
   const started = performance.now();
   const deadline = started + options.seconds * 1000;
 
@@ -170,6 +172,7 @@ async function main(): Promise<void> {
   };
   await Promise.all(Array.from({ length: options.inFlight }, loopAsync));
   clearInterval(ticker);
+  const whereTheTimeWent = await watch.stopAsync();
 
   const seconds = (performance.now() - started) / 1000;
   const all = [...times.values()].flat().toSorted((a, b) => a - b);
@@ -187,6 +190,8 @@ async function main(): Promise<void> {
     const row = [0.5, 0.95, 0.99].map((fraction) => percentile(sorted, fraction).toFixed(0));
     console.log(`| ${name} | ${sorted.length} | ${row.join(" | ")} | ${(sorted.at(-1) ?? 0).toFixed(0)} |`);
   }
+
+  console.log(`\n${whereTheTimeWent.join("\n")}`);
 
   const misses = [
     options.targetRps !== null && rps < options.targetRps

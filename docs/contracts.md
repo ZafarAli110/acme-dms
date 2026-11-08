@@ -11,7 +11,8 @@ document-api (`src/rest-clients/document-api/document-api.schema.d.ts`), rather 
 
 ### `GET /v1/system/health` (every service and the gateway)
 
-The same shape everywhere, with every field always present. Aspire polls it to show each resource as Healthy.
+The same shape everywhere, with every field always present. `200` when the service can do its work, `503` when it is
+`degraded`: the status code is what Aspire (and a load balancer) reads, so a broken service never shows as Healthy.
 
 ```json
 { "service": "identity-api", "status": "ok", "version": "26.11.0", "databaseReachable": true }
@@ -20,11 +21,13 @@ The same shape everywhere, with every field always present. Aspire polls it to s
 | Field               | Meaning                                                                         |
 | ------------------- | ------------------------------------------------------------------------------- |
 | `service`           | `gateway-api`, `identity-api`, `document-api` or `dealership-api`               |
-| `status`            | `ok`, or `degraded` when the service cannot reach its database                  |
+| `status`            | `ok`, or `degraded` when the service cannot do its work (below)                 |
 | `version`           | the product version, from the root `package.json`; the same for every service   |
 | `databaseReachable` | whether the service's database answers (the gateway's is its sessions database) |
 
-Anonymous: no token, no location. Each service's tests check the shape.
+Degraded means the service's database does not answer; for dealership-api also that it answers slower than 2 seconds
+(barely answering is as bad as down), or that an export queued since it started has waited 5 minutes for the export
+worker (background work has stopped). Anonymous: no token, no location. Each service's tests check the shape.
 
 ### `/api/session` (the gateway, for the web app)
 

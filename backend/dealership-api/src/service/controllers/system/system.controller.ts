@@ -1,4 +1,5 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import type { ServerResponse } from "node:http";
+import { Controller, Get, HttpStatus, Inject, Res } from "@nestjs/common";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import {
   GET_USER_CONTEXT_QUERY_HANDLER,
@@ -28,10 +29,15 @@ export class SystemController {
     this._getUserContextQueryHandler = getUserContextQueryHandler;
   }
 
+  /** 200 when it can do its work, 503 when degraded: the status code is what Aspire and a load balancer read. */
   @Public()
   @Get("health")
-  public findHealthAsync(): Promise<HealthCheckResponseDto> {
-    return this._getHealthQueryHandler.executeAsync();
+  public async findHealthAsync(@Res({ passthrough: true }) response: ServerResponse): Promise<HealthCheckResponseDto> {
+    const health = await this._getHealthQueryHandler.executeAsync();
+    if (health.status !== "ok") {
+      response.statusCode = HttpStatus.SERVICE_UNAVAILABLE;
+    }
+    return health;
   }
 
   /** Who the API thinks you are at the selected location: handy when a permission check surprises you. */

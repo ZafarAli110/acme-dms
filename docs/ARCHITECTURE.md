@@ -195,7 +195,9 @@ What this does not do, on purpose:
 
 The target (ACME-117) is a busy Saturday morning: 200,000 requests in the peak minute, about 3,300 a second, with
 pages answering within about a third of a second at Northside's size. `bun run load-test` measures it against the
-running system; `bun run load-test --target-rps 3300 --target-p95 300` fails when it is missed.
+running system; `bun run load-test --target-rps 3300 --target-p95 300` fails when it is missed. It also says where the
+time went: Postgres (its CPU, its running queries, what waits on locks) or the API processes (their CPU), because more
+API copies in front of a full database only queue more queries on it. Measure, then scale what is full.
 
 - **More copies, not a faster language.** A Node process runs JavaScript on one core, and almost every request spends
   its time waiting on Postgres, which one process does for thousands of requests at once. More processes use the other
