@@ -28,7 +28,7 @@ React web app, run together by Aspire. `README.md` explains the business, the de
 - **Messages go through the outbox**; a consumer exists for every event published. `docs/standards/messaging.md`.
 - **Database:** audit columns and soft delete on every business table; never edit a migration that has run, add a new
   one. `docs/standards/database.md`.
-- **Money is whole pence** in code (`unitPriceCents`), calculated with integers and rounded once; never a float.
+- **Money is whole cents** in code (`unitPriceCents`), calculated with integers and rounded once; never a float.
   `docs/standards/money.md`.
 - **Time is UTC**, through the injected clock (`IClock` / `CLOCK`), never `new Date()` or `DateTime.Now`.
 - **Style:** `docs/standards/coding-standards.md`. Anything asynchronous ends in `Async`; private fields start with
