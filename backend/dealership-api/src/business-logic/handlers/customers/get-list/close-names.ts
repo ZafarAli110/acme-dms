@@ -61,8 +61,8 @@ export async function closeNamesAsync(db: Database, word: string): Promise<Close
  * people mistype a name they heard ("pnewood" for Penwood, 1).
  */
 export function editDistance(from: string, to: string): number {
-  const rows = Array.from({ length: from.length + 1 }, (_, i) =>
-    Array.from({ length: to.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+  const rows = Array.from({ length: from.length + 1 }, (_row, i) =>
+    Array.from({ length: to.length + 1 }, (_column, j) => (i === 0 ? j : j === 0 ? i : 0)),
   );
   const at = (i: number, j: number): number => rows[i]?.[j] ?? Number.POSITIVE_INFINITY;
   for (let i = 1; i <= from.length; i++) {
