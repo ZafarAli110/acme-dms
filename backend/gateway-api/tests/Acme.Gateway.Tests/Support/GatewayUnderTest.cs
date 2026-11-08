@@ -23,6 +23,9 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
     /// <summary>Where every request comes from: the in-memory server has no network, so it is set here as Kestrel would.</summary>
     public const string BrowserAddress = "203.0.113.7";
 
+    /// <summary>The services the gateway forwards to: their health probes are off in tests.</summary>
+    private static readonly string[] _clusters = ["identity-api", "dealership-api", "document-api"];
+
     private readonly WebApplicationFactory<Program> _factory;
 
     private GatewayUnderTest(string connectionString, IReadOnlyDictionary<string, string> settings)
@@ -35,7 +38,7 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
             builder.UseSetting("services:dealership-api:http:0", "http://dealership.test");
             builder.UseSetting("services:document-api:http:0", "http://documents.test");
             // No health probes in tests: they would reach FakeService and add to what it records.
-            foreach (var cluster in new[] { "identity-api", "dealership-api", "document-api" })
+            foreach (var cluster in _clusters)
             {
                 builder.UseSetting($"ReverseProxy:Clusters:{cluster}:HealthCheck:Active:Enabled", "false");
             }
