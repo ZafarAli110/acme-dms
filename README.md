@@ -512,6 +512,7 @@ If identity-api ever cannot open the signing key in use (its Data Protection key
 | `.ai-plans/`                                                                          | one plan per ticket, from `plan-template.md` (from lab 08); example plans on `final`                 |
 | `.ai-observability/`                                                                  | what `bun run audit` writes: drift and cost of the agent's sessions (`final`)                        |
 | `.github/workflows/ci.yml`                                                            | CI: format, lint, typecheck and test on every pull request                                           |
+| `.github/workflows/windows-setup.yml`                                                 | `setup.ps1` on a fresh Windows machine, then the checks on Windows (weekly, and when setup changes)  |
 
 ## Troubleshooting
 
