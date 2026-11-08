@@ -41,7 +41,7 @@ describe("GetCustomerListQueryHandler: sorting and filtering as the data grid as
     expect(byContact.items.map((c) => c.surname)).toEqual(["Carter", "Baker", "Abbot"]);
     expect(byCity.items.map((c) => c.city)).toEqual(["Leeds", "Leeds", "York"]);
     const leeds = byCity.items.filter((c) => c.city === "Leeds").map((c) => c.id);
-    expect(leeds).toEqual([...leeds].sort());
+    expect(leeds).toEqual(leeds.toSorted());
   });
 
   it("filters by one field with the grid's operators for text, dates and emptiness", async () => {

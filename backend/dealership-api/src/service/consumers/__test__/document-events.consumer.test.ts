@@ -33,6 +33,11 @@ function consumerWhoseHandlerFails() {
     internals.handleAsync(channel as unknown as ConfirmChannel, message);
 }
 
+/** What every channel call does once RabbitMQ closed the channel. */
+function throwChannelClosed(): never {
+  throw new Error("Channel closed");
+}
+
 describe("DocumentEventsConsumer", () => {
   it("sends an event whose handler failed to wait and be tried again, and only then acknowledges it", async () => {
     const channel = fakeChannel();
@@ -93,10 +98,12 @@ describe("DocumentEventsConsumer", () => {
   });
 
   it("lets nothing escape when the channel closed under it: the message is delivered again", async () => {
-    const closed = () => {
-      throw new Error("Channel closed");
+    const channel = {
+      ...fakeChannel(),
+      ack: vi.fn(throwChannelClosed),
+      nack: vi.fn(throwChannelClosed),
+      sendToQueue: vi.fn(throwChannelClosed),
     };
-    const channel = { ...fakeChannel(), ack: vi.fn(closed), nack: vi.fn(closed), sendToQueue: vi.fn(closed) };
 
     await expect(consumerWhoseHandlerFails()(channel, delivery("document.processed.v1"))).resolves.toBeUndefined();
   });

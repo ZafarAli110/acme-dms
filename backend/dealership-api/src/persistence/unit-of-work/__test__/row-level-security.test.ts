@@ -118,17 +118,18 @@ describe("row-level security", () => {
     expect(await asRequestAsync(null, (db) => db.select().from(exportJobs))).toHaveLength(3);
   });
 
-  it("shows a request whose scope was never set no business row, not every dealer's", async () => {
-    const run = async () => {
-      await using work = await database.unitOfWorkFactory.beginAsync({ readOnly: true });
-      return {
-        customers: await work.db.select().from(customers),
-        parts: await work.db.select().from(parts),
-        exports: await work.db.select().from(exportJobs),
-      };
+  /** Every row of three business tables that the request's scope lets it see. */
+  async function readBusinessTablesAsync() {
+    await using work = await database.unitOfWorkFactory.beginAsync({ readOnly: true });
+    return {
+      customers: await work.db.select().from(customers),
+      parts: await work.db.select().from(parts),
+      exports: await work.db.select().from(exportJobs),
     };
+  }
 
-    const seen = await runWithDataScope(run);
+  it("shows a request whose scope was never set no business row, not every dealer's", async () => {
+    const seen = await runWithDataScope(readBusinessTablesAsync);
 
     expect(seen).toEqual({ customers: [], parts: [], exports: [] });
   });

@@ -143,10 +143,14 @@ describe("controllers", () => {
 });
 
 /** What Swagger shows for a schema: what a client may send, in OpenAPI's words. */
-describe("the OpenAPI schemas", () => {
-  const openApi = (schema: v.GenericSchema) =>
-    valibotToOpenApi(schema).schema as { properties: Record<string, Record<string, unknown>>; required?: string[] };
+function openApi(schema: v.GenericSchema) {
+  return valibotToOpenApi(schema).schema as {
+    properties: Record<string, Record<string, unknown>>;
+    required?: string[];
+  };
+}
 
+describe("the OpenAPI schemas", () => {
   it("say a price is whole pence", () => {
     const { properties } = openApi(PartCreateRequestSchema);
 

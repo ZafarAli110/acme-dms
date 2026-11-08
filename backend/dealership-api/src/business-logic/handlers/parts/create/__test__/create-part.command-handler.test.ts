@@ -6,15 +6,15 @@ import { CENTRAL, NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { CreatePartCommandHandler } from "../create-part.command-handler";
 
+function request(partNumber: string, binId: string) {
+  return { partNumber, description: "Brake pads", unitPriceCents: 4999, binId, quantityOnHand: 6, reorderLevel: 4 };
+}
+
 describe("CreatePartCommandHandler", () => {
   const database = useTestDatabase();
 
   function handler(): CreatePartCommandHandler {
     return database.asRequest(new CreatePartCommandHandler(database.unitOfWorkFactory, fixedClock()));
-  }
-
-  function request(partNumber: string, binId: string) {
-    return { partNumber, description: "Brake pads", unitPriceCents: 4999, binId, quantityOnHand: 6, reorderLevel: 4 };
   }
 
   it("adds the part and stocks it in a bin of the selected location", async () => {

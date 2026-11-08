@@ -19,7 +19,7 @@ describe("softDeleteAsync", () => {
         .where(eq(bins.isDeleted, true))
     )
       .map((row) => `${row.code}@${row.locationId}`)
-      .sort();
+      .toSorted();
 
   it("deletes only the request's own dealer's and location's rows, whatever the condition says", async () => {
     await database.seed.addBinAsync({ locationId: NORTHSIDE, code: "SD-1" });

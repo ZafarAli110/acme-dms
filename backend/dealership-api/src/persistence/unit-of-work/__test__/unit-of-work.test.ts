@@ -53,14 +53,15 @@ describe("UnitOfWork", () => {
     expect(await binExistsAsync("R-01")).toBe(false);
   });
 
-  it("rolls back when the block throws", async () => {
-    async function failingAsync(): Promise<void> {
-      await using work = await factory.beginAsync();
-      await work.db.insert(bins).values(newBin("T-01"));
-      throw new Error("the use case failed");
-    }
+  /** A use case that writes, then fails before it ends. */
+  async function insertThenFailAsync(): Promise<void> {
+    await using work = await factory.beginAsync();
+    await work.db.insert(bins).values(newBin("T-01"));
+    throw new Error("the use case failed");
+  }
 
-    await expect(failingAsync()).rejects.toThrow("the use case failed");
+  it("rolls back when the block throws", async () => {
+    await expect(insertThenFailAsync()).rejects.toThrow("the use case failed");
     expect(await binExistsAsync("T-01")).toBe(false);
   });
 
