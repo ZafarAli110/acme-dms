@@ -70,3 +70,23 @@ Business rows are never removed; a delete sets `is_deleted`, `deleted_at` and `d
 - A migration that adds a `NOT NULL` column to a table with data backfills it from data the row already has (see
   .NET's `AuditColumns` migration), and has a working `down`.
 - Never edit a migration that has run anywhere else; add a new one.
+
+## Migrations on big tables
+
+A table with millions of rows (Northside alone has 1.6 million customers) needs more care: a migration that locks it
+stops every request that touches the table for as long as it runs, and on a busy morning that is the whole group.
+
+- **Fail fast on a lock.** A migration that changes a big table starts with `SET LOCAL lock_timeout = '5s';`. If it
+  cannot get its lock (a long export is reading the table), it fails and is run again later, instead of every request
+  queueing behind it while it waits.
+- **Build a big index without blocking saves:** `CREATE INDEX CONCURRENTLY`. It cannot run inside a transaction, and
+  every Drizzle migration runs in one. So in production the index is built first, by hand or by a deploy step, with
+  `CREATE INDEX CONCURRENTLY IF NOT EXISTS …`, and the migration holds the same statement without `CONCURRENTLY`,
+  with `IF NOT EXISTS`, so there it does nothing. On a laptop the migration builds the index itself in seconds. EF Core:
+  `migrationBuilder.Sql("CREATE INDEX CONCURRENTLY …", suppressTransaction: true)`.
+- **Change data in batches**, from a script rather than the migration: a few thousand rows per statement, in a loop.
+  One `UPDATE` over every row is an outage of its own.
+- **Expand, then contract.** Add the new column or table, write to both, backfill, switch the reads, and drop the old
+  one only in a later release, so the old and the new version of the code both work while a deploy rolls out.
+- **Try it at the real size first:** `bun run seed:bulk`, then time the migration and check the queries with
+  `bun run sql:explain`.
