@@ -204,6 +204,11 @@ API copies in front of a full database only queue more queries on it. Measure, t
   run by Node, the .NET services in Release, the web app's production build served as files
   (`scripts/serve-web.ts`), warnings and errors only in the logs. It keeps Development settings (demo users, dev
   credentials, plain HTTP), so sign-in and the seed work as usual. A change needs a restart.
+- **Lift the limits per address for a load test, and only those.** A load test from one machine is one address: 200
+  sign-ins and thousands of requests a second from it is exactly the flood the limits per address stop (identity's 10
+  sign-ins a minute, the gateway's 500 requests a second), so the test would measure the limiter, not the system.
+  `bun run start:prod --load-test` raises those two; the share per sign-in stays, so a 429 still means one person
+  asked for more than a person would. Production keeps every limit: there the load comes from many addresses.
 - **A laptop says before against after, not the absolute number.** On one machine the database is a loopback call
   away (in the cloud each round trip costs about a millisecond, and a request makes about three), the disk has no IOPS
   cap, Postgres keeps its container defaults, and the load test shares the CPU with the system it measures. Use local

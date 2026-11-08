@@ -10,17 +10,22 @@ namespace Acme.Identity.Service;
 /// How often one address may call the unauthenticated endpoints. The address is the caller's, as the gateway forwards it
 /// (<c>X-Forwarded-For</c>, see Program.cs): without that every request would come from the gateway and the limit would
 /// count everyone as one. Per-account guessing is slowed separately (SignInThrottle), because many addresses can try one account.
+/// Sign-ins per address per minute are a setting (<c>RateLimits:SignInPerMinute</c>, 10 by default) only so that a load test,
+/// which signs many people in from one machine, can raise it (<c>bun run start:prod --load-test</c>); production keeps 10.
 /// </summary>
 public static class RateLimits
 {
     public const string SignIn = "sign-in";
     public const string Token = "token";
+    public const int DefaultSignInPerMinute = 10;
 
-    public static IServiceCollection AddAcmeRateLimits(this IServiceCollection services) =>
-        services.AddRateLimiter(options =>
+    public static IServiceCollection AddAcmeRateLimits(this IServiceCollection services, IConfiguration configuration)
+    {
+        var signInPerMinute = SignInPerMinute(configuration);
+        return services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.AddPolicy(SignIn, context => PerAddress(context, permits: 10));
+            options.AddPolicy(SignIn, context => PerAddress(context, permits: signInPerMinute));
             options.AddPolicy(Token, context => PerAddress(context, permits: 120));
             options.OnRejected = async (context, cancellationToken) =>
             {
@@ -33,6 +38,11 @@ public static class RateLimits
                 await context.HttpContext.Response.WriteAsJsonAsync(problem, (System.Text.Json.JsonSerializerOptions?)null, "application/problem+json", cancellationToken);
             };
         });
+    }
+
+    /// <summary>Sign-ins one address may make a minute: <c>RateLimits:SignInPerMinute</c> when it is a positive number, else the default.</summary>
+    public static int SignInPerMinute(IConfiguration configuration) =>
+        configuration.GetValue<int?>("RateLimits:SignInPerMinute") is int permits and > 0 ? permits : DefaultSignInPerMinute;
 
     private static RateLimitPartition<string> PerAddress(HttpContext context, int permits) =>
         RateLimitPartition.GetFixedWindowLimiter(

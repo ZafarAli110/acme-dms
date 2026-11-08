@@ -36,7 +36,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
-builder.Services.AddAcmeRateLimits();
+builder.Services.AddAcmeRateLimits(builder.Configuration);
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 // After the service's own handler: Postgres failures become 409/400/503 with a meaningful message, not a 500. The
 // unique indexes get their own message (names from IdentityDbContext's HasIndex(...).IsUnique()).

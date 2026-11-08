@@ -129,4 +129,16 @@ if (productionLike)
     }
 }
 
+// `bun run start:prod --load-test`: the limits per address lifted, so `bun run load-test` can sign 200 people in and send
+// thousands of requests a second from this one machine, which those limits exist to stop. The share per sign-in stays: a
+// 429 in the load test still means one person asked for more than a person would. Never in production, where the load
+// comes from many addresses and these limits are what stop one of them flooding the rest.
+if (productionLike && builder.Configuration["ACME_LOAD_TEST"] == "1")
+{
+    gateway
+        .WithEnvironment("RateLimit__AddressBurst", "1000000")
+        .WithEnvironment("RateLimit__AddressRequestsPerSecond", "1000000");
+    identityApi.WithEnvironment("RateLimits__SignInPerMinute", "100000");
+}
+
 await builder.Build().RunAsync();

@@ -8,7 +8,22 @@
 //   logs                                               warnings and errors only: per-request info lines cost time
 //
 // More copies: DEALERSHIP_API_INSTANCES=4 bun run start:prod (PowerShell: $env:DEALERSHIP_API_INSTANCES=4 first).
+// For `bun run load-test`: bun run start:prod --load-test lifts the limits per address (sign-ins a minute, requests a
+// second), which a load test from one machine trips at once; the share per sign-in stays (see AppHost.cs).
 // A change to the code needs a restart: nothing here watches files.
+const options = process.argv.slice(2);
+const unknown = options.filter((option) => option !== "--load-test");
+if (unknown.length > 0) {
+  console.error(`Unknown option ${unknown.join(" ")}. Usage: bun run start:prod [--load-test]`);
+  process.exit(1);
+}
+const loadTest = options.includes("--load-test");
+if (loadTest) {
+  console.warn(
+    "Load test: the limits per address are off (sign-ins a minute, requests a second). Measure with it; never deploy it.",
+  );
+}
+
 const appHost = Bun.spawn(["aspire", "run"], {
   stdin: "inherit",
   stdout: "inherit",
@@ -16,6 +31,7 @@ const appHost = Bun.spawn(["aspire", "run"], {
   env: {
     ...process.env,
     ACME_PRODUCTION_LIKE: "1",
+    ...(loadTest ? { ACME_LOAD_TEST: "1" } : {}),
     // MSBuild reads it like -c Release, for the AppHost and the projects it builds.
     Configuration: "Release",
   },
