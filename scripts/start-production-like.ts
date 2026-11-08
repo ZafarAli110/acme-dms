@@ -24,6 +24,18 @@ if (loadTest) {
   );
 }
 
+// `aspire run` builds the AppHost in Release (Configuration below) and then starts its Debug build (Aspire CLI 13.6.4):
+// build that one first, so the AppHost that runs is the one in the code. The services' own Release builds come from
+// the Release build of the AppHost (ReleaseBuild in AppHost.cs).
+const debugAppHost = Bun.spawnSync(["dotnet", "build", "apphost/Acme.AppHost", "-c", "Debug", "--nologo", "-v", "q"], {
+  stdout: "inherit",
+  stderr: "inherit",
+});
+if (debugAppHost.exitCode !== 0) {
+  console.error("Building the AppHost failed; see above.");
+  process.exit(1);
+}
+
 const appHost = Bun.spawn(["aspire", "run"], {
   stdin: "inherit",
   stdout: "inherit",
