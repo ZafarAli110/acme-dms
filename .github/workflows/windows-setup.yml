@@ -1,0 +1,49 @@
+name: windows-setup
+
+# A fresh Windows machine runs setup.ps1 the way an attendee does (Windows PowerShell 5.1, as administrator), then
+# formats, lints and typechecks every project and runs the tests that need no database, on Windows. It catches a
+# setup step that breaks, a tool that moved, and code that only works on macOS or Linux (paths, file-name case).
+# GitHub's Windows machines already have Git, the GitHub CLI and Docker (Windows containers), so setup skips those;
+# Node 26 (through fnm), Bun, the .NET 10 SDK, the Aspire CLI and `bun install` run for real. The handler tests need
+# Linux containers for Postgres and run in ci.yml.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC: a tool's installer can change without a commit here
+  push:
+    branches: [main, final]
+    paths:
+      - setup.ps1
+      - .nvmrc
+      - global.json
+      - bun.lock
+      - "**/package.json"
+      - .github/workflows/windows-setup.yml
+
+jobs:
+  setup:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: setup.ps1, as an attendee runs it
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File .\setup.ps1
+      - name: Format, lint and typecheck on Windows; the tests that need no database
+        shell: powershell
+        run: |
+          # A new terminal, as setup.ps1 says to open: the PATH it saved, and fnm's Node for this folder.
+          $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+          fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
+          fnm use
+          node -v; bun --version; dotnet --version; aspire --version
+          $env:NX_TUI = "false"
+          bunx nx run-many -t format lint typecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          bunx nx run @acme/web:test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # The scripts' own tests, where the branch has them.
+          if (Test-Path scripts\*.test.ts) {
+            bun test scripts
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
