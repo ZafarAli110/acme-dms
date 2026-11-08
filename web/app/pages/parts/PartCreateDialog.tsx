@@ -158,7 +158,8 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
             />
           </Grid>
         </Grid>
-        <ErrorAlert error={bins.error ?? create.error} />
+        <ErrorAlert error={bins.error} />
+        <ErrorAlert error={create.error} during="save" />
       </DialogContent>
       <DialogActions>
         <Button onClick={close} disabled={create.isPending}>

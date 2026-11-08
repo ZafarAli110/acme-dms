@@ -22,7 +22,9 @@ import { Fragment } from "react";
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { type ClientLoaderFunctionArgs, Link as RouterLink } from "react-router";
+import { ErrorAlert } from "../components/ErrorAlert";
 import { PageHeader } from "../components/PageHeader";
+import { isBusyError } from "../core/config/apiErrors";
 import { useAuth } from "../core/contexts/auth/useAuth";
 import { useSelectedLocation } from "../core/contexts/location/useSelectedLocation";
 import { formatDaysAgo, formatPlainDate } from "../core/formatters/formatDate";
@@ -117,6 +119,8 @@ export default function Home() {
   const partCount = usePartCount(locationId, can("parts.read"));
   const customerCount = useCustomerCount(locationId, EVERY_CUSTOMER, can("customers.read"));
   const recent = useRecentCustomers(locationId, can("customers.read"));
+  // Home's counts stay grey on a failure; a busy one says so at the top, as the lists do above their grid (ACME-122).
+  const busy = [partCount.error, customerCount.error, recent.error].find(isBusyError) ?? null;
 
   return (
     <Fragment>
@@ -126,6 +130,7 @@ export default function Home() {
           location ? `${user?.dealerName} · ${location.name} · ${formatRole(tCommon, location.role)}` : user?.dealerName
         }
       />
+      <ErrorAlert error={busy} />
       <Grid container spacing={3}>
         {can("customers.read") && (
           <Grid size={{ xs: 12, sm: 6, lg: 4 }}>

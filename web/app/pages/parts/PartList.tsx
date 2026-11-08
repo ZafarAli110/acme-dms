@@ -45,9 +45,12 @@ export default function PartList() {
   const columns = useMemo(() => partColumns(t, i18n.language), [t, i18n.language]);
   // Creating a part opens PartCreateDialog, which predates the web standard: its own form state, not a route.
   const [creating, setCreating] = useState(false);
-  const noRows = params.search
-    ? t("noMatch", { search: params.search })
-    : t("noneStocked", { location: location?.name ?? "" });
+  // A list that failed to load is not empty: the alert above the grid says what happened (ACME-122).
+  const noRows = error
+    ? ""
+    : params.search
+      ? t("noMatch", { search: params.search })
+      : t("noneStocked", { location: location?.name ?? "" });
 
   const openPart = (part: PartListItem): void => {
     void navigate(`/parts/${part.id}`);

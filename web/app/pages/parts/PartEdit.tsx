@@ -7,7 +7,8 @@ import {
   useActionData,
   useParams,
 } from "react-router";
-import { ApiError, problemErrorMessage } from "../../core/config/apiErrors";
+import { ApiError, isBusyError, problemErrorMessage } from "../../core/config/apiErrors";
+import { ErrorAlert } from "../../components/ErrorAlert";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useFormRevision } from "../../core/hooks/useFormRevision";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
@@ -71,9 +72,13 @@ export default function PartEdit() {
   if (!part) {
     return (
       <Stack sx={{ gap: 2, alignItems: "flex-start" }}>
-        <Alert severity="warning" data-testid="part-not-found">
-          {error ? t("edit.notFound", { location: location?.name ?? "" }) : null}
-        </Alert>
+        {isBusyError(error) ? (
+          <ErrorAlert error={error} />
+        ) : (
+          <Alert severity="warning" data-testid="part-not-found">
+            {error ? t("edit.notFound", { location: location?.name ?? "" }) : null}
+          </Alert>
+        )}
         <Button component={RouterLink} to="/parts">
           {t("edit.backToList")}
         </Button>

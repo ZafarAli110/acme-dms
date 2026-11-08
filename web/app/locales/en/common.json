@@ -44,7 +44,10 @@
     "timeout": "The server took too long to answer. Try again.",
     "traceId": "Trace id: {{traceId}}",
     "accountNotLoaded": "You are signed in, but your account could not be loaded. Try again.",
-    "pageNotLoaded": "This page could not be loaded. Check your connection, then reload."
+    "pageNotLoaded": "This page could not be loaded. Check your connection, then reload.",
+    "busyRetrying": "The system is busy, trying again…",
+    "stillBusy": "The system is still busy. Try again in a moment.",
+    "busySave": "The system is busy and nothing was saved. Your changes are still here: try again in a moment."
   },
   "notFound": {
     "title": "Page not found",

@@ -72,9 +72,12 @@ export default function CustomerList() {
     closeCount > 0
       ? `${t("closeMatch.exact", { count: items.length - closeCount })} · ${t("closeMatch.close", { count: closeCount })}`
       : null;
-  const noRows = params.search
-    ? t("noMatch", { search: params.search })
-    : t("none", { location: location?.name ?? "" });
+  // A list that failed to load is not empty: the alert above the grid says what happened (ACME-122).
+  const noRows = error
+    ? ""
+    : params.search
+      ? t("noMatch", { search: params.search })
+      : t("none", { location: location?.name ?? "" });
 
   // The note and the divider are not customers: nothing to open.
   const openCustomer = (row: CustomerGridRow): void => {

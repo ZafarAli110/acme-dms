@@ -9,7 +9,8 @@ import {
   useParams,
 } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
-import { ApiError, problemErrorMessage } from "../../core/config/apiErrors";
+import { ApiError, isBusyError, problemErrorMessage } from "../../core/config/apiErrors";
+import { ErrorAlert } from "../../components/ErrorAlert";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useFormRevision } from "../../core/hooks/useFormRevision";
 import { formatInstant } from "../../core/formatters/formatDate";
@@ -66,7 +67,7 @@ export default function CustomerEdit() {
   const { t, i18n: activeI18n } = useTranslation("customers");
   const { customerId = "" } = useParams();
   const { location, can } = useSelectedLocation();
-  const { data: customer, isLoading } = useCustomer(location?.id ?? "", customerId);
+  const { data: customer, error, isLoading } = useCustomer(location?.id ?? "", customerId);
   const actionData = useActionData<typeof clientAction>();
   const revision = useFormRevision(customer?.updatedAt ?? "", actionData);
 
@@ -76,9 +77,13 @@ export default function CustomerEdit() {
   if (!customer) {
     return (
       <Stack sx={{ gap: 2, alignItems: "flex-start" }}>
-        <Alert severity="warning" data-testid="customer-not-found">
-          {t("edit.notFound", { location: location?.name ?? "" })}
-        </Alert>
+        {isBusyError(error) ? (
+          <ErrorAlert error={error} />
+        ) : (
+          <Alert severity="warning" data-testid="customer-not-found">
+            {t("edit.notFound", { location: location?.name ?? "" })}
+          </Alert>
+        )}
         <Button component={RouterLink} to="/customers">
           {t("edit.backToList")}
         </Button>

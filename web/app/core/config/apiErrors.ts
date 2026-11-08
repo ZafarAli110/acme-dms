@@ -23,6 +23,8 @@ export const PROBLEM_TYPE = {
   tooManyRequests: "urn:acme:error:too-many-requests",
   internal: "urn:acme:error:internal",
   serviceUnavailable: "urn:acme:error:service-unavailable",
+  /** Too much at once: nothing was done, and trying again in a second may work (`Retry-After`, ACME-121). */
+  busy: "urn:acme:error:busy",
 } as const;
 
 /** A service answered with an error. `problem.traceId` finds the request in the Aspire dashboard. */
@@ -65,10 +67,22 @@ export function isTransientError(error: unknown): boolean {
 }
 
 /**
+ * The system had too much at once and did nothing (ACME-121). Known by its type, not its status: a database that is
+ * down is also a 503, and is not worth trying again in a second.
+ */
+export function isBusyError(error: unknown): boolean {
+  return error instanceof ApiError && error.type === PROBLEM_TYPE.busy;
+}
+
+/**
  * The message to show for an error a clientAction returns as `{error}`: the service's problem detail, or a translated
- * message when the service could not be reached.
+ * message when the service could not be reached. The actions are saves (and sign-in, which is never busy), so busy says
+ * that nothing was saved and the form still holds what was typed.
  */
 export function problemErrorMessage(error: unknown, fallback: string): string {
+  if (isBusyError(error)) {
+    return i18n.t("errors.busySave");
+  }
   if (error instanceof ServerUnreachableError) {
     return i18n.t("errors.serverUnreachable");
   }

@@ -4,6 +4,7 @@ import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 import { ThemeProvider } from "@mui/material/styles";
 import type { ReactNode } from "react";
 import { Links, Meta, Scripts, ScrollRestoration } from "react-router";
+import { BusyNotice } from "./components/BusyNotice";
 import { LocationChangeGuardProvider } from "./core/contexts/location/LocationChangeGuardContext";
 import { QueryProvider } from "./core/queries/QueryProvider";
 import { appTheme } from "./theme";
@@ -25,6 +26,7 @@ export function RootLayout({ children }: { children: ReactNode }) {
           <CssBaseline enableColorScheme />
           <QueryProvider>
             <LocationChangeGuardProvider>{children}</LocationChangeGuardProvider>
+            <BusyNotice />
           </QueryProvider>
         </ThemeProvider>
         <ScrollRestoration />

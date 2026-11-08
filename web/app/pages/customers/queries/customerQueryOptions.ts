@@ -7,27 +7,34 @@ import { CUSTOMER_QUERY_KEYS } from "./customerQueryKey";
 /**
  * Each customers query, key and fetch together, defined once: a route's clientLoader prefetches with it and the
  * page's hook reads with it, so the two can never use different keys.
+ *
+ * `retryOnMount: false` on each option a clientLoader fetches: the loader has had its tries (two more when busy) and runs
+ * again on every visit, so the page does not start a second round when it shows (ACME-122).
  */
 export const customerQueryOptions = {
   list: (locationId: string, params: ListParams) =>
     queryOptions({
       queryKey: CUSTOMER_QUERY_KEYS.list(locationId, params),
       queryFn: ({ signal }) => customerQueries.getCustomersAsync(params, { signal, locationId }),
+      retryOnMount: false,
     }),
   /** How many customers a question matches, asked once per question rather than with every page (ACME-117). */
   count: (locationId: string, question: CustomerQuestion) =>
     queryOptions({
       queryKey: CUSTOMER_QUERY_KEYS.count(locationId, question),
       queryFn: ({ signal }) => customerQueries.countCustomersAsync(question, { signal, locationId }),
+      retryOnMount: false,
     }),
   recent: (locationId: string) =>
     queryOptions({
       queryKey: CUSTOMER_QUERY_KEYS.recent(locationId),
       queryFn: ({ signal }) => customerQueries.getRecentCustomersAsync({ signal, locationId }),
+      retryOnMount: false,
     }),
   detail: (locationId: string, customerId: string) =>
     queryOptions({
       queryKey: CUSTOMER_QUERY_KEYS.detail(locationId, customerId),
       queryFn: ({ signal }) => customerQueries.getCustomerAsync(customerId, { signal, locationId }),
+      retryOnMount: false,
     }),
 };

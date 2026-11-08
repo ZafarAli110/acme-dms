@@ -44,7 +44,10 @@
     "timeout": "Le serveur a mis trop de temps à répondre. Réessayez.",
     "traceId": "Identifiant de trace : {{traceId}}",
     "accountNotLoaded": "Vous êtes connecté, mais votre compte n'a pas pu être chargé. Réessayez.",
-    "pageNotLoaded": "Cette page n'a pas pu être chargée. Vérifiez votre connexion, puis rechargez."
+    "pageNotLoaded": "Cette page n'a pas pu être chargée. Vérifiez votre connexion, puis rechargez.",
+    "busyRetrying": "Le système est occupé, nouvel essai…",
+    "stillBusy": "Le système est toujours occupé. Réessayez dans un instant.",
+    "busySave": "Le système est occupé et rien n'a été enregistré. Vos modifications sont toujours là : réessayez dans un instant."
   },
   "notFound": {
     "title": "Page introuvable",
