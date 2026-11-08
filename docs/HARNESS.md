@@ -77,6 +77,7 @@ A hook is a script Claude Code runs at a fixed moment, every time: it cannot be 
 | ------------------ | ---------------------- | ------------------------------------------------------------------------------------- | --- |
 | `protect-files.ts` | before an edit         | refuses `.env` files and migrations already committed                                 | 03  |
 | `format-file.ts`   | after an edit          | formats the file, so formatting is never a review comment                             | 03  |
+| `check-plan.ts`    | after a plan edit      | checks Status, Now, the Log's times and what is loaded; sends back what does not fit  | 08  |
 | `gate.ts`          | when Claude stops      | runs the fast gate; on a failure, Claude carries on working                           | 03  |
 | `open-plans.ts`    | when a session starts  | lists the plans not done yet, and says when a handoff note waits                      | 08  |
 | `ticket-branch.ts` | before a shell command | commits, pushes and pull requests only on a ticket branch (`ACME-106`); never a merge | 10  |

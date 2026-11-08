@@ -93,8 +93,8 @@ and never posts an answered finding again. A `REJECT` stops the run: hand it to 
 
 ## 6. Hand over
 
-First bring the plan up to date: Status, **Now** (the pull request, what is left and who acts next) and a Log line
-for each review round, with the time from `date`. Have the **git** subagent commit and push it.
+First bring the plan up to date: Status stays one of the template's (Done once verified), **Now** says the pull
+request, what is left and who acts next, and a Log line for each review round goes at the end, with the time from `date`. Have the **git** subagent commit and push it.
 
 Then stop. Report, so a person can judge the work rather than trust it:
 
