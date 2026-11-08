@@ -51,11 +51,11 @@ Otherwise:
    not sent the plan again.
 7. Show the plan as a person reads it: Status and Now, the requirement and the acceptance criteria, then what you need
    from them (the questions, the design pick). Wait for the answers, the pick and a go-ahead before changing code;
-   then set Status to "In progress".
+   then load every item in "Load before building" and tick it, and set Status to "In progress".
 
 ## Work
 
-One step at a time: do it, run its check, tick it, and add a line to the log. When a step turns out wrong, change the
+One step at a time: do it, run its check, tick it, and add a line to the end of the Log with the time `date` prints. When a step turns out wrong, change the
 plan first, then the code. An acceptance box is ticked only when something checked it. Update **Now** as you go.
 
 **Look at what you built.** After a step that changes a screen, open it with the `check-in-browser` skill before you
@@ -65,7 +65,8 @@ spilling out or cut off in that step, not at the end. Tests prove behaviour; onl
 ## Finish
 
 Run the `verify-ticket` skill. Link `docs/evidence/<KEY>.md` from the plan, tick the last step only when verification
-passed, and set Status to "Done".
+passed, and set Status to "Done": verified. What happens after it (a pull request, QA) goes in Now's Next, never in
+Status.
 
 **Whenever you stop**, finished or not, Status and Now say what is true at that moment: what a person can see or run,
 what comes next and who does it, and anything left undone with its reason. A reader must never have to guess whether
