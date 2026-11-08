@@ -11,11 +11,11 @@ export interface PartListItem {
   id: string;
   partNumber: string;
   description: string;
-  /** In pence: 4999 is £49.99. */
+  /** In cents: 4999 is $49.99. */
   unitPriceCents: number;
   thumbnailDocumentId: string | null;
   inventory: PartInventory;
-  /** What this location's stock of the part is worth, in pence: on hand × price. */
+  /** What this location's stock of the part is worth, in cents: on hand × price. */
   stockValueCents: number;
 }
 

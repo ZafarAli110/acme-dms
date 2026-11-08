@@ -157,6 +157,9 @@ Rules:
 - **One Save per form.** Everything on the form, files included, is sent together when Save is pressed; nothing is
   saved on its own as the user types or picks a file. The service saves it as one unit
   (`docs/standards/file-uploads.md`, "Saving a record together with its files").
+- **Money is whole cents from the API and dollars on screen** (`docs/standards/money.md`): show it with
+  `useFormatMoney` (or `formatMoney`), take it with `components/MoneyField.tsx` in a `Controller`, and turn the typed
+  text into cents in the mapper with `parseMoneyCents`. Never `parseFloat`, and never divide cents by 100.
 - **Always give `defaultValues`.** Number inputs hold strings; the schema turns them into numbers. An empty number field
   is "required", never `0`.
 - **Server errors**: a problem that belongs to a field (a duplicate part number, `409`) is shown on that field with

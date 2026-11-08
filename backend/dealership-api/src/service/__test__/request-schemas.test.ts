@@ -84,7 +84,7 @@ describe("request schemas", () => {
     expect(problems(BinCreateRequestSchema, { code: "a-1", description: "x" })).toEqual([
       "Code may only contain capital letters, digits and dashes.",
     ]);
-    // A price in pence with a fraction is a pound amount sent by mistake (49.99): refused, never rounded.
+    // A price in cents with a fraction is a dollar amount sent by mistake (49.99): refused, never rounded.
     expect(problems(PartCreateRequestSchema, { ...PART, unitPriceCents: 49.99 })).toEqual([
       "Unit price must be a whole number.",
     ]);
@@ -151,14 +151,14 @@ function openApi(schema: v.GenericSchema) {
 }
 
 describe("the OpenAPI schemas", () => {
-  it("say a price is whole pence", () => {
+  it("say a price is whole cents", () => {
     const { properties } = openApi(PartCreateRequestSchema);
 
     expect(properties["unitPriceCents"]).toEqual({
       type: "integer",
       minimum: 0,
       maximum: 999_999_999_999,
-      description: "In pence: 4999 is £49.99",
+      description: "In cents: 4999 is $49.99",
       example: 4999,
     });
   });

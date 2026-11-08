@@ -8,7 +8,7 @@
 import { deflateSync } from "node:zlib";
 import { callAsync, type Location, resourceUrl, type Session, signInAsync } from "./running-system";
 
-/** A part as the seed adds it; the price in whole pence (docs/standards/money.md). */
+/** A part as the seed adds it; the price in whole cents (docs/standards/money.md). */
 type PartSeed = [partNumber: string, description: string, unitPriceCents: number];
 
 /**

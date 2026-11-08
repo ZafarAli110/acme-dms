@@ -25,7 +25,7 @@ the board to a reviewed pull request, then `/qa-ticket`, then a person merges in
 | ACME-113 | An export can be downloaded whichever server answers         | to build: export files on shared storage (`@nestjs/storage`)                                            |
 | ACME-114 | Messages from the server in the user's language              | built by hand: `@nestjs/i18n`, English and French                                                       |
 | ACME-115 | Signing out ends my sign-in in every open tab, straight away | built; QA found sign-out bugs, all fixed (a slow sign-out, offline, cookie gone, phone, a double press) |
-| ACME-116 | Prices and stock value, right to the penny                   | built by hand: whole pence in code, GBP, each part's and the location's stock value                     |
+| ACME-116 | Prices and stock value, right to the cent                    | built by hand: whole cents in code, USD, a money input, each part's and the location's stock value      |
 
 ## Build the next one
 

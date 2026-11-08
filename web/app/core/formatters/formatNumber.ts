@@ -37,7 +37,7 @@ export function parseDecimal(text: string, language: string): number | null {
 
 /**
  * What the user typed, rewritten with a dot as the decimal point and no grouping ("1 234,50" in French → "1234.50"),
- * still as text, so an amount can be read exactly (into pence) without passing through a float. Null when the text is
+ * still as text, so an amount can be read exactly (into cents) without passing through a float. Null when the text is
  * not a number.
  */
 export function normalizeDecimal(text: string, language: string): string | null {

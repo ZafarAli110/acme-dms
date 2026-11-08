@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { centsFromDecimalText, decimalTextFromCents } from "#persistence/schema/columns/money-column";
 import { rateOfCents, roundHalfAwayFromZero, splitCents, sumCents, timesCents } from "../money";
 
-describe("money in whole pence", () => {
-  it("reads and writes pounds by text, where multiplying by 100 goes wrong", () => {
+describe("money in whole cents", () => {
+  it("reads and writes dollars by text, where multiplying by 100 goes wrong", () => {
     expect(1.005 * 100).not.toBe(100.5);
     expect(centsFromDecimalText("1.005".slice(0, 4))).toBe(100);
     expect(centsFromDecimalText("45.50")).toBe(4550);
@@ -16,7 +16,7 @@ describe("money in whole pence", () => {
     expect(decimalTextFromCents(999_999_999_999)).toBe("9999999999.99");
   });
 
-  it("refuses anything that is not two decimals at most, or not whole pence", () => {
+  it("refuses anything that is not two decimals at most, or not whole cents", () => {
     expect(() => centsFromDecimalText("1.234")).toThrow();
     expect(() => centsFromDecimalText("abc")).toThrow();
     expect(() => decimalTextFromCents(10.5)).toThrow();
@@ -38,10 +38,10 @@ describe("money in whole pence", () => {
     expect(rateOfCents(99, 2000)).toBe(20); // 20% of 99p is 19.8p
     expect(rateOfCents(-99, 2000)).toBe(-20);
     expect(rateOfCents(125, 2000)).toBe(25);
-    expect(rateOfCents(1250, 625)).toBe(78); // 6.25% of £12.50 is 78.125p
+    expect(rateOfCents(1250, 625)).toBe(78); // 6.25% of $12.50 is 78.125¢
   });
 
-  it("splits without losing a penny", () => {
+  it("splits without losing a cent", () => {
     expect(splitCents(1000, 3)).toEqual([334, 333, 333]);
     expect(splitCents(-1000, 3)).toEqual([-334, -333, -333]);
     expect(sumCents(splitCents(1001, 7))).toBe(1001);

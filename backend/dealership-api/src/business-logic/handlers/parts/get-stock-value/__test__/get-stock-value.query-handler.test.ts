@@ -8,8 +8,8 @@ import { GetStockValueQueryHandler } from "../get-stock-value.query-handler";
 describe("GetStockValueQueryHandler", () => {
   const database = useTestDatabase();
 
-  it("sums on hand × price at the selected location only, to the penny, and matches the list's stock values", async () => {
-    // 0.10 × 3 and 0.20 × 1: in floats 0.30000000000000004 + 0.2; in pence 30 + 20.
+  it("sums on hand × price at the selected location only, to the cent, and matches the list's stock values", async () => {
+    // 0.10 × 3 and 0.20 × 1: in floats 0.30000000000000004 + 0.2; in cents 30 + 20.
     await database.seed.addStockedPartAsync({
       locationId: NORTHSIDE,
       partNumber: "WSH-010",
@@ -68,7 +68,7 @@ describe("GetStockValueQueryHandler", () => {
     expect(allParts.items.reduce((sum, item) => sum + item.stockValueCents, 0)).toBe(value.stockValueCents);
   });
 
-  it("is £0.00 at a location with no stock (Central: another dealer, nothing stocked by these tests)", async () => {
+  it("is $0.00 at a location with no stock (Central: another dealer, nothing stocked by these tests)", async () => {
     const value = await database
       .asRequest(new GetStockValueQueryHandler(database.unitOfWorkFactory))
       .executeAsync(AT_CENTRAL);

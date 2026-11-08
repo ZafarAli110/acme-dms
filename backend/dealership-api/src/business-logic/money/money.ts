@@ -1,9 +1,9 @@
-// Arithmetic on amounts in whole pence (docs/standards/money.md). Every function takes and returns integers, so nothing
+// Arithmetic on amounts in whole cents (docs/standards/money.md). Every function takes and returns integers, so nothing
 // drifts; the one place a fraction appears (a rate) is rounded once, half away from zero.
 
 function requireCents(cents: number): void {
   if (!Number.isSafeInteger(cents)) {
-    throw new Error(`${cents} is not a whole number of pence.`);
+    throw new Error(`${cents} is not a whole number of cents.`);
   }
 }
 
@@ -32,7 +32,7 @@ export function sumCents(amounts: readonly number[]): number {
 }
 
 /**
- * A rate of an amount, in basis points (20% VAT = 2000), rounded once: 20% of £0.99 is 19.8p → 20p. Apply it to each
+ * A rate of an amount, in basis points (a 20% rate = 2000), rounded once: 20% of $0.99 is 19.8¢ → 20¢. Apply it to each
  * line, then add the lines; never to a total summed from unrounded parts.
  */
 export function rateOfCents(cents: number, basisPoints: number): number {
@@ -44,7 +44,7 @@ export function rateOfCents(cents: number, basisPoints: number): number {
 }
 
 /**
- * An amount split into `parts` shares that always add up to it: £10.00 three ways is 334, 333, 333. The pennies left
+ * An amount split into `parts` shares that always add up to it: $10.00 three ways is 334, 333, 333. The cents left
  * over go to the first shares.
  */
 export function splitCents(cents: number, parts: number): number[] {

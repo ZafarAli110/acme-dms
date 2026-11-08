@@ -38,11 +38,13 @@ type (TC39's Decimal proposal is at an early stage), and Acme adds no money libr
 
 ## Where it lives
 
-| Piece                                                                   | What it does                                                                   |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `backend/dealership-api/src/persistence/schema/columns/money-column.ts` | the `money` column; `centsFromDecimalText`, `decimalTextFromCents` (rule 3)    |
-| `backend/dealership-api/src/business-logic/money/money.ts`              | `timesCents`, `sumCents`, `rateOfCents`, `splitCents`, `roundHalfAwayFromZero` |
-| `web/app/pages/parts/formatters/formatPrice.ts`                         | `formatPrice`, `formatPriceInput`, `parsePriceCents` (rule 10)                 |
+| Piece                                                                   | What it does                                                                       |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `backend/dealership-api/src/persistence/schema/columns/money-column.ts` | the `money` column; `centsFromDecimalText`, `decimalTextFromCents` (rule 3)        |
+| `backend/dealership-api/src/business-logic/money/money.ts`              | `timesCents`, `sumCents`, `rateOfCents`, `splitCents`, `roundHalfAwayFromZero`     |
+| `web/app/core/formatters/formatMoney.ts`                                | `formatMoney`, `formatMoneyInput`, `parseMoneyCents`, `currencySymbol` (rule 10)   |
+| `web/app/core/hooks/useFormatMoney.ts`                                  | formats cents in the user's current language, for a page or a column               |
+| `web/app/components/MoneyField.tsx`                                     | the input for an amount: symbol on the language's side, two decimals on leaving it |
 
 The stock value (ACME-116) shows both kinds of sum: each part's value in the list is `timesCents` in the handler, and the
 location's total (`GET /v1/parts/stock-value`) is summed by Postgres (rule 7). A test checks the two agree.

@@ -3,7 +3,7 @@ import type { TFunction } from "i18next";
 import { serverColumn } from "../../../components/data-grid/serverColumns";
 import { PartOnHandCell } from "../components/PartOnHandCell";
 import { PartThumbnailCell } from "../components/PartThumbnailCell";
-import { formatPrice } from "../formatters/formatPrice";
+import { formatMoney } from "../../../core/formatters/formatMoney";
 import type { PartListItem } from "../types/part";
 
 function renderThumbnail(params: GridRenderCellParams<PartListItem>) {
@@ -51,7 +51,7 @@ export function partColumns(t: TFunction<"parts">, language: string): GridColDef
       headerName: t("columns.unitPrice"),
       type: "number",
       width: 120,
-      valueFormatter: (value: number) => formatPrice(value, language),
+      valueFormatter: (value: number) => formatMoney(value, language),
     },
     {
       // Worked out by the API for this location; it sorts and filters by neither.
@@ -61,7 +61,7 @@ export function partColumns(t: TFunction<"parts">, language: string): GridColDef
       width: 140,
       sortable: false,
       filterable: false,
-      valueFormatter: (value: number) => formatPrice(value, language),
+      valueFormatter: (value: number) => formatMoney(value, language),
     },
   ].map((column) => serverColumn<PartListItem>(column as GridColDef<PartListItem>));
 }

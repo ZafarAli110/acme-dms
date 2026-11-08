@@ -53,7 +53,7 @@ describe("the dealership schema", () => {
       .where(sql`${parts.id} in (${rows[0]!.id}, ${rows[1]!.id}, ${rows[2]!.id})`)
       .orderBy(parts.partNumber);
 
-    // Whole pence in code, pounds in the database (docs/standards/money.md).
+    // Whole cents in code, dollars in the database (docs/standards/money.md).
     expect(read.map((row) => row.unitPriceCents)).toEqual([4999, 10, 999_999_999_999]);
     expect(read.map((row) => row.stored)).toEqual(["49.99", "0.10", "9999999999.99"]);
   });

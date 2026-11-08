@@ -8,12 +8,12 @@ import { ErrorAlert } from "../../components/ErrorAlert";
 import { PageHeader } from "../../components/PageHeader";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useColumnVisibility } from "../../core/hooks/useColumnVisibility";
+import { useFormatMoney } from "../../core/hooks/useFormatMoney";
 import { useListParams } from "../../core/hooks/useListParams";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
 import { prefetchListPage } from "../../core/paging/prefetchListPage";
 import { queryClient } from "../../core/queries/queryClient";
 import { partColumns } from "./columns/partColumns";
-import { formatPrice } from "./formatters/formatPrice";
 import { usePartList } from "./hooks/usePartList";
 import { useStockValue } from "./hooks/useStockValue";
 import { PartCreateDialog } from "./PartCreateDialog";
@@ -40,6 +40,7 @@ export default function PartList() {
   const isLoadingPage = useNavigation().state === "loading";
   const { data, error, isLoading } = usePartList(location?.id ?? "", params);
   const stockValue = useStockValue(location?.id ?? "");
+  const formatMoney = useFormatMoney();
   const visibility = useColumnVisibility("parts");
   const columns = useMemo(() => partColumns(t, i18n.language), [t, i18n.language]);
   // Creating a part opens PartCreateDialog, which predates the web standard: its own form state, not a route.
@@ -60,7 +61,7 @@ export default function PartList() {
           stockValue.isSuccess
             ? t("subtitleWithValue", {
                 location: location?.name ?? "",
-                value: formatPrice(stockValue.data, i18n.language),
+                value: formatMoney(stockValue.data),
               })
             : t("subtitle", { location: location?.name ?? "" })
         }

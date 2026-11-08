@@ -11,8 +11,9 @@ import {
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { MoneyField } from "../../components/MoneyField";
 import { useTranslation } from "react-i18next";
-import { parsePriceCents } from "./formatters/formatPrice";
+import { parseMoneyCents } from "../../core/formatters/formatMoney";
 import { useNavigate } from "react-router";
 import { partQueries } from "./queries/partQueries";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
@@ -46,7 +47,7 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
       partQueries.createPartAsync({
         partNumber: form.partNumber,
         description: form.description,
-        unitPriceCents: parsePriceCents(form.unitPrice, i18n.language) ?? 0,
+        unitPriceCents: parseMoneyCents(form.unitPrice, i18n.language) ?? 0,
         binId: form.binId,
         quantityOnHand: Number(form.quantityOnHand),
         reorderLevel: Number(form.reorderLevel),
@@ -70,7 +71,7 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
 
   const set = (field: keyof typeof EMPTY) => (event: { target: { value: string } }) =>
     setForm({ ...form, [field]: field === "partNumber" ? event.target.value.toUpperCase() : event.target.value });
-  const priceIsValid = parsePriceCents(form.unitPrice, i18n.language) !== null;
+  const priceIsValid = parseMoneyCents(form.unitPrice, i18n.language) !== null;
   const complete = form.partNumber && form.description && priceIsValid && form.binId;
 
   return (
@@ -93,17 +94,14 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
+            <MoneyField
               label={t("columns.unitPrice")}
               value={form.unitPrice}
-              onChange={set("unitPrice")}
+              onChange={(unitPrice) => setForm((previous) => ({ ...previous, unitPrice }))}
               required
-              fullWidth
-              // Text, not type="number": the price is read the user's way ("45,50" in French), not the browser's.
-              slotProps={{ htmlInput: { inputMode: "decimal" } }}
               error={form.unitPrice !== "" && !priceIsValid}
               helperText={form.unitPrice !== "" && !priceIsValid ? t("edit.validation.priceInvalid") : undefined}
-              data-testid="part-unit-price"
+              testId="part-unit-price"
             />
           </Grid>
           <Grid size={12}>

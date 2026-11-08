@@ -1,11 +1,11 @@
-import { formatPriceInput, parsePriceCents } from "../formatters/formatPrice";
+import { formatMoneyInput, parseMoneyCents } from "../../../core/formatters/formatMoney";
 import type { Part, PartFormValues } from "../types/part";
 
 /** The form's starting values: the part as saved, its price written the user's way ("45.50", "45,50"). */
 export function toFormValues(part: Part, language: string): PartFormValues {
   return {
     description: part.description,
-    unitPrice: formatPriceInput(part.unitPriceCents, language),
+    unitPrice: formatMoneyInput(part.unitPriceCents, language),
     photos: part.photos.map((photo) => ({
       key: photo.id,
       photoId: photo.id,
@@ -23,7 +23,7 @@ export function toFormValues(part: Part, language: string): PartFormValues {
  */
 export function toUpdateFormData(values: PartFormValues, saved: Part, language: string): FormData {
   const description = values.description.trim();
-  const unitPriceCents = parsePriceCents(values.unitPrice, language);
+  const unitPriceCents = parseMoneyCents(values.unitPrice, language);
   const existing = values.photos.filter((photo) => photo.photoId !== null);
   const added = values.photos.filter((photo) => photo.file !== null);
 

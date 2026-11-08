@@ -3,15 +3,15 @@ import * as v from "valibot";
 const wholeNumberFromZero = v.pipe(v.number(), v.integer(), v.minValue(0));
 
 /**
- * A price in whole pence (4999 = £49.99): never a pound amount with decimals, so no client parses money through a float
- * (docs/standards/money.md). At most £9,999,999,999.99, what the database's `numeric(12, 2)` holds.
+ * A price in whole cents (4999 = $49.99): never a dollar amount with decimals, so no client parses money through a float
+ * (docs/standards/money.md). At most $9,999,999,999.99, what the database's `numeric(12, 2)` holds.
  */
 export const unitPriceCents = v.pipe(
   v.number(),
   v.integer(),
   v.minValue(0),
   v.maxValue(999_999_999_999),
-  v.description("In pence: 4999 is £49.99"),
+  v.description("In cents: 4999 is $49.99"),
   v.metadata({ example: 4999 }),
 );
 

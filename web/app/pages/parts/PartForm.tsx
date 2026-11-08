@@ -3,6 +3,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert, Box, Button, Chip, Grid, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
+import { MoneyField } from "../../components/MoneyField";
 import { useTranslation } from "react-i18next";
 import { useActionData, useNavigate, useNavigation, useSubmit } from "react-router";
 import { FormGuards } from "../../components/FormGuards";
@@ -187,16 +188,18 @@ export function PartForm({
                   control={methods.control}
                   name="unitPrice"
                   render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
+                    <MoneyField
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      inputRef={field.ref}
+                      name={field.name}
                       label={t("columns.unitPrice")}
                       required
-                      fullWidth
                       disabled={disabled}
-                      slotProps={{ htmlInput: { inputMode: "decimal" } }}
                       error={fieldState.invalid}
                       helperText={fieldState.error?.message}
-                      data-testid="part-unit-price"
+                      testId="part-unit-price"
                     />
                   )}
                 />
