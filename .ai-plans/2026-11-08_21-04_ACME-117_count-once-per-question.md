@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-08 21:04
 
-**Status:** In progress
+**Status:** Done
 
 **Ticket:** ACME-117 · **Branch:** final
 
@@ -11,8 +11,7 @@
 **Design:** No screen change: the customer list, its footer ("1–25 of 10,000+"), Home's tile and the export dialog
 look exactly as after ACME-119, with the total there when the page first shows (the route prefetches it).
 
-**Now:** Done: the list pages without counting, the count per question, the web and the load test; at 200 a second
-none fail, p95 89 ms; gates pass · Next: step 3's browser check (the totals on first paint) and `verify-ticket` ·
+**Now:** Done: verified, evidence in `docs/evidence/ACME-117-count.md` · Next: ACME-117's next step (the city index) ·
 Blocked: None
 
 ## Requirement
@@ -40,9 +39,9 @@ Happy
 
 - [x] Page 2 of the plain list, a sort, a filtered page → the handler runs no `count(*)` (the handler test's recorded
       SQL)
-- [ ] Open Customers, change the search or the filter → the web asks for the count once for that question; going back
+- [x] Open Customers, change the search or the filter → the web asks for the count once for that question; going back
       to a question asked within five minutes uses the total already fetched (the web query test)
-- [ ] The footer, Home's tile and the export dialog → the same numbers as before ("10,000+" past 10,000), there when
+- [x] The footer, Home's tile and the export dialog → the same numbers as before ("10,000+" past 10,000), there when
       the page first shows
 - [x] Save a customer → the pages and the totals are fetched again
 - [x] A search for a term nobody has ("ahed") → its page still comes from the trigram index, never a walk of the
@@ -135,7 +134,7 @@ costs its count on each page, as today (13% of the database's time at 200 a seco
 - [x] 1. Tests first: the list without a count, the count handler's totals, the web key → verify: they fail on today's
       code
 - [x] 2. API: the list's page, the count handler and endpoint → verify: the handler and plans tests
-- [ ] 3. Web: the count per question, the loaders' prefetch, the grid, the export dialog, Home → verify: web tests and
+- [x] 3. Web: the count per question, the loaders' prefetch, the grid, the export dialog, Home → verify: web tests and
       typecheck; the footer, Home and the dialog in a browser (`check-in-browser`) show the totals on first paint
 - [x] 4. Load test: totals from the count, views count once → verify: `bun run load-test --rate 25` and `sql:top`:
       plain-list counts about one per list view, none on paging
@@ -181,3 +180,6 @@ None: nothing a person sees changes.
   `--rate 400`: 148 a second answered, 15,132 busy, 0 failed, p95 1.8 s (ACME-121 holds), Postgres 763%. `--rate 800`:
   nothing answered while Postgres idled at 7% with 25,000 requests in flight: the test rig (one laptop sending and
   serving) is the limit there, not the system. Capacity on the laptop: about 200 to 250 a second.
+- 2026-11-08 22:25 The verifier: PASS (the browser's requests while paging and searching; the footer on first paint, Home, the
+  dialog; counts against SQL at three locations and another dealer; `hasMore` at the last page). Evidence:
+  [docs/evidence/ACME-117-count.md](../docs/evidence/ACME-117-count.md). Done.
