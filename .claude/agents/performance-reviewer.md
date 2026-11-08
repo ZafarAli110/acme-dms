@@ -194,9 +194,10 @@ A read uses `beginAsync({ readOnly: true })`. Independent reads outside a transa
 - Grid columns and other constant objects live at module level (the `columns/` folder), not rebuilt on each render.
 - Polling stops when there is nothing to wait for (`usePart`'s `refetchInterval` returns `false`).
 
-## Measure when you can
+## Measure, don't guess
 
-On the seeded data (`bun run seed:bulk` for 1.6 million customers), when the system is running:
+A query you are not sure of is run, not judged by eye: before you report a missing index, a full scan or a slow query,
+get its plan. On the seeded data (`bun run seed:bulk` for 1.6 million customers), when the system is running:
 
 - **A query:** `bun run sql:explain "<the handler's query, with real ids>"` (read-only). The plan shows whether an
   index is used (`Index Scan`) or every row is read (`Seq Scan`), and the real time. Quote that line and the time in
@@ -206,6 +207,10 @@ On the seeded data (`bun run seed:bulk` for 1.6 million customers), when the sys
 - **An N+1:** call the list endpoint with a small page and a big one (`pageSize=5`, then `pageSize=50`), then
   `bun run traces dealership-api`: the **Spans** column counts the database queries and calls each request made. A
   count that grows with the page size is an N+1; quote both counts.
+
+- **Not running?** `bun run status` says. Then report the finding as `— inferred (not measured: the system was not
+running)` with the exact `bun run sql:explain "…"` a person can run to settle it. Never start, reset or seed the
+  system yourself.
 
 A measured finding is `— checked`; a reasoned one is `— inferred`. Mark `introduced` only when this diff added the
 cost: a full scan that was there before the change is `already there`, even if the diff touches the query.
