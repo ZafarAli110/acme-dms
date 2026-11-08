@@ -507,7 +507,7 @@ If identity-api ever cannot open the signing key in use (its Data Protection key
 | Path                                                                                  | What                                                                                                 |
 | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `docs/ARCHITECTURE.md`                                                                | services, layers, and how they fit together                                                          |
-| `docs/standards/`                                                                     | the team's rules: handlers, errors, messaging, uploads, dealers and locations, database, web, coding |
+| `docs/standards/`                                                                     | the rules: handlers, errors, messaging, uploads, dealers and locations, database, money, web, coding |
 | `docs/contracts.md`                                                                   | what services promise each other: the health response, RabbitMQ messages and queues                  |
 | [Acme Tracker](https://github.com/ZafarAli110/acme-tracker)                           | the backlog: a separate repository, at http://localhost:4100 when it is running                      |
 | `CLAUDE.md`, `.claude/`, `.mcp.json`                                                  | the Claude Code harness (lab branches and `final`, see [Branches](#branches))                        |
