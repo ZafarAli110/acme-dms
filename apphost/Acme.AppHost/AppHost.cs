@@ -19,25 +19,53 @@ var gatewayDb = postgres.AddDatabase("gateway");
 
 var rabbitmq = builder.AddRabbitMQ("rabbitmq", username, password).WithManagementPlugin();
 
-// Services
-var identityApi = builder.AddProject<Projects.Acme_Identity_Service>("identity-api")
-    .WithHttpHealthCheck("/v1/system/health")
-    .WithReference(identityDb)
-    .WaitFor(identityDb);
-
-var documentApi = builder.AddProject<Projects.Acme_Documents_Service>("document-api")
-    .WithHttpHealthCheck("/v1/system/health")
-    .WithReference(documentsDb)
-    .WithReference(rabbitmq)
-    .WithReference(identityApi)
-    .WaitFor(documentsDb)
-    .WaitFor(rabbitmq)
-    .WaitFor(identityApi);
-
 // `bun run start:prod` (scripts/start-production-like.ts): the same system run as production runs it, to measure it.
-// The Bun apps run their built bundle once instead of watching and rebuilding, the web app its production build, and
-// logs say warnings and errors only. Development settings stay (demo users, dev credentials, plain HTTP).
+// The Bun apps run their built bundle once instead of watching and rebuilding, the .NET services their Release build,
+// the web app its production build, and logs say warnings and errors only. Development settings stay (demo users, dev
+// credentials, plain HTTP).
 var productionLike = builder.Configuration["ACME_PRODUCTION_LIKE"] == "1";
+
+// `bun run start:prod --load-test`: the limits per address lifted, so `bun run load-test` can sign 200 people in and send
+// thousands of requests a second from this one machine, which those limits exist to stop. The share per sign-in stays: a
+// 429 in the load test still means one person asked for more than a person would. Never in production, where the load
+// comes from many addresses and these limits are what stop one of them flooding the rest.
+var loadTest = productionLike && builder.Configuration["ACME_LOAD_TEST"] == "1";
+
+// Services. The .NET ones run as projects in `bun run dev` (Debug, `bun run rebuild` after a change) and as their Release
+// build in `bun run start:prod` (ReleaseBuild, at the end of this file).
+IResourceBuilder<IResourceWithServiceDiscovery> identityApi = productionLike
+    ? IdentityApi(ReleaseBuild<Projects.Acme_Identity_Service>("identity-api", port: 5270))
+    : IdentityApi(builder.AddProject<Projects.Acme_Identity_Service>("identity-api"));
+
+IResourceBuilder<T> IdentityApi<T>(IResourceBuilder<T> service)
+    where T : IResourceWithServiceDiscovery, IResourceWithEnvironment, IResourceWithWaitSupport
+{
+    service
+        .WithHttpHealthCheck("/v1/system/health")
+        .WithReference(identityDb)
+        .WaitFor(identityDb);
+    if (loadTest)
+    {
+        service.WithEnvironment("RateLimits__SignInPerMinute", "100000");
+    }
+
+    return service;
+}
+
+IResourceBuilder<IResourceWithServiceDiscovery> documentApi = productionLike
+    ? DocumentApi(ReleaseBuild<Projects.Acme_Documents_Service>("document-api", port: 5280))
+    : DocumentApi(builder.AddProject<Projects.Acme_Documents_Service>("document-api"));
+
+IResourceBuilder<T> DocumentApi<T>(IResourceBuilder<T> service)
+    where T : IResourceWithServiceDiscovery, IResourceWithEnvironment, IResourceWithWaitSupport =>
+    service
+        .WithHttpHealthCheck("/v1/system/health")
+        .WithReference(documentsDb)
+        .WithReference(rabbitmq)
+        .WithReference(identityApi)
+        .WaitFor(documentsDb)
+        .WaitFor(rabbitmq)
+        .WaitFor(identityApi);
 
 // One key signs every export download link for all dealership-api copies: a link one copy made must open on whichever
 // copy the gateway sends the download to. A deployment sets EXPORT_LINK_KEY; here it lasts until the next start.
@@ -87,20 +115,37 @@ builder.AddExecutable("export-worker", "bun", "../../backend/dealership-api", "r
     .WaitFor(dealershipApi);
 
 // The single entry point for the web app: /api/<service>/... is routed to that service with the prefix removed.
-var gateway = builder.AddProject<Projects.Acme_Gateway_Service>("gateway-api")
-    .WithHttpHealthCheck("/v1/system/health")
-    .WithReference(identityApi)
-    .WithReference(dealershipApi.GetEndpoint("http"))
-    .WithReference(documentApi)
-    .WithReference(gatewayDb)
-    .WaitFor(gatewayDb)
-    .WaitFor(identityApi)
-    .WaitFor(dealershipApi)
-    .WaitFor(documentApi);
-// Every further copy under the same service name: service discovery gives the gateway's proxy one destination each.
-for (var index = 0; index < dealershipApiReplicas.Count; index++)
+IResourceBuilder<IResourceWithServiceDiscovery> gateway = productionLike
+    ? GatewayApi(ReleaseBuild<Projects.Acme_Gateway_Service>("gateway-api", port: 5200))
+    : GatewayApi(builder.AddProject<Projects.Acme_Gateway_Service>("gateway-api"));
+
+IResourceBuilder<T> GatewayApi<T>(IResourceBuilder<T> service)
+    where T : IResourceWithServiceDiscovery, IResourceWithEnvironment, IResourceWithWaitSupport
 {
-    gateway.WithEnvironment($"services__dealership-api__http__{index + 1}", dealershipApiReplicas[index].GetEndpoint("http"));
+    service
+        .WithHttpHealthCheck("/v1/system/health")
+        .WithReference(identityApi)
+        .WithReference(dealershipApi.GetEndpoint("http"))
+        .WithReference(documentApi)
+        .WithReference(gatewayDb)
+        .WaitFor(gatewayDb)
+        .WaitFor(identityApi)
+        .WaitFor(dealershipApi)
+        .WaitFor(documentApi);
+    // Every further copy under the same service name: service discovery gives the gateway's proxy one destination each.
+    for (var index = 0; index < dealershipApiReplicas.Count; index++)
+    {
+        service.WithEnvironment($"services__dealership-api__http__{index + 1}", dealershipApiReplicas[index].GetEndpoint("http"));
+    }
+
+    if (loadTest)
+    {
+        service
+            .WithEnvironment("RateLimit__AddressBurst", "1000000")
+            .WithEnvironment("RateLimit__AddressRequestsPerSecond", "1000000");
+    }
+
+    return service;
 }
 
 // The sample data (scripts/seed.ts), loaded through the gateway once everything is up. It runs on every start and is
@@ -129,16 +174,27 @@ if (productionLike)
     }
 }
 
-// `bun run start:prod --load-test`: the limits per address lifted, so `bun run load-test` can sign 200 people in and send
-// thousands of requests a second from this one machine, which those limits exist to stop. The share per sign-in stays: a
-// 429 in the load test still means one person asked for more than a person would. Never in production, where the load
-// comes from many addresses and these limits are what stop one of them flooding the rest.
-if (productionLike && builder.Configuration["ACME_LOAD_TEST"] == "1")
+await builder.Build().RunAsync();
+
+// A .NET service's Release build, run as it is (`dotnet <its assembly>`), for `bun run start:prod`. Not as a project:
+// Aspire starts a project in the AppHost's own build configuration, and `aspire run` starts the AppHost's Debug build
+// even after building it in Release (Aspire CLI 13.6.4), so a project would run in Debug however start:prod built it.
+// start:prod builds in Release (Configuration=Release), and the AppHost's references compile every service with it.
+// Like a project here: the port and environment its launch profile gives it (Properties/launchSettings.json), its
+// traces and logs sent to the dashboard, and other resources reach it by name.
+IResourceBuilder<ReleaseBuildResource> ReleaseBuild<TProject>(string name, int port)
+    where TProject : IProjectMetadata, new()
 {
-    gateway
-        .WithEnvironment("RateLimit__AddressBurst", "1000000")
-        .WithEnvironment("RateLimit__AddressRequestsPerSecond", "1000000");
-    identityApi.WithEnvironment("RateLimits__SignInPerMinute", "100000");
+    var project = new TProject().ProjectPath;
+    var directory = Path.GetDirectoryName(project)!;
+    var assembly = Path.Combine(directory, "bin", "Release", "net10.0", $"{Path.GetFileNameWithoutExtension(project)}.dll");
+    return builder.AddResource(new ReleaseBuildResource(name, directory))
+        .WithArgs(assembly)
+        .WithHttpEndpoint(port: port, env: "ASPNETCORE_HTTP_PORTS")
+        .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+        .WithOtlpExporter();
 }
 
-await builder.Build().RunAsync();
+/// <summary>A process started with <c>dotnet</c> that other resources can reference by name, as they do a project.</summary>
+internal sealed class ReleaseBuildResource(string name, string workingDirectory)
+    : ExecutableResource(name, "dotnet", workingDirectory), IResourceWithServiceDiscovery;
