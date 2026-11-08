@@ -6,7 +6,27 @@
 //
 // Dealers, locations and users are bootstrap data: identity-api seeds them itself on startup.
 import { deflateSync } from "node:zlib";
-import { callAsync, type Location, resourceUrl, type Session, signInAsync } from "./running-system";
+import { callAsync as callOnceAsync, type Location, resourceUrl, type Session, signInAsync } from "./running-system";
+
+/** How many times one call waits out a 429 before the seed gives up. */
+const MAX_WAITS = 20;
+
+/**
+ * One API call that waits and asks again when the gateway answers 429. The seed is one sign-in making hundreds of
+ * calls in a row, faster than its fair share (ACME-117's limit per sign-in), so it waits the `Retry-After` the gateway
+ * sends, as any well-behaved client does, rather than stopping half-seeded.
+ */
+async function callAsync(...args: Parameters<typeof callOnceAsync>): Promise<Response> {
+  for (let waits = 0; ; waits++) {
+    const response = await callOnceAsync(...args);
+    if (response.status !== 429 || waits === MAX_WAITS) {
+      return response;
+    }
+    const seconds = Number(response.headers.get("retry-after")) || 1;
+    await response.body?.cancel();
+    await Bun.sleep(seconds * 1000);
+  }
+}
 
 /** A part as the seed adds it; the price in whole cents (docs/standards/money.md). */
 type PartSeed = [partNumber: string, description: string, unitPriceCents: number];
