@@ -73,19 +73,27 @@ export function seedKit(db: NodePgDatabase) {
     quantityOnHand?: number;
     reorderLevel?: number;
     deleted?: boolean;
+    /** "Part <number>" unless given. */
+    description?: string;
+    /** The bin it is stocked in has been deleted. */
+    binDeleted?: boolean;
   }): Promise<{ part: Part; bin: Bin }> {
     const [part] = await db
       .insert(parts)
       .values({
         dealerId: dealerOf(stocked.locationId),
         partNumber: stocked.partNumber,
-        description: `Part ${stocked.partNumber}`,
+        description: stocked.description ?? `Part ${stocked.partNumber}`,
         unitPriceCents: stocked.unitPriceCents ?? 1000,
         ...SEEDED_AUDIT,
         ...(stocked.deleted ? DELETED_AUDIT : {}),
       })
       .returning();
-    const bin = await addBinAsync({ locationId: stocked.locationId, code: `B-${stocked.partNumber}` });
+    const bin = await addBinAsync({
+      locationId: stocked.locationId,
+      code: `B-${stocked.partNumber}`,
+      deleted: stocked.binDeleted ?? false,
+    });
     await db.insert(partInventories).values({
       dealerId: dealerOf(stocked.locationId),
       locationId: stocked.locationId,

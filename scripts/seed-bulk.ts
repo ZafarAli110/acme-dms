@@ -1,10 +1,11 @@
 // A merged dealer group's customer book: 1.6 million customers at Northside, 400,000 at Riverside and 250,000 at
-// Westgate (ACME-108).
+// Westgate (ACME-108), and its parts catalogue: 60,000 parts, stocked 40% at Northside, 30% at Riverside and 20% at
+// Westgate (ACME-123).
 // Written straight into the dealership database with one INSERT … SELECT per location, so it takes seconds, not hours
 // of API calls. Run `bun run seed` first; `bun run reset` removes these customers with the rest of the business data.
 //
 //   bun run seed:bulk                     the default sizes
-//   bun run seed:bulk 50000 20000 10000   smaller, for a quick look
+//   bun run seed:bulk 50000 20000 10000   smaller, for a quick look (a fourth number: the parts, 60000 by default)
 import { SQL } from "bun";
 import { resourceUrl } from "./running-system";
 
@@ -119,7 +120,9 @@ const COMPANIES = [
 ];
 const EMAIL_DOMAINS = ["gmail.com", "outlook.com", "hotmail.co.uk", "yahoo.co.uk", "btinternet.com", "icloud.com"];
 
-const [northside = 1_600_000, riverside = 400_000, westgate = 250_000] = process.argv.slice(2).map(Number);
+const [northside = 1_600_000, riverside = 400_000, westgate = 250_000, catalogue = 60_000] = process.argv
+  .slice(2)
+  .map(Number);
 
 function textArray(values: string[]): string {
   return `ARRAY[${values.map((value) => `'${value.replaceAll("'", "''")}'`).join(", ")}]`;
@@ -161,8 +164,93 @@ async function seedLocationAsync(locationId: string, name: string, first: number
   );
 }
 
+// The parts catalogue (ACME-123): what each family is, where on the car it goes, how it is made, and what it fits.
+// Combined, they give a few thousand distinct descriptions, so 60,000 parts read like a catalogue (one part from
+// several makers shares a description) and a word such as "brake" or "filter" matches thousands, as in a real one.
+const PART_FAMILIES: [code: string, name: string, positions: string[]][] = [
+  ["BRK-PAD", "Brake pad set", ["front", "rear"]],
+  ["BRK-DSC", "Brake disc", ["front", "rear"]],
+  ["BRK-CAL", "Brake caliper", ["front left", "front right", "rear left", "rear right"]],
+  ["BRK-HSE", "Brake hose", ["front", "rear"]],
+  ["FLT-OIL", "Oil filter", ["spin-on", "cartridge"]],
+  ["FLT-AIR", "Air filter", ["panel", "round"]],
+  ["FLT-CAB", "Cabin filter", ["pollen", "activated carbon"]],
+  ["FLT-FUE", "Fuel filter", ["inline", "cartridge"]],
+  ["WPR-BLD", "Wiper blade", ["front", "rear"]],
+  ["SPK-PLG", "Spark plug", ["iridium", "platinum", "nickel"]],
+  ["BLT-AUX", "Auxiliary belt", ["ribbed"]],
+  ["BLT-TIM", "Timing belt kit", ["with water pump", "without water pump"]],
+  ["PMP-WAT", "Water pump", ["mechanical", "electric"]],
+  ["SHK-ABS", "Shock absorber", ["front", "rear"]],
+  ["SPR-COI", "Coil spring", ["front", "rear"]],
+  ["ARM-CTL", "Control arm", ["front left", "front right"]],
+  ["LNK-STB", "Anti-roll bar link", ["front", "rear"]],
+  ["BTR-12V", "Battery 12 V", ["70 Ah", "80 Ah", "95 Ah"]],
+  ["CLT-KIT", "Clutch kit", ["three-piece", "with flywheel"]],
+  ["EXH-SIL", "Exhaust silencer", ["rear", "centre"]],
+  ["SNS-OXY", "Oxygen sensor", ["upstream", "downstream"]],
+  ["SNS-ABS", "Wheel speed sensor", ["front", "rear"]],
+  ["LMP-HED", "Headlamp bulb", ["H7", "H4", "LED"]],
+  ["RAD-ENG", "Radiator", ["manual gearbox", "automatic gearbox"]],
+  ["THR-STA", "Thermostat", ["with housing", "insert"]],
+  ["CVJ-DRV", "Drive shaft joint", ["outer", "inner"]],
+  ["MNT-ENG", "Engine mount", ["front", "rear", "gearbox side"]],
+  ["GSK-HED", "Cylinder head gasket", ["multi-layer steel"]],
+];
+const PART_GRADES = ["", "premium", "economy", "heavy duty", "low dust", "original equipment"];
+const FITMENTS = (
+  "Focus 2018-2022,Fiesta 2017-2023,Puma 2019-2024,Golf 2013-2020,Golf 2020-2024,Polo 2017-2024,Corsa 2019-2024," +
+  "Astra 2015-2021,Octavia 2020-2024,Fabia 2015-2021,Qashqai 2014-2021,Juke 2019-2024,Clio 2019-2024," +
+  "Megane 2016-2022,Yaris 2020-2024,Corolla 2019-2024,C-Class 2014-2021,3 Series 2019-2024,A3 2020-2024," +
+  "Civic 2017-2022,Tucson 2020-2024,Sportage 2016-2021,208 2019-2024,Transit Custom 2018-2023,Sprinter 2018-2024"
+).split(",");
+const PART_TEMPLATES = PART_FAMILIES.flatMap(([code, name, positions]) =>
+  positions.map((position) => ({ code, text: `${name}, ${position}` })),
+);
+
+/** The catalogue at Northwind, and its stock at the three rooftops, each part in one of the rooftop's bins. */
+async function seedCatalogueAsync(count: number): Promise<void> {
+  const started = performance.now();
+  // Seven-digit numbers (2,000,001 on), so they never meet the six-digit parts the end-to-end tests add.
+  await sql.unsafe(`
+    WITH made AS (
+      INSERT INTO parts (dealer_id, part_number, description, unit_price, created_at, created_by, updated_at, updated_by)
+      SELECT '${NORTHWIND}',
+             (${textArray(PART_TEMPLATES.map((template) => template.code))})[t] || '-' || (2000000 + i)::text,
+             (${textArray(PART_TEMPLATES.map((template) => template.text))})[t]
+               || coalesce(', ' || nullif((${textArray(PART_GRADES)})[1 + abs(hashint4(i * 17)) % ${PART_GRADES.length}], ''), '')
+               || ', ' || (${textArray(FITMENTS)})[1 + abs(hashint4(i * 19)) % ${FITMENTS.length}],
+             (2 + abs(hashint4(i * 23)) % 400)::numeric + (abs(hashint4(i * 29)) % 100)::numeric / 100,
+             now(), '${CREATED_BY}', now(), '${CREATED_BY}'
+      FROM generate_series(1, ${count}) AS i,
+           LATERAL (SELECT 1 + abs(hashint4(i * 13)) % ${PART_TEMPLATES.length} AS t) AS template
+      ON CONFLICT DO NOTHING
+      RETURNING id, (right(part_number, 7)::int - 2000000) AS i
+    ),
+    shares (location_id, percent, salt) AS (
+      VALUES ('${NORTHSIDE}'::uuid, 40, 31), ('${RIVERSIDE}'::uuid, 30, 37), ('${WESTGATE}'::uuid, 20, 41)
+    ),
+    location_bins AS (
+      SELECT location_id, array_agg(id ORDER BY code) AS bin_ids FROM bins WHERE NOT is_deleted GROUP BY location_id
+    )
+    INSERT INTO part_inventories (dealer_id, location_id, part_id, bin_id, quantity_on_hand, reorder_level,
+                                  created_at, created_by, updated_at, updated_by)
+    SELECT '${NORTHWIND}', shares.location_id, made.id,
+           location_bins.bin_ids[1 + abs(hashint4(made.i * shares.salt)) % cardinality(location_bins.bin_ids)],
+           abs(hashint4(made.i * 43)) % 40, abs(hashint4(made.i * 47)) % 6,
+           now(), '${CREATED_BY}', now(), '${CREATED_BY}'
+    FROM made
+    CROSS JOIN shares
+    JOIN location_bins ON location_bins.location_id = shares.location_id
+    WHERE abs(hashint4(made.i * shares.salt)) % 100 < shares.percent`);
+  console.log(
+    `Northwind: ${count.toLocaleString("en-GB")} catalogue parts and their stock in ${((performance.now() - started) / 1000).toFixed(1)} s`,
+  );
+}
+
 await seedLocationAsync(NORTHSIDE, "Northside", 1, northside);
 await seedLocationAsync(RIVERSIDE, "Riverside", 10_000_001, riverside);
 await seedLocationAsync(WESTGATE, "Westgate", 20_000_001, westgate);
-await sql.unsafe("ANALYZE customers");
+await seedCatalogueAsync(catalogue);
+await sql.unsafe("ANALYZE customers, parts, part_inventories");
 await sql.close();

@@ -137,6 +137,26 @@ function someCustomer(person: Person): KnownCustomer | undefined {
 }
 
 /** What people do on a busy morning, and how often, out of 100. */
+/** Parts searches as the counter types them, over the large sample data's catalogue (ACME-123). */
+const PARTS_SEARCHES = [
+  "brake pads front",
+  "pads brake rear",
+  "brak pads",
+  "oil filter",
+  "filters",
+  "cabin filter carbon",
+  "wiper blade rear",
+  "spark plug iridium",
+  "timing belt kit",
+  "shock absorber front golf",
+  "battery 12 v 95",
+  "clutch kit focus",
+  "headlamp bulb h7",
+  "water pump",
+  "BRK-PAD-20",
+  "FLT-OIL",
+];
+
 const READS: Kind[] = [
   {
     name: "customers list",
@@ -202,8 +222,17 @@ const READS: Kind[] = [
   { name: "recent customers", weight: 5, call: () => ({ method: "GET", path: "/api/dealership/v1/customers/recent" }) },
   {
     name: "parts list",
-    weight: 9,
+    weight: 6,
     call: () => ({ method: "GET", path: `/api/dealership/v1/parts?page=${pick(1, 3)}&pageSize=${PAGE_SIZE}` }),
+  },
+  {
+    // What a parts counter types (ACME-123): words in any order and form, a word cut short, a part number's beginning.
+    name: "parts search",
+    weight: 5,
+    call: () => ({
+      method: "GET",
+      path: `/api/dealership/v1/parts?page=1&pageSize=${PAGE_SIZE}&search=${encodeURIComponent(oneOf(PARTS_SEARCHES) ?? "brake")}`,
+    }),
   },
   {
     name: "one part",

@@ -11,9 +11,19 @@ import {
 import { timesCents } from "../../../money/money";
 import { requireLocation } from "../../../user-context/require-location";
 import { toPartInventoryDto } from "../part.mapper";
-import { findStockedPartsAsync, findThumbnailsAsync } from "../part.queries";
+import {
+  findMatchingPartIdsAsync,
+  findStockedPartsAsync,
+  findStockedPartsByIdsAsync,
+  findThumbnailsAsync,
+  type StockedPart,
+} from "../part.queries";
 
-/** The parts stocked at the user's selected location, with their bin and quantity there. */
+/**
+ * The parts stocked at the user's selected location, with their bin and quantity there. A search finds its page's ids
+ * as the tables' owner, with the scope written out (no index could serve it under row-level security), and reads the
+ * rows as the request (ACME-123).
+ */
 @Injectable()
 export class GetPartListQueryHandler implements IGetPartListQueryHandler {
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
@@ -23,11 +33,13 @@ export class GetPartListQueryHandler implements IGetPartListQueryHandler {
   }
 
   public async executeAsync(userContext: UserContext, query: ListQueryDto): Promise<PageResponseDto<PartListItemDto>> {
-    requireLocation(userContext);
+    const locationId = requireLocation(userContext);
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
+    const { items, total } = query.search
+      ? await this.searchAsync(userContext.dealerId, locationId, query, query.search)
+      : await this.listAsync(query);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const { items, total } = await findStockedPartsAsync(work.db, query);
     const thumbnails = await findThumbnailsAsync(
       work.db,
       items.map(({ part }) => part.id),
@@ -47,5 +59,32 @@ export class GetPartListQueryHandler implements IGetPartListQueryHandler {
       page,
       pageSize,
     };
+  }
+
+  private async listAsync(query: ListQueryDto): Promise<{ items: StockedPart[]; total: number }> {
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
+    // Awaited here: returned unawaited, the unit of work would close before it ran.
+    return await findStockedPartsAsync(work.db, query);
+  }
+
+  private async searchAsync(
+    dealerId: string,
+    locationId: string,
+    query: ListQueryDto,
+    search: string,
+  ): Promise<{ items: StockedPart[]; total: number }> {
+    const found = await this.findMatchingAsync(dealerId, locationId, query, search);
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
+    return { items: await findStockedPartsByIdsAsync(work.db, found.ids), total: found.total };
+  }
+
+  private async findMatchingAsync(
+    dealerId: string,
+    locationId: string,
+    query: ListQueryDto,
+    search: string,
+  ): Promise<{ ids: string[]; total: number }> {
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
+    return await findMatchingPartIdsAsync(work.db, { dealerId, locationId }, query, search);
   }
 }

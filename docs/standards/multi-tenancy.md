@@ -50,8 +50,10 @@ location is refused (the `row_level_security` migration). This is the rule, not 
   written out (`GetCustomerListQueryHandler.findScopedAsync`, chosen by `matchesText`, and the list's count,
   `CountCustomersQueryHandler`, by the same rule and `ownerScoped`); the rows are then read as the request, so the
   policy still decides what comes back. The count is not re-read, so its hand-written scope has its
-  own test (another location's and deleted rows never counted). Anything else stays under the policy: a status or
-  date filter uses `=`, `<` or `>`, which are leakproof.
+  own test (another location's and deleted rows never counted). The parts search does the same (ACME-123:
+  `findMatchingPartIdsAsync`, words by `@@`, the part number by LIKE), writing out the dealer for the part and the
+  location and live rows for its stock and its bin. Anything else stays under the policy: a status or date filter uses
+  `=`, `<` or `>`, which are leakproof.
 - The policies, by kind of table: location-scoped (`customers`, `customer_names`, `bins`, `part_inventories`): dealer
   and location (the name list is read under its policy: a location has hundreds to a few thousand names, so the policy
   narrows them before the trigram `%` runs);

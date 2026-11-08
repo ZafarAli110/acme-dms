@@ -393,7 +393,7 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run xlsx:inspect <file>`                       | an Excel file's sheets, row counts, header and first and last rows     |
 | `bun run api as rita GET /api/identity/v1/users/me` | call the system as a demo user (see below)                             |
 | `bun run seed`                                      | add the sample parts, stock, photos, customers                         |
-| `bun run seed:bulk`                                 | add 1.6M customers at Northside, 400k at Riverside, 250k at Westgate   |
+| `bun run seed:bulk`                                 | add 2.25M customers over the rooftops, and a 60,000-part catalogue     |
 | `bun run load-test --rate 3300 --people 200`        | a busy morning at a fixed rate: times, failures, CPU and memory        |
 | `bun run reset`                                     | empty business data and queues, reset demo users' locations, then seed |
 

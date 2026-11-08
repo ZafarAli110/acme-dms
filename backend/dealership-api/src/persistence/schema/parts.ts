@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
-import { integer, snakeCase, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, integer, snakeCase, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { money } from "./columns/money-column";
+import { tsvector } from "./columns/tsvector-column";
 
 /**
  * A dealer's part catalogue. The master record is shared by the dealer's rooftops; each stocks it in
@@ -23,9 +24,19 @@ export const parts = snakeCase.table(
      * (If-Match), and one that started from an older version is refused (412) instead of undoing someone's change.
      */
     version: integer().notNull().default(1),
+    /**
+     * The description's words for the parts search (ACME-123), kept by Postgres on every write: their base forms in
+     * English ("pads" → "pad"), the small words ("for", "the") left out. Searched with `@@`, ranked with `ts_rank_cd`.
+     */
+    searchWords: tsvector()
+      .notNull()
+      .generatedAlwaysAs(sql`to_tsvector('english'::regconfig, "description")`),
     ...auditColumns(),
   },
   (table) => [
+    // The parts search: words in the description, and any part of a part number, case ignored (ACME-123).
+    index("ix_parts_search_words").using("gin", table.searchWords),
+    index("ix_parts_part_number_trigram").using("gin", sql`upper(${table.partNumber}) gin_trgm_ops`),
     uniqueIndex("uq_parts_dealer_part_number")
       .on(table.dealerId, table.partNumber)
       .where(sql`NOT ${table.isDeleted}`),

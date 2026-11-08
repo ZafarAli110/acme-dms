@@ -1,0 +1,110 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "fc67a9c6-6929-4a85-9cef-e90b7fdb34a0",
+  "prevIds": ["d6118771-1cfc-4c20-bca7-7fc48fcb811b"],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "parts", "search_words"],
+      "writes": [
+        "s|col|public.parts.search_words",
+        "n|col|public.parts.search_words",
+        "e|col|public.parts.search_words"
+      ],
+      "reads": ["n|tbl|public.parts", "n|sch|public"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "parts", "ix_parts_search_words"],
+      "writes": [
+        "s|idx|public.ix_parts_search_words",
+        "n|idx|public.ix_parts_search_words",
+        "e|idx|public.ix_parts_search_words",
+        "n|rel|public.ix_parts_search_words"
+      ],
+      "reads": ["n|tbl|public.parts", "n|sch|public", "n|col|public.parts.search_words"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "parts", "ix_parts_part_number_trigram"],
+      "writes": [
+        "s|idx|public.ix_parts_part_number_trigram",
+        "n|idx|public.ix_parts_part_number_trigram",
+        "e|idx|public.ix_parts_part_number_trigram",
+        "n|rel|public.ix_parts_part_number_trigram"
+      ],
+      "reads": ["n|tbl|public.parts", "n|sch|public"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "parts",
+        "name": "search_words",
+        "type": "tsvector",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": {
+          "as": "to_tsvector('english'::regconfig, \"description\")",
+          "type": "stored"
+        },
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "parts",
+        "name": "ix_parts_search_words",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "search_words",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "gin",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "parts",
+        "name": "ix_parts_part_number_trigram",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "upper(\"part_number\") gin_trgm_ops",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "gin",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}
