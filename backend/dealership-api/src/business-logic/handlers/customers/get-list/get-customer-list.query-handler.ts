@@ -62,7 +62,15 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     // A search or a text filter matches with ILIKE, which no index can serve under row-level security (ACME-110, 119).
     const { ids, total } =
       query.search || matchesText(CUSTOMER_LIST_COLUMNS, query)
-        ? await this.findScopedAsync(userContext.dealerId, locationId, where, order, page, pageSize)
+        ? await this.findScopedAsync(
+            userContext.dealerId,
+            locationId,
+            where,
+            order,
+            page,
+            pageSize,
+            Boolean(query.search),
+          )
         : await this.findListedAsync(where, order, page, pageSize);
 
     // The rows are always read as the request: row-level security decides what comes back, whatever found the ids.
@@ -102,6 +110,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     order: SQL[],
     page: number,
     pageSize: number,
+    searching: boolean,
   ): Promise<{ ids: string[]; total: number }> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
     const scoped = and(
@@ -110,7 +119,7 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
       notDeleted(customers),
       where,
     );
-    return await findPageAsync(work.db, scoped, order, page, pageSize);
+    return await findPageAsync(work.db, scoped, order, page, pageSize, searching);
   }
 }
 
@@ -120,14 +129,8 @@ async function findPageAsync(
   order: SQL[],
   page: number,
   pageSize: number,
+  searching = false,
 ): Promise<{ ids: string[]; total: number }> {
-  const rows = await db
-    .select({ id: customers.id })
-    .from(customers)
-    .where(where)
-    .orderBy(...order)
-    .limit(pageSize)
-    .offset(pageOffset(page, pageSize));
   // Counted up to one past the list's depth: past it the screen says "10,000+", and the exact number would cost a read
   // of the whole location on every page (ACME-119).
   const upToDepth = db
@@ -137,7 +140,23 @@ async function findPageAsync(
     .limit(MAX_LIST_DEPTH + 1)
     .as("up_to_depth");
   const [counted] = await db.select({ total: count() }).from(upToDepth);
-  return { ids: rows.map((row) => row.id), total: counted?.total ?? 0 };
+  const total = counted?.total ?? 0;
+  if (searching && total <= MAX_LIST_DEPTH) {
+    // Postgres guesses ILIKE's matches poorly. For a term few or none have, it would walk the name index in order
+    // looking for a page, and at a big location read every customer ("ahed" at Northside: 6.5 s). With an exact count
+    // the matches are few enough to sort: find them through the trigram index only. Past 10,000 they are dense, and
+    // the walk finds a page at once. `set local` ends with this read-only transaction (ACME-119).
+    await db.execute(sql`set local enable_indexscan = off`);
+    await db.execute(sql`set local enable_indexonlyscan = off`);
+  }
+  const rows = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(where)
+    .orderBy(...order)
+    .limit(pageSize)
+    .offset(pageOffset(page, pageSize));
+  return { ids: rows.map((row) => row.id), total };
 }
 
 /**

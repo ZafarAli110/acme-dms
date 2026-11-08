@@ -23,6 +23,8 @@ interface Recorded {
   values: unknown[];
   /** Run in a request's transaction (row-level security on), or as the table's owner (a search's ids and count). */
   asRequest: boolean;
+  /** The `set local` statements its transaction ran before it, replayed before its plan is asked for. */
+  settings: string[];
 }
 
 interface Plan {
@@ -95,6 +97,7 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
     pool.on("connect", (client: PoolClient) => {
       const send = client.query.bind(client) as (...args: unknown[]) => unknown;
       let inRequestTransaction = false;
+      let settings: string[] = [];
       (client as unknown as { query: (...args: unknown[]) => unknown }).query = (...args: unknown[]) => {
         const [config, values] = args;
         const text = typeof config === "string" ? config : (config as QueryConfig).text;
@@ -106,8 +109,16 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
             : (config as QueryConfig).values;
         if (/^\s*begin\b/i.test(text)) {
           inRequestTransaction = text.includes("set_config('role'");
+          settings = [];
+        } else if (/^\s*set local\b/i.test(text)) {
+          settings.push(text);
         } else if (/^\s*select\b/i.test(text) && /"customers"/.test(text)) {
-          recorded.push({ text, values: (params as unknown[] | undefined) ?? [], asRequest: inRequestTransaction });
+          recorded.push({
+            text,
+            values: (params as unknown[] | undefined) ?? [],
+            asRequest: inRequestTransaction,
+            settings: [...settings],
+          });
         }
         return send(...args);
       };
@@ -128,7 +139,7 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
     const plans: Plan[] = [];
     const client = await pool.connect();
     try {
-      for (const { text, values, asRequest: inRequest } of queries) {
+      for (const { text, values, asRequest: inRequest, settings } of queries) {
         await client.query("begin read only");
         if (inRequest) {
           // As the request's unit of work opens its transaction: the request role and Northside's scope.
@@ -137,6 +148,9 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
               "set_config('app.location_id', $3, true), set_config('app.user_id', $4, true)",
             [REQUEST_ROLE, NORTHWIND, NORTHSIDE, TEST_USER_ID],
           );
+        }
+        for (const setting of settings) {
+          await client.query(setting);
         }
         const result = await client.query<{ "QUERY PLAN": { Plan: PlanNode }[] }>(
           `explain (format json) ${text}`,
@@ -220,6 +234,28 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
     expect(city.length).toBeGreaterThan(0);
     expect(city.every((query) => !query.asRequest)).toBe(true);
     expect(status.every((query) => query.asRequest)).toBe(true);
+  });
+
+  // Postgres guesses ILIKE's matches poorly: for a term nobody has it walked the name index in order looking for 25, and
+  // at Northside's 1.6 million read every customer (6.5 s). A search with 10,000 matches or fewer is paged through the
+  // trigram index; one with more is dense, and the walk finds its page at once (ACME-119).
+  it("pages a search nobody matches through the trigram index, never walking the location in name order", async () => {
+    const plans = await plansAsync({ page: 1, pageSize: 25, search: "Zqxv" });
+
+    const page = plans.find((plan) => plan.isPage && !/"id" in/i.test(recorded[plans.indexOf(plan)]?.text ?? ""))!;
+    expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_list_by_name")).toBe(false);
+    expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_search")).toBe(true);
+  });
+
+  it("still counts and pages a search with more than 10,000 matches", async () => {
+    const page = await asRequest(new GetCustomerListQueryHandler(factory)).executeAsync(AT_NORTHSIDE, {
+      page: 1,
+      pageSize: 25,
+      search: "example.test",
+    });
+
+    expect(page.total).toBe(10_001);
+    expect(page.items).toHaveLength(25);
   });
 
   it("finds a surname, and counts the matches, through the trigram index", async () => {
