@@ -160,7 +160,7 @@ class ApiClient {
    * browser holds that answer back until it has cleared, which can take seconds. A failure changes nothing that matters.
    */
   public forgetCache(): void {
-    this.sendOnceAsync(API_CONFIG.sessionCacheUrl, { method: "DELETE" }, { anonymous: true }).catch(() => undefined);
+    this.sendOnceAsync(API_CONFIG.sessionCacheUrl, { method: "DELETE" }, { anonymous: true }).catch(() => null);
   }
 
   private async sendOnceAsync(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {

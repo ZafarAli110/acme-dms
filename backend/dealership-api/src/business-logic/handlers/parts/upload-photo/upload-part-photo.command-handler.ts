@@ -72,7 +72,7 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
       return await this.savePhotoAsync(userContext, partId, request, document.id);
     } catch (error) {
       // The photo was not saved: its file is nobody's. Best effort; a failure to delete is only logged by the client.
-      await this._documentApiClient.deleteDocumentAsync(userContext, document.id).catch(() => undefined);
+      await this._documentApiClient.deleteDocumentAsync(userContext, document.id).catch(() => null);
       throw error;
     }
   }

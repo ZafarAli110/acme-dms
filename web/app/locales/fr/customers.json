@@ -11,6 +11,11 @@
     "lastContact": "Dernier contact"
   },
   "noMatch": "Aucun client ne correspond à « {{search}} ».",
+  "closeMatch": {
+    "note": "Aucun client ne s’appelle « {{search}} ».",
+    "divider": "Vouliez-vous dire… (orthographes les plus proches d’abord)",
+    "footer": "{{exact}} correspondances exactes · {{close}} orthographes proches"
+  },
   "none": "Aucun client à {{location}} pour l'instant.",
   "fields": {
     "firstName": "Prénom",

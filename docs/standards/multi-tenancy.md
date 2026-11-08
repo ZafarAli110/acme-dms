@@ -52,7 +52,9 @@ location is refused (the `row_level_security` migration). This is the rule, not 
   policy still decides what comes back. The count is not re-read, so its hand-written scope has its
   own test (another location's and deleted rows never counted). Anything else stays under the policy: a status or
   date filter uses `=`, `<` or `>`, which are leakproof.
-- The policies, by kind of table: location-scoped (`customers`, `bins`, `part_inventories`): dealer and location;
+- The policies, by kind of table: location-scoped (`customers`, `customer_names`, `bins`, `part_inventories`): dealer
+  and location (the name list is read under its policy: a location has hundreds to a few thousand names, so the policy
+  narrows them before the trigram `%` runs);
   `export_jobs`: dealer, location and its owner; dealer-scoped (`parts`, `part_photos`): dealer; no dealer at all
   (`processed_messages`): none. With no location selected, location-scoped tables return nothing.
 - **Write only what is the handler's own business**: the id, the search, the rules. Deleted rows are left out by a

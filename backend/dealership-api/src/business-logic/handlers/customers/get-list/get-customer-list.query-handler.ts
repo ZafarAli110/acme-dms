@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, count, eq, ilike, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, notInArray, sql, type SQL } from "drizzle-orm";
 import type { IGetCustomerListQueryHandler } from "#business-logic-abstractions/handlers/customers/get-list/get-customer-list.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerPageResponseDto } from "#dto/customers/customer-page-response.dto";
@@ -15,6 +15,10 @@ import { listFilter, listOrderBy, matchesText, type ListColumns } from "../../..
 import { MAX_LIST_DEPTH, pageOffset } from "../../../list-query/page-offset";
 import { requireLocation } from "../../../user-context/require-location";
 import { toCustomerListItemDto } from "../customer.mapper";
+import { type CloseName, closeNamesAsync, isKnownNameAsync } from "./close-names";
+
+/** A search shorter than this stays exact: too few letters to compare spellings (ACME-120). */
+const MIN_CLOSE_LETTERS = 3;
 
 /** What the customer list can be sorted and filtered by: the grid's field names. */
 export const CUSTOMER_LIST_COLUMNS: ListColumns = {
@@ -69,17 +73,90 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
           )
         : await this.findListedAsync(where, order, page, pageSize);
 
+    // Fewer than a page match exactly: close spellings fill the rest of page 1 (ACME-120).
+    const closeIds =
+      page === 1 && ids.length < pageSize
+        ? await this.findCloseAsync(userContext.dealerId, locationId, query, ids, pageSize - ids.length)
+        : [];
+
     // The rows are always read as the request: row-level security decides what comes back, whatever found the ids.
+    // Put back in the ids' order: the exact ones in the list's order, then the close ones closest first.
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const items =
-      ids.length === 0
-        ? []
-        : await work.db
-            .select()
-            .from(customers)
-            .where(inArray(customers.id, ids))
-            .orderBy(...order);
-    return { items: items.map(toCustomerListItemDto), page, pageSize, hasMore };
+    const all = [...ids, ...closeIds];
+    const rows = all.length === 0 ? [] : await work.db.select().from(customers).where(inArray(customers.id, all));
+    const position = new Map(all.map((id, index) => [id, index]));
+    const close = new Set(closeIds);
+    const items = rows
+      .toSorted((a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0))
+      .map((row) => ({
+        ...toCustomerListItemDto(row),
+        match: close.has(row.id) ? ("close" as const) : ("exact" as const),
+      }));
+    return { items, page, pageSize, hasMore };
+  }
+
+  /**
+   * Close spellings' customers, to fill page 1 after `exactIds` (ACME-120): only for one word of three letters or more
+   * that is not a name the location has (a known name is a correct spelling: today's list). The close names come from
+   * the location's name list, under the policy; each one's customers by the search's own trigram match, as the owner
+   * with the scope written out (as the search finds its ids), closest name first, in the list's name order within it.
+   * Phones and emails are never close-matched: the name list holds only names.
+   */
+  private async findCloseAsync(
+    dealerId: string,
+    locationId: string,
+    query: ListQueryDto,
+    exactIds: string[],
+    room: number,
+  ): Promise<string[]> {
+    const word = (query.search ?? "").trim().toLowerCase();
+    if (word.length < MIN_CLOSE_LETTERS || /\s/.test(word)) {
+      return [];
+    }
+    let names: CloseName[];
+    {
+      await using namesWork = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
+      if (await isKnownNameAsync(namesWork.db, word)) {
+        return [];
+      }
+      names = await closeNamesAsync(namesWork.db, word);
+    }
+    if (names.length === 0) {
+      return [];
+    }
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
+    // As a search's page: few matches each, so through the trigram index, never a walk in name order (ACME-119).
+    await work.db.execute(sql`set local enable_indexscan = off`);
+    await work.db.execute(sql`set local enable_indexonlyscan = off`);
+    const found: string[] = [];
+    for (const { name } of names) {
+      if (found.length >= room) {
+        break;
+      }
+      const taken = [...exactIds, ...found];
+      const rows = await work.db
+        .select({ id: customers.id })
+        .from(customers)
+        .where(
+          and(
+            // The list's filter applies to close spellings as to exact matches.
+            ownerScoped(
+              dealerId,
+              locationId,
+              and(
+                matching(`%${name.replace(/[\\%_]/g, (character) => `\\${character}`)}%`),
+                listFilter(CUSTOMER_LIST_COLUMNS, query),
+              ),
+            ),
+            // Drizzle's and() takes SQL or undefined (not null) for "no condition".
+            taken.length > 0 ? notInArray(customers.id, taken) : undefined,
+          ),
+        )
+        .orderBy(asc(customers.surname), asc(customers.firstName), asc(customers.id))
+        .limit(room - found.length);
+      found.push(...rows.map((row) => row.id));
+    }
+    return found;
   }
 
   private async findListedAsync(

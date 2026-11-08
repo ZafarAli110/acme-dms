@@ -124,7 +124,7 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
     // The connection may still come: give it straight back, unused.
     void connecting.then(
       (late) => late.release(),
-      () => undefined,
+      () => null,
     );
     if (request) {
       throw new DatabaseBusyError(Math.round(waitMs));

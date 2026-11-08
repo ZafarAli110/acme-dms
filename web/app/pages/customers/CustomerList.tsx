@@ -22,7 +22,8 @@ import { customerColumns } from "./columns/customerColumns";
 import { useCustomerCount } from "./hooks/useCustomerCount";
 import { useCustomerList } from "./hooks/useCustomerList";
 import { customerQueryOptions } from "./queries/customerQueryOptions";
-import { type CustomerListItem, questionOf } from "./types/customer";
+import { type CustomerGridRow, isMatchRow, withCloseMatchRows } from "./columns/closeMatchRows";
+import { questionOf } from "./types/customer";
 
 /** Fetches the page of customers the URL asks for (search, page, sort, filter) before the list shows it. */
 export async function clientLoader({ request, context }: ClientLoaderFunctionArgs) {
@@ -58,13 +59,26 @@ export default function CustomerList() {
   const count = useCustomerCount(location?.id ?? "", questionOf(params));
   const total = count.data ?? 0;
   const visibility = useColumnVisibility("customers");
-  const columns = useMemo(() => customerColumns(t, i18n.language), [t, i18n.language]);
+  const labels = useMemo(
+    () => ({ note: t("closeMatch.note", { search: params.search }), divider: t("closeMatch.divider") }),
+    [t, params.search],
+  );
+  const columns = useMemo(() => customerColumns(t, i18n.language, labels), [t, i18n.language, labels]);
+  // Exact matches, then close spellings under "Did you mean" (ACME-120, design a.html).
+  const items = useMemo(() => data?.items ?? [], [data]);
+  const rows = useMemo(() => withCloseMatchRows(items), [items]);
+  const closeCount = items.filter((item) => item.match === "close").length;
+  const footerLabel =
+    closeCount > 0 ? t("closeMatch.footer", { exact: items.length - closeCount, close: closeCount }) : null;
   const noRows = params.search
     ? t("noMatch", { search: params.search })
     : t("none", { location: location?.name ?? "" });
 
-  const openCustomer = (customer: CustomerListItem): void => {
-    void navigate(`/customers/${customer.id}`);
+  // The note and the divider are not customers: nothing to open.
+  const openCustomer = (row: CustomerGridRow): void => {
+    if (!isMatchRow(row)) {
+      void navigate(`/customers/${row.id}`);
+    }
   };
 
   // The list as it is shown: its search, sort and filter, and its visible columns in order under their headings.
@@ -87,15 +101,18 @@ export default function CustomerList() {
     <Fragment>
       <PageHeader title={t("title")} subtitle={t("subtitle", { location: location?.name ?? "" })} />
       <ErrorAlert error={error ?? count.error ?? exportProblem} />
-      <AppDataGrid<CustomerListItem>
+      <AppDataGrid<CustomerGridRow>
         columns={columns}
-        rows={data?.items ?? []}
+        rows={rows}
         loading={isLoading || isLoadingPage}
         server={{
           params,
-          rowCount: total,
+          // At least the customers on the page (close spellings are not in the exact count); the note and the divider
+          // are not customers, so they never make a second page.
+          rowCount: Math.max(total, items.length),
           update,
           totalLabel: formatListTotal(total, i18n.language),
+          footerLabel,
         }}
         columnVisibilityModel={visibility.columnVisibilityModel}
         onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}

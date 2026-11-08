@@ -43,8 +43,13 @@ export interface CustomerFormValues {
  * A page of the customer list: whether another follows, not how many there are. The total is the count's, asked once
  * per question (ACME-117).
  */
+/** A customer on a page of the list, and how it matched the search: exactly, or a close spelling (ACME-120). */
+export interface CustomerPageItem extends CustomerListItem {
+  match: "exact" | "close";
+}
+
 export interface CustomerPage {
-  items: CustomerListItem[];
+  items: CustomerPageItem[];
   page: number;
   pageSize: number;
   hasMore: boolean;

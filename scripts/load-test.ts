@@ -582,7 +582,7 @@ async function main(): Promise<void> {
           ...(call.body === undefined ? {} : { "content-type": "application/json" }),
           ...(call.ifMatch ? { "if-match": call.ifMatch } : {}),
         },
-        body: call.body === undefined ? undefined : JSON.stringify(call.body),
+        body: call.body === undefined ? null : JSON.stringify(call.body),
         signal: AbortSignal.timeout(options.timeoutMs),
       });
       const text = await response.text();

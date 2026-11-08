@@ -308,6 +308,16 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
     expect(indexesUsed(count)).toContain("ix_customers_by_city");
   });
 
+  // ACME-120: a misspelt surname ("Surnam04217": no exact match) finds its close names in the location's name list and
+  // their customers through the trigram index, never by reading the location whole.
+  it("finds close spellings' customers through the trigram index, never reading the table whole", async () => {
+    const plans = await plansAsync({ page: 1, pageSize: 25, search: "Surnam04217" });
+
+    expectNoFullRead(plans);
+    expect(recorded.some((query) => /ilike/i.test(query.text))).toBe(true);
+    expect(indexesUsed(plans)).toContain("ix_customers_search");
+  });
+
   it("finds a surname, and counts the matches, through the trigram index", async () => {
     const plans = await plansAsync({ page: 1, pageSize: 25, search: "Surname04217" });
 

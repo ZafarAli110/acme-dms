@@ -1,0 +1,201 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d6118771-1cfc-4c20-bca7-7fc48fcb811b",
+  "prevIds": ["7eee8c9c-f311-4bb1-be69-e7898a347ec0"],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": ["table", "public", "customer_names"],
+      "writes": [
+        "s|tbl|public.customer_names",
+        "n|tbl|public.customer_names",
+        "e|tbl|public.customer_names",
+        "n|rel|public.customer_names",
+        "n|type|public.customer_names"
+      ],
+      "reads": ["n|sch|public"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customer_names", "uq_customer_names_location_kind_name"],
+      "writes": [
+        "s|idx|public.uq_customer_names_location_kind_name",
+        "n|idx|public.uq_customer_names_location_kind_name",
+        "e|idx|public.uq_customer_names_location_kind_name",
+        "n|rel|public.uq_customer_names_location_kind_name"
+      ],
+      "reads": [
+        "n|tbl|public.customer_names",
+        "n|sch|public",
+        "n|col|public.customer_names.location_id",
+        "n|col|public.customer_names.kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customer_names", "ix_customer_names_trigrams"],
+      "writes": [
+        "s|idx|public.ix_customer_names_trigrams",
+        "n|idx|public.ix_customer_names_trigrams",
+        "e|idx|public.ix_customer_names_trigrams",
+        "n|rel|public.ix_customer_names_trigrams"
+      ],
+      "reads": ["n|tbl|public.customer_names", "n|sch|public"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "customer_names",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customer_names",
+        "name": "dealer_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customer_names",
+        "name": "location_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customer_names",
+        "name": "kind",
+        "type": "varchar(20)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customer_names",
+        "name": "name",
+        "type": "varchar(200)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customer_names",
+        "name": "customers",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customer_names",
+        "name": "uq_customer_names_location_kind_name",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "kind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "lower(\"name\")",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customer_names",
+        "name": "ix_customer_names_trigrams",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "lower(\"name\") gin_trgm_ops",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "gin",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}

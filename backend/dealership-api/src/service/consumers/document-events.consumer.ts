@@ -95,7 +95,7 @@ export class DocumentEventsConsumer
     // A channel that closes on its own stops the consuming: close the connection too, so it all starts again.
     channel.on("close", () => {
       if (!this._isStopping) {
-        void connection.close().catch(() => undefined);
+        void connection.close().catch(() => null);
       }
     });
     await this.declareTopologyAsync(channel);
@@ -146,7 +146,7 @@ export class DocumentEventsConsumer
             );
           }
         })
-        .catch(() => undefined);
+        .catch(() => null);
     }, DEAD_LETTER_CHECK_MS);
     this._deadLetterCheck.unref();
   }

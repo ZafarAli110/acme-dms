@@ -88,7 +88,7 @@ export class ExportQueue implements IExportJobs, OnApplicationBootstrap, OnAppli
   }
 
   public onApplicationBootstrap(): void {
-    this._unclaimedCheck = setInterval(() => void this.failUnclaimedAsync().catch(() => undefined), 60_000);
+    this._unclaimedCheck = setInterval(() => void this.failUnclaimedAsync().catch(() => null), 60_000);
     this._unclaimedCheck.unref();
   }
 

@@ -5,8 +5,16 @@ import type { CustomerListItemDto } from "./customer-list-item.dto";
  * the count endpoint's (`GET /v1/customers/count`), fetched once per search and filter instead of on every page
  * (ACME-117).
  */
+/**
+ * A customer on a page of the list, and how it matched the search: `exact` as today, or `close`, a spelling a little
+ * different from what was typed, shown after the exact ones under "Did you mean" (ACME-120).
+ */
+export interface CustomerPageItemDto extends CustomerListItemDto {
+  match: "exact" | "close";
+}
+
 export interface CustomerPageResponseDto {
-  items: CustomerListItemDto[];
+  items: CustomerPageItemDto[];
   page: number;
   pageSize: number;
   /** Another page follows this one (and lies within the list's depth). */

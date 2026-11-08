@@ -33,7 +33,9 @@ A check constraint (`ck_<table>_deleted`) keeps the three delete columns consist
 
 - **"Who" is a user id**: the signed-in user, or `00000000-0000-0000-0000-000000000000` (the system) for work no user
   does: seeding, processing document events.
-- **Technical tables are exempt** and keep their own timestamp: `processed_messages`, `outbox_messages`,
+- **Technical tables are exempt** and keep their own timestamp: `customer_names` (each location's names for "Did you
+  mean", derived from `customers` by triggers in the same transaction: a name nobody has any more is removed),
+  `processed_messages`, `outbox_messages`,
   `document_contents` (part of its document), `signing_keys`, and the gateway's `sessions`. A session's id is not a
   `uuid` but the SHA-256 of the browser's cookie (hex), so the row is found by the cookie and the cookie is never stored.
 - **Secrets are never stored readable.** A refresh token by its hash; a session's tokens, and the token that replaced a

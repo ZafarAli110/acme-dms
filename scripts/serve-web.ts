@@ -22,7 +22,7 @@ export function createWebHandler(root: string, gatewayUrl: string): (request: Re
       return fetch(`${gatewayUrl}${url.pathname}${url.search}`, {
         method: request.method,
         headers: request.headers,
-        body: request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer(),
+        body: request.method === "GET" || request.method === "HEAD" ? null : await request.arrayBuffer(),
         redirect: "manual",
         // Bun would unzip the gateway's answer and keep its Content-Encoding: the browser would unzip it again.
         decompress: false,

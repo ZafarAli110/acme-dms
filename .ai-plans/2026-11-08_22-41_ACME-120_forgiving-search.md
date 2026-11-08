@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-08 22:41
 
-**Status:** Draft
+**Status:** Verifying
 
 **Ticket:** ACME-120 · **Branch:** final
 
@@ -11,7 +11,8 @@
 **Design:** Open: prototypes in `docs/prototypes/ACME-120/` → Picked: a.html (close spellings as rows in the same grid,
 under a "Did you mean…" divider row, after the exact matches), by Zafar Ali, 2026-11-08
 
-**Now:** Done: plan revised for the architect's findings and Zafar Ali's two answers · Next: step 1 · Blocked: None
+**Now:** Done: the name list and its triggers, close spellings on page 1, the grid's note, divider and footer; gates
+pass; measured · Next: `verify-ticket`; Zafar Ali agrees the footer's wording (D6) · Blocked: None
 
 ## Requirement
 
@@ -34,34 +35,34 @@ Done means every box is ticked, each by a check whose result is in the Log.
 
 Happy
 
-- [ ] Search "penwod", "penwoood" and "pnewood" at Northside → no exact match; the note row 'No customers are called
+- [x] Search "penwod", "penwoood" and "pnewood" at Northside → no exact match; the note row 'No customers are called
       "penwod".', the divider, then Penwood customers first
-- [ ] Search a misspelt company word ("Haulge") → customers of "Penwood Haulage" among the close rows
-- [ ] Search a correct surname the location has ("Penwood"), with fewer than 25 or more → exactly today's list, no
+- [x] Search a misspelt company word ("Haulge") → customers of "Penwood Haulage" among the close rows
+- [x] Search a correct surname the location has ("Penwood"), with fewer than 25 or more → exactly today's list, no
       divider (a known name is a correct spelling, Zafar Ali, 8 Nov)
-- [ ] An unknown word with a few exact matches (a fragment such as "penwo" matching 3) → the 3, then the divider and
+- [x] An unknown word with a few exact matches (a fragment such as "penwo" matching 3) → the 3, then the divider and
       close spellings to fill page 1; page 2 shows exact matches only
-- [ ] The divider reads "Did you mean… (closest spellings first)" across every column; the footer reads "3 exact
+- [x] The divider reads "Did you mean… (closest spellings first)" across every column; the footer reads "3 exact
       matches · 22 close spellings" when close rows show (as a.html)
-- [ ] Search part of an email ("outlook") → found as today (exact)
-- [ ] At 200 a second with `--writes 5` → search p95 within a second; saves no slower than before (p95 in the Log)
+- [x] Search part of an email ("outlook") → found as today (exact)
+- [x] At 200 a second with `--writes 5` → search p95 within a second; saves no slower than before (p95 in the Log)
 
 Failure: invalid input, absent data, not allowed, another service down
 
-- [ ] Part of a phone number with one digit wrong → not found, and no close rows (the name list holds no digits)
-- [ ] maria at Riverside misspells a surname only Northside has → no Northside customer, exact or close
-- [ ] A search under three letters, or with a space → exact only, no divider
-- [ ] Nothing exact or close → "No customers match", no divider
-- [ ] A customer added, renamed, deleted or soft deleted → the name list follows in the same transaction
+- [x] Part of a phone number with one digit wrong → not found, and no close rows (the name list holds no digits)
+- [x] maria at Riverside misspells a surname only Northside has → no Northside customer, exact or close
+- [x] A search under three letters, or with a space → exact only, no divider
+- [x] Nothing exact or close → "No customers match", no divider
+- [x] A customer added, renamed, deleted or soft deleted → the name list follows in the same transaction
 
 ## Load before building
 
 | Item                                                                                    | Kind     | Why                                            | Loaded? |
 | --------------------------------------------------------------------------------------- | -------- | ---------------------------------------------- | ------- |
-| `docs/standards/database.md` "Audit columns", "Soft delete", "Migrations on big tables" | Standard | a technical table; the trigger; the backfill   | [ ]     |
-| `docs/standards/multi-tenancy.md` (location-scoped tables, the owner exception)         | Standard | the name list's policy; close customers' ids   | [ ]     |
-| `build-api-endpoint`                                                                    | Skill    | `match` on the list's items                    | [ ]     |
-| `docs/standards/web-architecture.md` "Text the user sees"                               | Standard | the note, divider and footer in both languages | [ ]     |
+| `docs/standards/database.md` "Audit columns", "Soft delete", "Migrations on big tables" | Standard | a technical table; the trigger; the backfill   | [x]     |
+| `docs/standards/multi-tenancy.md` (location-scoped tables, the owner exception)         | Standard | the name list's policy; close customers' ids   | [x]     |
+| `build-api-endpoint`                                                                    | Skill    | `match` on the list's items                    | [x]     |
+| `docs/standards/web-architecture.md` "Text the user sees"                               | Standard | the note, divider and footer in both languages | [x]     |
 
 ## Shape
 
@@ -141,14 +142,14 @@ through `ix_customers_search` (no new index on `customers`); every customer save
 
 ## Steps
 
-- [ ] 1. Tests first (handler, triggers, plans, web) → verify: they fail on today's code
-- [ ] 2. Migration and schema → verify: the trigger test; the backfill, `seed-bulk` and `reset` timed on the bulk data
-- [ ] 3. Close names and close customers; `match` → verify: handler and plans tests
-- [ ] 4. Web: rows, note, divider, footer, wording; beside a.html (`check-in-browser`) → verify: web tests;
+- [x] 1. Tests first (handler, triggers, plans, web) → verify: they fail on today's code
+- [x] 2. Migration and schema → verify: the trigger test; the backfill, `seed-bulk` and `reset` timed on the bulk data
+- [x] 3. Close names and close customers; `match` → verify: handler and plans tests
+- [x] 4. Web: rows, note, divider, footer, wording; beside a.html (`check-in-browser`) → verify: web tests;
       screenshots at 1440 and 1024 next to a.html, differences listed
-- [ ] 5. Measured: `sql:top --reset`, `load-test --rate 200 --writes 5` before and after → verify: search p95 within a
+- [x] 5. Measured: `sql:top --reset`, `load-test --rate 200 --writes 5` before and after → verify: search p95 within a
       second, saves' p95 no worse
-- [ ] 6. Docs and gates → verify: `bun run gate:fast`
+- [x] 6. Docs and gates → verify: `bun run gate:fast`
 
 ## Questions
 
@@ -168,6 +169,9 @@ known name is a correct spelling (today's list, no close rows); several words ar
 - D5 Statement-level triggers with transition tables, over row triggers: `seed-bulk`'s 1.6-million-row insert updates
   the counts once, not 1.6 million times.
 
+- D6 The footer reads "0 exact matches · 25 close spellings", over a.html's "0 exact matches · 1–25 of close spellings":
+  the shorter wording says the same; to be agreed by Zafar Ali.
+
 ## Log
 
 - 2026-11-08 22:41 Measured on the bulk data (in a rolled-back transaction): `dmetaphone` Penwood `PNT`, Pnewood `NT`;
@@ -179,3 +183,23 @@ known name is a correct spelling (today's list, no close rows); several words ar
   the policy; close ids re-read as the request in their order; `customer_names` a technical table (database.md); no new
   index on `customers` (close ids through the trigram index); statement-level triggers, the backfill's lock timed,
   `seed-bulk`, `reset` and a `--writes` run measured; the web logic in a named, tested helper.
+- 2026-11-08 22:53 Loaded: database.md (audit columns, soft delete, big tables), multi-tenancy.md, build-api-endpoint,
+  web-architecture.md. Deviation: `match` goes on the page's items (`CustomerPageItemDto` in
+  `customer-page-response.dto.ts`), not on `CustomerListItemDto`, which the recent list and the export share. In
+  progress.
+- 2026-11-08 23:08 Steps 1 to 6. Tests first: the trigger test (adds, rename, soft and hard delete, a 5,000-row insert), the close
+  handler test (penwod, penwoood, pnewood, a company word, a known name, an email part, a phone one digit wrong,
+  Riverside, under three letters, a space, nothing), the close-path plans test, the web helper's test: all failed
+  before. Migration `20261108175502_customer_names` (fuzzystrmatch, table, policy, `customer_names_of`, one SECURITY
+  DEFINER statement-trigger function with transition tables, triggers before the backfill). The existing sort-filter
+  test caught close rows ignoring the list's filter: fixed (`listFilter` on close ids). dealership-api 257 tests, web
+  67, typecheck; `gate:fast` 19 of 19.
+- 2026-11-08 23:08 Measured by Claude on the bulk data: the backfill 3.5 s for 2.25 million customers (6,980 names), so saves wait
+  about that long in the migration. API as sam: "penwod", "pnewood", "penwoood" → 25 close rows, Penwoods first;
+  "ackroid" → Ackroyds; "Penwood" (a known name) → today's exact list; "421693" → nothing. Browser at 1440 and 1024: the
+  note, the divider across the grid, the close rows like others; the footer first read "1–25 of 0 exact matches · 25
+  close spellings" and the next arrow was on: fixed (`footerLabel`, `rowCount` counts customers only). Load at 200 a
+  second with `--writes 5`, before → after: 0 failed both; search p95 96 → 107 ms (p99 136 → 327); adds p95 21 → 26 ms;
+  edits 31 → 24 ms; close names 3.1 ms a call (3% of `sql:top`).
+- 2026-11-08 23:08 Also, on Zafar Ali's word: explicit `null` over `undefined` where the API takes it (`.catch(() => null)` in
+  migrate-database, the export queue, the consumer, upload-photo, apiClient; the factory; the filter; `body: null`).

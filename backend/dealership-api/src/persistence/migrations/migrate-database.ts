@@ -22,7 +22,7 @@ export async function migrateDatabaseAsync(connectionString: string, migrationsF
     await migrate(drizzle({ client }), { migrationsFolder });
   } finally {
     // Ending the connection releases the lock too; unlocking first lets a waiting instance go on at once.
-    await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK]).catch(() => undefined);
+    await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK]).catch(() => null);
     await client.end();
   }
 }

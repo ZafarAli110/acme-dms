@@ -113,7 +113,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
 
   /** The status's type, unless a database problem has a more precise one ("busy"). */
   private resolveType(exception: unknown, status: number): string {
-    const precise = exception instanceof HttpException ? undefined : resolveDatabaseProblem(exception)?.type;
+    const precise = exception instanceof HttpException ? null : (resolveDatabaseProblem(exception)?.type ?? null);
     return precise ?? PROBLEM_TYPE_BY_STATUS[status] ?? DEFAULT_PROBLEM_TYPE;
   }
 

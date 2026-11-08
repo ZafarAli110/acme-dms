@@ -29,6 +29,11 @@ export interface ServerList {
    * list: `formatListTotal`). Left out, the footer shows `rowCount` as a number.
    */
   totalLabel?: string;
+  /**
+   * The whole footer text, for a page that is not a slice of a counted list (close spellings after the exact matches,
+   * ACME-120: "0 exact matches · 25 close spellings"). Left out, the footer is "1–25 of {total}".
+   */
+  footerLabel?: string | null;
 }
 
 interface AppDataGridProps<Row extends GridValidRowModel> {
@@ -142,6 +147,9 @@ export function AppDataGrid<Row extends GridValidRowModel>({
           ...(server
             ? {
                 paginationDisplayedRows: ({ from, to }: { from: number; to: number }) => {
+                  if (server.footerLabel) {
+                    return server.footerLabel;
+                  }
                   // Past the depth: a list that stops counting says "10,000+"; one that counts says its number.
                   const pastDepth = server.rowCount > MAX_LIST_DEPTH;
                   const key = pastDepth

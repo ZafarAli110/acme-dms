@@ -219,6 +219,10 @@ API copies in front of a full database only queue more queries on it. Measure, t
   search and filter, so paging and sorting count nothing. Counting had been 88% of the database's time (`bun run
 sql:top`). A search's page still counts first, because its count decides whether the trigram index or the name
   order finds the page (ACME-119).
+- **Close spellings from a name list, not from the customers (ACME-120).** "Did you mean" compares the word searched
+  with the location's names (`customer_names`: first names, surnames, company words; 6,980 for 2.25 million customers),
+  kept in step by statement-level triggers, so a bulk insert updates it once. Close names cost about 3 ms; their
+  customers come through the search's own trigram index.
 - **Past capacity, answer quickly and do the saves first (ACME-121).** Each dealership-api copy has 5 connections, as
   many queries as Postgres's cores run well once there are 4 copies (more only run slower), and keeps 2 of them for saves (any request but GET and HEAD, its reads included), so lists can never take them all; a list
   waits at most 1.5 s for a connection and a save 5 s, then is answered 503 `urn:acme:error:busy` with `Retry-After`
