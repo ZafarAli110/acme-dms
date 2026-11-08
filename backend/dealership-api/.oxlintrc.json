@@ -255,6 +255,36 @@
       }
     },
     {
+      "files": ["src/business-logic/handlers/customers/get-list/__test__/get-customer-list.plans.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#service/**", "../**/service/**"],
+                "message": "Business logic depends on abstractions: inject IDocumentApiClient, never the client class or the HTTP layer."
+              },
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Business logic depends on abstractions: inject IDocumentApiClient, never the client class or the HTTP layer."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@nestjs/platform-node",
+                "message": "Only service/main.ts, service/interceptors/file-upload.interceptor.ts and the tests that check translated messages, ETags and the data scope through it know the HTTP adapter."
+              },
+              {
+                "name": "drizzle-orm/node-postgres",
+                "message": "Open a unit of work (IUnitOfWorkFactory) instead of a connection."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["src/persistence/**"],
       "rules": {
         "no-restricted-imports": [

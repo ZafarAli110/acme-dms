@@ -1,0 +1,275 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f3394317-840d-4d53-b3ca-bd50d32e8e83",
+  "prevIds": ["1d272a26-5a9e-4b51-a2b7-342213f0a786"],
+  "footprints": [
+    {
+      "statementType": "drop_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_location"],
+      "writes": [
+        "s|idx|public.ix_customers_location",
+        "n|idx|public.ix_customers_location",
+        "e|idx|public.ix_customers_location",
+        "n|rel|public.ix_customers_location"
+      ],
+      "reads": ["e|tbl|public.customers", "n|sch|public", "e|col|public.customers.location_id"],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_location_name"],
+      "writes": [
+        "s|idx|public.ix_customers_location_name",
+        "n|idx|public.ix_customers_location_name",
+        "e|idx|public.ix_customers_location_name",
+        "n|rel|public.ix_customers_location_name"
+      ],
+      "reads": [
+        "e|tbl|public.customers",
+        "n|sch|public",
+        "e|col|public.customers.location_id",
+        "e|col|public.customers.surname",
+        "e|col|public.customers.first_name",
+        "e|col|public.customers.id"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_list_by_name"],
+      "writes": [
+        "s|idx|public.ix_customers_list_by_name",
+        "n|idx|public.ix_customers_list_by_name",
+        "e|idx|public.ix_customers_list_by_name",
+        "n|rel|public.ix_customers_list_by_name"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.surname",
+        "n|col|public.customers.first_name",
+        "n|col|public.customers.id",
+        "n|col|public.customers.status",
+        "n|col|public.customers.city",
+        "n|col|public.customers.last_contact_date"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_list_by_last_contact"],
+      "writes": [
+        "s|idx|public.ix_customers_list_by_last_contact",
+        "n|idx|public.ix_customers_list_by_last_contact",
+        "e|idx|public.ix_customers_list_by_last_contact",
+        "n|rel|public.ix_customers_list_by_last_contact"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.last_contact_date",
+        "n|col|public.customers.id",
+        "n|col|public.customers.status",
+        "n|col|public.customers.city",
+        "n|col|public.customers.surname",
+        "n|col|public.customers.first_name"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_search"],
+      "writes": [
+        "s|idx|public.ix_customers_search",
+        "n|idx|public.ix_customers_search",
+        "e|idx|public.ix_customers_search",
+        "n|rel|public.ix_customers_search"
+      ],
+      "reads": ["n|tbl|public.customers", "n|sch|public"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_list_by_name",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "surname",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "first_name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "status",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "city",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "last_contact_date",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_list_by_last_contact",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "last_contact_date",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "status",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "city",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "surname",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "first_name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_search",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "(\"first_name\" || chr(31) || \"surname\" || chr(31) || coalesce(\"company_name\", '') || chr(31) || coalesce(\"email\", '') || chr(31) || coalesce(\"phone\", '')) gin_trgm_ops",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "gin",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"ix_customers_location\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"ix_customers_location_name\"]"
+    }
+  ]
+}

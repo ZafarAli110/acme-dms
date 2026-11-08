@@ -1,11 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, count, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, sql, type SQL } from "drizzle-orm";
 import type { IGetCustomerListQueryHandler } from "#business-logic-abstractions/handlers/customers/get-list/get-customer-list.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
 import type { PageResponseDto } from "#dto/paging/page-response.dto";
-import { customers } from "#persistence/schema/customers";
+import { customerSearchText, customers } from "#persistence/schema/customers";
+import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
+import type { Database } from "#persistence/unit-of-work/unit-of-work";
 import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
@@ -18,7 +20,11 @@ import { toCustomerListItemDto } from "../customer.mapper";
 /** What the customer list can be sorted and filtered by: the grid's field names. */
 export const CUSTOMER_LIST_COLUMNS: ListColumns = {
   // "Surname, First name": sorts by surname, and a filter on the name matches either.
-  name: { source: sql`${customers.surname} || ', ' || ${customers.firstName}`, type: "text" },
+  name: {
+    source: sql`${customers.surname} || ', ' || ${customers.firstName}`,
+    type: "text",
+    sortBy: [customers.surname, customers.firstName],
+  },
   companyName: { source: customers.companyName, type: "text" },
   email: { source: customers.email, type: "text" },
   phone: { source: customers.phone, type: "text" },
@@ -45,21 +51,81 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
   ): Promise<PageResponseDto<CustomerListItemDto>> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
-    requireLocation(userContext);
+    const locationId = requireLocation(userContext);
     const where = customerListWhere(query);
+    const order = customerListOrderBy(query);
 
+    // The page's ids first, from an index alone, then only those rows: a later page skips its offset in the index
+    // instead of reading every customer before it from the table (ACME-110).
+    const { ids, total } = query.search
+      ? await this.findSearchedAsync(userContext.dealerId, locationId, where, order, page, pageSize)
+      : await this.findListedAsync(where, order, page, pageSize);
+
+    // The rows are always read as the request: row-level security decides what comes back, whatever found the ids.
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const items = await work.db
-      .select()
-      .from(customers)
-      .where(where)
-      .orderBy(...customerListOrderBy(query))
-      .limit(pageSize)
-      .offset(pageOffset(page, pageSize));
-    const [counted] = await work.db.select({ total: count() }).from(customers).where(where);
-    const total = counted?.total ?? 0;
+    const items =
+      ids.length === 0
+        ? []
+        : await work.db
+            .select()
+            .from(customers)
+            .where(inArray(customers.id, ids))
+            .orderBy(...order);
     return { items: items.map(toCustomerListItemDto), total, page, pageSize };
   }
+
+  private async findListedAsync(
+    where: SQL | undefined,
+    order: SQL[],
+    page: number,
+    pageSize: number,
+  ): Promise<{ ids: string[]; total: number }> {
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
+    // Awaited here: returned unawaited, the unit of work would close (and drop the request's scope) before it ran.
+    return await findPageAsync(work.db, where, order, page, pageSize);
+  }
+
+  /**
+   * A search's ids and count, as the table's owner with the dealer, the location and live rows written out (as the
+   * export does). Under row-level security Postgres must apply the policy before a filter that is not leakproof, and
+   * ILIKE is not, so the trigram index could never serve the search; as the owner with these conditions it does. Only
+   * ids and a count come from here: the rows are read as the request.
+   */
+  private async findSearchedAsync(
+    dealerId: string,
+    locationId: string,
+    where: SQL | undefined,
+    order: SQL[],
+    page: number,
+    pageSize: number,
+  ): Promise<{ ids: string[]; total: number }> {
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
+    const scoped = and(
+      eq(customers.dealerId, dealerId),
+      eq(customers.locationId, locationId),
+      notDeleted(customers),
+      where,
+    );
+    return await findPageAsync(work.db, scoped, order, page, pageSize);
+  }
+}
+
+async function findPageAsync(
+  db: Database,
+  where: SQL | undefined,
+  order: SQL[],
+  page: number,
+  pageSize: number,
+): Promise<{ ids: string[]; total: number }> {
+  const rows = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(where)
+    .orderBy(...order)
+    .limit(pageSize)
+    .offset(pageOffset(page, pageSize));
+  const [counted] = await db.select({ total: count() }).from(customers).where(where);
+  return { ids: rows.map((row) => row.id), total: counted?.total ?? 0 };
 }
 
 /**
@@ -81,12 +147,7 @@ export function customerListOrderBy(query: ListQueryDto): SQL[] {
   );
 }
 
-function matching(pattern: string): SQL | undefined {
-  return or(
-    ilike(customers.firstName, pattern),
-    ilike(customers.surname, pattern),
-    ilike(customers.companyName, pattern),
-    ilike(customers.email, pattern),
-    ilike(customers.phone, pattern),
-  );
+/** A match anywhere in the name, company, email or phone: one text, so one trigram index serves it (ACME-110). */
+function matching(pattern: string): SQL {
+  return ilike(customerSearchText(customers), pattern);
 }

@@ -10,6 +10,11 @@ export type ListColumnType = keyof typeof FILTER_OPERATORS;
 export interface ListColumn {
   source: PgColumn | SQL;
   type: ListColumnType;
+  /**
+   * What a sort on this field orders by, when that is not `source`: "Surname, First name" is filtered as one text but
+   * sorted by its columns, which an index can serve; ordering by the joined text sorts every row of the location.
+   */
+  sortBy?: readonly (PgColumn | SQL)[];
 }
 
 /** A list's sortable and filterable fields, by the names the web app's grid uses. */
@@ -59,8 +64,11 @@ export function listOrderBy(columns: ListColumns, query: ListQueryDto, defaults:
   if (!query.sort) {
     return [...defaults, ...tieBreakers];
   }
-  const source = sql`${columnFor(columns, query.sort, "errors.listCannotSortBy").source}`;
-  return [query.direction === "desc" ? desc(source) : asc(source), ...tieBreakers];
+  const column = columnFor(columns, query.sort, "errors.listCannotSortBy");
+  const sorted = (column.sortBy ?? [column.source]).map((source) =>
+    query.direction === "desc" ? desc(sql`${source}`) : asc(sql`${source}`),
+  );
+  return [...sorted, ...tieBreakers];
 }
 
 /** The query's one filter as a condition, or undefined when it has none. */

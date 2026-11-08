@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
-import { index, integer, snakeCase, uuid, varchar } from "drizzle-orm/pg-core";
+import { type SQL, sql } from "drizzle-orm";
+import { type AnyPgColumn, index, integer, snakeCase, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
 import { plainDate } from "./columns/temporal-columns";
 
@@ -30,15 +30,56 @@ export const customers = snakeCase.table(
     ...auditColumns(),
   },
   (table) => [
-    index("ix_customers_location").on(table.locationId),
-    // The list's own order (by name, then id) read straight from the index: a page stops after its 25 rows instead of
-    // sorting the whole location. At 1.6 million customers, page 1 went from 391 ms to 0.3 ms.
-    index("ix_customers_location_name")
-      .on(table.locationId, table.surname, table.firstName, table.id)
+    // The list's two orders (ACME-110), each read straight from an index: a page stops after its 25 rows instead of
+    // sorting the whole location. Each starts with what row-level security compares (dealer, location: only live
+    // rows), then the order, then the id; the columns after the id are there so the page's ids, the count and a
+    // filter on status, city or the other order are answered from the index alone, without reading the table.
+    index("ix_customers_list_by_name")
+      .on(
+        table.dealerId,
+        table.locationId,
+        table.surname,
+        table.firstName,
+        table.id,
+        table.status,
+        table.city,
+        table.lastContactDate,
+      )
+      .where(sql`${table.isDeleted} = false`),
+    index("ix_customers_list_by_last_contact")
+      .on(
+        table.dealerId,
+        table.locationId,
+        table.lastContactDate,
+        table.id,
+        table.status,
+        table.city,
+        table.surname,
+        table.firstName,
+      )
+      .where(sql`${table.isDeleted} = false`),
+    // The search box (a match anywhere in the name, company, email or phone): trigrams find the few matching rows
+    // among millions; an ordinary index cannot serve `ilike '%…%'`. It needs pg_trgm, and three letters or more.
+    index("ix_customers_search")
+      .using("gin", sql`(${customerSearchText(table)}) gin_trgm_ops`)
       .where(sql`${table.isDeleted} = false`),
     softDeleteCheck("customers", table),
   ],
 );
+
+/**
+ * The text the customer search looks in: name, company, email and phone, a unit separator (chr 31) between them so a
+ * search never matches across two fields. The search and its index use this one expression, so they cannot drift.
+ */
+export function customerSearchText(columns: {
+  firstName: AnyPgColumn;
+  surname: AnyPgColumn;
+  companyName: AnyPgColumn;
+  email: AnyPgColumn;
+  phone: AnyPgColumn;
+}): SQL {
+  return sql`${columns.firstName} || chr(31) || ${columns.surname} || chr(31) || coalesce(${columns.companyName}, '') || chr(31) || coalesce(${columns.email}, '') || chr(31) || coalesce(${columns.phone}, '')`;
+}
 
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
