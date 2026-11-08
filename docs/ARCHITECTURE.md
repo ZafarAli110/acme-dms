@@ -230,7 +230,10 @@ sql:top`). A search's page still counts first, because its count decides whether
   cancelled, so the queue holds no answers nobody will read. The health check (readiness) and the cancels have a
   connection each, so a full pool never looks like a slow database; liveness (`/v1/system/alive`) never touches the
   database, so an outage does not restart every copy; a copy shutting down answers new requests 503 at once while
-  those in flight finish. The gateway gives a service 15 s. Without this, past capacity the system answered fewer
+  those in flight finish. The gateway gives a service 15 s, and asks each copy's liveness every 5 s: a copy that
+  fails or takes over 2 s to answer is taken out at once, and one whose connections fail is rested for 10 s, so a
+  copy that stops loses only the few requests already sent to it (3 of 4,500 at 100 a second, against 10 with no
+  checks). Without this, past capacity the system answered fewer
   requests than at capacity (45 a second at 300 sent, against 150 at 150).
 - **A laptop says before against after, not the absolute number.** On one machine the database is a loopback call
   away (in the cloud each round trip costs about a millisecond, and a request makes about three), the disk has no IOPS

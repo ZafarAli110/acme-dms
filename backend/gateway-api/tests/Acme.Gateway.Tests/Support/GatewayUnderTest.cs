@@ -34,6 +34,11 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
             builder.UseSetting("services:identity-api:http:0", "http://identity.test");
             builder.UseSetting("services:dealership-api:http:0", "http://dealership.test");
             builder.UseSetting("services:document-api:http:0", "http://documents.test");
+            // No health probes in tests: they would reach FakeService and add to what it records.
+            foreach (var cluster in new[] { "identity-api", "dealership-api", "document-api" })
+            {
+                builder.UseSetting($"ReverseProxy:Clusters:{cluster}:HealthCheck:Active:Enabled", "false");
+            }
             foreach (var (key, value) in settings)
             {
                 builder.UseSetting(key, value);

@@ -25,8 +25,8 @@ Gate: `bun run gate:fast` passed.
 
 - **A copy stopping loses a few requests.** One copy was stopped during a 100-a-second run (`bun run resource` with
   `dealership-api-2 stop`): 10 of 4,500 requests timed out at 10 s, because the gateway kept sending to the copy that
-  had gone. `return503OnClosing` is set, but the gateway has no health check on its destinations; a follow-up gives it
-  passive health checks and a retry for reads whose connection failed.
+  had gone. `return503OnClosing` is set, but the gateway had no health check on its destinations. Follow-up (plan
+  `2026-11-08_23-39_ACME-117_draining`): active and passive health checks; the same check then lost 3 of 4,500, twice.
 - A save can wait up to the save wait (5 s) for one of its 2 connections before busy; the run's saves stayed fast
   (p95 209 ms), but no run measured saves under heavy save contention.
 - The rates are a laptop's; 3,300 a second needs an environment shaped like production.
