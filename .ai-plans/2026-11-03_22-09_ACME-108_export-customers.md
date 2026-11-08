@@ -1,6 +1,6 @@
 # ACME-108: Export the customer list to Excel
 
-**Created:** 2026-11-03 23:43
+**Created:** 2026-11-03 22:09
 
 **Status:** Done
 
@@ -146,6 +146,11 @@ Written with the code they cover, failing first.
 | Unit (web)              | `web/app/core/kernel/__test__/exportKernel.test.ts`                                                                          | cards follow, reconnect, resend a start, forget on sign-out                      |
 | End to end (Playwright) | `web/e2e/export.spec.ts`                                                                                                     | export, follow, download; cancel; the panel survives a reload                    |
 
+Evidence from `docs/lessons/ACME-108.md`, measured on 1.6 million rows: streamed export 7.1 s, peak 212 MB, other
+requests 1 ms (p50); `bun run xlsx:inspect` showed sheet 1 with 1,048,576 rows (header + 1,048,575) and sheet 2 with
+551,426, the order carrying on. Checked with `bun run xlsx:inspect <file>` and the tests above; this plan records no new
+run.
+
 ## Steps
 
 - [x] 1. Seed the real sizes: `scripts/seed-bulk.ts` → verify: 1.6 million customers at Northside
@@ -183,7 +188,3 @@ None.
 - 2026-11-06 22:21 `4c6de50` Idempotency key and limit are per user across locations.
 - 2026-11-07 20:01 `c353253` Files and writes fenced by attempt, orphan sweep, shared link key, status CHECK.
 - 2026-11-07 21:53 `5073a25` An export no worker took fails after 30 minutes; a cancel stops a long count at once.
-- Evidence from `docs/lessons/ACME-108.md`, measured on 1.6 million rows: streamed export 7.1 s, peak 212 MB, other
-  requests 1 ms (p50); `bun run xlsx:inspect` showed sheet 1 with 1,048,576 rows (header + 1,048,575) and sheet 2 with
-  551,426, the order carrying on.
-- Checked with `bun run xlsx:inspect <file>` and the tests above; this plan records no new run.

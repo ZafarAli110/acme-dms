@@ -168,9 +168,9 @@ None.
 - 2026-11-06 20:54 Commit `82fd7e8`: handlers stop repeating the dealer and location, and a request with no scope sees
   nothing. The handler test now runs through `asRequest`, so it proves the policy and the handler together.
 - 2026-11-06 22:25 Commit `47ca19a`: soft delete is a policy too, so the handler no longer writes `notDeleted`.
-- 2026-11-07 01:03 Commit `483aa1c`: the soft-delete policy is a plain `NOT is_deleted`, so partial indexes are usable
-  again.
-- QA, from `docs/qa/ACME-106.md`: PASS. As `maria` at Riverside, all 5 names are in Riverside's list, newest
+- 2026-11-06 22:48 QA committed in `docs/qa/ACME-106.md` (with `60e461d`): PASS. As `maria` at Riverside, all 5 names are in Riverside's list, newest
   first. As `sam` at Northside, all 5 are in Northside's list and none is among Maria's. Clicking a name opens
   the customer, and the API answers 404 for another location's customer. Not tested there: the "no location" 400
   (the `api` tool always sends a location); the handler test covers it.
+- 2026-11-07 01:03 Commit `483aa1c`: the soft-delete policy is a plain `NOT is_deleted`, so partial indexes are usable
+  again.

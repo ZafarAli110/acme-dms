@@ -104,6 +104,8 @@ Written with the code they cover, failing first.
 | Web hook                | `web/app/core/hooks/__test__/useFormRevision.test.ts`                                                                  | a newer version does not wipe unsaved edits                                                                                    |
 | End to end (Playwright) | `web/e2e/edit-conflicts.spec.ts`                                                                                       | two windows edit one customer: keep my edits puts them on top of the other person's                                            |
 
+Not run yet: `web/e2e/edit-conflicts.spec.ts` has not been run in a browser; the history shows no run of it.
+
 ## Steps
 
 - [x] 1. Add `version` to customers, with migration 0003 → verify: the handler test reads `version: 2` after one save.
@@ -132,4 +134,3 @@ None.
 - 2026-11-07 20:35 `15e03db` and 20:36 `0d51e68`: a newer version never wipes unsaved edits, and a refused save fetches their version (`useFormRevision.test.ts`).
 - 2026-11-07 20:37 `a68506f` added `edit-conflicts.spec.ts`: two windows edit one part or customer.
 - 2026-11-07 20:57 `854e204` keep my edits merges the part's photo lists (a part fix, not the customer).
-- Not run: `web/e2e/edit-conflicts.spec.ts` has not been run in a browser; the history shows no run of it.
