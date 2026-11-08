@@ -1,7 +1,8 @@
 // PostToolUse hook for Edit and Write: checks a plan in .ai-plans/ against plan-template.md each time Claude changes
 // it, and sends back what is wrong (exit 2), so Claude fixes the plan in the same turn. It checks what a reader relies
 // on and a model gets wrong: Status is one of the template's values, Now says Done, Next and Blocked, the Log runs
-// forward in time and never ahead of the clock, and nothing is built before what it needs was loaded.
+// forward in time and never ahead of the clock, nothing is built before what it needs was loaded or before its design
+// was picked, and the Scope matches the files the plan lists.
 import { basename } from "node:path";
 
 interface HookInput {
@@ -103,6 +104,28 @@ export function checkPlan(fileName: string, plan: string, now: number): string[]
       problems.push(
         `Status is ${status} but ${item} is not loaded: load it before building (and tick it), ` +
           "or take the row out and say why in Decisions.",
+      );
+    }
+  }
+
+  // No UI code before a design is picked: an Open design (prototypes drawn, nothing chosen) may not be built yet.
+  const design = field(plan, "Design") ?? "";
+  if (status && BUILDING.has(status) && /\bOpen\b/.test(design) && !/\bPicked:/.test(design)) {
+    problems.push(
+      `Status is ${status} but the design is Open with no pick: ask the product owner to pick a prototype, write ` +
+        "`Picked: <file>, by <who>, <date>` on the Design line, and only then build the screen.",
+    );
+  }
+
+  // The size follows the files, not the other way round: a plan that grew is a bigger ticket, or two.
+  const scope = /\b(Small|Medium|Large)\b/.exec(field(plan, "Scope") ?? "")?.[1];
+  const files = (section(plan, "Shape").match(/^\d+\. `[^`]+`/gm) ?? []).length;
+  if (scope && files > 0) {
+    const expected = files <= 3 ? "Small" : files <= 8 ? "Medium" : "Large";
+    if (scope !== expected) {
+      problems.push(
+        `Scope says ${scope} but Files lists ${files}: that is ${expected} (Small 1-3, Medium 4-8, Large 9+). ` +
+          "Fix the Scope, or split the ticket if it grew.",
       );
     }
   }

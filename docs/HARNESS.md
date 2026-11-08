@@ -42,6 +42,7 @@ anything. The ones marked **you** are started by a person (`/name`); the others 
 | `export-large-list`           | Claude     | an Excel or CSV export of a list that can be large                                | 10  |
 | `/verify-ticket <KEY>`        | you        | evidence anyone can re-run: the gate, the verifier, screenshots, `docs/evidence/` | 07  |
 | `/implement-ticket <KEY>`     | you        | ticket to verified change, through a plan file that survives a restart            | 08  |
+| `/interview-feature …`        | you        | a request becomes a ticket, or a ticket's gaps are settled, in two short rounds   | —   |
 | `/write-handoff`              | you        | a short note of where you stopped, in `.claude/handoff.md` (not committed)        | 08  |
 | `/resume-handoff`             | you        | a fresh session reads the note, checks it, and waits for your go-ahead            | 08  |
 | `/qa-ticket <KEY>`            | you        | In QA, a test plan on the ticket, a visible browser, screenshots; Done or back    | 09  |
@@ -77,7 +78,7 @@ A hook is a script Claude Code runs at a fixed moment, every time: it cannot be 
 | ------------------ | ---------------------- | ------------------------------------------------------------------------------------- | --- |
 | `protect-files.ts` | before an edit         | refuses `.env` files and migrations already committed                                 | 03  |
 | `format-file.ts`   | after an edit          | formats the file, so formatting is never a review comment                             | 03  |
-| `check-plan.ts`    | after a plan edit      | checks Status, Now, the Log's times and what is loaded; sends back what does not fit  | 08  |
+| `check-plan.ts`    | after a plan edit      | Status, Now, Log times, what is loaded, a design picked, the Scope; sends back misses | 08  |
 | `gate.ts`          | when Claude stops      | runs the fast gate; on a failure, Claude carries on working                           | 03  |
 | `open-plans.ts`    | when a session starts  | lists the plans not done yet, and says when a handoff note waits                      | 08  |
 | `ticket-branch.ts` | before a shell command | commits, pushes and pull requests only on a ticket branch (`ACME-106`); never a merge | 10  |

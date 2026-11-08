@@ -24,7 +24,9 @@ If the ticket's plan exists, read it and continue from **Now** and the first unc
 Otherwise:
 
 1. Read the ticket with `get_ticket`. Move it to `in-progress` with `update_ticket_status`.
-2. Read the standards it touches and find the existing feature of the same kind to follow.
+2. Read the standards it touches and find the existing feature of the same kind to follow. **Medium or Large, or a
+   new screen: run the `interview-feature` skill on it now**, before the plan: it settles the decisions that are the
+   person's, in two short rounds, and writes the rest down as defaults. Small: skip it.
 3. **Copy `.ai-plans/plan-template.md`** to the plan's name and fill it in, keeping its sections and their order:
    every plan looks the same. For a bug, step 1 reproduces it as a failing test; the fix comes after. About 200 lines
    is a soft limit: past it, check whether this is really two tickets, and say so if it is.
@@ -38,7 +40,12 @@ Otherwise:
      `docs/prototypes/<KEY>/` (`a.html`, `b.html`, `c.html`): plain HTML in the app's look, with the real labels and
      sample rows, nothing wired up. Each differs in one real choice (where the search goes, a dialog or a page), named
      in a comment at its top. Ask the product owner to pick, with your recommendation first, and record the pick in
-     the Design field and Decisions. No UI code until then.
+     the Design field (`Picked: b.html, by <who>, <date>`) and Decisions. No UI code until then: the check-plan hook
+     refuses a plan In progress while its design is Open with no pick.
+   - **Picked or Given: the design becomes acceptance rows.** Everything a person can see in it gets a row of its
+     own: each column, badge, button, line of help text, the empty state, the wording of labels. Passing tests prove
+     the behaviour, never the look; a screen that quietly drops a badge "because a shared component did not have
+     one" must fail a box. Reusing a component is fine only when it shows what the design shows.
 5. **Check it before you show it:**
    - every section of the template is there, in its order, or says "N/A: <reason>";
    - every file in Files exists, or is marked **new**; the high-level code shows the logic that matters (a query, the
@@ -61,6 +68,12 @@ plan first, then the code. An acceptance box is ticked only when something check
 **Look at what you built.** After a step that changes a screen, open it with the `check-in-browser` skill before you
 tick the step: screenshots at 1440 and 1024 wide, read each one, and say what you see. Fix anything overlapping,
 spilling out or cut off in that step, not at the end. Tests prove behaviour; only looking shows the layout.
+
+**Then put it next to the design.** When the plan's Design is Picked or Given, open the design (the prototype file, or
+the ticket's image) at the same width and compare the two screenshots region by region: every column, badge, label,
+section and empty state. List each difference in the Log. A difference is fixed, or kept as a Decision that names who
+agreed to it; "the existing component works this way" is not a reason. Gates check that the code is right, not that
+it looks like what was agreed: only this comparison does.
 
 ## Finish
 

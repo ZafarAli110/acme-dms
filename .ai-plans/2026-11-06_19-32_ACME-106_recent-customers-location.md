@@ -6,7 +6,7 @@
 
 **Ticket:** ACME-106 · **Branch:** final
 
-**Scope:** Medium (4-8) · **Layers:** Backend
+**Scope:** Large (9+) · **Layers:** Backend
 
 **Design:** Follows: the "Recently contacted" panel on the home page (`web/app/pages/Home.tsx`), unchanged
 

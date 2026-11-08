@@ -6,7 +6,18 @@ const NAME = "2026-11-08_10-00_ACME-110_customer-list-indexes.md";
 const NOW = new Date("2026-11-08T12:00:00").getTime();
 
 /** A plan that passes; each test breaks one thing. */
-function plan(changes: { status?: string; now?: string; load?: string; log?: string; steps?: string } = {}): string {
+function plan(
+  changes: {
+    status?: string;
+    now?: string;
+    load?: string;
+    log?: string;
+    steps?: string;
+    scope?: string;
+    design?: string;
+    files?: number;
+  } = {},
+): string {
   return [
     "# ACME-110: The customer list stays quick at our biggest location",
     "",
@@ -15,6 +26,10 @@ function plan(changes: { status?: string; now?: string; load?: string; log?: str
     `**Status:** ${changes.status ?? "In progress"}`,
     "",
     `**Now:** ${changes.now ?? "Done: the plan, answered · Next: step 2, the index · Blocked: None"}`,
+    "",
+    `**Scope:** ${changes.scope ?? "Small (1-3 files)"} · **Layers:** Backend`,
+    "",
+    `**Design:** ${changes.design ?? "No screen."}`,
     "",
     "## Acceptance criteria: the goal",
     "",
@@ -25,6 +40,12 @@ function plan(changes: { status?: string; now?: string; load?: string; log?: str
     "| Item | Kind | Why | Loaded? |",
     "| --- | --- | --- | --- |",
     `| \`docs/standards/database.md\` "Indexes" | Standard | the index | ${changes.load ?? "[x]"} |`,
+    "",
+    "## Shape",
+    "",
+    "Files:",
+    "",
+    ...Array.from({ length: changes.files ?? 2 }, (_, i) => `${i + 1}. \`backend/file-${i + 1}.ts\`: a change`),
     "",
     "## Steps",
     "",
@@ -81,5 +102,20 @@ describe("check-plan", () => {
 
   it("refuses a file name that is not date, time, key and name", () => {
     expect(checkPlan("ACME-110-plan.md", plan(), NOW)[0]).toContain("The file name must be");
+  });
+
+  it("refuses building a screen whose design is still Open, and lets it through once a prototype is picked", () => {
+    const open = "Open: prototypes in `docs/prototypes/ACME-110/`";
+    expect(checkPlan(NAME, plan({ design: open }), NOW)[0]).toContain("the design is Open with no pick");
+    expect(checkPlan(NAME, plan({ status: "Waiting on a design pick", design: open }), NOW)).toEqual([]);
+    expect(checkPlan(NAME, plan({ design: `${open} → Picked: b.html, by Maria, 2026-11-08` }), NOW)).toEqual([]);
+  });
+
+  it("refuses a Scope that does not match the number of files", () => {
+    expect(checkPlan(NAME, plan({ scope: "Small (1-3 files)", files: 5 }), NOW)[0]).toContain(
+      "Scope says Small but Files lists 5: that is Medium",
+    );
+    expect(checkPlan(NAME, plan({ scope: "Large (9+)", files: 9 }), NOW)).toEqual([]);
+    expect(checkPlan(NAME, plan({ scope: "Medium (4-8)", files: 4 }), NOW)).toEqual([]);
   });
 });
