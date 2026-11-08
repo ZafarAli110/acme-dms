@@ -1,6 +1,6 @@
 ---
 name: find-state-machines
-description: Sweeps the whole repository, not a diff, for state machines nobody declared - in every service and the web app - checks each against the state reviewer's questions, and writes what it finds to docs/plans/implicit-state-machines.md. It changes no code. Started by a person, e.g. /find-state-machines, or /find-state-machines web for one area.
+description: Sweeps the whole repository, not a diff, for state machines nobody declared - in every service and the web app - checks each against the state reviewer's questions, and writes what it finds to .ai-plans/implicit-state-machines.md. It changes no code. Started by a person, e.g. /find-state-machines, or /find-state-machines web for one area.
 disable-model-invocation: true
 argument-hint: "[area: web | dealership-api | document-api | identity | gateway, or nothing for all]"
 ---
@@ -11,7 +11,7 @@ The **state-reviewer** finds the machines a diff touches. This finds the ones no
 large feature, before a release, or when a bug turns out to be a stage nobody named. It reads; it never changes code.
 
 Read `.claude/agents/state-reviewer.md` first: its sections 1 to 7 are the questions, and its report format is the
-format of each finding here. Then read the report of the last sweep, docs/plans/implicit-state-machines.md, if there is one: what was found before, and
+format of each finding here. Then read the report of the last sweep, .ai-plans/implicit-state-machines.md, if there is one: what was found before, and
 what has been fixed since.
 
 ## 1. One search per area, at once
@@ -39,10 +39,11 @@ found by two searches is written once, under the area that owns its writes.
 
 ## 3. Write it down
 
-Write the report, docs/plans/implicit-state-machines.md (the first sweep creates it), or bring it up to date in its shape: every finding worst first with an id and
+Write the report, .ai-plans/implicit-state-machines.md (the first sweep creates it), or bring it up to date in its shape: every finding worst first with an id and
 whether it was checked; the unfinished states with no sure way out; the plans that fix them; the order of work. A
-finding already there keeps its id; a fixed one is moved to "Fixed" with its commit. A new family of machines gets a
-plan of its own, in the same folder.
+finding already there keeps its id; a fixed one is moved to "Fixed" with its commit. Its first lines say `**Status:** Open`
+(`Done` when nothing is left), so the plans hook lists it while findings are open. A fix bigger than one ticket gets
+a plan of its own in .ai-plans/, from plan-template.md.
 
 ## 4. Report
 
