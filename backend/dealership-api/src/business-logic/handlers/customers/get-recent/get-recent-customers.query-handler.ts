@@ -9,7 +9,7 @@ import {
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
 import { requireLocation } from "../../../user-context/require-location";
-import { toCustomerListItemDto } from "../customer.mapper";
+import { CUSTOMER_LIST_ITEM_COLUMNS, toCustomerListItemDto } from "../customer.mapper";
 
 /** How many customers the "Recently contacted" panel on the home page shows. */
 export const RECENT_CUSTOMERS_LIMIT = 5;
@@ -30,7 +30,7 @@ export class GetRecentCustomersQueryHandler implements IGetRecentCustomersQueryH
     requireLocation(userContext);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const recent = await work.db
-      .select()
+      .select(CUSTOMER_LIST_ITEM_COLUMNS)
       .from(customers)
       .where(and(isNotNull(customers.lastContactDate)))
       // The last-contact index's own order, read backwards: newest day first, then the newest id (ACME-129). A tie

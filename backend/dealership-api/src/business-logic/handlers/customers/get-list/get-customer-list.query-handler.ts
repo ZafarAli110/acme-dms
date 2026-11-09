@@ -36,7 +36,7 @@ import {
 import { escapeLike } from "../../../list-query/like-pattern";
 import { MAX_LIST_DEPTH, pageOffset } from "../../../list-query/page-offset";
 import { requireLocation } from "../../../user-context/require-location";
-import { toCustomerListItemDto } from "../customer.mapper";
+import { CUSTOMER_LIST_ITEM_COLUMNS, toCustomerListItemDto } from "../customer.mapper";
 import { type CloseName, closeNamesAsync, isKnownNameAsync } from "./close-names";
 
 /** A search shorter than this stays exact: too few letters to compare spellings (ACME-120). */
@@ -120,7 +120,10 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     // Put back in the ids' order: the exact ones in the list's order, then the close ones closest first.
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const all = [...ids, ...closeIds];
-    const rows = all.length === 0 ? [] : await work.db.select().from(customers).where(inArray(customers.id, all));
+    const rows =
+      all.length === 0
+        ? []
+        : await work.db.select(CUSTOMER_LIST_ITEM_COLUMNS).from(customers).where(inArray(customers.id, all));
     const position = new Map(all.map((id, index) => [id, index]));
     const close = new Set(closeIds);
     const items = rows
