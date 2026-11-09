@@ -33,18 +33,22 @@ under 1, API code 1, SQL 2.7, about 5 statements); p95 32 ms, p99 61 ms.
 
 The figures above, and every earlier one, send straight to the gateway, as a load balancer would. Since ACME-130 a
 browser on a developer's machine comes in through the web server's HTTPS. `bun run load-test --through-web` measures
-that way in; the two are written side by side, never mixed. 800 a second for 30 s, on mains power, all 24,000
-answered each time:
+that way in; the two are written side by side, never mixed. 800 a second for 30 s, on mains power, every run of the
+day (three by the author, one by the verifier); each answered all 24,000:
 
-| Way in                              | p50   | p95   | p99    | Postgres | gateway-api | dealership-api (each) |
-| ----------------------------------- | ----- | ----- | ------ | -------- | ----------- | --------------------- |
-| Straight to the gateway (as before) | 11 ms | 37 ms | 155 ms | 165%     | 83%         | 29%                   |
-| Through the web server's HTTPS      | 13 ms | 37 ms | 62 ms  | 173%     | 87%         | 33%                   |
+| Way in                              | Runs | p50      | p95                    | p99                    | Postgres (average) |
+| ----------------------------------- | ---- | -------- | ---------------------- | ---------------------- | ------------------ |
+| Straight to the gateway (as before) | 3    | 10–13 ms | 37, 40, 67 ms          | 134–162 ms             | 134–176%           |
+| Through the web server's HTTPS      | 4    | 11–13 ms | 29, 31, 37, **240** ms | 43, 46, 62, **845** ms | 134–174%           |
 
-The web server's own CPU (TLS, and its hop to the gateway) is not in the load watcher's table, so its cost is seen only
-as the 2 ms more at the median. Bun's client speaks HTTP/1.1 to it (its HTTP/2 client is experimental); a browser uses
-HTTP/2. Postgres ran 135–167% across the day's runs at this rate, against 141% on 9 Nov: the laptop's swing, as
-ACME-130 changes nothing Postgres is asked.
+The middle of the answers is the same either way; the tail moves with the laptop on both. The verifier's 240 ms run had
+Postgres peaking at 421% and the client at its 512 connections: the laptop, not the way in, as the runs before and
+after it show. Take the cost of HTTPS here as "not measurable on one laptop", not as a number. Two things the table
+leaves out: the web server's own CPU (TLS, its hop to the gateway) is not in the load watcher's table; and in
+`start:prod` the web server, like every resource but the .NET services and dealership-api, sits behind Aspire's own
+proxy, which the gateway was taken from because it was the limit (see AppHost.cs). Bun's client speaks HTTP/1.1 to it
+(its HTTP/2 client is experimental); a browser uses HTTP/2. Against 9 Nov (p95 42 ms, Postgres 141%) the gateway's
+runs sit either side: ACME-130 changes nothing Postgres or the gateway is asked.
 
 ## Projections from that cost
 

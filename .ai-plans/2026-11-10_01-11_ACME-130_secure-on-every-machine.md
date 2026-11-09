@@ -234,3 +234,10 @@ None: Q1 is answered (D4).
   `https://localhost:58798`, HTTP/2. Step 7: ARCHITECTURE (the cookie the same everywhere, HSTS the one difference,
   a paragraph on HTTPS locally; start:prod), contracts (`/api/session`), benchmarks (the through-the-web figure beside
   the gateway's); `docs:check` 53/53.
+- 2026-11-10 02:00 Verifier: FAIL on one row, the HTTPS load figure: its rerun `--through-web` got p95 240, p99 845 ms (Postgres
+  peak 421%, client at 512 in flight) against the doc's one-run 37 ms. Rerun on mains: `--through-web` p95 29 and 31
+  ms, p99 43 and 46; to the gateway p95 67 ms. The tail moves with the laptop on both ways in. The benchmarks section
+  now gives every run as ranges and says the cost of HTTPS is not measurable on one laptop; it names what the table
+  leaves out (the web server's CPU; Aspire's proxy in front of the web server in start:prod). Its other gaps: dev mode
+  seen only by the author (sent back to it), Windows not run, the untrusted path only with a fake `dotnet`, "ran out"
+  shown by a server-side end, the every-page spec blind to 4xx.
