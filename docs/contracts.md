@@ -48,6 +48,27 @@ With the cookie, a request to `/api/…` reaches the service with `Authorization
 session is gone, or the page's own request comes with no cookie at all, the gateway answers `401` itself, with
 `X-Acme-Session: ended`: the only 401 that signs the page out.
 
+### `Idempotency-Key` on a save (dealership-api, ACME-125)
+
+Every save that adds or changes a record (customer add and change, part add and change, a photo, a bin, a stock
+level) takes an optional `Idempotency-Key` header: 1 to 255 printable characters, one key per save the user means to
+make, sent again unchanged on every retry. The service does the save once per key, for that user at that dealer, for
+24 hours. Without the header a save works as it always has.
+
+| The same key arrives…                                   | Answer                                                                                      |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| for the first time, or 24 hours after it was first used | the save runs                                                                               |
+| with the same request, after the save was done          | the first answer again (status, body, `Location`, `ETag`), with `Idempotent-Replayed: true` |
+| while a save with it is still running                   | `409` `urn:acme:error:save-in-progress`, `Retry-After: 2`; nothing done                     |
+| with another request, after a save with it went through | `409` `urn:acme:error:save-went-through`, `resource`: where the saved record is read        |
+| not 1 to 255 printable characters                       | `422` `urn:acme:error:idempotency-key`; nothing done                                        |
+
+"The same request" is the method, the URL, `If-Match`, the body and each file's bytes. A save refused before it
+committed (a missing field, `409` part number in use, `503` busy) frees the key, so the corrected save can use it. A
+save that failed after it committed keeps it: sent again, it is told it went through, and never runs twice. Another
+user's or another dealer's save with the same key is their own save. The web app's save screens send one
+(`useSaveKey`); the export start keeps its own key (`/v1/exports`, `docs/standards/business-handlers.md`).
+
 ## Messages
 
 Services talk asynchronously through RabbitMQ. Messages are plain JSON so the TypeScript and .NET services read each

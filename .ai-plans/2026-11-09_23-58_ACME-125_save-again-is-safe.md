@@ -11,8 +11,9 @@
 **Design:** Follows: the customer and part forms' save alert (`ErrorAlert during="save"`) and the edit forms'
 "changed elsewhere" alert; no new screen
 
-**Now:** Done: steps 1–2 (the record; the interceptor and commit marker on the seven saves) · Next: step 3, the web ·
-Blocked: None
+**Now:** Done: steps 1, 2, 5; step 3's code and step 4's specs written · Next: rebuild and restart the running system
+(it runs the `start:prod` build from before ACME-125), then step 3's browser check, step 4's e2e, step 6 · Blocked:
+the restart is Zafar Ali's to run or allow
 
 ## Requirement
 
@@ -98,7 +99,8 @@ Files (each checked to exist, or marked **new**). `B` is `backend/dealership-api
 9. `W/core/hooks/useSaveKey.ts` (**new**); `W/core/config/apiErrors.ts` (the types, the "could not confirm" message)
 10. `W/pages/customers/CustomerForm.tsx`, `CustomerCreate.tsx`, `CustomerEdit.tsx`, `queries/customerQueries.ts`
 11. `W/pages/parts/PartForm.tsx`, `PartEdit.tsx`, `PartCreateDialog.tsx`, `queries/partQueries.ts`
-12. `W/locales/{en,fr}/common.json`; `web/e2e/customers.spec.ts`, `web/e2e/parts.spec.ts`
+12. `W/locales/{en,fr}/common.json`; `web/e2e/save-again.spec.ts` (**new**: one file for the ticket's six
+    journeys, as `busy.spec.ts` is for ACME-122, rather than spread over `customers.spec.ts` and `parts.spec.ts`)
 
 ```ts
 // idempotency.interceptor.ts (new)
@@ -155,7 +157,7 @@ is claimed or saved.
 - [ ] 3. The web: `useSaveKey`, the customer forms, the part form and dialog, the messages (en, fr) → verify: unit
       tests; check-in-browser at 1440 and 1024
 - [ ] 4. End to end: answers lost after and before the server, a changed second save, a double click → verify: e2e
-- [ ] 5. Docs: `api-errors.md`, `contracts.md`, `database.md` → verify: `docs:check`
+- [x] 5. Docs: `api-errors.md`, `contracts.md`, `database.md` → verify: `docs:check`
 - [ ] 6. `verify-ticket` → `docs/evidence/ACME-125.md`
 
 ## Questions
@@ -210,3 +212,8 @@ None: the interview's answers are in Requirement and D1–D2.
   create opens the record with `?first-save-went-through`; a ref ignores a second press in flight. `ErrorAlert
 during="save"` now means a keyed save (its only user is the part dialog). Web typecheck, lint, 93 unit tests pass.
   Not ticked: the browser check needs the running system rebuilt (it runs the `start:prod` build from before).
+- 2026-11-10 00:29 Step 4 specs: `web/e2e/save-again.spec.ts`, six journeys (answer lost after the API: once; changed phone → went
+  through, opens with the first phone; dropped before sending, changed → saved once; double click → one; part with a
+  photo → one photo, no 412; dialog → one part), typecheck and lint clean, not yet run. Step 5: `contracts.md`
+  (Idempotency-Key answers), `api-errors.md` (three types, extension members, `@Idempotent` first), `database.md`
+  (technical table), `web-architecture.md` (the form's key); `docs:check` 53/53.

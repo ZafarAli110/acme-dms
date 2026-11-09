@@ -28,7 +28,13 @@ exactly these fields (always present; `null` when unknown):
 | `urn:acme:error:internal`            | 500    |
 | `urn:acme:error:service-unavailable` | 503    |
 | `urn:acme:error:busy`                | 503    |
+| `urn:acme:error:save-in-progress`    | 409    |
+| `urn:acme:error:save-went-through`   | 409    |
+| `urn:acme:error:idempotency-key`     | 422    |
 
+- **Extension members** (RFC 9457) follow the standard ones, only on the type that defines them: `save-went-through`
+  carries `resource`, where the saved record is read (`/v1/customers/{id}`), `null` when not known. A type more precise
+  than its status is thrown as `TypedProblemException` (`service/problem-details/`), with its `Retry-After` and members.
 - Unexpected errors (500) never expose internals: `detail` is "An unexpected error occurred". The real error is in the
   logs and the trace — search the dashboard for the `traceId`.
 - 4xx errors are logged as warnings, 5xx as errors.
@@ -55,6 +61,23 @@ A record people edit (a customer, a part) has a `version`, one more with every s
 - The web app's form sends the version it was opened with, never one refetched since: the edit pages remount the form
   when the record changes.
 - In code: `@ETagged()` on the endpoint, `@IfMatchVersion()` for the version (`service/concurrency/record-version.ts`).
+
+## Saving again is safe: Idempotency-Key (dealership-api, ACME-125)
+
+A save whose answer was lost (a timeout, a dropped connection) may or may not have gone through. Every save that adds or
+changes a record takes an `Idempotency-Key` and is done once per key (`docs/contracts.md` has the answers).
+
+- In code: `@Idempotent("created" | "path" | "none")`, **listed first** on the method, above `@Post`/`@Put` and every
+  other decorator: Nest runs the last-listed interceptor innermost, and it must be innermost so the files are read for
+  its fingerprint and a replayed answer still passes through `@Created` and `@ETagged`. The argument says where the
+  saved record is read: an add's `@Created` Location, a change's own path, or none.
+- The key is claimed in a transaction of its own before the save; the save's own transaction marks it committed just
+  before COMMIT (`UnitOfWorkFactory`), so a key is committed exactly when its save is. A second save that took the key
+  over (the first ran past its 60 s lease) leaves the first unable to commit: one of them saves, never both.
+- The answer is kept after the save, and a failed save's key freed, as background work that is never "busy" and
+  outlives a caller who left. The claim spends the save's one connection wait: a busy system still answers 503 within
+  it, with nothing claimed.
+- A new save endpoint gets `@Idempotent`, and a test that sends it twice with one key.
 
 ## Messages in the user's language (dealership-api)
 

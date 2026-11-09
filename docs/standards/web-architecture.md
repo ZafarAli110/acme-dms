@@ -164,7 +164,12 @@ Rules:
   is "required", never `0`.
 - **Server errors**: a problem that belongs to a field (a duplicate part number, `409`) is shown on that field with
   `setError`; anything else as an alert above the form. What the user typed is kept.
-- **Save is disabled while submitting**, so one click saves once.
+- **Save is disabled while submitting**, so one click saves once; a ref ignores a second press made before the
+  button re-renders disabled.
+- **Every save sends the form's key** (`core/hooks/useSaveKey.ts`, ACME-125): one `Idempotency-Key` per save the user
+  means to make, kept until a save is answered as saved. No answer says "We could not confirm the save. Save again: it
+  will never be added twice." (`saveErrorMessage`); a save that went through from the form as it was before shows what
+  it saved (an edit) or opens the record (an add, `?first-save-went-through`).
 - **Unsaved changes**: every form page renders `<FormGuards isDirty={isDirty && !isSubmitting} redirectTo="/list" />`
   (`app/components/FormGuards.tsx`). It asks before leaving the page (links, back, closing the tab) and before
   switching location in the top bar. A successful save must not ask.
