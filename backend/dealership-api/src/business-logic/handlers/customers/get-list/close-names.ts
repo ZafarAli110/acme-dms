@@ -13,7 +13,7 @@ const MIN_LIKENESS = 0.3;
 /**
  * From this length on, every name at most `MAX_DISTANCE` edits away shares a trigram with the word: the word has
  * length + 1 trigrams and one edit changes at most 3, so 7 or more cannot all go. The trigram index then finds every
- * candidate; a shorter word compares every name of the location.
+ * candidate. A shorter word takes the alike names from the index and the near ones from the names of about its length.
  */
 const MIN_INDEXED_LENGTH = 6;
 const KINDS: CustomerNameKind[] = ["first", "surname", "company_word"];
@@ -63,21 +63,30 @@ export async function isKnownNameAsync(db: Database, scope: NameScope, word: str
  * `db` works as the table's owner, with the dealer and location written out: under the policy neither `%` nor
  * levenshtein is leakproof, so every name of the location was compared (12 ms at Northside's 5,329). As the owner, a
  * word of `MIN_INDEXED_LENGTH` letters or more takes its candidates from the trigram index, every name sharing a
- * trigram with it (the threshold set just above none), and only they are compared (0.3 ms, ACME-129). `set local` ends
- * with the read-only transaction.
+ * trigram with it (the threshold set just above none), and only they are compared (0.3 ms, ACME-129). A shorter word
+ * takes the names alike enough from the index (`%` at `MIN_LIKENESS`), and the edit distance only of names within
+ * `MAX_DISTANCE` letters of its length, as no name further in length is that few edits away (1 ms; 5 ms comparing
+ * every name). `set local` ends with the read-only transaction.
  */
 export async function closeNamesAsync(db: Database, scope: NameScope, word: string): Promise<CloseName[]> {
   const name = sql`lower(${customerNames.name})`;
   const indexed = word.length >= MIN_INDEXED_LENGTH;
-  if (indexed) {
-    await db.execute(sql`select set_config('pg_trgm.similarity_threshold', '0.001', true)`);
-  }
+  const threshold = indexed ? "0.001" : String(MIN_LIKENESS);
+  await db.execute(sql`select set_config('pg_trgm.similarity_threshold', ${threshold}, true)`);
+  const inScope = sql`${customerNames.dealerId} = ${scope.dealerId} and ${customerNames.locationId} = ${scope.locationId}`;
+  const candidates = indexed
+    ? sql`${name} % ${word}`
+    : sql`${name} in (
+        select ${name} from ${customerNames} where ${inScope} and ${name} % ${word}
+        union
+        select ${name} from ${customerNames}
+        where ${inScope} and length(${customerNames.name}) between ${word.length - MAX_DISTANCE} and ${word.length + MAX_DISTANCE}
+          and levenshtein_less_equal(${name}, ${word}, ${MAX_DISTANCE}) <= ${MAX_DISTANCE})`;
   const result = await db.execute<{ name: string; likeness: number; kinds: CustomerNameKind[] }>(sql`
     select min(${customerNames.name}) as name, max(similarity(${name}, ${word})) as likeness,
            array_agg(distinct ${customerNames.kind}) as kinds
     from ${customerNames}
-    where ${customerNames.dealerId} = ${scope.dealerId} and ${customerNames.locationId} = ${scope.locationId}
-      and ${indexed ? sql`${name} % ${word}` : sql`true`}
+    where ${inScope} and ${candidates}
       and (similarity(${name}, ${word}) >= ${MIN_LIKENESS}
            or levenshtein_less_equal(${name}, ${word}, ${MAX_DISTANCE}) <= ${MAX_DISTANCE})
       and ${name} <> ${word}
