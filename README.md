@@ -379,7 +379,7 @@ From a second terminal (repo root, while `bun run dev` is running):
 | `bun run status`                                    | every resource, its state and URL                                      |
 | `bun run health`                                    | what is not healthy, its last log lines, and the likely fix            |
 | `bun run start` / `bun run stop`                    | start the whole system in the background / stop it                     |
-| `bun run start:prod`                                | run it as production does (built, Release, quiet logs) to measure it   |
+| `bun run start:prod`                                | run it as production does (built, Release, quiet logs, 4 API copies)   |
 | `bun run start:prod --load-test`                    | the same, with the limits per address lifted, for `bun run load-test`  |
 | `bun run rebuild identity-api`                      | rebuild one .NET service after a change (the rest reload themselves)   |
 | `bun run resource dealership-api stop`              | stop one service (or `start`, `restart`): how the rest copes           |

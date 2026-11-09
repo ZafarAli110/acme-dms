@@ -7,7 +7,9 @@
 //   web                                                the production build, served as files (scripts/serve-web.ts)
 //   logs                                               warnings and errors only: per-request info lines cost time
 //
-// More copies: DEALERSHIP_API_INSTANCES=4 bun run start:prod (PowerShell: $env:DEALERSHIP_API_INSTANCES=4 first).
+// Four dealership-api copies by default, as the benchmarks are measured (docs/benchmarks/README.md): one copy is one Node
+// process, one core. Another count: DEALERSHIP_API_INSTANCES=8 bun run start:prod (PowerShell: $env:DEALERSHIP_API_INSTANCES=8
+// first). How many run in production is the deployment's to say, not this script's.
 // For `bun run load-test`: bun run start:prod --load-test lifts the limits per address (sign-ins a minute, requests a
 // second), which a load test from one machine trips at once; the share per sign-in stays (see AppHost.cs).
 // A change to the code needs a restart: nothing here watches files.
@@ -18,6 +20,8 @@ if (unknown.length > 0) {
   process.exit(1);
 }
 const loadTest = options.includes("--load-test");
+/** dealership-api copies unless DEALERSHIP_API_INSTANCES says otherwise: the count the benchmarks use. */
+const PRODUCTION_LIKE_INSTANCES = 4;
 if (loadTest) {
   console.warn(
     "Load test: the limits per address are off (sign-ins a minute, requests a second). Measure with it; never deploy it.",
@@ -43,6 +47,7 @@ const appHost = Bun.spawn(["aspire", "run"], {
   env: {
     ...process.env,
     ACME_PRODUCTION_LIKE: "1",
+    DEALERSHIP_API_INSTANCES: process.env["DEALERSHIP_API_INSTANCES"] ?? String(PRODUCTION_LIKE_INSTANCES),
     ...(loadTest ? { ACME_LOAD_TEST: "1" } : {}),
     // MSBuild reads it like -c Release, for the AppHost and the projects it builds.
     Configuration: "Release",

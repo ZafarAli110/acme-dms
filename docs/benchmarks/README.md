@@ -69,7 +69,7 @@ load test keeps at most 512 connections, and 1,200 a second is not a valid run h
 ## How to measure
 
 ```bash
-DEALERSHIP_API_INSTANCES=4 bun run start:prod --load-test   # PowerShell: $env:DEALERSHIP_API_INSTANCES=4; bun run start:prod --load-test
+bun run start:prod --load-test                              # 4 dealership-api copies; DEALERSHIP_API_INSTANCES=<n> for another count
 bun run sql:top --reset                                     # count the database's statements afresh
 bun run load-test --rate 800 --seconds 30                   # one rate per run
 bun run sql:top                                             # which statements took the database's time
