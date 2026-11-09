@@ -70,7 +70,10 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
                 return tokens.AccessToken;
             }
 
-            if (await TryTakeLeaseAsync(id, cancellationToken) is { } lease)
+            // Not the browser's cancellation: a lease committed by Postgres whose answer was then abandoned would stay held for
+            // its 15 s with no renewal behind it, and the requests waiting on it would get 503 (the state sweep's F6). Once
+            // taken, the renewal ignores the browser too (RenewAsync).
+            if (await TryTakeLeaseAsync(id, CancellationToken.None) is { } lease)
             {
                 return await RenewAsync(cookieValue, id, tokens, session.AccessTokenExpiresAt, lease.Until, lease.Key, caller);
             }

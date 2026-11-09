@@ -137,6 +137,29 @@ describe("AuthKernel", () => {
     expect(replace).toHaveBeenCalledWith("/sign-in");
   });
 
+  // The state sweep's F2: the same person signing in again in another tab while this tab's sign-out waited was ignored
+  // here, so this tab wrote the "sign-out pending" note back, and its next load revoked the new sign-in.
+  it("leaves no sign-out pending when the same person signs in again in another tab while it waited", async () => {
+    const kernel = await ritasTabAsync();
+    let answer: (response: Response) => void = () => undefined;
+    gateway.signOut = () =>
+      new Promise<Response>((resolve) => {
+        answer = resolve;
+      });
+
+    const signingOut = kernel.signOutAsync();
+    await Promise.resolve();
+    expect(session.isRevokePending()).toBe(true);
+    // The other tab's sign-in clears the shared note, then says who signed in.
+    session.setRevokePending(false);
+    FakeBroadcastChannel.last!.fromOtherTab({ kind: "signed-in", userId: rita.id });
+    answer(new Response(null, { status: 503 }));
+    await signingOut;
+
+    expect(session.isRevokePending()).toBe(false);
+    expect(replace).toHaveBeenCalledWith("/sign-in");
+  });
+
   it("asks the gateway once when Sign out is pressed twice", async () => {
     const kernel = await ritasTabAsync();
 

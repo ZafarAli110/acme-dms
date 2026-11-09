@@ -127,6 +127,13 @@ export class AuthKernel {
       this.leaveForSignIn();
       return;
     }
+    // A sign-in elsewhere while this tab's sign-out waits for the gateway, by anyone, the same person too: the cookie is
+    // that sign-in's now, so the sign-out must not leave "pending" behind for the next load to end it (the state sweep's
+    // F2). This tab is leaving for the sign-in page anyway.
+    if (this._signingOut !== null) {
+      this._generation += 1;
+      return;
+    }
     // The same person signing in again elsewhere: the cookie is still theirs, so this tab keeps its location, its data
     // and any unsaved form.
     if (this._snapshot.status === "signed-in" && this._snapshot.user?.id === change.userId) {
