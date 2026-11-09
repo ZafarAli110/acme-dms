@@ -33,8 +33,8 @@ worker (background work has stopped). Anonymous: no token, no location. Each ser
 
 The web app's sign-in. Every method needs the header `X-Requested-With: acme-web` (403 without it).
 
-- `POST` with `{ "email": "…", "password": "…" }`: `204` and the session cookie, `__Host-acme_session` (`acme_session` in
-  local development): `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`. Otherwise identity-api's own answer, unchanged
+- `POST` with `{ "email": "…", "password": "…" }`: `204` and the session cookie, `__Host-acme_session` (the same on
+  a developer's machine, ACME-130): `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`. Otherwise identity-api's own answer, unchanged
   (`400`, `401`, or `429` with `Retry-After`); `503` when identity-api cannot be reached or answers anything else. It
   ends the session the browser had.
 - `GET`: always `200`, `{ "isSignedIn": true | false }`: whether the cookie names a session that can still give a

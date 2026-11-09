@@ -29,6 +29,23 @@ anything beyond, needs a database on its own machine and the load sent from anot
 From the traces (`bun run trace-breakdown`): a typical request takes 7 ms end to end (session read 1, gateway to API
 under 1, API code 1, SQL 2.7, about 5 statements); p95 32 ms, p99 61 ms.
 
+## Through the web server's HTTPS (ACME-130, 10 Nov 2026)
+
+The figures above, and every earlier one, send straight to the gateway, as a load balancer would. Since ACME-130 a
+browser on a developer's machine comes in through the web server's HTTPS. `bun run load-test --through-web` measures
+that way in; the two are written side by side, never mixed. 800 a second for 30 s, on mains power, all 24,000
+answered each time:
+
+| Way in                              | p50   | p95   | p99    | Postgres | gateway-api | dealership-api (each) |
+| ----------------------------------- | ----- | ----- | ------ | -------- | ----------- | --------------------- |
+| Straight to the gateway (as before) | 11 ms | 37 ms | 155 ms | 165%     | 83%         | 29%                   |
+| Through the web server's HTTPS      | 13 ms | 37 ms | 62 ms  | 173%     | 87%         | 33%                   |
+
+The web server's own CPU (TLS, and its hop to the gateway) is not in the load watcher's table, so its cost is seen only
+as the 2 ms more at the median. Bun's client speaks HTTP/1.1 to it (its HTTP/2 client is experimental); a browser uses
+HTTP/2. Postgres ran 135–167% across the day's runs at this rate, against 141% on 9 Nov: the laptop's swing, as
+ACME-130 changes nothing Postgres is asked.
+
 ## Projections from that cost
 
 At 4 ms of CPU a request, with servers kept at half their CPU so a spike has room:

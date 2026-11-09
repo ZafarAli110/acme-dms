@@ -10,7 +10,7 @@
 
 **Design:** No screen
 
-**Now:** Done: steps 1–5 (start:prod over HTTPS and HTTP/2, all checks) · Next: step 6, dev mode · Blocked: None
+**Now:** Done: steps 1–7 · Next: step 8, verify-ticket · Blocked: None
 
 ## Requirement
 
@@ -140,9 +140,9 @@ only); the gateway and the services are unchanged; the load test keeps measuring
 - [x] 5. start:prod over HTTPS: restart it → verify: the whole e2e suite; `every-page.spec.ts` logs `h2`; the cookie
       read in the browser; check-in-browser at 1440 and 1024 (no warning); load test 800/s twice and once
       `--through-web`, compared with 9 Nov
-- [ ] 6. Dev mode: `bun run dev` → verify: it opens at `https://` with no warning; `every-page.spec.ts` logs `h2`; then
+- [x] 6. Dev mode: `bun run dev` → verify: it opens at `https://` with no warning; `every-page.spec.ts` logs `h2`; then
       back to `start:prod --load-test`
-- [ ] 7. Docs → verify: `docs:check`
+- [x] 7. Docs → verify: `docs:check`
 - [ ] 8. `verify-ticket` → `docs/evidence/ACME-130.md`; then, by a person: Zafar Ali notes the protocols on ACME-130 (the
       tracker is not connected to this session), and someone on Windows follows the README's setup once
 
@@ -228,3 +228,9 @@ None: Q1 is answered (D4).
   p99 62 ms, Postgres 173%, gateway 87%, API 33% each (Bun's web server's CPU is not in the watcher's table). 9 Nov
   23:00: p95 42 ms, Postgres 141%: p95 within it; Postgres higher, within today's own swing, and nothing in ACME-130
   changes what Postgres is asked.
+- 2026-11-10 01:47 Step 6: `bun run dev` (start:prod stopped first): web at `https://localhost:57438`; curl page HTTP/2 (verify 0),
+  `/api/session` with the page's header HTTP/2 200; `every-page` and `sign-out` specs 10/10 (every page `h2` in Chrome,
+  no console error, so Vite's live reload over `wss:` connected). Then `start:prod --load-test` back up:
+  `https://localhost:58798`, HTTP/2. Step 7: ARCHITECTURE (the cookie the same everywhere, HSTS the one difference,
+  a paragraph on HTTPS locally; start:prod), contracts (`/api/session`), benchmarks (the through-the-web figure beside
+  the gateway's); `docs:check` 53/53.

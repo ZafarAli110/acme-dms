@@ -67,10 +67,20 @@ cookie. Scripts and tests call the services with a token of their own, as before
 
 The gateway keeps both in its own database (`gateway`, table `sessions`), **encrypted with a key derived from the
 session cookie's value** (HKDF, then AES-GCM), and finds the row by that value's SHA-256: a copy of the table holds no
-token anyone can use. The browser gets **`__Host-acme_session`** (`acme_session` in local development, which is plain
-HTTP): 256 random bits, `HttpOnly` (out of reach of the page's scripts), `SameSite=Strict`, `Secure`, `Path=/` and no
+token anyone can use. The browser gets **`__Host-acme_session`**, on a developer's machine as live (ACME-130): 256
+random bits, `HttpOnly` (out of reach of the page's scripts), `SameSite=Strict`, `Secure`, `Path=/` and no
 `Domain` (what the `__Host-` prefix requires, so a sibling subdomain cannot plant a cookie of its own), and no expiry
-(gone when the browser closes). Outside development the gateway also sends HSTS, so the browser keeps to HTTPS. The
+(gone when the browser closes). Outside development the gateway also sends HSTS, so the browser keeps to HTTPS; on a
+developer's machine it does not, the one difference from live: a browser keeps HSTS per host name, so it would hold
+every app on `localhost` to HTTPS (ACME-130, D4).
+
+**HTTPS on a developer's machine (ACME-130).** The web server (Vite in `bun run dev`, `scripts/serve-web.ts` in
+`start:prod`) serves HTTPS, and HTTP/2 to a browser that offers it, with the ASP.NET Core development certificate:
+`dotnet dev-certs https --trust` once (the setup scripts run it; `scripts/check-certificate.ts` stops every start
+without it and writes the certificate and its key to `.certs/`, ignored by git). The gateway stays plain HTTP behind
+it, told the browser's connection was HTTPS (`X-Forwarded-Proto`), as behind a load balancer live; scripts and the
+load test call the gateway there. Node and Bun do not read the system's trust store as a browser does: the e2e and
+load-test scripts point them at the certificate (`NODE_EXTRA_CA_CERTS`). The
 answer is 204 with the cookie, or identity-api's own refusal (400, 401, or 429 with `Retry-After`) as it gave it; any
 other answer from identity-api, or none, is a 503.
 
@@ -208,7 +218,8 @@ API copies in front of a full database only queue more queries on it. Measure, t
   every request; `bun run start:prod` runs the same system as production does: each Bun app's bundle built once and
   run by Node, the .NET services in Release, the web app's production build served as files
   (`scripts/serve-web.ts`), warnings and errors only in the logs. It keeps Development settings (demo users, dev
-  credentials, plain HTTP), so sign-in and the seed work as usual. A change needs a restart.
+  credentials), so sign-in and the seed work as usual, and serves the web app over HTTPS and HTTP/2 as `bun run dev`
+  does (ACME-130). A change needs a restart.
 - **Lift the limits per address for a load test, and only those.** A load test from one machine is one address: 200
   sign-ins and thousands of requests a second from it is exactly the flood the limits per address stop (identity's 10
   sign-ins a minute, the gateway's 500 requests a second), so the test would measure the limiter, not the system.
