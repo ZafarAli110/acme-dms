@@ -1,15 +1,16 @@
 import { formatNumber } from "../../core/formatters/formatNumber";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert, Box, Button, Chip, Grid, Paper, Stack, TextField, Typography } from "@mui/material";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { MoneyField } from "../../components/MoneyField";
 import { useTranslation } from "react-i18next";
-import { useActionData, useNavigate, useNavigation, useSubmit } from "react-router";
+import { useActionData, useNavigate, useNavigation, useSearchParams, useSubmit } from "react-router";
 import { FormGuards } from "../../components/FormGuards";
 import { PageHeader } from "../../components/PageHeader";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useErrorUntilEdited } from "../../core/hooks/useErrorUntilEdited";
+import { FIRST_SAVE_WENT_THROUGH, useSaveKey } from "../../core/hooks/useSaveKey";
 import { PartPhotosSection } from "./components/PartPhotosSection";
 import { mergePhotos, toFormValues, toUpdateFormData } from "./mappers/partFormMapper";
 import type { clientAction } from "./PartEdit";
@@ -35,11 +36,15 @@ interface PartFormProps {
  * The part edit form: details, the stock here (read only) and the photos. One Save sends everything together through
  * the page's clientAction; nothing is saved before that.
  */
-/** The location the form was saved at: the page's action sends the save there, whatever is selected by then. */
-function withLocation(form: FormData, locationId: string | undefined): FormData {
+/**
+ * The location the form was saved at, and the form's key (ACME-125): the page's action sends the save there, whatever
+ * is selected by then, once per key.
+ */
+function withLocationAndKey(form: FormData, locationId: string | undefined, saveKey: string): FormData {
   if (locationId) {
     form.append("locationId", locationId);
   }
+  form.append("saveKey", saveKey);
   return form;
 }
 
@@ -58,7 +63,20 @@ export function PartForm({
   const navigate = useNavigate();
   const submit = useSubmit();
   const actionData = useActionData<typeof clientAction>();
-  const isSubmitting = useNavigation().state === "submitting";
+  const navigationState = useNavigation().state;
+  const isSubmitting = navigationState === "submitting";
+  // One key per save the user means to make: the same on every Save until one is done (ACME-125).
+  const saveKey = useSaveKey(actionData);
+  // Opened from a create whose first save went through, or a save here that found its first had (ACME-125).
+  const [searchParams] = useSearchParams();
+  const wentThrough = actionData?.wentThrough ?? searchParams.has(FIRST_SAVE_WENT_THROUGH);
+  // A second press while a save is on its way is ignored, before React has re-rendered the button disabled.
+  const sending = useRef(false);
+  useEffect(() => {
+    if (navigationState === "idle") {
+      sending.current = false;
+    }
+  }, [navigationState]);
 
   // The part as this form opened it: its version goes with a save, so a save over someone else's is refused (412), and
   // the unsaved edits are compared with it.
@@ -73,12 +91,24 @@ export function PartForm({
   useEffect(() => onDirtyChange(isDirty), [isDirty, onDirtyChange]);
   const disabled = !canEdit || isSubmitting;
 
-  const save = methods.handleSubmit((values) =>
-    submit(withLocation(toUpdateFormData(values, opened, i18n.language), location?.id), {
-      method: "post",
-      encType: "multipart/form-data",
-    }),
+  const send = methods.handleSubmit(
+    (values) =>
+      submit(withLocationAndKey(toUpdateFormData(values, opened, i18n.language), location?.id, saveKey), {
+        method: "post",
+        encType: "multipart/form-data",
+      }),
+    () => {
+      sending.current = false;
+    },
   );
+  const save = (event: FormEvent<HTMLFormElement>): void => {
+    if (sending.current) {
+      event.preventDefault();
+      return;
+    }
+    sending.current = true;
+    void send(event);
+  };
 
   // Their version under the user's edits: what the user did not touch becomes theirs, then the form saves from theirs.
   const keepMine = (): void => {
@@ -148,9 +178,14 @@ export function PartForm({
           {saveError}
         </Alert>
       )}
-      {actionData?.saved && !isDirty && (
+      {actionData?.saved && !isDirty && !wentThrough && (
         <Alert severity="success" sx={{ mb: 2 }} data-testid="save-success">
           {t("edit.saved")}
+        </Alert>
+      )}
+      {wentThrough && !isDirty && (
+        <Alert severity="info" sx={{ mb: 2 }} data-testid="save-went-through">
+          {tCommon("saves.wentThrough")}
         </Alert>
       )}
       <Box

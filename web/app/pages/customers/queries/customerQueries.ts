@@ -3,7 +3,7 @@ import { apiClient, type RequestOptions } from "../../../core/services/apiClient
 import type { ListTotal } from "../../../core/types/listTotal";
 import { FIRST_PAGE, type ListParams, toListApiQuery, toListSearchParams } from "../../../core/paging/listParams";
 import type { Customer, CustomerInput, CustomerListItem, CustomerPage, CustomerQuestion } from "../types/customer";
-import { ifMatch } from "../../../core/services/ifMatch";
+import { idempotencyKey, ifMatch } from "../../../core/services/ifMatch";
 
 const CUSTOMERS_URL = `${API_CONFIG.dealershipUrl}/v1/customers`;
 
@@ -22,8 +22,22 @@ export const customerQueries = {
     apiClient.getAsync<CustomerListItem[]>(`${CUSTOMERS_URL}/recent`, options),
   getCustomerAsync: (customerId: string, options?: RequestOptions) =>
     apiClient.getAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, options),
-  createCustomerAsync: (input: CustomerInput) => apiClient.postAsync<Customer>(CUSTOMERS_URL, input),
-  /** PUT: every field is sent, from `version` (If-Match): a newer version saved meanwhile answers 412. */
-  updateCustomerAsync: (customerId: string, input: CustomerInput, version: number, locationId?: string) =>
-    apiClient.putAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, input, { headers: ifMatch(version), locationId }),
+  /** Done once per `saveKey`: the same save sent again is answered with the first (ACME-125). */
+  createCustomerAsync: (input: CustomerInput, saveKey: string) =>
+    apiClient.postAsync<Customer>(CUSTOMERS_URL, input, { headers: idempotencyKey(saveKey) }),
+  /**
+   * PUT: every field is sent, from `version` (If-Match): a newer version saved meanwhile answers 412. Done once per
+   * `saveKey`, so a save sent again after a lost answer is never refused as someone else's (ACME-125).
+   */
+  updateCustomerAsync: (
+    customerId: string,
+    input: CustomerInput,
+    version: number,
+    saveKey: string,
+    locationId?: string,
+  ) =>
+    apiClient.putAsync<Customer>(`${CUSTOMERS_URL}/${customerId}`, input, {
+      headers: { ...ifMatch(version), ...idempotencyKey(saveKey) },
+      locationId,
+    }),
 };

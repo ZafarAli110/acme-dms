@@ -7,9 +7,10 @@ import {
   Link as RouterLink,
   useActionData,
   useParams,
+  useSearchParams,
 } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
-import { ApiError, isBusyError, problemErrorMessage } from "../../core/config/apiErrors";
+import { ApiError, isBusyError, isSaveWentThrough, saveErrorMessage } from "../../core/config/apiErrors";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useFormRevision } from "../../core/hooks/useFormRevision";
@@ -24,6 +25,7 @@ import { customerQueries } from "./queries/customerQueries";
 import { CUSTOMER_QUERY_KEYS } from "./queries/customerQueryKey";
 import { customerQueryOptions } from "./queries/customerQueryOptions";
 import type { CustomerInput } from "./types/customer";
+import { FIRST_SAVE_WENT_THROUGH } from "../../core/hooks/useSaveKey";
 
 /** Fetches the customer before the page shows. Another location's customer is shown by the page, not thrown. */
 export async function clientLoader({ context, params }: ClientLoaderFunctionArgs) {
@@ -37,30 +39,41 @@ export async function clientLoader({ context, params }: ClientLoaderFunctionArgs
   return null;
 }
 
-/** One Save: a PUT with every field; the page then shows the customer as saved. */
+/**
+ * One Save: a PUT with every field; the page then shows the customer as saved. It goes with the form's key (ACME-125):
+ * sent again after a lost answer it is done once; when the form changed in between, the first save went through, and the
+ * page shows what it saved.
+ */
 export async function clientAction({ request, context, params }: ClientActionFunctionArgs) {
   const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
   const customerId = params["customerId"];
   if (!resolved || !customerId) {
-    return { saved: false, error: i18n.t("errors.unexpected") };
+    return { saved: false, wentThrough: false, error: i18n.t("errors.unexpected") };
   }
   try {
-    // The version the form was opened from goes as If-Match, not in the body (the API accepts only its fields).
-    // Sent for the location the user saw when they pressed Save, even if another is selected by now.
-    const { version, locationId, ...input } = (await request.json()) as CustomerInput & {
+    // The version the form was opened from goes as If-Match, not in the body (the API accepts only its fields), and
+    // the key as Idempotency-Key. Sent for the location the user saw when they pressed Save, even if another is
+    // selected by now.
+    const { version, locationId, saveKey, ...input } = (await request.json()) as CustomerInput & {
       version: number;
       locationId?: string;
+      saveKey: string;
     };
-    await customerQueries.updateCustomerAsync(customerId, input, version, locationId ?? resolved.locationId);
+    await customerQueries.updateCustomerAsync(customerId, input, version, saveKey, locationId ?? resolved.locationId);
   } catch (error) {
+    if (isSaveWentThrough(error)) {
+      // Saved already, from the form as it was before: show what that save stored.
+      await queryClient.invalidateQueries({ queryKey: CUSTOMER_QUERY_KEYS.all(resolved.locationId) });
+      return { saved: true, wentThrough: true, error: null };
+    }
     if (error instanceof ApiError && error.status === 412) {
       // Someone else saved first: read their version, so the form can show it or keep the user's edits over it.
       await queryClient.invalidateQueries({ queryKey: CUSTOMER_QUERY_KEYS.detail(resolved.locationId, customerId) });
     }
-    return { saved: false, error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
+    return { saved: false, wentThrough: false, error: saveErrorMessage(error, i18n.t("errors.unexpected")) };
   }
   await queryClient.invalidateQueries({ queryKey: CUSTOMER_QUERY_KEYS.all(resolved.locationId) });
-  return { saved: true, error: null };
+  return { saved: true, wentThrough: false, error: null };
 }
 
 export default function CustomerEdit() {
@@ -70,6 +83,9 @@ export default function CustomerEdit() {
   const { data: customer, error, isLoading } = useCustomer(location?.id ?? "", customerId);
   const actionData = useActionData<typeof clientAction>();
   const revision = useFormRevision(customer?.updatedAt ?? "", actionData);
+  // Opened from a create whose first save went through (ACME-125), until the next save here is answered.
+  const [searchParams] = useSearchParams();
+  const wentThrough = actionData?.wentThrough ?? searchParams.has(FIRST_SAVE_WENT_THROUGH);
 
   if (isLoading) {
     return <Skeleton variant="rounded" height={420} />;
@@ -112,6 +128,7 @@ export default function CustomerEdit() {
             canEdit={can("customers.write")}
             error={actionData?.error ?? null}
             saved={actionData?.saved ?? false}
+            wentThrough={wentThrough}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>

@@ -204,3 +204,9 @@ None: the interview's answers are in Requirement and D1–D2.
   within one 500 ms wait with nothing claimed, failure after commit not run again, takeover → one commit, caller gone
   → key freed. A test bug found on the way (the failure switch fired on the claim's commit). Suite 333/333 twice; lint
   override for the test, as data-scope.test.ts has.
+- 2026-11-10 00:27 Step 3 code: `useSaveKey` (`nextSaveKey` unit-tested: kept until a save is done), the key on the customer
+  create/edit, part edit and part dialog saves; `saveErrorMessage` (no answer → "could not confirm", in progress →
+  "still going through"); went-through: an edit shows what the first save stored ("Your first save went through…"), a
+  create opens the record with `?first-save-went-through`; a ref ignores a second press in flight. `ErrorAlert
+during="save"` now means a keyed save (its only user is the part dialog). Web typecheck, lint, 93 unit tests pass.
+  Not ticked: the browser check needs the running system rebuilt (it runs the `start:prod` build from before).

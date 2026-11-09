@@ -48,7 +48,9 @@
     "pageNotLoaded": "Cette page n'a pas pu être chargée. Vérifiez votre connexion, puis rechargez.",
     "busyRetrying": "Le système est occupé, nouvel essai…",
     "stillBusy": "Le système est toujours occupé. Réessayez dans un instant.",
-    "busySave": "Le système est occupé et rien n'a été enregistré. Vos modifications sont toujours là : réessayez dans un instant."
+    "busySave": "Le système est occupé et rien n'a été enregistré. Vos modifications sont toujours là : réessayez dans un instant.",
+    "saveUnconfirmed": "Nous n'avons pas pu confirmer l'enregistrement. Enregistrez à nouveau : rien ne sera ajouté deux fois.",
+    "saveInProgress": "Votre premier enregistrement est encore en cours. Patientez un instant, puis cliquez à nouveau sur Enregistrer."
   },
   "notFound": {
     "title": "Page introuvable",
@@ -110,5 +112,9 @@
     "changedElsewhere": "Quelqu'un d'autre a enregistré cette fiche pendant votre modification. Affichez sa version, ou gardez vos changements par-dessus les siens.",
     "showLatest": "Voir sa version",
     "keepMine": "Garder mes changements"
+  },
+  "saves": {
+    "wentThrough": "Votre premier enregistrement a abouti. Voici ce qu'il a enregistré ; vos modifications suivantes n'ont pas été enregistrées.",
+    "wentThroughElsewhere": "Votre premier enregistrement a abouti. Retrouvez la fiche dans la liste : vos modifications suivantes n'ont pas été enregistrées."
   }
 }

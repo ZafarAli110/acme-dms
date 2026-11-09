@@ -3,7 +3,7 @@ import { apiClient, type RequestOptions } from "../../../core/services/apiClient
 import type { ListTotal } from "../../../core/types/listTotal";
 import { FIRST_PAGE, type ListParams, toListApiQuery, toListSearchParams } from "../../../core/paging/listParams";
 import type { Bin, Part, PartInput, PartPage, PartQuestion, StockValue } from "../types/part";
-import { ifMatch } from "../../../core/services/ifMatch";
+import { idempotencyKey, ifMatch } from "../../../core/services/ifMatch";
 
 const PARTS_URL = `${API_CONFIG.dealershipUrl}/v1/parts`;
 
@@ -19,12 +19,18 @@ export const partQueries = {
   getStockValueAsync: (options?: RequestOptions) => apiClient.getAsync<StockValue>(`${PARTS_URL}/stock-value`, options),
   getPartAsync: (partId: string, options?: RequestOptions) =>
     apiClient.getAsync<Part>(`${PARTS_URL}/${partId}`, options),
-  createPartAsync: (input: PartInput) => apiClient.postAsync<Part>(PARTS_URL, input),
+  /** Done once per `saveKey`: the same save sent again is answered with the first (ACME-125). */
+  createPartAsync: (input: PartInput, saveKey: string) =>
+    apiClient.postAsync<Part>(PARTS_URL, input, { headers: idempotencyKey(saveKey) }),
   /**
    * One Save of the part page: a multipart PATCH with the changes as JSON in `payload` and the new photos as `photos`
-   * files (built by mappers/partFormMapper.ts). The service saves the part and its photos together or not at all.
+   * files (built by mappers/partFormMapper.ts). The service saves the part and its photos together or not at all, and
+   * once per `saveKey` (ACME-125).
    */
-  updatePartAsync: (partId: string, form: FormData, version: number, locationId?: string) =>
-    apiClient.patchFormAsync<Part>(`${PARTS_URL}/${partId}`, form, { headers: ifMatch(version), locationId }),
+  updatePartAsync: (partId: string, form: FormData, version: number, saveKey: string, locationId?: string) =>
+    apiClient.patchFormAsync<Part>(`${PARTS_URL}/${partId}`, form, {
+      headers: { ...ifMatch(version), ...idempotencyKey(saveKey) },
+      locationId,
+    }),
   getBinsAsync: (options?: RequestOptions) => apiClient.getAsync<Bin[]>(`${API_CONFIG.dealershipUrl}/v1/bins`, options),
 };

@@ -10,7 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MoneyField } from "../../components/MoneyField";
 import { useTranslation } from "react-i18next";
 import { parseMoneyCents } from "../../core/formatters/formatMoney";
@@ -18,6 +18,8 @@ import { useNavigate } from "react-router";
 import { partQueries } from "./queries/partQueries";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { ErrorAlert } from "../../components/ErrorAlert";
+import { wentThroughPath } from "../../core/config/apiErrors";
+import { FIRST_SAVE_WENT_THROUGH } from "../../core/hooks/useSaveKey";
 
 const EMPTY = { partNumber: "", description: "", unitPrice: "", binId: "", quantityOnHand: "0", reorderLevel: "0" };
 
@@ -34,6 +36,11 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [form, setForm] = useState(EMPTY);
+  // One key per part the user means to add (ACME-125): the same on every press until it is added, so pressing again
+  // after a lost answer never adds it twice or says its number is in use; a new one for the next part.
+  const [saveKey, setSaveKey] = useState<string>(() => crypto.randomUUID());
+  // A second press while the first is on its way is ignored, before React has re-rendered the button disabled.
+  const sending = useRef(false);
 
   // Bins belong to one location, so the location is part of the key.
   const bins = useQuery({
@@ -44,21 +51,48 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
 
   const create = useMutation({
     mutationFn: () =>
-      partQueries.createPartAsync({
-        partNumber: form.partNumber,
-        description: form.description,
-        unitPriceCents: parseMoneyCents(form.unitPrice, i18n.language) ?? 0,
-        binId: form.binId,
-        quantityOnHand: Number(form.quantityOnHand),
-        reorderLevel: Number(form.reorderLevel),
-      }),
+      partQueries.createPartAsync(
+        {
+          partNumber: form.partNumber,
+          description: form.description,
+          unitPriceCents: parseMoneyCents(form.unitPrice, i18n.language) ?? 0,
+          binId: form.binId,
+          quantityOnHand: Number(form.quantityOnHand),
+          reorderLevel: Number(form.reorderLevel),
+        },
+        saveKey,
+      ),
     onSuccess: async (part) => {
-      await queryClient.invalidateQueries({ queryKey: ["parts"] });
-      setForm(EMPTY);
-      onClose();
-      navigate(`/parts/${part.id}`);
+      await openAddedAsync(`/parts/${part.id}`);
+    },
+    onError: async (error) => {
+      // Added already, from the form as it was before: open that part, which says so.
+      const firstSave = wentThroughPath(error);
+      if (firstSave !== null) {
+        await openAddedAsync(`${firstSave}?${FIRST_SAVE_WENT_THROUGH}`);
+      }
+    },
+    onSettled: () => {
+      sending.current = false;
     },
   });
+
+  const openAddedAsync = async (path: string): Promise<void> => {
+    await queryClient.invalidateQueries({ queryKey: ["parts"] });
+    setForm(EMPTY);
+    setSaveKey(crypto.randomUUID());
+    create.reset();
+    onClose();
+    navigate(path);
+  };
+
+  const add = (): void => {
+    if (sending.current) {
+      return;
+    }
+    sending.current = true;
+    create.mutate();
+  };
 
   const close = (): void => {
     if (create.isPending) {
@@ -167,7 +201,7 @@ export function PartCreateDialog({ open, onClose }: { open: boolean; onClose: ()
         </Button>
         <Button
           variant="contained"
-          onClick={() => create.mutate()}
+          onClick={add}
           disabled={!complete || create.isPending}
           data-testid="create-part-submit"
         >

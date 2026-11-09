@@ -7,7 +7,7 @@ import {
   useActionData,
   useParams,
 } from "react-router";
-import { ApiError, isBusyError, problemErrorMessage } from "../../core/config/apiErrors";
+import { ApiError, isBusyError, isSaveWentThrough, saveErrorMessage } from "../../core/config/apiErrors";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useFormRevision } from "../../core/hooks/useFormRevision";
@@ -37,26 +37,34 @@ export async function clientAction({ request, context, params }: ClientActionFun
   const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
   const partId = params["partId"];
   if (!resolved || !partId) {
-    return { saved: false, error: i18n.t("errors.unexpected") };
+    return { saved: false, wentThrough: false, error: i18n.t("errors.unexpected") };
   }
   try {
     const form = await request.formData();
-    // The version the form was opened from goes as If-Match, not as a multipart field the API does not know.
+    // The version the form was opened from goes as If-Match, and the form's key as Idempotency-Key (ACME-125), not as
+    // multipart fields the API does not know.
     const version = Number(form.get("version"));
     form.delete("version");
+    const saveKey = String(form.get("saveKey"));
+    form.delete("saveKey");
     // Sent for the location the user saw when they pressed Save, even if another is selected by now.
     const locationId = String(form.get("locationId") ?? resolved.locationId);
     form.delete("locationId");
-    await partQueries.updatePartAsync(partId, form, version, locationId);
+    await partQueries.updatePartAsync(partId, form, version, saveKey, locationId);
   } catch (error) {
+    if (isSaveWentThrough(error)) {
+      // Saved already, from the form as it was before: show what that save stored.
+      await queryClient.invalidateQueries({ queryKey: PART_QUERY_KEYS.all(resolved.locationId) });
+      return { saved: true, wentThrough: true, error: null };
+    }
     if (error instanceof ApiError && error.status === 412) {
       // Someone else saved first: read their version, so the form can show it or keep the user's edits over it.
       await queryClient.invalidateQueries({ queryKey: PART_QUERY_KEYS.detail(resolved.locationId, partId) });
     }
-    return { saved: false, error: problemErrorMessage(error, i18n.t("errors.unexpected")) };
+    return { saved: false, wentThrough: false, error: saveErrorMessage(error, i18n.t("errors.unexpected")) };
   }
   await queryClient.invalidateQueries({ queryKey: PART_QUERY_KEYS.all(resolved.locationId) });
-  return { saved: true, error: null };
+  return { saved: true, wentThrough: false, error: null };
 }
 
 export default function PartEdit() {

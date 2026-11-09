@@ -48,7 +48,9 @@
     "pageNotLoaded": "This page could not be loaded. Check your connection, then reload.",
     "busyRetrying": "The system is busy, trying again…",
     "stillBusy": "The system is still busy. Try again in a moment.",
-    "busySave": "The system is busy and nothing was saved. Your changes are still here: try again in a moment."
+    "busySave": "The system is busy and nothing was saved. Your changes are still here: try again in a moment.",
+    "saveUnconfirmed": "We could not confirm the save. Save again: it will never be added twice.",
+    "saveInProgress": "Your first save is still going through. Wait a moment, then press Save again."
   },
   "notFound": {
     "title": "Page not found",
@@ -110,5 +112,9 @@
     "changedElsewhere": "Someone else saved this record while you were editing. Show their version, or keep your edits on top of theirs.",
     "showLatest": "Show their version",
     "keepMine": "Keep my edits"
+  },
+  "saves": {
+    "wentThrough": "Your first save went through. This is what it saved; your later changes were not saved.",
+    "wentThroughElsewhere": "Your first save went through. Find the record in the list: your later changes were not saved."
   }
 }

@@ -25,6 +25,10 @@ export const PROBLEM_TYPE = {
   serviceUnavailable: "urn:acme:error:service-unavailable",
   /** Too much at once: nothing was done, and trying again in a second may work (`Retry-After`, ACME-121). */
   busy: "urn:acme:error:busy",
+  /** A save with this Idempotency-Key is still running (ACME-125). */
+  saveInProgress: "urn:acme:error:save-in-progress",
+  /** A save with this Idempotency-Key already went through, from another request: `resource` is where (ACME-125). */
+  saveWentThrough: "urn:acme:error:save-went-through",
 } as const;
 
 /** A service answered with an error. `problem.traceId` finds the request in the Aspire dashboard. */
@@ -72,6 +76,42 @@ export function isTransientError(error: unknown): boolean {
  */
 export function isBusyError(error: unknown): boolean {
   return error instanceof ApiError && error.type === PROBLEM_TYPE.busy;
+}
+
+/**
+ * A save sent with a key already went through, from the form as it was before (ACME-125): where the saved record is
+ * read in the app (`/customers/{id}`), or null when the service did not know. Null too for any other error.
+ */
+export function wentThroughPath(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.type !== PROBLEM_TYPE.saveWentThrough) {
+    return null;
+  }
+  const { resource } = error.problem as ProblemDetailsDto & { resource?: string | null };
+  // The service's path (`/v1/customers/{id}`) without its version is the app's route to the same record.
+  return typeof resource === "string" ? resource.replace(/^\/v1\//, "/") : null;
+}
+
+/** Whether the error says a save with this key went through (whether or not it says where). */
+export function isSaveWentThrough(error: unknown): boolean {
+  return error instanceof ApiError && error.type === PROBLEM_TYPE.saveWentThrough;
+}
+
+/**
+ * The message for a save sent with an Idempotency-Key that did not come back saved (ACME-125). No answer may mean it was
+ * saved: the form says so, and that saving again is safe; a save still running says to wait. Anything else as
+ * `problemErrorMessage`.
+ */
+export function saveErrorMessage(error: unknown, fallback: string): string {
+  if (isTransientError(error)) {
+    return i18n.t("errors.saveUnconfirmed");
+  }
+  if (error instanceof ApiError && error.type === PROBLEM_TYPE.saveInProgress) {
+    return i18n.t("errors.saveInProgress");
+  }
+  if (isSaveWentThrough(error)) {
+    return i18n.t("saves.wentThroughElsewhere");
+  }
+  return problemErrorMessage(error, fallback);
 }
 
 /**

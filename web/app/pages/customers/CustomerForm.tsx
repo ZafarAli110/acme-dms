@@ -1,12 +1,13 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useActionData, useNavigate, useNavigation, useSubmit } from "react-router";
 import { FormGuards } from "../../components/FormGuards";
 import { useSelectedLocation } from "../../core/contexts/location/useSelectedLocation";
 import { useErrorUntilEdited } from "../../core/hooks/useErrorUntilEdited";
+import { type SaveAnswer, useSaveKey } from "../../core/hooks/useSaveKey";
 import { CustomerFields } from "./components/CustomerFields";
 import { toCustomerInput, toFormValues } from "./mappers/customerFormMapper";
 import { createCustomerSchema } from "./schemas/customerSchema";
@@ -19,6 +20,8 @@ interface CustomerFormProps {
   /** What the page's clientAction returned: its error, and whether the last Save succeeded. */
   error: string | null;
   saved: boolean;
+  /** A save sent again found the first one had gone through (ACME-125): the form shows what that one saved. */
+  wentThrough?: boolean;
   /** The edit page: told whether the form has unsaved changes, so a newer version never replaces them unasked. */
   onDirtyChange?: (dirty: boolean) => void;
   /** The edit page: someone else saved a newer version while this form has unsaved changes. */
@@ -38,6 +41,7 @@ export function CustomerForm({
   canEdit,
   error,
   saved,
+  wentThrough = false,
   onDirtyChange,
   changedElsewhere = false,
   onShowLatest,
@@ -59,23 +63,46 @@ export function CustomerForm({
     defaultValues: toFormValues(opened),
   });
   // The page's action result, for the error's identity: a new failed save shows its error again.
-  const saveError = useErrorUntilEdited(useActionData<object>(), error, methods);
+  const actionData = useActionData<SaveAnswer>();
+  const saveError = useErrorUntilEdited(actionData, error, methods);
+  // One key per save the user means to make: the same on every Save until one is done (ACME-125).
+  const saveKey = useSaveKey(actionData);
+  // A second press while a save is on its way is ignored, before React has re-rendered the button disabled.
+  const sending = useRef(false);
+  useEffect(() => {
+    if (navigation.state === "idle") {
+      sending.current = false;
+    }
+  }, [navigation.state]);
   const { isDirty } = methods.formState;
   useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
   const disabled = !canEdit || isSubmitting;
 
-  const save = methods.handleSubmit((values) =>
-    // An edit carries its version and the location the user saw at Save (the create page's action takes neither).
-    submit(
-      opened === null
-        ? { ...toCustomerInput(values) }
-        : { ...toCustomerInput(values), version: opened.version, locationId: location?.id ?? null },
-      {
-        method: "post",
-        encType: "application/json",
-      },
-    ),
+  const send = methods.handleSubmit(
+    (values) =>
+      // Every save carries the form's key; an edit also its version and the location the user saw at Save (the create
+      // page's action takes neither).
+      submit(
+        opened === null
+          ? { ...toCustomerInput(values), saveKey }
+          : { ...toCustomerInput(values), saveKey, version: opened.version, locationId: location?.id ?? null },
+        {
+          method: "post",
+          encType: "application/json",
+        },
+      ),
+    () => {
+      sending.current = false;
+    },
   );
+  const save = (event: FormEvent<HTMLFormElement>): void => {
+    if (sending.current) {
+      event.preventDefault();
+      return;
+    }
+    sending.current = true;
+    void send(event);
+  };
 
   // Their version under the user's edits: what the user did not touch becomes theirs, then the form saves from theirs.
   const keepMine = (): void => {
@@ -121,9 +148,14 @@ export function CustomerForm({
           {saveError}
         </Alert>
       )}
-      {saved && !isDirty && (
+      {saved && !isDirty && !wentThrough && (
         <Alert severity="success" sx={{ mb: 2 }} data-testid="save-success">
           {t("edit.saved")}
+        </Alert>
+      )}
+      {wentThrough && !isDirty && (
+        <Alert severity="info" sx={{ mb: 2 }} data-testid="save-went-through">
+          {tCommon("saves.wentThrough")}
         </Alert>
       )}
       <Paper
