@@ -8,6 +8,7 @@ import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { partPhotos } from "#persistence/schema/part-photos";
 import { parts } from "#persistence/schema/parts";
 import { fakeDocumentApi, jpeg } from "#test-setup/document-api/fake-document-api";
+import { UploadPartPhotoCommandHandler } from "../../upload-photo/upload-part-photo.command-handler";
 import { UpdatePartCommandHandler } from "../update-part.command-handler";
 
 describe("UpdatePartCommandHandler", () => {
@@ -147,6 +148,36 @@ describe("UpdatePartCommandHandler", () => {
     expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(AT_NORTHSIDE, uploaded.id);
     const [stored] = await database.db.select().from(parts).where(eq(parts.id, part.id));
     expect(stored?.description).not.toBe("Mine");
+  });
+
+  // The state sweep's F1: an upload did not move the part's version, so a save from a form opened before it passed the
+  // version check and removed the uploaded photo, the form not knowing it.
+  it("refuses a save from a form opened before a photo was uploaded, and keeps that photo", async () => {
+    const { part, photoA, photoB } = await partWithTwoPhotosAsync("UPD-F1");
+    const documents = fakeDocumentApi();
+    const uploaded = await database
+      .asRequest(new UploadPartPhotoCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()))
+      .executeAsync(AT_NORTHSIDE, part.id, jpeg("meanwhile.jpg"));
+
+    await expect(
+      database
+        .asRequest(new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()))
+        .executeAsync(
+          AT_NORTHSIDE,
+          part.id,
+          {
+            photos: [
+              { id: photoA.id, isDefault: true },
+              { id: photoB.id, isDefault: false },
+            ],
+          },
+          [],
+          1,
+        ),
+    ).rejects.toThrow(PreconditionFailedException);
+    const [kept] = await database.db.select().from(partPhotos).where(eq(partPhotos.id, uploaded.id));
+    expect(kept?.isDeleted).toBe(false);
+    expect(documents.deleteDocumentAsync).not.toHaveBeenCalled();
   });
 
   it("counts again under the part's lock: a photo uploaded meanwhile cannot take it past the limit", async () => {

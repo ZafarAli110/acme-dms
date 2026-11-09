@@ -1,6 +1,6 @@
 import { localized } from "#i18n/messages";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { IUploadPartPhotoCommandHandler } from "#business-logic-abstractions/handlers/parts/upload-photo/upload-part-photo.command-handler.interface";
 import {
   DOCUMENT_API_CLIENT,
@@ -16,7 +16,7 @@ import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
-import { createdAudit } from "../../../audit/audit-fields";
+import { createdAudit, updatedAudit } from "../../../audit/audit-fields";
 import { toPartPhotoResponseDto } from "../part.mapper";
 import { findPhotosAsync } from "../part.queries";
 import { applyEarlyOutcomesAsync } from "../photo-outcome";
@@ -81,6 +81,9 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
    * Saves the photo with the part locked, so uploads to one part take turns: the count and the default are read
    * again under the lock (the first count, before the upload, only spares a needless upload). Applies anything
    * document-api already said about the document.
+   *
+   * The part's version goes up, as with any change to its photos: a save from a form opened before this upload keeps
+   * the photos that form knew, and without a new version it removed this one, with no 412 (the state sweep's F1).
    */
   private async savePhotoAsync(
     userContext: UserContext,
@@ -90,7 +93,11 @@ export class UploadPartPhotoCommandHandler implements IUploadPartPhotoCommandHan
   ): Promise<PartPhotoResponseDto> {
     const now = this._clock.now();
     await using work = await this._unitOfWorkFactory.beginAsync();
-    await work.db.select({ id: parts.id }).from(parts).where(eq(parts.id, partId)).for("update");
+    // Locks the part (uploads take turns) and moves its version, in one statement.
+    await work.db
+      .update(parts)
+      .set({ version: sql`${parts.version} + 1`, ...updatedAudit(userContext.userId, now) })
+      .where(eq(parts.id, partId));
     const count = (await findPhotosAsync(work.db, partId)).length;
     if (count >= MAX_PHOTOS_PER_PART) {
       throw new BadRequestException(localized("errors.tooManyPhotos", { max: MAX_PHOTOS_PER_PART }));
