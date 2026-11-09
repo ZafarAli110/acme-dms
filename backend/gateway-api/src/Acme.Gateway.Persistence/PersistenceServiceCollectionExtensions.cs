@@ -8,7 +8,9 @@ public static class PersistenceServiceCollectionExtensions
 {
     public static IServiceCollection AddPersistence(this IServiceCollection services, string connectionString)
     {
-        services.AddDbContext<GatewayDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+        // Pooled: every request through the gateway reads its session, and building a context (and its services) for each
+        // was about a tenth of the gateway's work at 800 requests a second (ACME-129, dotnet-trace).
+        services.AddDbContextPool<GatewayDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
         return services;
     }
 

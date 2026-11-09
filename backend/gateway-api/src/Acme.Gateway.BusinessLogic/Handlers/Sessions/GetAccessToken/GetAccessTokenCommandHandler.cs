@@ -1,6 +1,7 @@
 using Acme.Gateway.BusinessLogic.Abstractions.Handlers.Sessions.GetAccessToken;
 using Acme.Gateway.BusinessLogic.Abstractions.RestClients;
 using Acme.Gateway.Persistence.Database;
+using Acme.Gateway.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +25,14 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
 {
     /// <summary>How often a request waiting for another's renewal looks again.</summary>
     private static readonly TimeSpan _lookAgainAfter = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>
+    /// The session, read on every request through the gateway: compiled once, so EF Core does not turn the LINQ into SQL
+    /// each time (ACME-129: with building the context, about a third of the gateway's work at 800 requests a second).
+    /// </summary>
+    private static readonly Func<GatewayDbContext, string, CancellationToken, Task<Session?>> _findSession =
+        EF.CompileAsyncQuery((GatewayDbContext dbContext, string id, CancellationToken cancellationToken) =>
+            dbContext.Sessions.AsNoTracking().SingleOrDefault(s => s.Id == id));
 
     private readonly GatewayDbContext _dbContext;
     private readonly IIdentityClient _identityClient;
@@ -49,7 +58,7 @@ internal sealed partial class GetAccessTokenCommandHandler : IGetAccessTokenComm
         while (true)
         {
             var now = _timeProvider.GetUtcNow();
-            var session = await _dbContext.Sessions.AsNoTracking().SingleOrDefaultAsync(s => s.Id == id, cancellationToken);
+            var session = await _findSession(_dbContext, id, cancellationToken);
             var tokens = session is null || session.ExpiresAt <= now ? null : SessionSecrets.Open(cookieValue, session.Tokens);
             if (session is null || tokens is null)
             {
