@@ -22,9 +22,9 @@ public sealed class SessionCommandControllerTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public async Task CreateAsync_SetsAHostOnlySecureHttpOnlyStrictCookie_OutsideDevelopment()
+    public async Task CreateAsync_SetsAHostOnlySecureHttpOnlyStrictCookie_OnADevelopersMachineAsLive()
     {
-        var (controller, response) = NewController(Environments.Production, new CreateSessionResult("the-value", null));
+        var (controller, response) = NewController(new CreateSessionResult("the-value", null));
 
         var result = await controller.CreateAsync(new SessionCreateRequestDto("maria@acme.test", "right"), TestContext.CancellationToken);
 
@@ -41,24 +41,10 @@ public sealed class SessionCommandControllerTests
     }
 
     [TestMethod]
-    public async Task CreateAsync_UsesTheBareCookieName_InDevelopment_WhichIsPlainHttp()
-    {
-        var (controller, response) = NewController(Environments.Development, new CreateSessionResult("the-value", null));
-
-        await controller.CreateAsync(new SessionCreateRequestDto("maria@acme.test", "right"), TestContext.CancellationToken);
-
-        var setCookie = response.Headers.SetCookie.ToString();
-        StringAssert.StartsWith(setCookie, "acme_session=the-value;");
-        Assert.DoesNotContain("secure", setCookie, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [TestMethod]
     public async Task CreateAsync_PassesIdentityApisRefusalOnUnchanged_WithItsRetryAfter()
     {
         var body = Encoding.UTF8.GetBytes("""{"status":429,"detail":"Too many requests."}""");
-        var (controller, response) = NewController(
-            Environments.Production,
-            new CreateSessionResult(null, new IdentityRefusal(429, "application/problem+json", "30", body)));
+        var (controller, response) = NewController(new CreateSessionResult(null, new IdentityRefusal(429, "application/problem+json", "30", body)));
 
         var result = await controller.CreateAsync(new SessionCreateRequestDto("maria@acme.test", "right"), TestContext.CancellationToken);
         await result.ExecuteResultAsync(new ActionContext(controller.HttpContext, new RouteData(), new Microsoft.AspNetCore.Mvc.Abstractions.ActionDescriptor()));
@@ -73,7 +59,7 @@ public sealed class SessionCommandControllerTests
     [TestMethod]
     public async Task DeleteAsync_RemovesTheCookie_WithoutHoldingTheAnswerOnTheBrowsersCache()
     {
-        var (controller, response) = NewController(Environments.Production, new CreateSessionResult("the-value", null));
+        var (controller, response) = NewController(new CreateSessionResult("the-value", null));
         controller.HttpContext.Request.Headers.Cookie = "__Host-acme_session=the-value";
 
         var result = await controller.DeleteAsync(TestContext.CancellationToken);
@@ -86,7 +72,7 @@ public sealed class SessionCommandControllerTests
     [TestMethod]
     public void ForgetCache_AsksTheBrowserToDropItsCache()
     {
-        var (controller, response) = NewController(Environments.Production, new CreateSessionResult("the-value", null));
+        var (controller, response) = NewController(new CreateSessionResult("the-value", null));
 
         var result = controller.ForgetCache();
 
@@ -94,17 +80,15 @@ public sealed class SessionCommandControllerTests
         Assert.AreEqual("\"cache\"", response.Headers["Clear-Site-Data"].ToString());
     }
 
-    private static (SessionCommandController Controller, HttpResponse Response) NewController(string environmentName, CreateSessionResult createResult)
+    private static (SessionCommandController Controller, HttpResponse Response) NewController(CreateSessionResult createResult)
     {
         var create = new Mock<ICreateSessionCommandHandler>();
         create.Setup(handler => handler.ExecuteAsync(
                 It.IsAny<SessionCreateRequestDto>(), It.IsAny<string?>(), It.IsAny<CallerContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(createResult);
-        var environment = new Mock<IHostEnvironment>();
-        environment.SetupGet(e => e.EnvironmentName).Returns(environmentName);
         var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = new MemoryStream();
-        var controller = new SessionCommandController(create.Object, Mock.Of<IDeleteSessionCommandHandler>(), environment.Object)
+        var controller = new SessionCommandController(create.Object, Mock.Of<IDeleteSessionCommandHandler>())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };

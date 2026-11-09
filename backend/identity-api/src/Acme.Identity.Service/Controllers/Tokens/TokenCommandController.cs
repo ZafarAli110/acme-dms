@@ -16,18 +16,15 @@ public sealed class TokenCommandController : ApiControllerBase
     private readonly ICreateTokenCommandHandler _createTokenCommandHandler;
     private readonly IRefreshTokenCommandHandler _refreshTokenCommandHandler;
     private readonly IRevokeTokenCommandHandler _revokeTokenCommandHandler;
-    private readonly IHostEnvironment _environment;
 
     public TokenCommandController(
         ICreateTokenCommandHandler createTokenCommandHandler,
         IRefreshTokenCommandHandler refreshTokenCommandHandler,
-        IRevokeTokenCommandHandler revokeTokenCommandHandler,
-        IHostEnvironment environment)
+        IRevokeTokenCommandHandler revokeTokenCommandHandler)
     {
         _createTokenCommandHandler = createTokenCommandHandler;
         _refreshTokenCommandHandler = refreshTokenCommandHandler;
         _revokeTokenCommandHandler = revokeTokenCommandHandler;
-        _environment = environment;
     }
 
     /// <summary>Signing in: the access token in the body, the refresh token in an httpOnly cookie.</summary>
@@ -37,7 +34,7 @@ public sealed class TokenCommandController : ApiControllerBase
     public async Task<ActionResult<TokenCreateResponseDto>> CreateAsync([FromBody] TokenCreateRequestDto request, CancellationToken cancellationToken)
     {
         var issued = await _createTokenCommandHandler.ExecuteAsync(request, cancellationToken);
-        RefreshCookie.Set(Response, _environment, issued.RefreshToken!);
+        RefreshCookie.Set(Response, issued.RefreshToken!);
         return issued.Response;
     }
 
@@ -61,7 +58,7 @@ public sealed class TokenCommandController : ApiControllerBase
         var issued = await _refreshTokenCommandHandler.ExecuteAsync(Request.Cookies[RefreshCookie.Name], renewalKey, cancellationToken);
         if (issued.RefreshToken is not null)
         {
-            RefreshCookie.Set(Response, _environment, issued.RefreshToken);
+            RefreshCookie.Set(Response, issued.RefreshToken);
         }
 
         return issued.Response;
@@ -75,7 +72,7 @@ public sealed class TokenCommandController : ApiControllerBase
     {
         RequireThePage();
         await _revokeTokenCommandHandler.ExecuteAsync(Request.Cookies[RefreshCookie.Name], cancellationToken);
-        RefreshCookie.Clear(Response, _environment);
+        RefreshCookie.Clear(Response);
         return NoContent();
     }
 

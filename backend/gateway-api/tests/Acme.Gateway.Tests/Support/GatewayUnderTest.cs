@@ -17,8 +17,11 @@ namespace Acme.Gateway.Tests.Support;
 /// </summary>
 internal sealed class GatewayUnderTest : IAsyncDisposable
 {
-    /// <summary>The session cookie's name in Development, where the tests run.</summary>
-    public const string CookieName = "acme_session";
+    /// <summary>The session cookie's name: the same in every environment (ACME-130).</summary>
+    public const string CookieName = "__Host-acme_session";
+
+    /// <summary>The browser's address: HTTPS, as the web server in front of the gateway is, so it keeps a <c>Secure</c> cookie.</summary>
+    private static readonly Uri _browserBase = new("https://localhost");
 
     /// <summary>Where every request comes from: the in-memory server has no network, so it is set here as Kestrel would.</summary>
     public const string BrowserAddress = "203.0.113.7";
@@ -56,7 +59,7 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
                 services.AddSingleton<IStartupFilter>(new FromAddress(BrowserAddress));
             });
         });
-        Browser = _factory.CreateClient();
+        Browser = _factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = _browserBase });
     }
 
     public string ConnectionString { get; }
@@ -79,7 +82,7 @@ internal sealed class GatewayUnderTest : IAsyncDisposable
         new(await TestPostgres.NewDatabaseAsync(cancellationToken), settings);
 
     /// <summary>A second client, with no cookies of its own: a script, or someone else's browser.</summary>
-    public HttpClient NewClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+    public HttpClient NewClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, BaseAddress = _browserBase });
 
     /// <summary>Signs in as the app's page does: the email, the password, and the page's own header.</summary>
     public Task<HttpResponseMessage> SignInAsync(string password, CancellationToken cancellationToken)

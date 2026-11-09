@@ -17,16 +17,13 @@ public sealed class SessionCommandController : ControllerBase
 {
     private readonly ICreateSessionCommandHandler _createSessionCommandHandler;
     private readonly IDeleteSessionCommandHandler _deleteSessionCommandHandler;
-    private readonly IHostEnvironment _environment;
 
     public SessionCommandController(
         ICreateSessionCommandHandler createSessionCommandHandler,
-        IDeleteSessionCommandHandler deleteSessionCommandHandler,
-        IHostEnvironment environment)
+        IDeleteSessionCommandHandler deleteSessionCommandHandler)
     {
         _createSessionCommandHandler = createSessionCommandHandler;
         _deleteSessionCommandHandler = deleteSessionCommandHandler;
-        _environment = environment;
     }
 
     /// <summary>
@@ -38,7 +35,7 @@ public sealed class SessionCommandController : ControllerBase
     {
         var result = await _createSessionCommandHandler.ExecuteAsync(
             request,
-            SessionCookie.ValueOf(Request, _environment),
+            SessionCookie.ValueOf(Request),
             CallerContextFactory.From(HttpContext),
             cancellationToken);
         if (result.Refusal is { } refusal)
@@ -46,7 +43,7 @@ public sealed class SessionCommandController : ControllerBase
             return new IdentityRefusalResult(refusal);
         }
 
-        SessionCookie.Set(Response, _environment, result.CookieValue!);
+        SessionCookie.Set(Response, result.CookieValue!);
         return NoContent();
     }
 
@@ -58,12 +55,12 @@ public sealed class SessionCommandController : ControllerBase
     [HttpDelete]
     public async Task<ActionResult> DeleteAsync(CancellationToken cancellationToken)
     {
-        if (SessionCookie.ValueOf(Request, _environment) is { } value)
+        if (SessionCookie.ValueOf(Request) is { } value)
         {
             await _deleteSessionCommandHandler.ExecuteAsync(value, CallerContextFactory.From(HttpContext), cancellationToken);
         }
 
-        SessionCookie.Clear(Response, _environment);
+        SessionCookie.Clear(Response);
         return NoContent();
     }
 

@@ -10,7 +10,7 @@
 
 **Design:** No screen
 
-**Now:** Done: plan, architect round, Q1 answered, go-ahead · Next: step 1, the cookies · Blocked: None
+**Now:** Done: step 1 (the cookies) · Next: step 2, the certificate check · Blocked: None
 
 ## Requirement
 
@@ -130,7 +130,7 @@ only); the gateway and the services are unchanged; the load test keeps measuring
 
 ## Steps
 
-- [ ] 1. The cookies: gateway and identity-api, their tests → verify: both projects' tests
+- [x] 1. The cookies: gateway and identity-api, their tests → verify: both projects' tests
 - [ ] 2. The certificate: `check-certificate.ts` and its test, `package.json`, `.gitignore`, `setup.ps1`, README →
       verify: its tests; it passes on this Mac and writes `.certs/localhost.pem`; the Windows runner runs its tests
       (`windows-setup.yml` runs `bun test scripts` on a push to final)
@@ -188,3 +188,8 @@ None: Q1 is answered (D4).
   tests; a person on Windows follows the setup once. (8) The check's test listed. (9) HSTS on localhost moved to Q1.
 - 2026-11-10 01:24 Q1 answered (Zafar Ali: leave HSTS off locally, D4) and go-ahead. Loaded the five rows: ARCHITECTURE "Signing
   in" and "Handling load", contracts "`/api/session`", benchmarks README, check-in-browser. In progress.
+- 2026-11-10 01:27 Step 1: `SessionCookie.Name` is the constant `__Host-acme_session` and `Secure` always; `RefreshCookie` `Secure`
+  always; neither takes the environment any more, so the four `_environment` fields that only fed them are gone. The
+  gateway tests' browser-like client is on `https://localhost` (a cookie client keeps a `Secure` cookie only there).
+  The Development tests turned round. gateway-api 46/46, identity-api 66/66, a full Release build of each with no
+  warning (one, my own field's name, fixed), format clean.

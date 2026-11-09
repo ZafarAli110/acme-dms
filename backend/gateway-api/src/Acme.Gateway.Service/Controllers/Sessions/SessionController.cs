@@ -14,12 +14,10 @@ namespace Acme.Gateway.Service.Controllers.Sessions;
 public sealed class SessionController : ControllerBase
 {
     private readonly IGetAccessTokenCommandHandler _getAccessTokenCommandHandler;
-    private readonly IHostEnvironment _environment;
 
-    public SessionController(IGetAccessTokenCommandHandler getAccessTokenCommandHandler, IHostEnvironment environment)
+    public SessionController(IGetAccessTokenCommandHandler getAccessTokenCommandHandler)
     {
         _getAccessTokenCommandHandler = getAccessTokenCommandHandler;
-        _environment = environment;
     }
 
     /// <summary>
@@ -30,7 +28,7 @@ public sealed class SessionController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<SessionStatusDto>> GetAsync(CancellationToken cancellationToken)
     {
-        if (SessionCookie.ValueOf(Request, _environment) is not { } value)
+        if (SessionCookie.ValueOf(Request) is not { } value)
         {
             return new SessionStatusDto(false);
         }
@@ -38,7 +36,7 @@ public sealed class SessionController : ControllerBase
         var accessToken = await _getAccessTokenCommandHandler.ExecuteAsync(value, CallerContextFactory.From(HttpContext), cancellationToken);
         if (accessToken is null)
         {
-            SessionCookie.Clear(Response, _environment);
+            SessionCookie.Clear(Response);
         }
 
         return new SessionStatusDto(accessToken is not null);

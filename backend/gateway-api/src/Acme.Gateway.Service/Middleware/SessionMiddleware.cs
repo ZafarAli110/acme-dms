@@ -14,12 +14,10 @@ namespace Acme.Gateway.Service.Middleware;
 internal sealed class SessionMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IHostEnvironment _environment;
 
-    public SessionMiddleware(RequestDelegate next, IHostEnvironment environment)
+    public SessionMiddleware(RequestDelegate next)
     {
         _next = next;
-        _environment = environment;
     }
 
     public async Task InvokeAsync(HttpContext context, IGetAccessTokenCommandHandler getAccessTokenCommandHandler)
@@ -45,7 +43,7 @@ internal sealed class SessionMiddleware
             return;
         }
 
-        var value = SessionCookie.ValueOf(request, _environment);
+        var value = SessionCookie.ValueOf(request);
         if (value is null)
         {
             // The app's own page with no session cookie has no sign-in (the cookie was cleared or ran out): the same marked
@@ -70,13 +68,13 @@ internal sealed class SessionMiddleware
         var accessToken = await getAccessTokenCommandHandler.ExecuteAsync(value, CallerContextFactory.From(context), context.RequestAborted);
         if (accessToken is null)
         {
-            SessionCookie.Clear(context.Response, _environment);
+            SessionCookie.Clear(context.Response);
             await SessionProblems.WriteEndedAsync(context);
             return;
         }
 
         request.Headers.Authorization = $"Bearer {accessToken}";
-        WithoutTheSessionCookie(request, SessionCookie.NameFor(_environment));
+        WithoutTheSessionCookie(request, SessionCookie.Name);
         await _next(context);
     }
 

@@ -26,7 +26,7 @@ public sealed class TokenCommandControllerTests
     [TestMethod]
     public async Task SignIn_PutsTheRefreshTokenInAnHttpOnlyStrictCookieForTheTokenEndpointsOnly_NotInTheBody()
     {
-        var (controller, response, _) = NewController(Environments.Production);
+        var (controller, response, _) = NewController();
 
         var result = await controller.CreateAsync(new TokenCreateRequestDto("rita@northwind.test", "x"), TestContext.CancellationToken);
 
@@ -45,19 +45,19 @@ public sealed class TokenCommandControllerTests
     }
 
     [TestMethod]
-    public async Task TheCookieIsNotMarkedSecureInLocalDevelopment_WhichIsPlainHttp()
+    public async Task TheCookieIsMarkedSecure_OnADevelopersMachineToo()
     {
-        var (controller, response, _) = NewController(Environments.Development);
+        var (controller, response, _) = NewController();
 
         await controller.CreateAsync(new TokenCreateRequestDto("rita@northwind.test", "x"), TestContext.CancellationToken);
 
-        Assert.DoesNotContain("secure", response.Headers.SetCookie.ToString().Replace("samesite", string.Empty, StringComparison.OrdinalIgnoreCase), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("secure", response.Headers.SetCookie.ToString().Replace("samesite", string.Empty, StringComparison.OrdinalIgnoreCase), StringComparison.OrdinalIgnoreCase);
     }
 
     [TestMethod]
     public async Task RefreshAndRevoke_RefuseARequestThatIsNotFromThePage_WithoutTouchingTheToken()
     {
-        var (controller, response, handlers) = NewController(Environments.Production, withCookie: "refresh-1", fromThePage: false);
+        var (controller, response, handlers) = NewController(withCookie: "refresh-1", fromThePage: false);
 
         var refresh = await Assert.ThrowsExactlyAsync<ApiException>(() => controller.RefreshAsync(TestContext.CancellationToken));
         var revoke = await Assert.ThrowsExactlyAsync<ApiException>(() => controller.RevokeAsync(TestContext.CancellationToken));
@@ -72,7 +72,7 @@ public sealed class TokenCommandControllerTests
     [TestMethod]
     public async Task Refresh_HandsTheHandlerTheCookie_AndReplacesItWithTheNewToken()
     {
-        var (controller, response, handlers) = NewController(Environments.Production, withCookie: "refresh-1");
+        var (controller, response, handlers) = NewController(withCookie: "refresh-1");
 
         var result = await controller.RefreshAsync(TestContext.CancellationToken);
 
@@ -84,7 +84,7 @@ public sealed class TokenCommandControllerTests
     [TestMethod]
     public async Task Refresh_ThatGetsNoNewRefreshToken_LeavesTheCookieAsItIs()
     {
-        var (controller, response, handlers) = NewController(Environments.Production, withCookie: "refresh-1");
+        var (controller, response, handlers) = NewController(withCookie: "refresh-1");
         handlers.Refresh
             .Setup(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IssuedTokens(new TokenCreateResponseDto("access-3", "Bearer", 900), null));
@@ -97,7 +97,7 @@ public sealed class TokenCommandControllerTests
     [TestMethod]
     public async Task Revoke_EndsTheCookiesSignIn_AndRemovesTheCookie_WithTheSameAttributesSoTheBrowserMatchesIt()
     {
-        var (controller, response, handlers) = NewController(Environments.Production, withCookie: "refresh-1");
+        var (controller, response, handlers) = NewController(withCookie: "refresh-1");
 
         var result = await controller.RevokeAsync(TestContext.CancellationToken);
 
@@ -111,7 +111,7 @@ public sealed class TokenCommandControllerTests
     }
 
     private static (TokenCommandController Controller, HttpResponse Response, Handlers Handlers) NewController(
-        string environment, string? withCookie = null, bool fromThePage = true)
+        string? withCookie = null, bool fromThePage = true)
     {
         var create = new Mock<ICreateTokenCommandHandler>();
         create.Setup(h => h.ExecuteAsync(It.IsAny<TokenCreateRequestDto>(), It.IsAny<CancellationToken>()))
@@ -120,8 +120,6 @@ public sealed class TokenCommandControllerTests
         refresh.Setup(h => h.ExecuteAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IssuedTokens(new TokenCreateResponseDto("access-2", "Bearer", 900), "refresh-2"));
         var revoke = new Mock<IRevokeTokenCommandHandler>();
-        var hostEnvironment = new Mock<IHostEnvironment>();
-        hostEnvironment.SetupGet(e => e.EnvironmentName).Returns(environment);
 
         var http = new DefaultHttpContext();
         if (withCookie is not null)
@@ -134,7 +132,7 @@ public sealed class TokenCommandControllerTests
             http.Request.Headers["X-Requested-With"] = "acme-web";
         }
 
-        var controller = new TokenCommandController(create.Object, refresh.Object, revoke.Object, hostEnvironment.Object)
+        var controller = new TokenCommandController(create.Object, refresh.Object, revoke.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = http },
         };

@@ -66,8 +66,7 @@ internal static class PerUserRateLimit
             return RateLimitPartition.GetNoLimiter("not-api");
         }
 
-        var environment = context.RequestServices.GetRequiredService<IHostEnvironment>();
-        var key = SessionCookie.ValueOf(request, environment) is { } cookie
+        var key = SessionCookie.ValueOf(request) is { } cookie
             ? $"session:{cookie}"
             : request.Headers.Authorization.Count > 0
                 ? $"token:{request.Headers.Authorization}"
