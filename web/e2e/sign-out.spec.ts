@@ -11,8 +11,9 @@ test.describe("the session", () => {
     await signInAsync(page, MARIA);
 
     const cookies = await context.cookies();
-    expect(cookies.map((cookie) => cookie.name)).toEqual(["acme_session"]);
-    expect(cookies[0]).toMatchObject({ httpOnly: true, sameSite: "Strict", path: "/" });
+    // The same name and rules as live (ACME-130): __Host- holds the browser to Secure, no Domain, Path=/.
+    expect(cookies.map((cookie) => cookie.name)).toEqual(["__Host-acme_session"]);
+    expect(cookies[0]).toMatchObject({ httpOnly: true, secure: true, sameSite: "Strict", path: "/" });
     const readable = await page.evaluate(() => ({
       cookie: document.cookie,
       local: JSON.stringify(window.localStorage),
@@ -40,9 +41,9 @@ test.describe("the session", () => {
     request,
   }) => {
     await signInAsync(page, MARIA);
-    const session = (await context.cookies()).find((cookie) => cookie.name === "acme_session");
+    const session = (await context.cookies()).find((cookie) => cookie.name === "__Host-acme_session");
     expect(session).toBeDefined();
-    const withCopy = { cookie: `acme_session=${session!.value}` };
+    const withCopy = { cookie: `__Host-acme_session=${session!.value}` };
     expect((await request.get("/api/identity/v1/users/me", { headers: withCopy })).status()).toBe(200);
 
     await page.getByTestId("profile-menu").click();
@@ -50,7 +51,7 @@ test.describe("the session", () => {
     await page.getByTestId("confirm-sign-out").click();
 
     await expect(page).toHaveURL(/\/sign-in/);
-    expect((await context.cookies()).some((cookie) => cookie.name === "acme_session")).toBe(false);
+    expect((await context.cookies()).some((cookie) => cookie.name === "__Host-acme_session")).toBe(false);
     expect((await request.get("/api/identity/v1/users/me", { headers: withCopy })).status()).toBe(401);
   });
 
@@ -84,6 +85,27 @@ test.describe("the session", () => {
     await expect(page).toHaveURL(/\/sign-in/);
 
     await page.goto("/customers");
+
+    await expect(page).toHaveURL(/\/sign-in/);
+  });
+
+  test("a sign-in ended at the server, as one that ran out is, takes the open page to sign-in on its next request", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await signInAsync(page, MARIA);
+    await page.goto("/customers");
+    await expect(page.getByTestId("customers-table").locator(".MuiDataGrid-row").first()).toBeVisible();
+    // Ended where the page cannot see it: a copy of the cookie signs out, as the gateway ends a sign-in that ran out.
+    const session = (await context.cookies()).find((cookie) => cookie.name === "__Host-acme_session");
+    const ended = await request.delete("/api/session", {
+      headers: { cookie: `__Host-acme_session=${session!.value}`, "x-requested-with": "acme-web" },
+    });
+    expect(ended.status()).toBe(204);
+
+    // The page's next request is answered "ended", and the page goes to sign-in, as it does today.
+    await page.getByTestId("customers-table").locator(".MuiDataGrid-row").first().click();
 
     await expect(page).toHaveURL(/\/sign-in/);
   });

@@ -10,7 +10,7 @@
 
 **Design:** No screen
 
-**Now:** Done: steps 1–3 (cookies; certificate check; the web server's code) · Next: step 4, Node and Bun trust, the scripts and the e2e · Blocked: None
+**Now:** Done: steps 1–4 (code, not yet run against the system) · Next: step 5, start:prod over HTTPS · Blocked: None
 
 ## Requirement
 
@@ -135,7 +135,7 @@ only); the gateway and the services are unchanged; the load test keeps measuring
       verify: its tests; it passes on this Mac and writes `.certs/localhost.pem`; the Windows runner runs its tests
       (`windows-setup.yml` runs `bun test scripts` on a push to final)
 - [x] 3. The web server on HTTPS and HTTP/2: AppHost, Vite, `serve-web.ts` and its test → verify: unit tests
-- [ ] 4. Node and Bun trust, the scripts and the e2e: `NODE_EXTRA_CA_CERTS`, load-test's cookie and `--through-web`,
+- [x] 4. Node and Bun trust, the scripts and the e2e: `NODE_EXTRA_CA_CERTS`, load-test's cookie and `--through-web`,
       the sign-out spec, `every-page.spec.ts` → verify: typecheck and lint (run in step 5)
 - [ ] 5. start:prod over HTTPS: restart it → verify: the whole e2e suite; `every-page.spec.ts` logs `h2`; the cookie
       read in the browser; check-in-browser at 1440 and 1024 (no warning); load test 800/s twice and once
@@ -209,3 +209,9 @@ None: Q1 is answered (D4).
   them and `xfwd` on `/api`; `serve-web.ts` `tls` with `http2: true`, and `x-forwarded-proto` on `/api`. `check-certificate`
   keeps the key, mode 600. scripts' tests 24/24 (a new one: the forwarded header, https and http), scripts' typecheck
   and lint, web typecheck, the AppHost's Release build: clean. Not yet run: step 5.
+- 2026-11-10 01:32 Step 4: `NODE_EXTRA_CA_CERTS` in the root `load-test` and web `e2e` scripts (so `gate:slow`, which runs the
+  latter, trusts it too); load-test finds `__Host-acme_session` and takes `--through-web` (the web resource's `https`
+  address); sign-out spec on the new name, `secure: true` asserted, and a new test: a sign-in ended at the server (a
+  copy of the cookie signs out) takes the open page to sign-in on its next request; `every-page.spec.ts`: five pages
+  and a part's and a customer's own page, sam and maria, en and fr, no error title, no console error, page and API
+  `nextHopProtocol` `h2` asserted and annotated. Typecheck and lint clean.

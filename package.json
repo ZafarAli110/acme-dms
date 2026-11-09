@@ -44,7 +44,7 @@
     "coverage": "bun scripts/coverage.ts",
     "docs:check": "bun scripts/check-docs.ts",
     "audit": "bun scripts/audit-sessions.ts",
-    "load-test": "BUN_CONFIG_MAX_HTTP_REQUESTS=512 bun scripts/load-test.ts",
+    "load-test": "BUN_CONFIG_MAX_HTTP_REQUESTS=512 NODE_EXTRA_CA_CERTS=.certs/localhost.pem bun scripts/load-test.ts",
     "gate:fast": "bun scripts/gate.ts",
     "gate:slow": "nx run @acme/web:e2e"
   },

@@ -8,6 +8,9 @@
 //                                                            p95 is over 300 ms, or more than 1% fail
 //   bun run load-test --writes 5                             5% of requests add or edit a customer (they stay)
 //   bun run load-test --rate 260 --writes 5 --calm 10        10 s at a tenth of the rate before and after: recovery
+//   bun run load-test --rate 800 --through-web               through the web server's HTTPS, as a browser comes in
+//                                                            (ACME-130); without it, straight to the gateway, as a
+//                                                            load balancer would send, and as every earlier figure was
 //
 // A 503 that says the system is busy (`urn:acme:error:busy`, ACME-121) is counted as "busy", apart from failures: it
 // is an answer within its wait, which the web tries again.
@@ -44,6 +47,8 @@ interface Options {
   writes: number;
   targetRps: number | null;
   targetP95: number | null;
+  /** Through the web server's HTTPS (TLS and its hop to the gateway) instead of straight to the gateway (ACME-130). */
+  throughWeb: boolean;
 }
 
 /** A customer seen at a location, to search for and open. */
@@ -344,7 +349,7 @@ const WRITES: Kind[] = [
 
 const USAGE =
   "Usage: bun run load-test [--rate N] [--people N] [--seconds N] [--warm-up N] [--calm N] [--timeout ms] [--writes %] " +
-  "[--target-rps N] [--target-p95 ms]";
+  "[--target-rps N] [--target-p95 ms] [--through-web]";
 
 function parseOptions(argv: string[]): Options {
   const options: Options = {
@@ -357,9 +362,16 @@ function parseOptions(argv: string[]): Options {
     writes: 0,
     targetRps: null,
     targetP95: null,
+    throughWeb: false,
   };
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index] ?? "";
+    // The one option with no value.
+    if (flag === "--through-web") {
+      options.throughWeb = true;
+      index -= 1;
+      continue;
+    }
     const value = Number(argv[index + 1]);
     if (flag === "--in-flight") {
       console.error(`--in-flight is gone: the test now sends at a fixed rate (--rate N a second). ${USAGE}`);
@@ -417,7 +429,7 @@ async function signInAsync(gateway: string, user: string): Promise<{ cookie: str
   });
   const cookie = response.headers
     .getSetCookie()
-    .find((header) => header.startsWith("acme_session="))
+    .find((header) => header.startsWith("__Host-acme_session="))
     ?.split(";")[0];
   if (response.status === 429) {
     throw new Error(
@@ -595,7 +607,10 @@ async function main(): Promise<void> {
     );
   }
   const options = parseOptions(process.argv.slice(2));
-  const gateway = resourceUrl("gateway-api", "http");
+  // Straight to the gateway, as a load balancer would send and as every earlier figure was; or through the web server's
+  // HTTPS, as a browser comes in (ACME-130). Bun's fetch speaks HTTP/1.1 to it (its HTTP/2 client is experimental), and
+  // trusts the development certificate through NODE_EXTRA_CA_CERTS (`bun run load-test` sets it).
+  const gateway = options.throughWeb ? resourceUrl("web", "https") : resourceUrl("gateway-api", "http");
   // Now, not when watching starts: the lookup blocks while it asks the Aspire CLI, and the test would fall behind.
   const postgresUrl = resourceUrl("postgres", "tcp");
   console.log(`Signing in ${options.people} people at ${gateway} …`);

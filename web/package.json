@@ -9,7 +9,7 @@
     "typecheck": "react-router typegen && tsc --noEmit -p tsconfig.json && tsc --noEmit -p e2e/tsconfig.json",
     "lint": "oxlint app e2e",
     "format": "bun fmt --check app e2e",
-    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e": "NODE_EXTRA_CA_CERTS=../.certs/localhost.pem playwright test -c e2e/playwright.config.ts",
     "test": "vitest run"
   },
   "dependencies": {
