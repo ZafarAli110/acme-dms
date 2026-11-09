@@ -1,4 +1,5 @@
 import { type MiddlewareFunction, redirect } from "react-router";
+import { i18n } from "../../i18n";
 import { AUTH_KERNEL_CONTEXT, LOCATION_KERNEL_CONTEXT, RESOLVED_LOCATION_CONTEXT } from "./routerContext";
 
 /**
@@ -12,6 +13,11 @@ export const authClientMiddleware: MiddlewareFunction = async ({ context }, next
     throw redirect("/sign-in");
   }
   const location = await context.get(LOCATION_KERNEL_CONTEXT).waitForResolvedLocationAsync();
+  // Signed in, at no location: nothing here can be shown, and the sign-in page would send them straight back. The error
+  // page says so, and what to do (the state sweep's F9).
+  if (location.status === "no-location") {
+    throw new Error(i18n.t("errors.noLocation"));
+  }
   if (location.status !== "ready" || location.current === null) {
     throw redirect("/sign-in");
   }

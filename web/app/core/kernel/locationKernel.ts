@@ -3,7 +3,11 @@ import { queryClient } from "../queries/queryClient";
 import { session } from "../storage/sessionStore";
 import { type AuthKernel, type AuthSnapshot, authKernel } from "./authKernel";
 
-export type LocationStatus = "pending" | "ready" | "signed-out";
+/**
+ * `no-location`: signed in, but working at no location (every one taken away, or none given yet). Not `signed-out`:
+ * the sign-in page sends a signed-in user home, and home sent them back, a loop with no way out (the state sweep's F9).
+ */
+export type LocationStatus = "pending" | "ready" | "signed-out" | "no-location";
 
 export interface LocationSnapshot {
   status: LocationStatus;
@@ -76,7 +80,7 @@ export class LocationKernel {
       locations[0] ??
       null;
     if (current === null) {
-      return { status: "signed-out", locations, current: null };
+      return { status: "no-location", locations, current: null };
     }
     if (current.id !== session.getLocationId()) {
       session.setLocationId(current.id);
