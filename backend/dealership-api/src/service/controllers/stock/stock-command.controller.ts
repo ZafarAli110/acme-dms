@@ -1,4 +1,5 @@
 import { Body, Controller, Inject, Param, ParseUUIDPipe, Put } from "@nestjs/common";
+import { Idempotent } from "../../idempotency/idempotency.interceptor";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import {
   type ISetStockLevelCommandHandler,
@@ -23,6 +24,7 @@ export class StockCommandController {
   }
 
   /** Sets the stock of one part at the selected location. */
+  @Idempotent("none")
   @Put(":partId")
   @RequirePermission("stock.adjust")
   public updateAsync(

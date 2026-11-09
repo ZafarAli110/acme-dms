@@ -1,4 +1,5 @@
 import { Body, Controller, HttpCode, HttpStatus, Inject, Post } from "@nestjs/common";
+import { Idempotent } from "../../idempotency/idempotency.interceptor";
 import {
   CREATE_BIN_COMMAND_HANDLER,
   type ICreateBinCommandHandler,
@@ -20,6 +21,7 @@ export class BinCommandController {
     this._createBinCommandHandler = createBinCommandHandler;
   }
 
+  @Idempotent("none")
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequirePermission("parts.write")

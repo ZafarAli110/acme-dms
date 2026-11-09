@@ -71,6 +71,12 @@ export const fr: Messages = {
       failed: "L'export a échoué. Réessayez.",
     },
   },
+  saves: {
+    keyFormat: "L'en-tête Idempotency-Key compte de 1 à 255 caractères imprimables.",
+    inProgress: "Votre premier enregistrement est encore en cours. Patientez un instant, puis renvoyez-le.",
+    wentThrough:
+      "Votre premier enregistrement avec cette clé Idempotency-Key a abouti. Il n'a pas été enregistré une seconde fois.",
+  },
   database: {
     alreadyExists: "Un enregistrement avec la même valeur existe déjà.",
     referenceProblem: "Ceci fait référence à un enregistrement qui n'existe pas, ou qui est encore utilisé.",

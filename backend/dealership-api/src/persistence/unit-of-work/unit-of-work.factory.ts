@@ -1,7 +1,14 @@
 import { Logger } from "@nestjs/common";
 import type { Pool, PoolClient, QueryResult } from "pg";
-import { currentDataScope, currentRequest, isInRequest, type RequestInfo } from "#request-scope/data-scope";
+import {
+  currentDataScope,
+  currentRequest,
+  type IdempotencyClaim,
+  isInRequest,
+  type RequestInfo,
+} from "#request-scope/data-scope";
 import { DatabaseBusyError } from "./database-busy.error";
+import { IdempotencyClaimLostError } from "./idempotency-claim-lost.error";
 import type { DatabasePools } from "./database-pool";
 import { UnitOfWork } from "./unit-of-work";
 import type { IUnitOfWorkFactory } from "./unit-of-work.factory.interface";
@@ -82,7 +89,7 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
       client.release(error instanceof Error ? error : true);
       throw error;
     }
-    return this.watchedUnitOfWork(client, request, pid);
+    return this.watchedUnitOfWork(client, request, pid, options.readOnly ? null : (request?.idempotency ?? null));
   }
 
   public async beginHealthCheckAsync(): Promise<UnitOfWork> {
@@ -137,9 +144,15 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
    * The unit of work, cancelling its statement when the request's caller goes away. A cancel already sent is waited
    * for before the connection goes back, so it can only ever reach this request's own statement.
    */
-  private watchedUnitOfWork(client: PoolClient, request: RequestInfo | null, pid: number | null): UnitOfWork {
+  private watchedUnitOfWork(
+    client: PoolClient,
+    request: RequestInfo | null,
+    pid: number | null,
+    claim: IdempotencyClaim | null,
+  ): UnitOfWork {
+    const markClaim = claim ? (onClient: PoolClient) => markClaimCommittedAsync(onClient, claim) : undefined;
     if (!request || pid === null) {
-      return new UnitOfWork(client);
+      return new UnitOfWork(client, undefined, undefined, markClaim);
     }
     const committed = (): void => {
       request.committed = true;
@@ -160,6 +173,7 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
         await cancelling;
       },
       committed,
+      markClaim,
     );
   }
 
@@ -171,5 +185,23 @@ export class UnitOfWorkFactory implements IUnitOfWorkFactory {
         `Could not cancel an abandoned request's statement: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+}
+
+/**
+ * Marks the request's idempotency key committed, in the save's own transaction just before COMMIT (ACME-125): the
+ * save and the mark commit together or not at all, so a key is `committed` exactly when its save is. Only the key's
+ * holder may: when a second save has taken the key over (this one ran past its lease), it changes no row, and this
+ * save rolls back rather than commit beside the second. The dealer and the user are written out, so it holds as the
+ * request's role and as the owner alike.
+ */
+async function markClaimCommittedAsync(client: PoolClient, claim: IdempotencyClaim): Promise<void> {
+  const marked = await client.query(
+    `UPDATE idempotency_records SET state = 'committed'
+     WHERE dealer_id = $1 AND user_id = $2 AND key = $3 AND holder = $4 AND state IN ('running', 'committed')`,
+    [claim.dealerId, claim.userId, claim.key, claim.holder],
+  );
+  if (marked.rowCount !== 1) {
+    throw new IdempotencyClaimLostError(claim.key);
   }
 }

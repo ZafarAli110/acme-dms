@@ -514,6 +514,22 @@
           }
         ]
       }
+    },
+    {
+      "files": ["src/service/idempotency/__test__/idempotency.interceptor.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["#rest-clients/**", "../**/rest-clients/**"],
+                "message": "Controllers go through a business handler, never straight to another service."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

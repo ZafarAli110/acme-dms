@@ -1,4 +1,5 @@
 import { IfMatchVersion } from "../../concurrency/record-version";
+import { Idempotent } from "../../idempotency/idempotency.interceptor";
 import { ETagged } from "../../interceptors/etag.interceptor";
 import { localized } from "#i18n/messages";
 import {
@@ -68,6 +69,7 @@ export class PartCommandController {
     this._uploadPartPhotoCommandHandler = uploadPartPhotoCommandHandler;
   }
 
+  @Idempotent("created")
   @Post()
   @Created((part: PartResponseDto) => `/v1/parts/${part.id}`)
   @RequirePermission("parts.write")
@@ -83,6 +85,7 @@ export class PartCommandController {
    * (PartUpdateRequestDto) and the new photos as `photos` files. The part and its photos are saved together or not
    * at all.
    */
+  @Idempotent("path")
   @Patch(":partId")
   @RequirePermission("parts.write")
   @ETagged()
@@ -125,6 +128,7 @@ export class PartCommandController {
   }
 
   /** 202: the photo is stored and queued for processing; its status turns "ready" or "failed" shortly after. */
+  @Idempotent("none")
   @Post(":partId/photos")
   @HttpCode(HttpStatus.ACCEPTED)
   @RequirePermission("documents.write")

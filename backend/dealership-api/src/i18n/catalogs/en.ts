@@ -73,6 +73,12 @@ export const en = {
       failed: "The export failed. Try again.",
     },
   },
+  /** A save sent with an Idempotency-Key (ACME-125). */
+  saves: {
+    keyFormat: "The Idempotency-Key is 1 to 255 printable characters.",
+    inProgress: "Your first save is still going through. Wait a moment, then send it again.",
+    wentThrough: "Your first save with this Idempotency-Key went through. It was not saved again.",
+  },
   database: {
     alreadyExists: "A record with the same value already exists.",
     referenceProblem: "This refers to a record that does not exist, or the record is still in use.",

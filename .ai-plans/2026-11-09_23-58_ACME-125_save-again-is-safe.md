@@ -11,7 +11,7 @@
 **Design:** Follows: the customer and part forms' save alert (`ErrorAlert during="save"`) and the edit forms'
 "changed elsewhere" alert; no new screen
 
-**Now:** Done: plan approved; rows loaded; step 1 (the record) · Next: step 2, the interceptor and the commit marker ·
+**Now:** Done: steps 1–2 (the record; the interceptor and commit marker on the seven saves) · Next: step 3, the web ·
 Blocked: None
 
 ## Requirement
@@ -150,7 +150,7 @@ is claimed or saved.
 ## Steps
 
 - [x] 1. The record: schema, migration, `idempotency-records.ts`, sweeper, `schema.test.ts` → verify: its tests
-- [ ] 2. The interceptor, the commit marker, the detached claim and release, problem types and messages → verify:
+- [x] 2. The interceptor, the commit marker, the detached claim and release, problem types and messages → verify:
       interceptor tests (all 7 writes, busy, after-commit failure, takeover, caller gone)
 - [ ] 3. The web: `useSaveKey`, the customer forms, the part form and dialog, the messages (en, fr) → verify: unit
       tests; check-in-browser at 1440 and 1024
@@ -172,6 +172,11 @@ None: the interview's answers are in Requirement and D1–D2.
   "Your first save went through" is detected (the same key, another fingerprint) (Claude, default).
 - D5 A save sent without a key behaves as today: API callers keep working (Claude, default; if wrong, a 428).
 - D6 A refusal (4xx) before the commit frees the key: the corrected form saves with it (Claude, default).
+- D8 `@Idempotent("created" | "path" | "none")` names where the saved record is read: an add's `@Created` Location, a
+  change's own path, or none (a bin, a stock level, a photo: no single read). `resource` is an RFC 9457 extension
+  member on `save-went-through` only, `null` when not known (Claude, while building).
+- D9 A save whose answer never comes (a time limit unsubscribes) frees its key; if it is still running, its commit
+  marker then finds no key and it rolls back, so the key is never held for nothing (Claude, while building).
 - D7 One ticket, not two (the API, then the web): the web's three messages are the API's three answers, and the ticket's
   checks run end to end; about 1,100 lines estimated, built and committed step by step (Claude).
 
@@ -192,3 +197,10 @@ None: the interview's answers are in Requirement and D1–D2.
   mine/taken-over), `IdempotencySweeper` (AppModule, every 10 min); `RequestInfo.idempotency`; `runDetachedFromCaller`
   takes `sharedWait` (the claim spends the save's one wait) and `asBackground` (the answer and the release, never
   busy), in place of the plan's `afterCommit`. 12 record tests pass, persistence 48/48, lint and typecheck clean.
+- 2026-11-10 00:23 Step 2: `IdempotencyInterceptor` and `@Idempotent` (innermost: listed first) on the 7 saves; the commit marker
+  in `UnitOfWork.commitAsync` (before COMMIT, holder checked; `IdempotencyClaimLostError` → 409 save-in-progress);
+  `TypedProblemException` (type, Retry-After, `resource`); `saves.*` messages (en, fr). 16 HTTP tests on the real
+  controllers and Postgres: each save once, replays through `@Created`/`@ETagged`, 422, refusal frees the key, busy
+  within one 500 ms wait with nothing claimed, failure after commit not run again, takeover → one commit, caller gone
+  → key freed. A test bug found on the way (the failure switch fired on the claim's commit). Suite 333/333 twice; lint
+  override for the test, as data-scope.test.ts has.

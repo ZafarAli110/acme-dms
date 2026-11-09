@@ -12,9 +12,10 @@ import {
 import { Reflector } from "@nestjs/core";
 import { map, type Observable } from "rxjs";
 
-const CREATED_LOCATION = Symbol("created-location");
+/** The metadata @Created() keeps its `locationOf` under: the idempotency interceptor reads it too (ACME-125). */
+export const CREATED_LOCATION = Symbol("created-location");
 
-type LocationOf = (created: unknown) => string;
+export type LocationOf = (created: unknown) => string;
 type HeaderSetter = { setHeader(name: string, value: string): void };
 
 /**

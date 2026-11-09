@@ -1,4 +1,5 @@
 import { ApiHeader } from "@nestjs/swagger";
+import { Idempotent } from "../../idempotency/idempotency.interceptor";
 import { IfMatchVersion } from "../../concurrency/record-version";
 import { ETagged } from "../../interceptors/etag.interceptor";
 import { Body, Controller, Inject, Param, ParseUUIDPipe, Post, Put } from "@nestjs/common";
@@ -35,6 +36,7 @@ export class CustomerCommandController {
     this._updateCustomerCommandHandler = updateCustomerCommandHandler;
   }
 
+  @Idempotent("created")
   @Post()
   @Created((customer: CustomerResponseDto) => `/v1/customers/${customer.id}`)
   @RequirePermission("customers.write")
@@ -45,6 +47,7 @@ export class CustomerCommandController {
     return this._createCustomerCommandHandler.executeAsync(userContext, request);
   }
 
+  @Idempotent("path")
   @Put(":customerId")
   @RequirePermission("customers.write")
   @ETagged()

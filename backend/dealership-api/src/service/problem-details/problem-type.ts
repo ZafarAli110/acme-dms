@@ -15,3 +15,13 @@ export const PROBLEM_TYPE_BY_STATUS: Readonly<Record<number, string>> = {
 };
 
 export const DEFAULT_PROBLEM_TYPE = "urn:acme:error:internal";
+
+/** Problem types more precise than their status (ACME-125: saves sent with an Idempotency-Key). */
+export const PROBLEM_TYPE = {
+  /** 409: a save with this key is still running; `Retry-After` says when to send it again. */
+  saveInProgress: "urn:acme:error:save-in-progress",
+  /** 409: a save with this key already went through, from another request; `resource` is where it is read. */
+  saveWentThrough: "urn:acme:error:save-went-through",
+  /** 422: the Idempotency-Key is not 1 to 255 printable characters. */
+  idempotencyKey: "urn:acme:error:idempotency-key",
+} as const;

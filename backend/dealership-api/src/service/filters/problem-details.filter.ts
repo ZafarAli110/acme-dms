@@ -18,6 +18,7 @@ import { toIsoString } from "#business-logic-abstractions/time/to-iso-string";
 import { serializeError } from "../logging/serialize-error";
 import { resolveDatabaseProblem } from "../problem-details/database-error";
 import type { ProblemDetailsDto } from "../problem-details/problem-details.dto";
+import { TypedProblemException } from "../problem-details/typed-problem.exception";
 import { DEFAULT_PROBLEM_TYPE, PROBLEM_TYPE_BY_STATUS } from "../problem-details/problem-type";
 
 type ProblemRequest = {
@@ -80,13 +81,15 @@ export class ProblemDetailsFilter implements ExceptionFilter {
 
     response.setHeader("content-type", "application/problem+json");
     const retryAfterSeconds =
-      exception instanceof TooManyRequestsException
+      exception instanceof TooManyRequestsException || exception instanceof TypedProblemException
         ? exception.retryAfterSeconds
         : resolveDatabaseProblem(exception)?.retryAfterSeconds;
     if (retryAfterSeconds) {
       response.setHeader("retry-after", String(retryAfterSeconds));
     }
-    response.status(status).end(JSON.stringify(problem));
+    // Extension members (RFC 9457) follow the standard ones, only on the problem types that define them.
+    const extensions = exception instanceof TypedProblemException ? exception.extensions : null;
+    response.status(status).end(JSON.stringify(extensions ? { ...problem, ...extensions } : problem));
   }
 
   private resolveStatus(exception: unknown): number {
@@ -111,8 +114,11 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     };
   }
 
-  /** The status's type, unless a database problem has a more precise one ("busy"). */
+  /** The status's type, unless the error or a database problem has a more precise one ("busy", "save-in-progress"). */
   private resolveType(exception: unknown, status: number): string {
+    if (exception instanceof TypedProblemException) {
+      return exception.problemType;
+    }
     const precise = exception instanceof HttpException ? null : (resolveDatabaseProblem(exception)?.type ?? null);
     return precise ?? PROBLEM_TYPE_BY_STATUS[status] ?? DEFAULT_PROBLEM_TYPE;
   }
