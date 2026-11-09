@@ -53,6 +53,8 @@ function fakeService() {
     job: running,
     /** POSTs that never reach the service, before one does. */
     unreachablePosts: 0,
+    /** Whether a cancel (DELETE) never reaches the service. */
+    cancelFails: false,
   };
   const handler = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const method = init?.method ?? "GET";
@@ -89,6 +91,9 @@ function fakeService() {
       return new Response(body, { headers: { "content-type": "text/event-stream" } });
     }
     if (method === "DELETE") {
+      if (behaviour.cancelFails) {
+        throw new TypeError("Failed to fetch");
+      }
       return new Response(null, { status: 204 });
     }
     return Response.json(method === "POST" ? running : behaviour.job);
@@ -125,6 +130,26 @@ describe("ExportKernel", () => {
       ["DELETE", "northside"],
     ]);
     expect(kernel.getSnapshot()[0]?.locationId).toBe("northside");
+  });
+
+  // The state sweep's F11: dismissing a running export took the card off at once, whether the cancel worked or not.
+  it("keeps a running export's card, with the problem, when its cancel never reached the service", async () => {
+    await kernel.startAsync("Customers", "/api/dealership", "v1/customers/exports", {});
+    service.behaviour.cancelFails = true;
+
+    kernel.dismiss("job-1");
+    await vi.waitFor(() => expect(kernel.getSnapshot()[0]?.problem).toBeTruthy());
+
+    expect(kernel.getSnapshot().map((entry) => entry.job.id)).toEqual(["job-1"]);
+  });
+
+  it("takes a running export's card off once the service took its cancel", async () => {
+    await kernel.startAsync("Customers", "/api/dealership", "v1/customers/exports", {});
+
+    kernel.dismiss("job-1");
+    await vi.waitFor(() => expect(kernel.getSnapshot()).toEqual([]));
+
+    expect(service.calls.some((call) => call.method === "DELETE")).toBe(true);
   });
 
   it("forgets every card, and stops following, when the sign-in ends or changes", async () => {

@@ -158,11 +158,28 @@ export class ExportKernel {
     }
   }
 
-  public async cancelAsync(jobId: string): Promise<void> {
+  /**
+   * Asks the service to cancel; whether it took the cancel. One it refused, or that never reached it, shows its problem
+   * on the card instead of going unseen. A card nothing follows any more (stalled) is followed again, so the cancel
+   * shows when it lands (the state sweep's F11).
+   */
+  public async cancelAsync(jobId: string): Promise<boolean> {
     const entry = this.find(jobId);
-    if (entry) {
-      await apiClient.deleteAsync(`${entry.serviceUrl}/v1/exports/${jobId}`, { locationId: entry.locationId });
+    if (!entry) {
+      return false;
     }
+    try {
+      await apiClient.deleteAsync(`${entry.serviceUrl}/v1/exports/${jobId}`, { locationId: entry.locationId });
+    } catch (error) {
+      this.update(jobId, { problem: error instanceof Error ? error.message : String(error) });
+      return false;
+    }
+    const now = this.find(jobId);
+    if (now && isRunning(now) && !this._following.has(jobId)) {
+      this.update(jobId, { connection: "reconnecting", problem: null });
+      void this.followAsync(jobId);
+    }
+    return true;
   }
 
   /**
@@ -186,11 +203,18 @@ export class ExportKernel {
     }
   }
 
-  /** Takes a finished export off the panel; one still running is cancelled first. */
+  /**
+   * Takes a finished export off the panel; one still running is cancelled first, and goes only once the service took
+   * the cancel: a cancel that failed left it running on the server, gone from the screen until a reload (F11).
+   */
   public dismiss(jobId: string): void {
+    void this.dismissAsync(jobId);
+  }
+
+  private async dismissAsync(jobId: string): Promise<void> {
     const entry = this.find(jobId);
-    if (entry && isRunning(entry)) {
-      void this.cancelAsync(jobId);
+    if (entry && isRunning(entry) && !(await this.cancelAsync(jobId))) {
+      return;
     }
     this._following.get(jobId)?.abort();
     this._following.delete(jobId);
