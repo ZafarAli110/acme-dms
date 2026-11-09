@@ -164,6 +164,10 @@ None: Q1 is answered (D4).
   `WithHttpsDeveloperCertificate`/`WithHttpsCertificateConfiguration`: both are experimental in Aspire 13.6.4
   (`ASPIRECERTIFICATES001`, a build error unless suppressed) and nothing here uses an experimental Aspire API. One
   copy of the certificate serves the browser and Node's and Bun's trust (Claude, while building).
+- D9 In `start:prod` the web server has a fixed port (5100) and no Aspire proxy in front, as the .NET services and
+  dealership-api already have there: through the proxy, three load-test runs in seven waited seconds at the tail; on
+  its own port, none in five (Claude, from the verifier's finding; same reason the AppHost already gives for the
+  gateway). Dev mode keeps the proxy, as everything there does.
 - D5 The cookie keeps one name everywhere, so a sign-in from before the change is not read: one more sign-in, local
   only (Claude, default).
 - D6 `serve-web.ts` keeps `Bun.serve` with its experimental `http2: true`, over `node:http2` (which also answers `h2`):
@@ -253,3 +257,10 @@ None: Q1 is answered (D4).
   `--check`'s output against the file's), and says so before it does (on macOS: "choose Always Allow"); 7 tests (two
   new: no export when it is there; again when renewed or the key is gone); for real here: 0.5 s, silent, `.certs/`
   untouched. README: the one dialog at the first start.
+- 2026-11-10 02:22 The load figure, measured. On the same build, alternating, `--through-web` with `services__web__https__0` set to
+  the proxied address (`:53978`) and to serve-web's own (`:30710`): proxy p95 758 then 48 ms; own port 37 then 53. All
+  three seconds-long tails of the day (240, 316, 758) went through Aspire's proxy. D9: start:prod gives web port 5100,
+  not proxied; AppHost builds; start:prod restarted, web at `https://localhost:5100` (HTTP/2, verify 0, Bun listening
+  on it). Then `--through-web` three times: p95 49, 71, 43, p99 84, 147, 91; the gateway between them p95 49, p99 101.
+  Benchmarks section rewritten: every run of the day by way in (gateway 4, proxied web 7, own-port web 5); ARCHITECTURE
+  names port 5100. The whole e2e suite 53/53 on it; gate 23/23.

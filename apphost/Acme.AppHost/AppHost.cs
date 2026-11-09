@@ -92,6 +92,8 @@ var exportLinkKey = Convert.ToBase64String(System.Security.Cryptography.RandomNu
 // requests a second it used most of a core while connections sat waiting, ACME-129). In `bun run dev` the proxy stays:
 // it lets a service restart on a rebuild without the others noticing.
 const int DealershipApiPort = 5301;
+// The web server's port in start:prod (ACME-130): fixed, as it is not behind Aspire's proxy there.
+const int WebPort = 5100;
 var dealershipApi = builder.AddExecutable("dealership-api", "bun", "../../backend/dealership-api", "run", productionLike ? "serve" : "dev")
     .WithEnvironment("EXPORT_LINK_KEY", exportLinkKey)
     .WithHttpEndpoint(port: productionLike ? DealershipApiPort : null, env: "PORT", isProxied: !productionLike)
@@ -182,8 +184,11 @@ var web = productionLike
 // its key, to .certs/ (ignored by git); Aspire's own certificate APIs are still experimental in 13.6. The gateway stays
 // plain HTTP behind the web server, as behind a load balancer live.
 var certificates = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", ".certs"));
+// start:prod: a fixed port and no Aspire proxy in front, as the .NET services and dealership-api have there. Through
+// the proxy, a load test through the web server at 800 a second now and then waited seconds (p95 240–758 ms in three
+// runs of seven), and never without it (ACME-130's verification, docs/benchmarks/README.md).
 web
-    .WithHttpsEndpoint(env: "PORT")
+    .WithHttpsEndpoint(port: productionLike ? WebPort : null, env: "PORT", isProxied: !productionLike)
     .WithEnvironment("TLS_CERT_PATH", Path.Combine(certificates, "localhost.pem"))
     .WithEnvironment("TLS_KEY_PATH", Path.Combine(certificates, "localhost.key"))
     .WithExternalHttpEndpoints()

@@ -78,7 +78,9 @@ every app on `localhost` to HTTPS (ACME-130, D4).
 `start:prod`) serves HTTPS, and HTTP/2 to a browser that offers it, with the ASP.NET Core development certificate:
 `dotnet dev-certs https --trust` once (the setup scripts run it; `scripts/check-certificate.ts` stops every start
 without it and writes the certificate and its key to `.certs/`, ignored by git). The gateway stays plain HTTP behind
-it, told the browser's connection was HTTPS (`X-Forwarded-Proto`), as behind a load balancer live; scripts and the
+it, told the browser's connection was HTTPS (`X-Forwarded-Proto`), as behind a load balancer live. In `start:prod` the
+web server has its own port, `https://localhost:5100`, with no Aspire proxy in front (the proxy now and then held a
+load test's requests for seconds: `docs/benchmarks/README.md`); scripts and the
 load test call the gateway there. Node and Bun do not read the system's trust store as a browser does: the e2e and
 load-test scripts point them at the certificate (`NODE_EXTRA_CA_CERTS`). The
 answer is 204 with the cookie, or identity-api's own refusal (400, 401, or 429 with `Retry-After`) as it gave it; any
