@@ -322,3 +322,15 @@ None
   restart on this build (`sql:top --reset`, 30 s each): 200/s all answered, p95 99 ms, Postgres 53% average (408%
   baseline: 13%); 400/s all answered, p95 53 ms, Postgres 109%. `sql:top` at 400/s: customer search page 32%, parts
   search 31% (14.5 ms a call), close spellings 13%. Evidence: `docs/evidence/ACME-129.md`.
+- 2026-11-09 21:00 After verification, towards 3,300/s (Zafar Ali: "work autonomously"). Parts search (fe2ff93): bins
+  as an array, joined only for a bin sort; 14.5 → 5.9 ms a call, 31% → 16% of the database; same answers. Known and
+  close names as the owner, candidates from the trigram index (99b1d50, 14c8a9d): 5 → 0.1 ms and 12 → 0.3–1 ms; the
+  same candidates for 297 long and 280 short misspellings. `--load-test` keeps one trace in ten (b952b92): 800/s p95
+  146 → 57 ms, the dashboard 44% → 12% of a core. Customer lists read only their columns (85517f1): the API 39% → 35%
+  of a core each at 800/s. Profile of one API copy at 800/s, busy 39% of the time: OpenTelemetry about a quarter of
+  it, Temporal's polyfill under Node 14% (2.3 µs a timestamp; 0.16 µs under Bun), Drizzle 8% self. The surname
+  search stays 8–16 ms: a surname is also a company ("Ackroyd Accountancy", 6,517), so about 8,000 matches to find
+  and sort; walking the name order instead took 891 ms for "moore". Ceiling: 800/s all answered; 1,000/s p95 2.2 s;
+  1,200/s the gateway died (the macOS listen-queue bug). This laptop has 4 performance and 6 efficiency cores, and a
+  request costs about 6 ms of CPU across Postgres (2.7), the API (1.8) and the gateway (1.1): about 1,000/s is its
+  limit; 3,300/s needs a server.
