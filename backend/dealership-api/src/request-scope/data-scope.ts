@@ -25,6 +25,21 @@ export interface RequestInfo {
    * was changed" about a change already saved); they wait as background work does (the ACME-121 verifier's finding).
    */
   committed: boolean;
+  /**
+   * The key this save holds (ACME-125), set by the idempotency interceptor once it has claimed it; null for a request
+   * sent without one. Every unit of work the request commits marks the key committed in the same transaction, and
+   * refuses to commit when the key is no longer this request's (a second save took it over).
+   */
+  idempotency: IdempotencyClaim | null;
+}
+
+/** A key a save holds (ACME-125): whose it is, and which claim of it, so only that claim may mark it. */
+export interface IdempotencyClaim {
+  dealerId: string;
+  userId: string;
+  key: string;
+  /** New on every claim and takeover. */
+  holder: string;
 }
 
 interface ScopeStore {
@@ -47,13 +62,36 @@ export function runWithDataScope<T>(run: () => T, request: RequestInfo | null = 
  * callers share, such as a cached value (`TtlCache`), must not be cancelled when the caller that happened to start it
  * goes away, or every caller waiting on it gets that cancellation (the state sweep's finding, ACME-129). It still reads
  * as a list does: the list connections, the list's wait, "busy" when that runs out.
+ *
+ * What it commits never marks the caller committed, and it holds no idempotency key. `sharedWait` spends the caller's
+ * one connection wait rather than a new one, so a request's key and its save are "busy" within one wait (ACME-125).
+ * `asBackground` waits as background work does and is never told "busy": for what must be written once a request has
+ * run (its save's answer, or freeing its key), which nobody would be there to retry.
  */
-export function runDetachedFromCaller<T>(run: () => T): T {
+export function runDetachedFromCaller<T>(
+  run: () => T,
+  options: { sharedWait?: boolean; asBackground?: boolean } = {},
+): T {
   const store = storage.getStore();
   const request = store?.request;
-  const detached: RequestInfo | null = request
-    ? { saves: request.saves, signal: new AbortController().signal, connectBy: null, committed: false }
-    : null;
+  let detached: RequestInfo | null = null;
+  if (request) {
+    detached = {
+      saves: request.saves,
+      signal: new AbortController().signal,
+      connectBy: null,
+      committed: options.asBackground === true,
+      idempotency: null,
+    };
+    if (options.sharedWait === true) {
+      Object.defineProperty(detached, "connectBy", {
+        get: (): number | null => request.connectBy,
+        set: (value: number | null): void => {
+          request.connectBy = value;
+        },
+      });
+    }
+  }
   return storage.run({ scope: store?.scope ?? null, request: detached }, run);
 }
 

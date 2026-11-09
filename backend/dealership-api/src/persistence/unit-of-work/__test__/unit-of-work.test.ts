@@ -116,7 +116,7 @@ describe("UnitOfWork", () => {
 });
 
 const asRequest = <T>(saves: boolean, run: () => Promise<T>, signal = new AbortController().signal): Promise<T> =>
-  runWithDataScope(run, { saves, signal, connectBy: null, committed: false });
+  runWithDataScope(run, { saves, signal, connectBy: null, committed: false, idempotency: null });
 
 // ACME-121: which connections a unit of work may use, how long it waits, and stopping the work of a caller who left.
 describe("UnitOfWorkFactory on a busy system", () => {

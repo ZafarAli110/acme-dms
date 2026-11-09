@@ -48,6 +48,8 @@ import { GetHealthQueryHandler } from "./handlers/system/get-health/get-health.q
 import { EXPORT_JOBS } from "#business-logic-abstractions/exports/export-jobs.interface";
 import { START_CUSTOMER_EXPORT_COMMAND_HANDLER } from "#business-logic-abstractions/handlers/customers/export/start-customer-export.command-handler.interface";
 import { ExportQueue } from "./exports/export-queue";
+import { IDEMPOTENCY_RECORDS } from "#business-logic-abstractions/idempotency/idempotency-records.interface";
+import { IdempotencyRecords } from "./idempotency/idempotency-records";
 import { StartCustomerExportCommandHandler } from "./handlers/customers/export/start-customer-export.command-handler";
 
 /** Registers every business handler against its abstraction token. Add one line per new handler. */
@@ -81,13 +83,24 @@ const HANDLERS = [
   // The clock handlers use for the current time (tests pass a fixed one).
   // The export queue: start handlers queue exports in it, controllers follow them through EXPORT_JOBS. An export worker
   // (service/worker.ts, a process of its own) runs them; the API never does.
+  // The saves' idempotency keys (ACME-125): the interceptor claims through IDEMPOTENCY_RECORDS; its sweeper, in
+  // AppModule, takes the class.
   providers: [
     ...HANDLERS,
     { provide: CLOCK, useClass: SystemClock },
     ExportQueue,
     { provide: EXPORT_JOBS, useExisting: ExportQueue },
+    IdempotencyRecords,
+    { provide: IDEMPOTENCY_RECORDS, useExisting: IdempotencyRecords },
   ],
   // The unit of work too: the photo sweeper (registered in AppModule, beside the message publisher) needs it.
-  exports: [...HANDLERS.map((handler) => handler.provide), CLOCK, EXPORT_JOBS, PersistenceModule],
+  exports: [
+    ...HANDLERS.map((handler) => handler.provide),
+    CLOCK,
+    EXPORT_JOBS,
+    IdempotencyRecords,
+    IDEMPOTENCY_RECORDS,
+    PersistenceModule,
+  ],
 })
 export class BusinessLogicModule {}

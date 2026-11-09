@@ -33,6 +33,7 @@ import { TraceRouteInterceptor } from "./interceptors/trace-route.interceptor";
 import { ProblemDetailsFilter } from "./filters/problem-details.filter";
 import { DOCUMENT_MESSAGE_PUBLISHER } from "#business-logic-abstractions/messaging/document-message.publisher.interface";
 import { PhotoSweeper } from "#business-logic/photos/photo-sweeper";
+import { IdempotencySweeper } from "#business-logic/idempotency/idempotency-sweeper";
 
 @Module({
   // The composition root: the only place that wires implementations (REST clients) to abstractions.
@@ -72,6 +73,8 @@ import { PhotoSweeper } from "#business-logic/photos/photo-sweeper";
     { provide: DOCUMENT_MESSAGE_PUBLISHER, useExisting: DocumentEventsConsumer },
     // Not a handler: runs on its own timer, failing photos whose processing never answered.
     PhotoSweeper,
+    // Not a handler: deletes saves' idempotency keys past their 24 hours (ACME-125).
+    IdempotencySweeper,
     // Guards run in this order: who is calling, then what they may do.
     { provide: APP_GUARD, useClass: AuthenticationGuard },
     { provide: APP_GUARD, useClass: AuthorizationGuard },

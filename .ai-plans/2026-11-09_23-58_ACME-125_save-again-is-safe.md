@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-09 23:58
 
-**Status:** Draft
+**Status:** In progress
 
 **Ticket:** ACME-125 · **Branch:** final
 
@@ -11,9 +11,8 @@
 **Design:** Follows: the customer and part forms' save alert (`ErrorAlert during="save"`) and the edit forms'
 "changed elsewhere" alert; no new screen
 
-**Now:** Done: research, interview, plan, architect round (CHANGES, 10 findings, fixed), go-ahead from Zafar Ali (10
-Nov) · Next: next session: load every row of "Load before building", tick it, set In progress, then steps 1–6 to the
-end and report · Blocked: None
+**Now:** Done: plan approved; rows loaded; step 1 (the record) · Next: step 2, the interceptor and the commit marker ·
+Blocked: None
 
 ## Requirement
 
@@ -63,14 +62,14 @@ Failure: invalid input, absent data, not allowed, another service down
 
 | Item                                            | Kind     | Why                                          | Loaded? |
 | ----------------------------------------------- | -------- | -------------------------------------------- | ------- |
-| `docs/standards/api-errors.md` (all)            | Standard | new problem types, 409/422, If-Match         | [ ]     |
-| `docs/standards/multi-tenancy.md` "Location"    | Standard | the record table's policy (dealer and user)  | [ ]     |
-| `docs/standards/database.md` "Audit columns"    | Standard | the record table is a technical table        | [ ]     |
-| `docs/standards/web-architecture.md` "Forms"    | Standard | the forms' key and messages                  | [ ]     |
-| `docs/standards/business-handlers.md` "Exports" | Standard | the export key: the pattern followed         | [ ]     |
-| `docs/ARCHITECTURE.md` "Handling load"          | Standard | busy, the saves' 4 connections, cancellation | [ ]     |
-| `tanstack-query`                                | Skill    | the part dialog's mutation                   | [ ]     |
-| `check-in-browser`                              | Skill    | the messages at 1440 and 1024                | [ ]     |
+| `docs/standards/api-errors.md` (all)            | Standard | new problem types, 409/422, If-Match         | [x]     |
+| `docs/standards/multi-tenancy.md` "Location"    | Standard | the record table's policy (dealer and user)  | [x]     |
+| `docs/standards/database.md` "Audit columns"    | Standard | the record table is a technical table        | [x]     |
+| `docs/standards/web-architecture.md` "Forms"    | Standard | the forms' key and messages                  | [x]     |
+| `docs/standards/business-handlers.md` "Exports" | Standard | the export key: the pattern followed         | [x]     |
+| `docs/ARCHITECTURE.md` "Handling load"          | Standard | busy, the saves' 4 connections, cancellation | [x]     |
+| `tanstack-query`                                | Skill    | the part dialog's mutation                   | [x]     |
+| `check-in-browser`                              | Skill    | the messages at 1440 and 1024                | [x]     |
 
 ## Shape
 
@@ -150,7 +149,7 @@ is claimed or saved.
 
 ## Steps
 
-- [ ] 1. The record: schema, migration, `idempotency-records.ts`, sweeper, `schema.test.ts` → verify: its tests
+- [x] 1. The record: schema, migration, `idempotency-records.ts`, sweeper, `schema.test.ts` → verify: its tests
 - [ ] 2. The interceptor, the commit marker, the detached claim and release, problem types and messages → verify:
       interceptor tests (all 7 writes, busy, after-commit failure, takeover, caller gone)
 - [ ] 3. The web: `useSaveKey`, the customer forms, the part form and dialog, the messages (en, fr) → verify: unit
@@ -188,3 +187,8 @@ None: the interview's answers are in Requirement and D1–D2.
   answer is lost; the real cost per save; `database.md` and `schema.test.ts` added; why one ticket (D7); D3 moved here.
   Also from the NestJS checklist: `Idempotent-Replayed: true` on a replay.
 - 2026-11-10 00:07 Go-ahead from Zafar Ali; the build starts next session at step 1 (after loading the rows).
+- 2026-11-10 00:16 Loaded the eight rows; In progress. Step 1: `idempotency_records` (key per dealer and user, policy by both),
+  `IdempotencyRecords` (claim in one `insert … on conflict do update where expired or lease out`, `xmax = 0` for
+  mine/taken-over), `IdempotencySweeper` (AppModule, every 10 min); `RequestInfo.idempotency`; `runDetachedFromCaller`
+  takes `sharedWait` (the claim spends the save's one wait) and `asBackground` (the answer and the release, never
+  busy), in place of the plan's `afterCommit`. 12 record tests pass, persistence 48/48, lint and typecheck clean.

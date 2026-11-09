@@ -25,6 +25,7 @@ export class DataScopeMiddleware implements NestMiddleware {
       signal: callerGone.signal,
       connectBy: null,
       committed: false,
+      idempotency: null,
     });
   }
 }

@@ -111,6 +111,7 @@ describe("the dealership schema", () => {
         "customers",
         "early_document_outcomes",
         "export_jobs",
+        "idempotency_records",
         "part_inventories",
         "part_photos",
         "parts",

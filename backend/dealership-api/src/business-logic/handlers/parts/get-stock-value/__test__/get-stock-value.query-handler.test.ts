@@ -149,7 +149,7 @@ describe("GetStockValueQueryHandler", () => {
           setDataScope({ dealerId: AT_CENTRAL.dealerId, locationId: AT_CENTRAL.locationId, userId: AT_CENTRAL.userId });
           return handler.executeAsync(AT_CENTRAL);
         },
-        { saves: false, signal, connectBy: null, committed: false },
+        { saves: false, signal, connectBy: null, committed: false, idempotency: null },
       );
     const leaving = new AbortController();
 
