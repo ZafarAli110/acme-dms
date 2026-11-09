@@ -19,7 +19,7 @@
 //
 // What it sends, out of 100: customer list pages (most on the first few, some deep, up to the last page), searches
 // (a surname, a misspelt one, part of a phone number), filters and sorts, one customer, recent customers, the parts
-// list, one part, the stock value and who am I; with --writes, that share adds or edits a customer. The people are
+// list, its count, one part, the stock value and who am I; with --writes, that share adds or edits a customer. The people are
 // spread over the locations as a busy morning is (Northside the busiest): see LOCATION_SHARES.
 //
 // Load the real sizes first (`bun run seed:bulk`): a slow query only shows at Northside's 1.6 million customers.
@@ -222,16 +222,28 @@ const READS: Kind[] = [
   { name: "recent customers", weight: 5, call: () => ({ method: "GET", path: "/api/dealership/v1/customers/recent" }) },
   {
     name: "parts list",
-    weight: 6,
+    weight: 5,
     call: () => ({ method: "GET", path: `/api/dealership/v1/parts?page=${pick(1, 3)}&pageSize=${PAGE_SIZE}` }),
   },
   {
     // What a parts counter types (ACME-123): words in any order and form, a word cut short, a part number's beginning.
     name: "parts search",
-    weight: 5,
+    weight: 4,
     call: () => ({
       method: "GET",
       path: `/api/dealership/v1/parts?page=1&pageSize=${PAGE_SIZE}&search=${encodeURIComponent(oneOf(PARTS_SEARCHES) ?? "brake")}`,
+    }),
+  },
+  {
+    // The parts list asks its total once per question (ACME-124): the plain list, or a search.
+    name: "parts count",
+    weight: 2,
+    call: () => ({
+      method: "GET",
+      path:
+        Math.random() < 0.5
+          ? "/api/dealership/v1/parts/count"
+          : `/api/dealership/v1/parts/count?search=${encodeURIComponent(oneOf(PARTS_SEARCHES) ?? "brake")}`,
     }),
   },
   {

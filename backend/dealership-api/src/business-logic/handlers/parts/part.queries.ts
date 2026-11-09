@@ -29,95 +29,104 @@ export const STOCKED_PART_COLUMNS: ListColumns = {
 };
 
 /**
- * One page of the parts the request's location stocks (row-level security picks the dealer and the location), by part
- * number unless the query sorts otherwise, narrowed by the query's filter. A search goes through
- * `findMatchingPartIdsAsync` instead.
+ * One page of the parts the request's location stocks in a live bin (row-level security picks the dealer, the location
+ * and live rows), by part number unless the query sorts otherwise, narrowed by the query's filter, and whether another
+ * page follows. A search goes through `findMatchingPartIdsAsync` instead.
+ *
+ * The page's ids come first, without the bins join unless the sort or filter is the bin: with it, Postgres guesses one
+ * bin per location and joins and sorts the location's whole stock for every page; without it, it walks the
+ * part-number index and stops at the page (ACME-124). The rows, with their bin, are then read for those ids alone.
  */
 export async function findStockedPartsAsync(
   db: Database,
   query: ListQueryDto,
-): Promise<{ items: StockedPart[]; total: number }> {
+): Promise<{ items: StockedPart[]; hasMore: boolean }> {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 25;
-  const where = listFilter(STOCKED_PART_COLUMNS, query);
-  const items = await stockedParts(db, where)
-    .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, [asc(parts.partNumber)], [asc(parts.id)]))
-    .limit(pageSize)
-    .offset(pageOffset(page, pageSize));
-  // The same joins as the page, so a filter on the bin counts the same rows it shows.
-  const [counted] = await db
-    .select({ total: count() })
+  const from = db
+    .select({ id: parts.id })
     .from(partInventories)
     .innerJoin(parts, eq(parts.id, partInventories.partId))
-    .innerJoin(bins, eq(bins.id, partInventories.binId))
-    .where(where);
-  return { items, total: counted?.total ?? 0 };
+    .$dynamic();
+  // One more than the page says whether another follows, without counting.
+  const rows = await (needsBin(query) ? from.innerJoin(bins, eq(bins.id, partInventories.binId)) : from)
+    .where(and(liveBinStock(db), listFilter(STOCKED_PART_COLUMNS, query)))
+    .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, [asc(parts.partNumber)], [asc(parts.id)]))
+    .limit(pageSize + 1)
+    .offset(pageOffset(page, pageSize));
+  const ids = rows.slice(0, pageSize).map((row) => row.id);
+  return { items: await findStockedPartsByIdsAsync(db, ids), hasMore: rows.length > pageSize };
 }
 
 /**
- * A search's page of part ids, best match first, and how many match (ACME-123). The part number matches by any part of
- * it, case ignored (its trigram index): the number itself first, then numbers starting with the search, then numbers
- * holding it. Then the description, by its words (its GIN index): every word, each as a word's beginning, in its other
- * forms, the closest match first. A column sort replaces that order.
+ * How many parts the request's location stocks in a live bin, narrowed by the query's filter: the rows the list's pages
+ * show, counted exactly (ACME-124). A search counts with `countMatchingPartsAsync` instead.
+ */
+export async function countStockedPartsAsync(db: Database, query: ListQueryDto): Promise<number> {
+  const from = db
+    .select({ total: count() })
+    .from(partInventories)
+    .innerJoin(parts, eq(parts.id, partInventories.partId))
+    .$dynamic();
+  const [counted] = await (needsBin(query) ? from.innerJoin(bins, eq(bins.id, partInventories.binId)) : from).where(
+    and(liveBinStock(db), listFilter(STOCKED_PART_COLUMNS, query)),
+  );
+  return counted?.total ?? 0;
+}
+
+/**
+ * A search's page of part ids, best match first, and whether another page follows (ACME-123). The part number matches by any part of it, case ignored
+ * (its trigram index): the number itself first, then numbers starting with the search, then numbers holding it. Then
+ * the description, by its words (its GIN index): every word, each as a word's beginning, in its other forms, the
+ * closest match first. A column sort replaces that order.
  *
- * `db` works as the tables' owner, so the dealer, the location and live rows are written out here, for the bin as for
- * the part (a filter or sort may name the bin): under row-level security no index could serve `@@` or LIKE, which are
- * not leakproof (docs/standards/multi-tenancy.md). Only ids and the count come from here; the rows are read as the
- * request (`findStockedPartsByIdsAsync`).
+ * `db` works as the tables' owner (`partSearchWhere`). Only ids come from here; the rows are read as the request
+ * (`findStockedPartsByIdsAsync`), and how many match from `countMatchingPartsAsync`.
  */
 export async function findMatchingPartIdsAsync(
   db: Database,
-  scope: { dealerId: string; locationId: string },
+  scope: PartScope,
   query: ListQueryDto,
   search: string,
-): Promise<{ ids: string[]; total: number }> {
+): Promise<{ ids: string[]; hasMore: boolean }> {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 25;
-  const typed = search.toUpperCase();
-  const number = sql`upper(${parts.partNumber})`;
-  const holdsTyped = sql`${number} LIKE ${`%${escapeLike(typed)}%`}`;
-  const words = toPartWordsQuery(search);
-  const wordsQuery = words === null ? null : sql`to_tsquery('english', ${words})`;
-  const where = and(
-    eq(parts.dealerId, scope.dealerId),
-    eq(partInventories.locationId, scope.locationId),
-    eq(bins.locationId, scope.locationId),
-    notDeleted(parts),
-    notDeleted(partInventories),
-    notDeleted(bins),
-    wordsQuery === null ? holdsTyped : or(holdsTyped, sql`${parts.searchWords} @@ ${wordsQuery}`),
-    listFilter(STOCKED_PART_COLUMNS, query),
-  );
+  const terms = partSearchTerms(search);
   const bestFirst = [
-    asc(sql`CASE WHEN ${number} = ${typed} THEN 0
-                 WHEN ${number} LIKE ${`${escapeLike(typed)}%`} THEN 1
-                 WHEN ${holdsTyped} THEN 2
+    asc(sql`CASE WHEN ${terms.number} = ${terms.typed} THEN 0
+                 WHEN ${terms.number} LIKE ${`${escapeLike(terms.typed)}%`} THEN 1
+                 WHEN ${terms.holdsTyped} THEN 2
                  ELSE 3 END`),
-    ...(wordsQuery === null ? [] : [desc(sql`ts_rank_cd(${parts.searchWords}, ${wordsQuery})`)]),
+    ...(terms.wordsQuery === null ? [] : [desc(sql`ts_rank_cd(${parts.searchWords}, ${terms.wordsQuery})`)]),
     asc(parts.partNumber),
   ];
-  // The total comes with the page (`count(*) over ()`), so the matches are read once, not again by a count.
+  // One more than the page says whether another follows, without counting.
   const rows = await db
-    .select({ id: parts.id, total: sql<number>`count(*) over ()`.mapWith(Number) })
+    .select({ id: parts.id })
     .from(partInventories)
     .innerJoin(parts, eq(parts.id, partInventories.partId))
     .innerJoin(bins, eq(bins.id, partInventories.binId))
-    .where(where)
+    .where(partSearchWhere(scope, query, search))
     .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, bestFirst, [asc(parts.id)]))
-    .limit(pageSize)
+    .limit(pageSize + 1)
     .offset(pageOffset(page, pageSize));
-  const [first] = rows;
-  if (first) {
-    return { ids: rows.map((row) => row.id), total: first.total };
-  }
-  // A page past the last has no rows to carry the total: count it on its own.
+  return { ids: rows.slice(0, pageSize).map((row) => row.id), hasMore: rows.length > pageSize };
+}
+
+/** How many parts a search matches at the location, exactly (ACME-124); `db` works as the tables' owner. */
+export async function countMatchingPartsAsync(
+  db: Database,
+  scope: PartScope,
+  query: ListQueryDto,
+  search: string,
+): Promise<number> {
   const [counted] = await db
     .select({ total: count() })
     .from(partInventories)
     .innerJoin(parts, eq(parts.id, partInventories.partId))
     .innerJoin(bins, eq(bins.id, partInventories.binId))
-    .where(where);
-  return { ids: [], total: counted?.total ?? 0 };
+    .where(partSearchWhere(scope, query, search));
+  return counted?.total ?? 0;
 }
 
 /** The parts with these ids as the request's location stocks them, in the ids' order (a search's page). */
@@ -171,4 +180,57 @@ function stockedParts(db: Database, where: SQL | undefined) {
     .innerJoin(bins, eq(bins.id, partInventories.binId))
     .where(where)
     .$dynamic();
+}
+
+/** The dealer and the location a search written out by hand is for: the request's. */
+export interface PartScope {
+  dealerId: string;
+  locationId: string;
+}
+
+/**
+ * Stock in a live bin of the location: the bins policy decides which bins those are (the dealer, the location, not
+ * deleted), and a location has a handful. Worked out first, as an array, rather than joined: Postgres guesses one bin
+ * per location, and turns a join or an `IN (select …)` into joining and sorting the location's whole stock for every
+ * page (66 ms at Northside's 24,211 stocked parts); with the array it walks the page's index and stops at the page
+ * (3 ms; ACME-124).
+ */
+export function liveBinStock(db: Database): SQL {
+  return sql`${partInventories.binId} = any(array(${db.select({ id: bins.id }).from(bins)}))`;
+}
+
+/** The list joins the bins only when it sorts or filters by one. */
+function needsBin(query: ListQueryDto): boolean {
+  return query.sort === "bin" || query.filterField === "bin";
+}
+
+function partSearchTerms(search: string) {
+  const typed = search.toUpperCase();
+  const number = sql`upper(${parts.partNumber})`;
+  const words = toPartWordsQuery(search);
+  return {
+    typed,
+    number,
+    holdsTyped: sql`${number} LIKE ${`%${escapeLike(typed)}%`}`,
+    wordsQuery: words === null ? null : sql`to_tsquery('english', ${words})`,
+  };
+}
+
+/**
+ * The rows a search matches, for the page and the count alike. Written for a `db` working as the tables' owner, so the
+ * dealer, the location and live rows are written out, for the bin as for the part (a filter or sort may name the bin):
+ * under row-level security no index could serve `@@` or LIKE, which are not leakproof (docs/standards/multi-tenancy.md).
+ */
+function partSearchWhere(scope: PartScope, query: ListQueryDto, search: string): SQL | undefined {
+  const { holdsTyped, wordsQuery } = partSearchTerms(search);
+  return and(
+    eq(parts.dealerId, scope.dealerId),
+    eq(partInventories.locationId, scope.locationId),
+    eq(bins.locationId, scope.locationId),
+    notDeleted(parts),
+    notDeleted(partInventories),
+    notDeleted(bins),
+    wordsQuery === null ? holdsTyped : or(holdsTyped, sql`${parts.searchWords} @@ ${wordsQuery}`),
+    listFilter(STOCKED_PART_COLUMNS, query),
+  );
 }

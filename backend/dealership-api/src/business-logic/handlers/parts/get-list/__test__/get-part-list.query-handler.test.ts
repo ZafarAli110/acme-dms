@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { ListQueryDto } from "#dto/paging/list-query.dto";
 import { AT_NORTHSIDE, AT_RIVERSIDE } from "#test-setup/users/test-users";
 import { CENTRAL, NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
 import { useTestDatabase } from "#test-setup/postgres/use-test-database";
+import { CountPartsQueryHandler } from "../../count/count-parts.query-handler";
 import { GetPartListQueryHandler } from "../get-part-list.query-handler";
+
+const numbers = (list: { items: { partNumber: string }[] }) => list.items.map((item) => item.partNumber);
 
 describe("GetPartListQueryHandler", () => {
   const database = useTestDatabase();
@@ -10,6 +14,22 @@ describe("GetPartListQueryHandler", () => {
     database
       .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory))
       .executeAsync(user, { page: 1, pageSize: 25, search, ...more });
+  const listAsync = (query: ListQueryDto) =>
+    database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory)).executeAsync(AT_NORTHSIDE, query);
+  const sorted = async (sort: string, direction: "asc" | "desc") =>
+    numbers(
+      await listAsync({
+        page: 1,
+        pageSize: 25,
+        sort,
+        direction,
+        filterField: "partNumber",
+        filterOperator: "startsWith",
+        filterValue: "SRT-",
+      }),
+    );
+  const countAsync = (query: ListQueryDto) =>
+    database.asRequest(new CountPartsQueryHandler(database.unitOfWorkFactory)).executeAsync(AT_NORTHSIDE, query);
 
   it("lists only parts stocked at the selected location, without deleted ones, with their default thumbnail", async () => {
     const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "AIR-001" });
@@ -28,7 +48,7 @@ describe("GetPartListQueryHandler", () => {
 
     expect(list.items.map((item) => item.partNumber)).toEqual(["AIR-001"]);
     expect(list.items[0]?.thumbnailDocumentId).toBe(thumbnail.documentId);
-    expect(list.total).toBe(1);
+    expect(list.hasMore).toBe(false);
   });
 
   // "Equals" on text is exact with the case ignored, and % and _ are the characters (ACME-117 rewrites it from ILIKE to
@@ -80,7 +100,75 @@ describe("GetPartListQueryHandler", () => {
     });
 
     expect(list.items.map((item) => item.partNumber)).toEqual(["QTY-2", "QTY-3"]);
-    expect(list.total).toBe(3);
+    expect(list.hasMore).toBe(true);
+    await expect(
+      countAsync({ page: 1, pageSize: 2, filterField: "bin", filterOperator: "startsWith", filterValue: "B-QTY" }),
+    ).resolves.toEqual({ total: 3 });
+  });
+
+  // ACME-124: the page's ids come without the bins join; a part in a deleted bin is left out by a condition, so the page
+  // stays full, and its next page and `hasMore` agree with the count.
+  it("keeps a page full when a part inside it is in a deleted bin, the next page and hasMore agreeing with the count", async () => {
+    for (const n of [1, 2, 3, 4, 5]) {
+      await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: `DBN-${n}`, binDeleted: n === 2 });
+    }
+    const only = { filterField: "partNumber", filterOperator: "startsWith", filterValue: "DBN-" } as const;
+
+    const first = await listAsync({ page: 1, pageSize: 2, ...only });
+    const second = await listAsync({ page: 2, pageSize: 2, ...only });
+    const last = await listAsync({ page: 3, pageSize: 2, ...only });
+
+    expect([numbers(first), first.hasMore]).toEqual([["DBN-1", "DBN-3"], true]);
+    expect([numbers(second), second.hasMore]).toEqual([["DBN-4", "DBN-5"], false]);
+    expect([numbers(last), last.hasMore]).toEqual([[], false]);
+    await expect(countAsync({ page: 1, pageSize: 2, ...only })).resolves.toEqual({ total: 4 });
+  });
+
+  it("sorts by every column it shows, each way, ties by the part", async () => {
+    const seed = database.seed;
+    await seed.addStockedPartAsync({
+      locationId: NORTHSIDE,
+      partNumber: "SRT-A",
+      description: "Caliper",
+      quantityOnHand: 7,
+      reorderLevel: 1,
+      unitPriceCents: 300,
+    });
+    await seed.addStockedPartAsync({
+      locationId: NORTHSIDE,
+      partNumber: "SRT-B",
+      description: "Axle",
+      quantityOnHand: 2,
+      reorderLevel: 3,
+      unitPriceCents: 100,
+    });
+    await seed.addStockedPartAsync({
+      locationId: NORTHSIDE,
+      partNumber: "SRT-C",
+      description: "Bearing",
+      quantityOnHand: 4,
+      reorderLevel: 2,
+      unitPriceCents: 200,
+    });
+
+    expect(await sorted("partNumber", "desc")).toEqual(["SRT-C", "SRT-B", "SRT-A"]);
+    expect(await sorted("description", "asc")).toEqual(["SRT-B", "SRT-C", "SRT-A"]);
+    expect(await sorted("bin", "desc")).toEqual(["SRT-C", "SRT-B", "SRT-A"]);
+    expect(await sorted("onHand", "asc")).toEqual(["SRT-B", "SRT-C", "SRT-A"]);
+    expect(await sorted("reorderLevel", "desc")).toEqual(["SRT-B", "SRT-C", "SRT-A"]);
+    expect(await sorted("unitPriceCents", "asc")).toEqual(["SRT-B", "SRT-C", "SRT-A"]);
+  });
+
+  it("says whether another page follows, false on the last page and past it", async () => {
+    const only = { filterField: "partNumber", filterOperator: "startsWith", filterValue: "SRT-" } as const;
+
+    const full = await listAsync({ page: 1, pageSize: 3, ...only });
+    const split = await listAsync({ page: 1, pageSize: 2, ...only });
+    const past = await listAsync({ page: 4, pageSize: 2, ...only });
+
+    expect([full.items.length, full.hasMore]).toEqual([3, false]);
+    expect([split.items.length, split.hasMore]).toEqual([2, true]);
+    expect([past.items.length, past.hasMore]).toEqual([0, false]);
   });
 
   describe("the search by words and part number (ACME-123)", () => {
@@ -198,13 +286,13 @@ describe("GetPartListQueryHandler", () => {
 
       const atNorthside = await searchAsync("cabin filter");
       expect(atNorthside.items.map((item) => item.partNumber)).toEqual(["CAB-1"]);
-      expect(atNorthside.total).toBe(1);
+      expect(atNorthside.hasMore).toBe(false);
       const byNumber = await searchAsync("CAB-");
       expect(byNumber.items.map((item) => item.partNumber)).toEqual(["CAB-1"]);
-      expect(byNumber.total).toBe(1);
+      expect(byNumber.hasMore).toBe(false);
       const atRiverside = await searchAsync("cabin filter", {}, AT_RIVERSIDE);
       expect(atRiverside.items.map((item) => item.partNumber)).toEqual(["CAB-2"]);
-      expect(atRiverside.total).toBe(1);
+      expect(atRiverside.hasMore).toBe(false);
     });
 
     it("treats quotes, operators and wildcards as text, and finds nothing for words nobody has", async () => {
@@ -224,15 +312,15 @@ describe("GetPartListQueryHandler", () => {
       for (const search of ["tag' | !price", "a & b", "(x):* <->", "--", "the"]) {
         await expect(searchAsync(search)).resolves.toBeDefined();
       }
-      // A page past the last still knows how many match.
+      // A page past the last is empty, and says nothing follows.
       const pastTheEnd = await database
         .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory))
         .executeAsync(AT_NORTHSIDE, { page: 5, pageSize: 25, search: "tag" });
       expect(pastTheEnd.items).toEqual([]);
-      expect(pastTheEnd.total).toBe(2);
+      expect(pastTheEnd.hasMore).toBe(false);
       const nothing = await searchAsync("hovercraft skirt");
       expect(nothing.items).toEqual([]);
-      expect(nothing.total).toBe(0);
+      expect(nothing.hasMore).toBe(false);
     });
   });
 });

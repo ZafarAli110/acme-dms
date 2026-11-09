@@ -1,6 +1,7 @@
 import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import type { TFunction } from "i18next";
 import { serverColumn } from "../../../components/data-grid/serverColumns";
+import { PartDescriptionCell } from "../components/PartDescriptionCell";
 import { PartOnHandCell } from "../components/PartOnHandCell";
 import { PartThumbnailCell } from "../components/PartThumbnailCell";
 import { formatMoney } from "../../../core/formatters/formatMoney";
@@ -8,6 +9,10 @@ import type { PartListItem } from "../types/part";
 
 function renderThumbnail(params: GridRenderCellParams<PartListItem>) {
   return <PartThumbnailCell part={params.row} />;
+}
+
+function renderDescription(params: GridRenderCellParams<PartListItem>) {
+  return <PartDescriptionCell part={params.row} />;
 }
 
 function renderOnHand(params: GridRenderCellParams<PartListItem>) {
@@ -30,7 +35,13 @@ export function partColumns(t: TFunction<"parts">, language: string): GridColDef
       renderCell: renderThumbnail,
     },
     { field: "partNumber", headerName: t("columns.partNumber"), width: 160, cellClassName: "monospace primary-link" },
-    { field: "description", headerName: t("columns.description"), flex: 1, minWidth: 200 },
+    {
+      field: "description",
+      headerName: t("columns.description"),
+      flex: 1,
+      minWidth: 200,
+      renderCell: renderDescription,
+    },
     {
       field: "bin",
       headerName: t("columns.bin"),

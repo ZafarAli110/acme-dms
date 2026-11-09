@@ -225,4 +225,10 @@ const GRID_SX = {
     fontSize: "0.8rem",
     color: "text.secondary",
   },
+  // A long footer ("1–25 of 24,214 (the list shows the first 10,000 …)") wraps instead of pushing the page buttons
+  // out of the card at 1024 wide (ACME-124's verifier).
+  "& .MuiTablePagination-root": { flex: 1, minWidth: 0 },
+  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", justifyContent: "flex-end", rowGap: 0.5 },
+  "& .MuiTablePagination-spacer": { display: "none" },
+  "& .MuiTablePagination-displayedRows": { flex: "1 1 12rem", minWidth: 0, whiteSpace: "normal", textAlign: "right" },
 } as const;

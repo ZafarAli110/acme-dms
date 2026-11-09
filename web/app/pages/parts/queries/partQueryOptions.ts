@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
-import { FIRST_PAGE, type ListParams } from "../../../core/paging/listParams";
+import type { ListParams } from "../../../core/paging/listParams";
+import type { PartQuestion } from "../types/part";
 import { partQueries } from "./partQueries";
 import { PART_QUERY_KEYS } from "./partQueryKey";
 
@@ -17,18 +18,22 @@ export const partQueryOptions = {
       queryFn: ({ signal }) => partQueries.getPartsAsync(params, { signal, locationId }),
       retryOnMount: false,
     }),
-  /** The first page of one: its `total` is how many parts the location stocks. */
-  count: (locationId: string) =>
+  /** How many parts the question matches, exactly: asked once per search and filter (ACME-124). */
+  count: (locationId: string, question: PartQuestion) =>
     queryOptions({
-      queryKey: PART_QUERY_KEYS.count(locationId),
-      queryFn: ({ signal }) => partQueries.getPartsAsync({ ...FIRST_PAGE, pageSize: 1 }, { signal, locationId }),
+      queryKey: PART_QUERY_KEYS.count(locationId, question),
+      queryFn: ({ signal }) => partQueries.countPartsAsync(question, { signal, locationId }),
       retryOnMount: false,
     }),
-  /** Under the location's key, so a part saved there refreshes it with the list. */
+  /**
+   * Under the location's key, so a part saved there refreshes it with the list. The list's clientLoader asks for it
+   * fresh on every visit to the list (ACME-124): a price saved at another counter shows the next time Parts opens.
+   */
   stockValue: (locationId: string) =>
     queryOptions({
       queryKey: PART_QUERY_KEYS.stockValue(locationId),
       queryFn: ({ signal }) => partQueries.getStockValueAsync({ signal, locationId }),
+      retryOnMount: false,
     }),
   detail: (locationId: string, partId: string) =>
     queryOptions({

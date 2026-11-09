@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { partQueryOptions } from "../queries/partQueryOptions";
+import type { PartQuestion } from "../types/part";
 
-/** How many parts the location stocks. `enabled` is false when the user may not read parts there. */
-export function usePartCount(locationId: string, enabled: boolean) {
-  return useQuery({ ...partQueryOptions.count(locationId), select: (page) => page.total, enabled });
+/**
+ * How many parts the question matches at the location, exactly. `enabled` is false when the user may not read parts
+ * there. Prefetched by the routes that show it, so the total is there on the first paint.
+ */
+export function usePartCount(locationId: string, question: PartQuestion, enabled = true) {
+  return useQuery({ ...partQueryOptions.count(locationId, question), select: (count) => count.total, enabled });
 }

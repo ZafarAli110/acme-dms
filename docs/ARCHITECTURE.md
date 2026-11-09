@@ -218,7 +218,13 @@ API copies in front of a full database only queue more queries on it. Measure, t
   (`hasMore`, one id more than the page); its total comes from `GET /v1/customers/count`, which the web keeps per
   search and filter, so paging and sorting count nothing. Counting had been 88% of the database's time (`bun run
 sql:top`). A search's page still counts first, because its count decides whether the trigram index or the name
-  order finds the page (ACME-119).
+  order finds the page (ACME-119). The parts list does the same (ACME-124), its total exact
+  (`GET /v1/parts/count`).
+- **Don't let a misjudged join read the whole location (ACME-124).** Under the policies Postgres guesses one bin per
+  location, so joining `bins` made every parts page join and sort the location's whole stock (66 ms at Northside's
+  24,000 stocked parts). The page finds its ids without that join, keeping only stock in a live bin by
+  `bin_id = any(array(select id from bins))` (an `IN (select …)` turns back into the join), then reads the 25 rows
+  with their bin: 3 ms. The count and stock value read two covering indexes alone.
 - **Close spellings from a name list, not from the customers (ACME-120).** "Did you mean" compares the word searched
   with the location's names (`customer_names`: first names, surnames, company words; 6,980 for 2.25 million customers),
   kept in step by statement-level triggers, so a bulk insert updates it once. Close names cost about 3 ms; their

@@ -9,6 +9,7 @@ describe("GetStockValueQueryHandler", () => {
   const database = useTestDatabase();
 
   it("sums on hand × price at the selected location only, to the cent, and matches the list's stock values", async () => {
+    // Never counted: a deleted part, deleted stock, stock in a deleted bin (ACME-124), another location's.
     // 0.10 × 3 and 0.20 × 1: in floats 0.30000000000000004 + 0.2; in cents 30 + 20.
     await database.seed.addStockedPartAsync({
       locationId: NORTHSIDE,
@@ -39,6 +40,18 @@ describe("GetStockValueQueryHandler", () => {
       partNumber: "OLD-001",
       quantityOnHand: 9,
       deleted: true,
+    });
+    await database.seed.addStockedPartAsync({
+      locationId: NORTHSIDE,
+      partNumber: "GONE-01",
+      quantityOnHand: 9,
+      stockDeleted: true,
+    });
+    await database.seed.addStockedPartAsync({
+      locationId: NORTHSIDE,
+      partNumber: "BIN-GONE",
+      quantityOnHand: 9,
+      binDeleted: true,
     });
     await database.seed.addStockedPartAsync({
       locationId: RIVERSIDE,

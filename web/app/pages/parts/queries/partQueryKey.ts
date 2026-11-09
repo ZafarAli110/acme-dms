@@ -1,4 +1,5 @@
 import type { ListParams } from "../../../core/paging/listParams";
+import type { PartQuestion } from "../types/part";
 
 /**
  * Query keys for parts. Parts are read at a location, so every key starts with the location id: switching location
@@ -7,7 +8,8 @@ import type { ListParams } from "../../../core/paging/listParams";
 export const PART_QUERY_KEYS = {
   all: (locationId: string) => ["parts", locationId] as const,
   list: (locationId: string, params: ListParams) => ["parts", locationId, "list", params] as const,
-  count: (locationId: string) => ["parts", locationId, "count"] as const,
+  /** A total per question (search and filter), kept while the pages and the sort change (ACME-124). */
+  count: (locationId: string, question: PartQuestion) => ["parts", locationId, "count", question] as const,
   stockValue: (locationId: string) => ["parts", locationId, "stock-value"] as const,
   detail: (locationId: string, partId: string) => ["parts", locationId, "detail", partId] as const,
   bins: (locationId: string) => ["bins", locationId] as const,

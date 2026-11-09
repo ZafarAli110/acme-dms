@@ -28,7 +28,7 @@ import { isBusyError } from "../core/config/apiErrors";
 import { useAuth } from "../core/contexts/auth/useAuth";
 import { useSelectedLocation } from "../core/contexts/location/useSelectedLocation";
 import { formatDaysAgo, formatPlainDate } from "../core/formatters/formatDate";
-import { formatListTotal } from "../core/formatters/formatNumber";
+import { formatListTotal, formatNumber } from "../core/formatters/formatNumber";
 import { formatRole } from "../core/formatters/formatRole";
 import { RESOLVED_LOCATION_CONTEXT } from "../core/middleware/routerContext";
 import { queryClient } from "../core/queries/queryClient";
@@ -38,6 +38,7 @@ import { EVERY_CUSTOMER } from "./customers/types/customer";
 import { useRecentCustomers } from "./customers/hooks/useRecentCustomers";
 import { customerQueryOptions } from "./customers/queries/customerQueryOptions";
 import { usePartCount } from "./parts/hooks/usePartCount";
+import { EVERY_PART } from "./parts/types/part";
 import { partQueryOptions } from "./parts/queries/partQueryOptions";
 
 /** Fetches what Home shows at the selected location, only what the user may read there, before the page shows. */
@@ -49,7 +50,7 @@ export async function clientLoader({ context }: ClientLoaderFunctionArgs) {
   const { locationId, permissions } = resolved;
   const prefetches: Promise<unknown>[] = [];
   if (permissions.includes("parts.read")) {
-    prefetches.push(queryClient.query({ ...partQueryOptions.count(locationId), staleTime: "static" }));
+    prefetches.push(queryClient.query({ ...partQueryOptions.count(locationId, EVERY_PART), staleTime: "static" }));
   }
   if (permissions.includes("customers.read")) {
     prefetches.push(
@@ -116,7 +117,7 @@ export default function Home() {
   const firstName = user?.displayName.split(" ")[0] ?? "";
 
   const locationId = location?.id ?? "";
-  const partCount = usePartCount(locationId, can("parts.read"));
+  const partCount = usePartCount(locationId, EVERY_PART, can("parts.read"));
   const customerCount = useCustomerCount(locationId, EVERY_CUSTOMER, can("customers.read"));
   const recent = useRecentCustomers(locationId, can("customers.read"));
   // Home's counts stay grey on a failure; a busy one says so at the top, as the lists do above their grid (ACME-122).
@@ -150,7 +151,7 @@ export default function Home() {
               to="/parts"
               icon={<Inventory2Icon />}
               title={t("partsAt", { location: location?.name ?? "" })}
-              count={partCount.data}
+              count={partCount.isSuccess ? formatNumber(partCount.data, i18n.language) : undefined}
               caption={t("partsCaption")}
               testId="home-parts"
             />

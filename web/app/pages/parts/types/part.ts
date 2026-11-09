@@ -1,3 +1,5 @@
+import type { ListFilter, ListParams } from "../../../core/paging/listParams";
+
 /** The part as stocked at the selected location. */
 export interface PartInventory {
   binId: string;
@@ -18,6 +20,31 @@ export interface PartListItem {
   /** What this location's stock of the part is worth, in cents: on hand × price. */
   stockValueCents: number;
 }
+
+/**
+ * A page of the parts list: whether another follows, not how many there are. The total is the count's, asked once per
+ * question (ACME-124).
+ */
+export interface PartPage {
+  items: PartListItem[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+/** What the parts total depends on: the search and the filter. The page and the sort don't change it. */
+export interface PartQuestion {
+  search: string;
+  filter: ListFilter | null;
+}
+
+/** The question a list page asks. */
+export function partQuestionOf(params: ListParams): PartQuestion {
+  return { search: params.search, filter: params.filter };
+}
+
+/** Every part the location stocks: Home's count, and the list's with no search or filter. */
+export const EVERY_PART: PartQuestion = { search: "", filter: null };
 
 /** What the stock at the selected location is worth. */
 export interface StockValue {

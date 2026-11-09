@@ -77,6 +77,8 @@ export function seedKit(db: NodePgDatabase) {
     description?: string;
     /** The bin it is stocked in has been deleted. */
     binDeleted?: boolean;
+    /** Its stock record at the location has been deleted, the part and the bin not. */
+    stockDeleted?: boolean;
   }): Promise<{ part: Part; bin: Bin }> {
     const [part] = await db
       .insert(parts)
@@ -102,6 +104,7 @@ export function seedKit(db: NodePgDatabase) {
       quantityOnHand: stocked.quantityOnHand ?? 5,
       reorderLevel: stocked.reorderLevel ?? 2,
       ...SEEDED_AUDIT,
+      ...(stocked.stockDeleted ? DELETED_AUDIT : {}),
     });
     return { part: part!, bin };
   }

@@ -14,18 +14,30 @@ import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
 import { prefetchListPage } from "../../core/paging/prefetchListPage";
 import { queryClient } from "../../core/queries/queryClient";
 import { partColumns } from "./columns/partColumns";
+import { usePartCount } from "./hooks/usePartCount";
 import { usePartList } from "./hooks/usePartList";
 import { useStockValue } from "./hooks/useStockValue";
 import { PartCreateDialog } from "./PartCreateDialog";
 import { partQueryOptions } from "./queries/partQueryOptions";
-import type { PartListItem } from "./types/part";
+import { type PartListItem, partQuestionOf } from "./types/part";
 
-/** Fetches the page of parts the URL asks for (search, page, sort, filter) before the list shows it. */
+/**
+ * Fetches the page of parts the URL asks for (search, page, sort, filter), its question's total and the stock value
+ * before the list shows them. The total is cached per question: paging and sorting fetch only the page. The stock value
+ * is asked again on arriving at the list from another page, so it is always current (ACME-124); paging keeps it.
+ */
 export async function clientLoader({ request, context }: ClientLoaderFunctionArgs) {
   const resolved = context.get(RESOLVED_LOCATION_CONTEXT);
   if (resolved) {
+    const { locationId } = resolved;
+    // While a loader runs the address bar still shows the page being left.
+    const arriving = window.location.pathname !== new URL(request.url).pathname;
     await prefetchListPage(request, (params) =>
-      queryClient.query({ ...partQueryOptions.list(resolved.locationId, params), staleTime: "static" }),
+      Promise.all([
+        queryClient.query({ ...partQueryOptions.list(locationId, params), staleTime: "static" }),
+        queryClient.query({ ...partQueryOptions.count(locationId, partQuestionOf(params)), staleTime: "static" }),
+        queryClient.query({ ...partQueryOptions.stockValue(locationId), staleTime: arriving ? 0 : "static" }),
+      ]),
     );
   }
   return null;
@@ -39,6 +51,7 @@ export default function PartList() {
   // A new page, sort or filter loads in the route's clientLoader; meanwhile the grid keeps its rows and shows a bar.
   const isLoadingPage = useNavigation().state === "loading";
   const { data, error, isLoading } = usePartList(location?.id ?? "", params);
+  const count = usePartCount(location?.id ?? "", partQuestionOf(params));
   const stockValue = useStockValue(location?.id ?? "");
   const formatMoney = useFormatMoney();
   const visibility = useColumnVisibility("parts");
@@ -69,12 +82,13 @@ export default function PartList() {
             : t("subtitle", { location: location?.name ?? "" })
         }
       />
-      <ErrorAlert error={error} />
+      <ErrorAlert error={error ?? count.error} />
       <AppDataGrid<PartListItem>
         columns={columns}
         rows={data?.items ?? []}
         loading={isLoading || isLoadingPage}
-        server={{ params, rowCount: data?.total ?? 0, update }}
+        // The exact total, counted once per question; the footer shows it as a number, never "10,000+" (ACME-124).
+        server={{ params, rowCount: count.data ?? 0, update }}
         columnVisibilityModel={visibility.columnVisibilityModel}
         onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}
         onRowClick={openPart}

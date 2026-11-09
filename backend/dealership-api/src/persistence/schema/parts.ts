@@ -37,6 +37,12 @@ export const parts = snakeCase.table(
     // The parts search: words in the description, and any part of a part number, case ignored (ACME-123).
     index("ix_parts_search_words").using("gin", table.searchWords),
     index("ix_parts_part_number_trigram").using("gin", sql`upper(${table.partNumber}) gin_trgm_ops`),
+    // Live parts by id with the columns the parts list's count, stock value and price sort read, so they are read from
+    // the index alone (ACME-124). Its migration adds `INCLUDE (dealer_id, unit_price, part_number)` by hand: Drizzle
+    // has no INCLUDE.
+    index("ix_parts_live_price")
+      .on(table.id)
+      .where(sql`NOT ${table.isDeleted}`),
     uniqueIndex("uq_parts_dealer_part_number")
       .on(table.dealerId, table.partNumber)
       .where(sql`NOT ${table.isDeleted}`),

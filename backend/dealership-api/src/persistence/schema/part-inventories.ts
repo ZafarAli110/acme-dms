@@ -25,6 +25,12 @@ export const partInventories = snakeCase.table(
   },
   (table) => [
     index("ix_part_inventories_location").on(table.locationId),
+    // The location's live stock with every column the parts list, its count and stock value read, so they are read
+    // from the index alone (ACME-124). Its migration adds `INCLUDE (dealer_id, part_id, bin_id, quantity_on_hand,
+    // reorder_level)` by hand: Drizzle has no INCLUDE.
+    index("ix_part_inventories_location_stock")
+      .on(table.locationId)
+      .where(sql`NOT ${table.isDeleted}`),
     uniqueIndex("uq_part_inventories_location_part")
       .on(table.locationId, table.partId)
       .where(sql`NOT ${table.isDeleted}`),

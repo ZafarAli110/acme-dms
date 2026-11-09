@@ -13,6 +13,7 @@ import { GET_USER_CONTEXT_QUERY_HANDLER } from "#business-logic-abstractions/han
 import { GET_HEALTH_QUERY_HANDLER } from "#business-logic-abstractions/handlers/system/get-health/get-health.query-handler.interface";
 import { CREATE_CUSTOMER_COMMAND_HANDLER } from "#business-logic-abstractions/handlers/customers/create/create-customer.command-handler.interface";
 import { COUNT_CUSTOMERS_QUERY_HANDLER } from "#business-logic-abstractions/handlers/customers/count/count-customers.query-handler.interface";
+import { COUNT_PARTS_QUERY_HANDLER } from "#business-logic-abstractions/handlers/parts/count/count-parts.query-handler.interface";
 import { GET_CUSTOMER_LIST_QUERY_HANDLER } from "#business-logic-abstractions/handlers/customers/get-list/get-customer-list.query-handler.interface";
 import { GET_RECENT_CUSTOMERS_QUERY_HANDLER } from "#business-logic-abstractions/handlers/customers/get-recent/get-recent-customers.query-handler.interface";
 import { GET_CUSTOMER_QUERY_HANDLER } from "#business-logic-abstractions/handlers/customers/get/get-customer.query-handler.interface";
@@ -27,6 +28,7 @@ import { GetBinListQueryHandler } from "./handlers/bins/get-list/get-bin-list.qu
 import { CreateCustomerCommandHandler } from "./handlers/customers/create/create-customer.command-handler";
 import { GetCustomerListQueryHandler } from "./handlers/customers/get-list/get-customer-list.query-handler";
 import { CountCustomersQueryHandler } from "./handlers/customers/count/count-customers.query-handler";
+import { CountPartsQueryHandler } from "./handlers/parts/count/count-parts.query-handler";
 import { GetRecentCustomersQueryHandler } from "./handlers/customers/get-recent/get-recent-customers.query-handler";
 import { GetCustomerQueryHandler } from "./handlers/customers/get/get-customer.query-handler";
 import { UpdateCustomerCommandHandler } from "./handlers/customers/update/update-customer.command-handler";
@@ -64,6 +66,7 @@ const HANDLERS = [
   { provide: SET_STOCK_LEVEL_COMMAND_HANDLER, useClass: SetStockLevelCommandHandler },
   { provide: GET_CUSTOMER_LIST_QUERY_HANDLER, useClass: GetCustomerListQueryHandler },
   { provide: COUNT_CUSTOMERS_QUERY_HANDLER, useClass: CountCustomersQueryHandler },
+  { provide: COUNT_PARTS_QUERY_HANDLER, useClass: CountPartsQueryHandler },
   { provide: GET_CUSTOMER_QUERY_HANDLER, useClass: GetCustomerQueryHandler },
   { provide: GET_RECENT_CUSTOMERS_QUERY_HANDLER, useClass: GetRecentCustomersQueryHandler },
   { provide: CREATE_CUSTOMER_COMMAND_HANDLER, useClass: CreateCustomerCommandHandler },

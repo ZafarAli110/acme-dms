@@ -9,10 +9,13 @@ import {
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
 import { requireLocation } from "../../../user-context/require-location";
-import { findStockedPartsAsync } from "../../parts/part.queries";
+import { countStockedPartsAsync, findStockedPartsAsync } from "../../parts/part.queries";
 import { toStockListItemDto } from "../stock.mapper";
 
-/** Stock at the user's selected location. Stock is per location: never mix locations in one answer. */
+/**
+ * Stock at the user's selected location. Stock is per location: never mix locations in one answer. Its page counts
+ * with every request, as it always has (the web does not read it; the parts list asks its count once, ACME-124).
+ */
 @Injectable()
 export class GetStockListQueryHandler implements IGetStockListQueryHandler {
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
@@ -26,7 +29,8 @@ export class GetStockListQueryHandler implements IGetStockListQueryHandler {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-    const { items, total } = await findStockedPartsAsync(work.db, query);
+    const { items } = await findStockedPartsAsync(work.db, query);
+    const total = await countStockedPartsAsync(work.db, query);
     return {
       items: items.map(({ part, inventory, bin }) => toStockListItemDto(part, inventory, bin)),
       total,
