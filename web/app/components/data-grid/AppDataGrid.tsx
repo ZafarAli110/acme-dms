@@ -4,7 +4,6 @@ import {
   type GridColDef,
   type GridColumnVisibilityModel,
   type GridFilterModel,
-  type GridPaginationModel,
   type GridRowParams,
   type GridSortModel,
   type GridValidRowModel,
@@ -14,21 +13,23 @@ import { frFR } from "@mui/x-data-grid/locales";
 import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGridScrollRestore } from "../../core/hooks/useGridScrollRestore";
-import { type ListParams, MAX_LIST_DEPTH, PAGE_SIZES } from "../../core/paging/listParams";
+import { type ListParams, PAGE_SIZES } from "../../core/paging/listParams";
+import type { ListTotal } from "../../core/types/listTotal";
 import { INSET_SURFACE } from "../../theme";
 import { AppDataGridToolbar } from "./AppDataGridToolbar";
+import { type ListPaging, ListFooter } from "./ListFooter";
 import { fromFilterModel, sameFilter, toFilterModel, toPaginationModel, toSortModel } from "./listGridModels";
 
 /** A list whose paging, sort, filter and search the API applies; they live in the URL (useListParams). */
 export interface ServerList {
   params: ListParams;
-  rowCount: number;
   update: (changes: Partial<ListParams>, options: { replace: boolean }) => void;
-  /**
-   * The total as the footer shows it, for a list whose API stops counting past its depth ("10,000+", the customer
-   * list: `formatListTotal`). Left out, the footer shows `rowCount` as a number.
-   */
-  totalLabel?: string;
+  /** The question's total: exact, about or many (ACME-129); null while it loads. */
+  total: ListTotal | null;
+  /** What the page says about the pages around it; null while it loads. */
+  paging: ListPaging | null;
+  /** The list pages by keyset (ACME-129); false for one that pages by number only (a parts search). */
+  keyset: boolean;
   /**
    * The whole footer text, for a page that is not a slice of a counted list (close spellings after the exact matches,
    * ACME-120: "0 exact matches · 25 close spellings"). Left out, the footer is "1–25 of {total}".
@@ -70,7 +71,7 @@ export function AppDataGrid<Row extends GridValidRowModel>({
   noRowsLabel,
   testId,
 }: AppDataGridProps<Row>) {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   // The rows scroll inside the grid: put them back where they were when this history entry is shown again (Back).
   const apiRef = useGridApiRef();
   useGridScrollRestore(apiRef, rows.length > 0);
@@ -86,17 +87,6 @@ export function AppDataGrid<Row extends GridValidRowModel>({
   const sort = server?.params.sort ?? null;
   const direction = server?.params.direction ?? "asc";
   const sortModel = useMemo(() => toSortModel({ sort, direction }), [sort, direction]);
-
-  const handlePaginationModelChange = (model: GridPaginationModel): void => {
-    if (!server) {
-      return;
-    }
-    if (model.pageSize !== server.params.pageSize) {
-      server.update({ pageSize: model.pageSize, page: 1 }, { replace: false });
-    } else if (model.page + 1 !== server.params.page) {
-      server.update({ page: model.page + 1 }, { replace: false });
-    }
-  };
 
   const handleSortModelChange = (model: GridSortModel): void => {
     const first = model[0];
@@ -128,6 +118,8 @@ export function AppDataGrid<Row extends GridValidRowModel>({
         borderColor: "divider",
         borderRadius: 4,
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
       data-testid={testId}
     >
@@ -143,29 +135,6 @@ export function AppDataGrid<Row extends GridValidRowModel>({
           ...(i18n.language.startsWith("fr") ? frFR.components.MuiDataGrid.defaultProps.localeText : {}),
           noRowsLabel,
           noResultsOverlayLabel: noRowsLabel,
-          // The grid's rowCount stops at the API's depth limit, so it cannot say how many rows there are: the footer says.
-          ...(server
-            ? {
-                paginationDisplayedRows: ({ from, to }: { from: number; to: number }) => {
-                  if (server.footerLabel) {
-                    return server.footerLabel;
-                  }
-                  // Past the depth: a list that stops counting says "10,000+"; one that counts says its number.
-                  const pastDepth = server.rowCount > MAX_LIST_DEPTH;
-                  const key = pastDepth
-                    ? server.totalLabel
-                      ? "paging.limitedRows"
-                      : "paging.cappedRows"
-                    : "paging.rows";
-                  return t(key, {
-                    from: from.toLocaleString(i18n.language),
-                    to: to.toLocaleString(i18n.language),
-                    total: server.totalLabel ?? server.rowCount.toLocaleString(i18n.language),
-                    max: MAX_LIST_DEPTH.toLocaleString(i18n.language),
-                  });
-                },
-              }
-            : {}),
         }}
         columnVisibilityModel={columnVisibilityModel}
         onColumnVisibilityModelChange={onColumnVisibilityModelChange}
@@ -173,25 +142,37 @@ export function AppDataGrid<Row extends GridValidRowModel>({
         onFilterModelChange={handleFilterModelChange}
         filterDebounceMs={400}
         pageSizeOptions={PAGE_SIZES}
+        // A server list's paging is its own footer's (ListFooter, ACME-129): previous and next by keyset, a page box.
+        hideFooter={Boolean(server)}
         onRowClick={onRowClick ? handleRowClick : undefined}
         disableRowSelectionOnClick
         rowHeight={48}
         columnHeaderHeight={44}
-        sx={[GRID_SX, !onRowClick && { "& .MuiDataGrid-row": { cursor: "default" } }]}
+        sx={[GRID_SX, { flex: 1, minHeight: 0 }, !onRowClick && { "& .MuiDataGrid-row": { cursor: "default" } }]}
         {...(server
           ? {
               paginationMode: "server",
               sortingMode: "server",
               filterMode: "server",
-              // The pager stops at the last page the API allows; narrow the list with search or a filter to go further.
-              rowCount: Math.min(server.rowCount, MAX_LIST_DEPTH),
+              // The grid shows the page it is given; the footer below it pages.
+              rowCount: rows.length,
               paginationModel: toPaginationModel(server.params),
-              onPaginationModelChange: handlePaginationModelChange,
               sortModel,
               onSortModelChange: handleSortModelChange,
             }
           : { initialState: { pagination: { paginationModel: { pageSize: 25 } } } })}
       />
+      {server && (
+        <ListFooter
+          params={server.params}
+          update={server.update}
+          rowsOnPage={server.footerLabel ? rows.length : rowsOnPage(rows.length, server)}
+          total={server.total}
+          paging={server.paging}
+          keyset={server.keyset}
+          label={server.footerLabel}
+        />
+      )}
     </Box>
   );
 }
@@ -232,3 +213,8 @@ const GRID_SX = {
   "& .MuiTablePagination-spacer": { display: "none" },
   "& .MuiTablePagination-displayedRows": { flex: "1 1 12rem", minWidth: 0, whiteSpace: "normal", textAlign: "right" },
 } as const;
+
+/** The rows a server list's page holds: what it was given, which is never more than a page. */
+function rowsOnPage(given: number, server: ServerList): number {
+  return Math.min(given, server.params.pageSize);
+}

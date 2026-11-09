@@ -87,8 +87,14 @@ export default function PartList() {
         columns={columns}
         rows={data?.items ?? []}
         loading={isLoading || isLoadingPage}
-        // The exact total, counted once per question; the footer shows it as a number, never "10,000+" (ACME-124).
-        server={{ params, rowCount: count.data ?? 0, update }}
+        // The total once per question (ACME-124): exact, about or many (ACME-129). A search pages by number.
+        server={{
+          params,
+          update,
+          total: count.data ?? null,
+          paging: data ? { hasMore: data.hasMore, next: data.next, previous: data.previous } : null,
+          keyset: !params.search,
+        }}
         columnVisibilityModel={visibility.columnVisibilityModel}
         onColumnVisibilityModelChange={visibility.setColumnVisibilityModel}
         onRowClick={openPart}

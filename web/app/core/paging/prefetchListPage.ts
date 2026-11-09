@@ -2,10 +2,12 @@ import { redirect } from "react-router";
 import { isTransientError } from "../config/apiErrors";
 import { type ListParams, readListParams } from "./listParams";
 
-/** The address without its `page`: the list's first page, with the same search, sort and filter. */
+/** The address without its `page` and cursor: the list's first page, with the same search, sort and filter. */
 export function withoutPage(requestUrl: string): string {
   const url = new URL(requestUrl);
-  url.searchParams.delete("page");
+  for (const paging of ["page", "after", "before", "last"]) {
+    url.searchParams.delete(paging);
+  }
   return `${url.pathname}${url.search}`;
 }
 
@@ -23,7 +25,7 @@ export async function prefetchListPage(
   try {
     await fetchPage(params);
   } catch (error) {
-    if (isTransientError(error) && params.page > 1) {
+    if (isTransientError(error) && (params.page !== 1 || params.cursor)) {
       throw redirect(withoutPage(request.url));
     }
   }

@@ -17,8 +17,9 @@ function fromIsoDate(isoDate: string): Date {
   return new Date(`${isoDate}T00:00:00Z`);
 }
 
+/** The grid's own page: always its first. Paging is the list footer's (`ListFooter`, ACME-129). */
 export function toPaginationModel(params: ListParams): GridPaginationModel {
-  return { page: params.page - 1, pageSize: params.pageSize };
+  return { page: 0, pageSize: params.pageSize };
 }
 
 export function toSortModel(params: Pick<ListParams, "sort" | "direction">): GridSortModel {

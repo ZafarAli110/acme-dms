@@ -28,7 +28,7 @@ import { isBusyError } from "../core/config/apiErrors";
 import { useAuth } from "../core/contexts/auth/useAuth";
 import { useSelectedLocation } from "../core/contexts/location/useSelectedLocation";
 import { formatDaysAgo, formatPlainDate } from "../core/formatters/formatDate";
-import { formatListTotal, formatNumber } from "../core/formatters/formatNumber";
+import { formatListTotal } from "../core/formatters/formatNumber";
 import { formatRole } from "../core/formatters/formatRole";
 import { RESOLVED_LOCATION_CONTEXT } from "../core/middleware/routerContext";
 import { queryClient } from "../core/queries/queryClient";
@@ -139,7 +139,7 @@ export default function Home() {
               to="/customers"
               icon={<PeopleIcon />}
               title={t("customersAt", { location: location?.name ?? "" })}
-              count={customerCount.isSuccess ? formatListTotal(customerCount.data, i18n.language) : undefined}
+              count={customerCount.isSuccess ? formatListTotal(customerCount.data, i18n.language, tCommon) : undefined}
               caption={t("customersCaption")}
               testId="home-customers"
             />
@@ -151,7 +151,7 @@ export default function Home() {
               to="/parts"
               icon={<Inventory2Icon />}
               title={t("partsAt", { location: location?.name ?? "" })}
-              count={partCount.isSuccess ? formatNumber(partCount.data, i18n.language) : undefined}
+              count={partCount.isSuccess ? formatListTotal(partCount.data, i18n.language, tCommon) : undefined}
               caption={t("partsCaption")}
               testId="home-parts"
             />

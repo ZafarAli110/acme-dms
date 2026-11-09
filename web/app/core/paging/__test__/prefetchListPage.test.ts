@@ -15,7 +15,7 @@ describe("withoutPage", () => {
 
 describe("prefetchListPage", () => {
   it("fetches the page the URL asks for", async () => {
-    const asked: number[] = [];
+    const asked: (number | null)[] = [];
 
     await prefetchListPage(request("?page=2&pageSize=50"), async (params) => {
       asked.push(params.page, params.pageSize);

@@ -1,6 +1,6 @@
 import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import type { TFunction } from "i18next";
-import { serverColumn } from "../../../components/data-grid/serverColumns";
+import { phoneFilterOperators, serverColumn } from "../../../components/data-grid/serverColumns";
 import { formatPlainDate } from "../../../core/formatters/formatDate";
 import { CustomerNameCell } from "../components/CustomerNameCell";
 import { CustomerStatusChip } from "../components/CustomerStatusChip";
@@ -59,7 +59,13 @@ export function customerColumns(
     },
     { field: "companyName", headerName: t("fields.companyName"), flex: 1, minWidth: 140 },
     { field: "email", headerName: t("fields.email"), flex: 1.2, minWidth: 180 },
-    { field: "phone", headerName: t("fields.phone"), flex: 0.9, minWidth: 140 },
+    {
+      field: "phone",
+      headerName: t("fields.phone"),
+      flex: 0.9,
+      minWidth: 140,
+      filterOperators: phoneFilterOperators(),
+    },
     { field: "city", headerName: t("columns.city"), flex: 0.8, minWidth: 120 },
     {
       field: "status",

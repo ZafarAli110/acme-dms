@@ -14,7 +14,9 @@ import { useSelectedLocation } from "../../core/contexts/location/useSelectedLoc
 import { useColumnVisibility } from "../../core/hooks/useColumnVisibility";
 import { useListParams } from "../../core/hooks/useListParams";
 import { RESOLVED_LOCATION_CONTEXT } from "../../core/middleware/routerContext";
-import { formatListTotal } from "../../core/formatters/formatNumber";
+import type { TFunction } from "i18next";
+import { aboutValue, formatNumber } from "../../core/formatters/formatNumber";
+import type { ListTotal } from "../../core/types/listTotal";
 import { toListQueryBody } from "../../core/paging/listParams";
 import { prefetchListPage } from "../../core/paging/prefetchListPage";
 import { queryClient } from "../../core/queries/queryClient";
@@ -57,7 +59,7 @@ export default function CustomerList() {
   const isLoadingPage = useNavigation().state === "loading";
   const { data, error, isLoading } = useCustomerList(location?.id ?? "", params);
   const count = useCustomerCount(location?.id ?? "", questionOf(params));
-  const total = count.data ?? 0;
+  const total = count.data ?? null;
   const visibility = useColumnVisibility("customers");
   const labels = useMemo(
     () => ({ note: t("closeMatch.note", { search: params.search }), divider: t("closeMatch.divider") }),
@@ -112,11 +114,10 @@ export default function CustomerList() {
         loading={isLoading || isLoadingPage}
         server={{
           params,
-          // At least the customers on the page (close spellings are not in the exact count); the note and the divider
-          // are not customers, so they never make a second page.
-          rowCount: Math.max(total, items.length),
           update,
-          totalLabel: formatListTotal(total, i18n.language),
+          total,
+          paging: data ? { hasMore: data.hasMore, next: data.next, previous: data.previous } : null,
+          keyset: true,
           footerLabel,
         }}
         columnVisibilityModel={visibility.columnVisibilityModel}
@@ -151,13 +152,21 @@ export default function CustomerList() {
       <ExportConfirmDialog
         open={confirmingExport}
         title={tCommon("exports.confirmTitle")}
-        message={tCommon("exports.confirmMessage", {
-          total: formatListTotal(total, i18n.language),
-          location: location?.name ?? "",
-        })}
+        message={exportMessage(tCommon, total, i18n.language, location?.name ?? "")}
         onCancel={() => setConfirmingExport(false)}
         onConfirm={startExport}
       />
     </Fragment>
   );
+}
+
+/** What the export dialog says it will export (ACME-129): the exact number, about a number, or every match. */
+function exportMessage(t: TFunction, total: ListTotal | null, language: string, location: string): string {
+  if (total?.kind === "about") {
+    return t("exports.confirmMessageAbout", { total: formatNumber(aboutValue(total.value), language), location });
+  }
+  if (total?.kind === "exact") {
+    return t("exports.confirmMessage", { total: formatNumber(total.value, language), location });
+  }
+  return t("exports.confirmMessageMany", { location });
 }

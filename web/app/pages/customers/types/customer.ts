@@ -50,9 +50,14 @@ export interface CustomerPageItem extends CustomerListItem {
 
 export interface CustomerPage {
   items: CustomerPageItem[];
-  page: number;
+  /** Null for a page found by keyset (ACME-129). */
+  page: number | null;
   pageSize: number;
   hasMore: boolean;
+  /** The next page's cursor (`after`); null on the last page. */
+  next: string | null;
+  /** The page before's cursor (`before`); null on the first page. */
+  previous: string | null;
 }
 
 /** What a total depends on: the search and the filter. The page and the sort don't change it. */

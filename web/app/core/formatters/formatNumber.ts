@@ -2,7 +2,8 @@
  * Numbers as the user's language writes them, read back the same way. Built on Intl: the separators come from
  * Intl.NumberFormat for the language (`formatToParts`), never from a list of our own.
  */
-import { MAX_LIST_DEPTH } from "../paging/listParams";
+import type { TFunction } from "i18next";
+import type { ListTotal } from "../types/listTotal";
 
 /**
  * A number in the user's language: 1600 is "1,600" in English, "1 600" in French. A decimal given as text ("45.50") is
@@ -17,11 +18,27 @@ export function formatNumber(
 }
 
 /**
- * A list's total for display, from an API that counts up to one past the list's depth: "1,234", and "10,000+" past
- * 10,000 (the customer list, ACME-119). Only for a list whose API stops counting; another list's total is a number.
+ * A list's total for display (ACME-129): "1,234" when exact, "about 1,600,000" for an estimate, "many" for a search or
+ * a filter with more matches than a page shows. `t` is the common namespace's.
  */
-export function formatListTotal(total: number, language: string): string {
-  return total > MAX_LIST_DEPTH ? `${formatNumber(MAX_LIST_DEPTH, language)}+` : formatNumber(total, language);
+export function formatListTotal(total: ListTotal, language: string, t: TFunction): string {
+  switch (total.kind) {
+    case "exact":
+      return formatNumber(total.value, language);
+    case "about":
+      return t("paging.about", { total: formatNumber(aboutValue(total.value), language) });
+    default:
+      return t("paging.many");
+  }
+}
+
+/** An estimate to two significant figures, no more precise than it is: 1,605,651 is "about 1,600,000". */
+export function aboutValue(value: number): number {
+  if (value < 100) {
+    return value;
+  }
+  const scale = 10 ** (Math.floor(Math.log10(value)) - 1);
+  return Math.round(value / scale) * scale;
 }
 
 /** A file size in megabytes, one decimal: "12.5 MB", "12,5 Mo". */

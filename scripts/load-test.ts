@@ -17,7 +17,8 @@
 // that fell behind cannot hide it. The first --warm-up seconds (10) are sent but not counted (cold caches, the runtime
 // warming up), and a request that takes longer than --timeout ms (10,000) counts as failed: a person gives up too.
 //
-// What it sends, out of 100: customer list pages (most on the first few, some deep, up to the last page), searches
+// What it sends, out of 100: customer list pages as the web asks for them (ACME-129: page 1, then Next and Previous by
+// their cursors, the last page, now and then a jump by number), searches
 // (a surname, a misspelt one, part of a phone number), filters and sorts, one customer, recent customers, the parts
 // list, its count, one part, the stock value and who am I; with --writes, that share adds or edits a customer. The people are
 // spread over the locations as a busy morning is (Northside the busiest): see LOCATION_SHARES.
@@ -53,12 +54,16 @@ interface KnownCustomer {
   city: string | null;
 }
 
-/** What the test knows about a location before it starts: some of its customers and parts, and its last page. */
+/**
+ * What the test knows about a location before it starts: some of its customers and parts, its last page by number, and
+ * cursors from pages through its list, for Next and Previous (ACME-129).
+ */
 interface Place {
   location: Location;
   customers: KnownCustomer[];
   partIds: string[];
   lastPage: number;
+  cursors: string[];
 }
 
 interface Person {
@@ -122,6 +127,28 @@ function pickPage(lastPage: number): number {
   return pick(1, lastPage);
 }
 
+/**
+ * A customer list page as the web asks for it (ACME-129): page 1 most, then Next and Previous from where people are
+ * (cursors), the last page, and now and then a jump by number (offset, up to page 400).
+ */
+function listPage(place: Place): string {
+  const roll = Math.random();
+  const cursor = oneOf(place.cursors);
+  if (roll < 0.45 || !cursor) {
+    return "page=1";
+  }
+  if (roll < 0.8) {
+    return `after=${encodeURIComponent(cursor)}`;
+  }
+  if (roll < 0.88) {
+    return `before=${encodeURIComponent(cursor)}`;
+  }
+  if (roll < 0.95) {
+    return "last=true";
+  }
+  return `page=${pickPage(place.lastPage)}`;
+}
+
 /** A surname with its middle letter left out ("Penwood" → "Penwod"), as a person mistypes it. */
 function misspelt(surname: string): string {
   const middle = Math.floor(surname.length / 2);
@@ -161,7 +188,7 @@ const READS: Kind[] = [
   {
     name: "customers list",
     weight: 30,
-    call: (person) => ({ method: "GET", path: customers(`page=${pickPage(person.place.lastPage)}`) }),
+    call: (person) => ({ method: "GET", path: customers(listPage(person.place)) }),
   },
   {
     // A list view asks its total once (ACME-117): the plain list, or a filter (a search's page counts for itself).
@@ -419,25 +446,26 @@ async function getJsonAsync<T>(gateway: string, cookie: string, location: Locati
 
 /** Some of a location's customers (from the first, a middle and the last page) and parts, and its last page. */
 async function placeAsync(gateway: string, cookie: string, location: Location): Promise<Place> {
-  type Page = { items?: KnownCustomer[] };
+  type Page = { items?: KnownCustomer[]; next?: string | null; previous?: string | null };
   const first = await getJsonAsync<Page>(gateway, cookie, location, customers("page=1"));
-  // The total is the count endpoint's (ACME-117); without one the test would never send a deep page.
-  const counted = await getJsonAsync<{ total?: number }>(
+  // The total is the count endpoint's (ACME-117): exact, about or many (ACME-129).
+  const counted = await getJsonAsync<{ kind?: string; value?: number | null }>(
     gateway,
     cookie,
     location,
     "/api/dealership/v1/customers/count",
   );
-  if (typeof counted.total !== "number") {
+  if (!counted.kind) {
     throw new Error(`The customer count at ${location.name} gave no total.`);
   }
-  const total = counted.total;
+  const total = typeof counted.value === "number" ? counted.value : LAST_REACHABLE_PAGE * PAGE_SIZE;
   const lastPage = Math.max(1, Math.min(LAST_REACHABLE_PAGE, Math.ceil(total / PAGE_SIZE)));
-  const later = await Promise.all(
-    [...new Set([Math.ceil(lastPage / 2), pick(1, lastPage), lastPage])]
+  const later = await Promise.all([
+    ...[...new Set([Math.ceil(lastPage / 2), pick(1, lastPage), lastPage])]
       .filter((page) => page > 1)
       .map((page) => getJsonAsync<Page>(gateway, cookie, location, customers(`page=${page}`))),
-  );
+    getJsonAsync<Page>(gateway, cookie, location, customers("last=true")),
+  ]);
   const parts = await getJsonAsync<{ items?: { id: string }[] }>(
     gateway,
     cookie,
@@ -451,6 +479,10 @@ async function placeAsync(gateway: string, cookie: string, location: Location): 
     ),
     partIds: (parts.items ?? []).map((part) => part.id),
     lastPage,
+    // Where people are in the list: after page 1, in the middle, past row 10,000 by Next, near the end.
+    cursors: [first, ...later].flatMap((page) =>
+      [page.next, page.previous].filter((cursor) => typeof cursor === "string"),
+    ),
   };
 }
 

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MAX_LIST_DEPTH, readListParams } from "../listParams";
+import { MAX_LIST_DEPTH, readListParams, toListApiQuery, toListQueryBody } from "../listParams";
 
 const read = (query: string) => readListParams(new URLSearchParams(query));
 
@@ -14,11 +14,33 @@ describe("readListParams", () => {
     ).toEqual({
       search: "brake",
       page: 2,
+      cursor: null,
       pageSize: 50,
       sort: "onHand",
       direction: "desc",
       filter: { field: "bin", operator: "startsWith", value: "A" },
     });
+  });
+
+  it("reads a keyset page: after or before a cursor, or the last page, with its number when known (ACME-129)", () => {
+    expect(read("page=401&after=abc.def")).toMatchObject({ page: 401, cursor: { after: "abc.def" } });
+    expect(read("before=abc.def")).toMatchObject({ page: null, cursor: { before: "abc.def" } });
+    expect(read("last=true")).toMatchObject({ page: null, cursor: { last: true } });
+    // Without a cursor, a page past row 10,000 opens on the deepest page a number reaches.
+    expect(read("page=401")).toMatchObject({ page: 400, cursor: null });
+  });
+
+  it("sends a keyset page's cursor to the API without its number, and a numbered page with it (ACME-129)", () => {
+    const base = readListParams(new URLSearchParams("sort=city"));
+
+    expect(toListApiQuery({ ...base, page: 7, cursor: { after: "c1" } })).toBe(
+      "after=c1&sort=city&direction=asc&pageSize=25",
+    );
+    expect(toListApiQuery({ ...base, page: null, cursor: { last: true } })).toBe(
+      "last=true&sort=city&direction=asc&pageSize=25",
+    );
+    expect(toListApiQuery({ ...base, page: 3, cursor: null })).toBe("page=3&sort=city&direction=asc&pageSize=25");
+    expect(toListQueryBody({ ...base, page: 7, cursor: { after: "c1" } })).toEqual({ sort: "city", direction: "asc" });
   });
 
   it("falls back for what is not valid: a page that is not a whole number from 1, a size the grid does not offer", () => {

@@ -65,8 +65,18 @@
   },
   "paging": {
     "rows": "{{from}}–{{to}} sur {{total}}",
-    "cappedRows": "{{from}}–{{to}} sur {{total}} (la liste affiche les {{max}} premières : recherchez ou filtrez pour la réduire)",
-    "limitedRows": "{{from}}–{{to}} sur {{total}} (recherchez ou filtrez pour la réduire)"
+    "lastRows": "{{count}} dernières sur {{total}}",
+    "beforeLast": "Lignes avant les {{count}} dernières",
+    "about": "environ {{total}}",
+    "many": "beaucoup",
+    "rowsPerPage": "Lignes par page :",
+    "page": "Page",
+    "first": "Première page",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "last": "Dernière page",
+    "pageTooDeep": "Jusqu'à la page {{max}} : allez plus loin avec Suivante ou Dernière.",
+    "pageBeyondEnd": "La liste a {{max}} pages."
   },
   "exports": {
     "export": "Exporter vers Excel",
@@ -91,6 +101,8 @@
     "customersTitle": "Clients du site {{location}}",
     "confirmTitle": "Exporter vers Excel ?",
     "confirmMessage": "{{total}} clients de {{location}}, avec la recherche, le tri, le filtre et les colonnes affichés. Un gros export prend quelques minutes ; il tourne en arrière-plan pendant que vous continuez.",
+    "confirmMessageAbout": "Environ {{total}} clients de {{location}}, avec la recherche, le tri, le filtre et les colonnes affichés. Un gros export prend quelques minutes ; il tourne en arrière-plan pendant que vous continuez.",
+    "confirmMessageMany": "Tous les clients qui correspondent, à {{location}}, avec la recherche, le tri, le filtre et les colonnes affichés. Un gros export prend quelques minutes ; il tourne en arrière-plan pendant que vous continuez.",
     "panel": "Exports"
   },
   "revision": {

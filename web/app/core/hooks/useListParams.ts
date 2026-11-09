@@ -10,8 +10,10 @@ export function useListParams() {
   const [searchParams, setSearchParams] = useSearchParams();
   const params = readListParams(searchParams);
 
+  // A change that does not say how the page was reached (a sort, a filter, a page size) leaves keyset paging: its
+  // cursor belonged to the old question (ACME-129).
   const update = (changes: Partial<ListParams>, options: { replace: boolean }): void => {
-    setSearchParams(toListSearchParams({ ...params, ...changes }), {
+    setSearchParams(toListSearchParams({ ...params, cursor: null, ...changes }), {
       replace: options.replace,
       preventScrollReset: true,
     });

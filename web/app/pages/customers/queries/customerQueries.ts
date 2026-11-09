@@ -1,5 +1,6 @@
 import { API_CONFIG } from "../../../core/config/api";
 import { apiClient, type RequestOptions } from "../../../core/services/apiClient";
+import type { ListTotal } from "../../../core/types/listTotal";
 import { FIRST_PAGE, type ListParams, toListApiQuery, toListSearchParams } from "../../../core/paging/listParams";
 import type { Customer, CustomerInput, CustomerListItem, CustomerPage, CustomerQuestion } from "../types/customer";
 import { ifMatch } from "../../../core/services/ifMatch";
@@ -13,7 +14,7 @@ export const customerQueries = {
     apiClient.getAsync<CustomerPage>(`${CUSTOMERS_URL}?${toListApiQuery(params)}`, options),
   /** How many customers the search and filter match: exact up to 10,000, 10,001 past it ("10,000+"). */
   countCustomersAsync: (question: CustomerQuestion, options?: RequestOptions) =>
-    apiClient.getAsync<{ total: number }>(
+    apiClient.getAsync<ListTotal>(
       `${CUSTOMERS_URL}/count?${toListSearchParams({ ...FIRST_PAGE, ...question })}`,
       options,
     ),

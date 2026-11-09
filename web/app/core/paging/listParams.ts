@@ -10,13 +10,24 @@ export interface ListFilter {
 }
 
 /**
+ * How a page was reached by keyset (ACME-129): after or before a page's cursor (the API's `next` and `previous`), or the
+ * list's last page. Each page then costs what the first costs, however deep.
+ */
+export type ListCursor = { after: string } | { before: string } | { last: true };
+
+/**
  * What a list page shows: the search, the page, one sort and one filter. They live in the URL, so a refresh or a shared
  * link keeps them.
  */
 export interface ListParams {
   search: string;
-  /** 1-based, as the API and the URL count. */
-  page: number;
+  /**
+   * 1-based, as the API and the URL count. Null when it is not known: the last page, and pages before it reached with
+   * Previous (ACME-129).
+   */
+  page: number | null;
+  /** The page by keyset; null for a page by its number (a jump, up to row 10,000). */
+  cursor: ListCursor | null;
   pageSize: number;
   /** A field of the list, or null for the list's own order. */
   sort: string | null;
@@ -41,9 +52,15 @@ export function readListParams(searchParams: URLSearchParams): ListParams {
   const pageSize = (PAGE_SIZES as readonly number[]).includes(requestedPageSize)
     ? requestedPageSize
     : DEFAULT_PAGE_SIZE;
-  // A shared link to a page the API would refuse opens on the last page it allows.
-  const page =
-    Number.isInteger(requestedPage) && requestedPage >= 1
+  const cursor = readCursor(searchParams);
+  const numbered = Number.isInteger(requestedPage) && requestedPage >= 1;
+  // A shared link to a page the API would refuse opens on the last page it allows. A page reached by keyset keeps the
+  // number it was counted to (past row 10,000 too), or none.
+  const page = cursor
+    ? numbered
+      ? requestedPage
+      : null
+    : numbered
       ? Math.min(requestedPage, Math.floor(MAX_LIST_DEPTH / pageSize))
       : 1;
   const filterField = searchParams.get("filterField");
@@ -51,6 +68,7 @@ export function readListParams(searchParams: URLSearchParams): ListParams {
   return {
     search: searchParams.get("search") ?? "",
     page,
+    cursor,
     pageSize,
     sort: searchParams.get("sort"),
     direction: searchParams.get("direction") === "desc" ? "desc" : "asc",
@@ -67,8 +85,17 @@ export function toListSearchParams(params: ListParams): URLSearchParams {
   if (params.search !== "") {
     searchParams.set("search", params.search);
   }
-  if (params.page !== 1) {
+  if (params.page !== null && (params.page !== 1 || params.cursor)) {
     searchParams.set("page", String(params.page));
+  }
+  if (params.cursor) {
+    if ("after" in params.cursor) {
+      searchParams.set("after", params.cursor.after);
+    } else if ("before" in params.cursor) {
+      searchParams.set("before", params.cursor.before);
+    } else {
+      searchParams.set("last", "true");
+    }
   }
   if (params.pageSize !== DEFAULT_PAGE_SIZE) {
     searchParams.set("pageSize", String(params.pageSize));
@@ -87,10 +114,17 @@ export function toListSearchParams(params: ListParams): URLSearchParams {
   return searchParams;
 }
 
-/** The query string the API's list endpoints take: the same names, with the page always sent. */
+/**
+ * The query string the API's list endpoints take: the same names, with the page sent for a page by its number and
+ * left out for one by keyset (the API finds that one from its cursor).
+ */
 export function toListApiQuery(params: ListParams): string {
   const searchParams = toListSearchParams(params);
-  searchParams.set("page", String(params.page));
+  if (params.cursor) {
+    searchParams.delete("page");
+  } else {
+    searchParams.set("page", String(params.page ?? 1));
+  }
   searchParams.set("pageSize", String(params.pageSize));
   return searchParams.toString();
 }
@@ -98,15 +132,29 @@ export function toListApiQuery(params: ListParams): string {
 /** The list's search, sort and filter as a request body (an export): every row, so no page. */
 export function toListQueryBody(params: ListParams): Record<string, string> {
   const query = Object.fromEntries(toListSearchParams(params));
-  delete query["page"];
-  delete query["pageSize"];
+  for (const paging of ["page", "pageSize", "after", "before", "last"]) {
+    delete query[paging];
+  }
   return query;
+}
+
+function readCursor(searchParams: URLSearchParams): ListCursor | null {
+  const after = searchParams.get("after");
+  if (after) {
+    return { after };
+  }
+  const before = searchParams.get("before");
+  if (before) {
+    return { before };
+  }
+  return searchParams.get("last") === "true" ? { last: true } : null;
 }
 
 /** The first page of a list, unsorted and unfiltered. */
 export const FIRST_PAGE: ListParams = {
   search: "",
   page: 1,
+  cursor: null,
   pageSize: DEFAULT_PAGE_SIZE,
   sort: null,
   direction: "asc",

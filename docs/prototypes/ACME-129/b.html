@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ACME-129 prototype B</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter Variable", Roboto, Helvetica, Arial, sans-serif;
+        background: #f5f7fa;
+        color: #1f2933;
+      }
+      main {
+        max-width: 1180px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 4px;
+      }
+      .sub {
+        color: #5f6b7a;
+        margin: 0 0 16px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e4e8ee;
+      }
+      .search {
+        flex: 1;
+        max-width: 360px;
+        border: 1px solid #c9d1db;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      .btn {
+        border: 1px solid #1565c0;
+        color: #1565c0;
+        background: #fff;
+        border-radius: 8px;
+        padding: 7px 14px;
+        font-size: 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th {
+        text-align: left;
+        color: #5f6b7a;
+        font-weight: 600;
+        padding: 10px 16px;
+        border-bottom: 1px solid #e4e8ee;
+      }
+      td {
+        padding: 10px 16px;
+        border-bottom: 1px solid #eef1f5;
+      }
+      .chip {
+        display: inline-block;
+        border-radius: 12px;
+        padding: 2px 10px;
+        font-size: 12px;
+        background: #e3f2e6;
+        color: #1b5e20;
+      }
+      .footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 16px;
+        padding: 10px 16px;
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .note {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .divider td {
+        background: #eef4fb;
+        color: #1565c0;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 8px 16px;
+      }
+    
+      .pager { display: flex; align-items: center; gap: 6px; }
+      .arrow { border: 0; background: none; color: #1f2933; font-size: 18px; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; }
+      .arrow:disabled { color: #b8c0cc; cursor: default; }
+      .arrow:hover:not(:disabled) { background: #eef1f5; }
+      .pagebox { width: 64px; border: 1px solid #c9d1db; border-radius: 6px; padding: 4px 6px; font-size: 13px; text-align: center; }
+      .num { min-width: 32px; height: 32px; border: 0; background: none; border-radius: 16px; font-size: 13px; color: #1f2933; }
+      .num.on { background: #1565c0; color: #fff; }
+      .state { margin: 24px 0 6px; font-size: 13px; color: #5f6b7a; font-weight: 600; }
+      .rows { color: #5f6b7a; font-size: 13px; }
+      select { border: 0; font-size: 13px; color: #1f2933; background: none; }
+</style>
+  </head>
+  <body>
+    <!-- B: numbered page buttons, as many web shops show. Needs a known last page: with an estimate or 'many' the last number cannot be shown, so those lists fall back to arrows only and lose the jump. -->
+    <main>
+      <h1>Customers</h1>
+      <p class="sub">Customers at Northside</p>
+<p class="state">The whole list: the total is an estimate, so no last page number (arrows only, no jump)</p><div class="card"><div class="toolbar"><input class="search" value="" placeholder="Search customers" aria-label="Search" /><span style="flex: 1"></span><button class="btn">Export</button><button class="btn" style="background: #1565c0; color: #fff">New customer</button></div>
+<table><thead><tr><th>Surname, First name</th><th>Company</th><th>Email</th><th>City</th><th>Status</th></tr></thead><tbody><tr><td>Abbott, Aisha</td><td>Abbott &amp; Sons</td><td>aisha.abbott@outlook.com</td><td>Leeds</td><td><span class="chip">Active</span></td></tr>
+<tr><td>Abbott, Ben</td><td>—</td><td>ben.abbott21@gmail.com</td><td>York</td><td><span class="chip">Active</span></td></tr>
+<tr><td>Abbott, Chloe</td><td>—</td><td>chloe.abbott@hotmail.co.uk</td><td>Hillcrest</td><td><span class="chip">Active</span></td></tr></tbody></table>
+<div class="footer"><span class="rows">Rows per page: <select><option>25</option></select></span><span class="rows">1–25 of about 960,000</span><span class="pager"><button class="arrow" disabled>‹</button><button class="arrow">›</button></span></div></div><p class="state">A search with hundreds of matches, on page 3: not counted (arrows only, no jump)</p><div class="card"><div class="toolbar"><input class="search" value="4417" placeholder="Search customers" aria-label="Search" /><span style="flex: 1"></span><button class="btn">Export</button><button class="btn" style="background: #1565c0; color: #fff">New customer</button></div>
+<table><thead><tr><th>Surname, First name</th><th>Company</th><th>Email</th><th>City</th><th>Status</th></tr></thead><tbody><tr><td>Abbott, Aisha</td><td>Abbott &amp; Sons</td><td>aisha.abbott@outlook.com</td><td>Leeds</td><td><span class="chip">Active</span></td></tr>
+<tr><td>Abbott, Ben</td><td>—</td><td>ben.abbott21@gmail.com</td><td>York</td><td><span class="chip">Active</span></td></tr>
+<tr><td>Abbott, Chloe</td><td>—</td><td>chloe.abbott@hotmail.co.uk</td><td>Hillcrest</td><td><span class="chip">Active</span></td></tr></tbody></table>
+<div class="footer"><span class="rows">Rows per page: <select><option>25</option></select></span><span class="rows">51–75 of many</span><span class="pager"><button class="arrow">‹</button><button class="arrow">›</button></span></div></div><p class="state">A filter with an exact total: numbered pages</p><div class="card"><div class="toolbar"><input class="search" value="" placeholder="Search customers" aria-label="Search" /><span style="flex: 1"></span><button class="btn">Export</button><button class="btn" style="background: #1565c0; color: #fff">New customer</button></div>
+<table><thead><tr><th>Surname, First name</th><th>Company</th><th>Email</th><th>City</th><th>Status</th></tr></thead><tbody><tr><td>Abbott, Aisha</td><td>Abbott &amp; Sons</td><td>aisha.abbott@outlook.com</td><td>Leeds</td><td><span class="chip">Active</span></td></tr>
+<tr><td>Abbott, Ben</td><td>—</td><td>ben.abbott21@gmail.com</td><td>York</td><td><span class="chip">Active</span></td></tr>
+<tr><td>Abbott, Chloe</td><td>—</td><td>chloe.abbott@hotmail.co.uk</td><td>Hillcrest</td><td><span class="chip">Active</span></td></tr></tbody></table>
+<div class="footer"><span class="rows">Rows per page: <select><option>25</option></select></span><span class="rows">26–50 of 212</span><span class="pager"><button class="arrow">‹</button><button class="num">1</button><button class="num on">2</button><button class="num">3</button><button class="num">4</button><span class="rows">…</span><button class="num">9</button><button class="arrow">›</button></span></div></div>
+    </main>
+  </body>
+</html>

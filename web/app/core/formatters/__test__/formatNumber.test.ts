@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatFileSize, formatListTotal, formatNumber, parseDecimal } from "../formatNumber";
+import type { TFunction } from "i18next";
+import { aboutValue, formatFileSize, formatListTotal, formatNumber, parseDecimal } from "../formatNumber";
 
 describe("formatNumber", () => {
   it("groups thousands the way the user's language does", () => {
@@ -7,11 +8,17 @@ describe("formatNumber", () => {
     expect(formatNumber(1600000, "fr")).toMatch(/^1\s600\s000$/);
   });
 
-  it("shows a list's total exactly up to 10,000 and as 10,000+ past it", () => {
-    expect(formatListTotal(0, "en")).toBe("0");
-    expect(formatListTotal(10_000, "en")).toBe("10,000");
-    expect(formatListTotal(10_001, "en")).toBe("10,000+");
-    expect(formatListTotal(10_001, "fr")).toMatch(/^10\s000\+$/);
+  it("shows a list's total exact, about a number to two figures, or many (ACME-129)", () => {
+    const t = ((key: string, options?: { total?: string }) =>
+      key === "paging.about" ? `about ${options?.total}` : "many") as unknown as TFunction;
+
+    expect(formatListTotal({ kind: "exact", value: 0 }, "en", t)).toBe("0");
+    expect(formatListTotal({ kind: "exact", value: 1095 }, "en", t)).toBe("1,095");
+    expect(formatListTotal({ kind: "about", value: 1_605_651 }, "en", t)).toBe("about 1,600,000");
+    expect(formatListTotal({ kind: "about", value: 24_266 }, "en", t)).toBe("about 24,000");
+    expect(formatListTotal({ kind: "many", value: null }, "en", t)).toBe("many");
+    expect(aboutValue(953_203)).toBe(950_000);
+    expect(aboutValue(42)).toBe(42);
   });
 
   it("shows a file size in megabytes with the language's decimal separator and unit", () => {

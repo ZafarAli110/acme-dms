@@ -30,9 +30,21 @@ function gridOperators(type: string): GridFilterOperator[] {
   }
 }
 
-/** A column of a server list: its filter offers only the operators the API takes for its type. */
+/**
+ * A phone column's filter (ACME-129): the start, the end or all of its digits, or empty; never "contains", which the
+ * API refuses (the middle of a number is not searched).
+ */
+export function phoneFilterOperators(): GridFilterOperator[] {
+  const allowed = ["startsWith", "endsWith", "equals", "isEmpty", "isNotEmpty"];
+  return getGridStringOperators().filter((operator) => allowed.includes(operator.value));
+}
+
+/**
+ * A column of a server list: its filter offers only the operators the API takes for its type, unless the column names
+ * its own (a phone's).
+ */
 export function serverColumn<Row extends GridValidRowModel>(column: GridColDef<Row>): GridColDef<Row> {
-  if (column.filterable === false) {
+  if (column.filterable === false || column.filterOperators) {
     return column;
   }
   const type = column.type ?? "string";

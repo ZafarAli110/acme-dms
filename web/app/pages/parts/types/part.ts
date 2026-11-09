@@ -27,9 +27,14 @@ export interface PartListItem {
  */
 export interface PartPage {
   items: PartListItem[];
-  page: number;
+  /** Null for a page found by keyset (ACME-129). */
+  page: number | null;
   pageSize: number;
   hasMore: boolean;
+  /** The next page's cursor (`after`); null on the last page, and for a search, which pages by number. */
+  next: string | null;
+  /** The page before's cursor (`before`); null on the first page, and for a search. */
+  previous: string | null;
 }
 
 /** What the parts total depends on: the search and the filter. The page and the sort don't change it. */

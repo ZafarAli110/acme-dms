@@ -28,16 +28,39 @@ test.describe("parts", () => {
     expect(quantities).toEqual(quantities.toSorted((a, b) => b - a));
   });
 
-  test("the next page goes into the URL", async ({ page }) => {
+  test("the next page goes into the URL, by keyset, and survives a reload (ACME-129)", async ({ page }) => {
     await page.goto("/parts?pageSize=10");
-    await page.getByRole("button", { name: "Go to next page" }).click();
+    await page.getByRole("button", { name: "Next page" }).click();
 
-    await expect(page).toHaveURL(/page=2/);
-    await expect(page.locator(".MuiTablePagination-displayedRows")).toContainText(/^11–/);
+    await expect(page).toHaveURL(/page=2&after=/);
+    await expect(page.getByTestId("list-footer-rows")).toContainText(/^11–20 of /);
+    await expect(page.getByTestId("list-footer-page")).toHaveValue("2");
     // The grid once went back to page 1 as soon as page 2 had loaded, so look again once it has.
     await expect(page.getByTestId("parts-table").locator(".MuiLinearProgress-root")).toHaveCount(0);
-    await expect(page).toHaveURL(/page=2/);
-    await expect(page.locator(".MuiTablePagination-displayedRows")).toContainText(/^11–/);
+    await page.reload();
+    await expect(page).toHaveURL(/page=2&after=/);
+    await expect(page.getByTestId("list-footer-rows")).toContainText(/^11–20 of /);
+  });
+
+  test("Last opens the last parts, Previous goes back from it, and the page box jumps (ACME-129)", async ({ page }) => {
+    await page.goto("/parts");
+    await page.getByRole("button", { name: "Last page" }).click();
+
+    await expect(page).toHaveURL(/last=true/);
+    await expect(page.getByTestId("list-footer-rows")).toContainText(/^Last 25 of /);
+    await expect(page.getByTestId("list-footer-page")).toHaveValue("");
+    await expect(page.getByRole("button", { name: "Next page" })).toBeDisabled();
+    await page.getByRole("button", { name: "Previous page" }).click();
+    await expect(page.getByTestId("list-footer-rows")).toContainText("Rows before the last 25");
+
+    await page.getByTestId("list-footer-page").fill("3");
+    await page.getByTestId("list-footer-page").press("Enter");
+    await expect(page).toHaveURL(/page=3/);
+    await expect(page.getByTestId("list-footer-rows")).toContainText(/^51–75 of /);
+    await page.getByTestId("list-footer-page").fill("9999");
+    await page.getByTestId("list-footer-page").press("Enter");
+    await expect(page.getByRole("alert")).toContainText("Up to page 400");
+    await expect(page).toHaveURL(/page=3/);
   });
 
   test("a part edit is saved", async ({ page, request }) => {
@@ -52,23 +75,23 @@ test.describe("parts", () => {
     await expect(page.getByTestId("part-description").locator("input")).toHaveValue("Oil filter, spin-on, long life");
   });
 
-  // ACME-124: the exact total, asked once per question; the stock value asked on each visit, so it is always current.
-  test("the footer shows the count's exact number; paging and sorting do not ask again, a search asks once", async ({
+  // ACME-124: the total, asked once per question; ACME-129: exact, about or many. The stock value on each visit.
+  test("the footer shows the count's total; paging and sorting do not ask again, a search asks once", async ({
     page,
   }) => {
     const asked = askedFor(page);
     const counted = page.waitForResponse((response) => /\/v1\/parts\/count\?/.test(response.url()));
     await page.goto("/parts");
-    const { total } = (await (await counted).json()) as { total: number };
+    const total = (await (await counted).json()) as { kind: string; value: number | null };
 
-    await expect(page.locator(".MuiTablePagination-displayedRows")).toContainText(
-      `1–25 of ${total.toLocaleString("en")}`,
+    await expect(page.getByTestId("list-footer-rows")).toContainText(
+      total.kind === "about" ? /^1–25 of about [\d,]+$/ : `1–25 of ${(total.value ?? 0).toLocaleString("en")}`,
     );
-    await page.getByRole("button", { name: "Go to next page" }).click();
+    await page.getByRole("button", { name: "Next page" }).click();
     await expect(page).toHaveURL(/page=2/);
-    await page.getByRole("button", { name: "Go to next page" }).click();
+    await page.getByRole("button", { name: "Next page" }).click();
     await expect(page).toHaveURL(/page=3/);
-    await expect(page.locator(".MuiTablePagination-displayedRows")).toContainText(/^51–75 of /);
+    await expect(page.getByTestId("list-footer-rows")).toContainText(/^51–75 of /);
     await page.getByRole("columnheader", { name: "Unit price" }).click();
     await expect(page).toHaveURL(/sort=unitPriceCents/);
     await expect(page.getByTestId("parts-table").locator(".MuiLinearProgress-root")).toHaveCount(0);
@@ -85,7 +108,10 @@ test.describe("parts", () => {
     browser,
     request,
   }) => {
+    test.setTimeout(60_000);
     const part = await createPartAsync(request);
+    // The value may be 10 seconds old (ACME-129): read it once it counts the part just made.
+    await page.waitForTimeout(11_000);
     await page.goto(`/parts?search=${part.partNumber}`);
     const before = await stockValueCentsAsync(page);
     await page.getByTestId("parts-table").locator(".MuiDataGrid-row").first().click();
@@ -101,11 +127,21 @@ test.describe("parts", () => {
     await expect(other.getByTestId("save-success")).toBeVisible();
     await elsewhere.close();
 
-    // Back to the list from inside the app, not by a reload: the stock value is asked again.
+    // Back to the list from inside the app, not by a reload: the stock value is asked again. It may be up to 10
+    // seconds old (ACME-129), so come back to the list until it shows. createPartAsync stocks 1 at $1.00: $2.50 adds
+    // 150 cents.
     await page.getByTestId("cancel").click();
     await expect(page).toHaveURL(/\/parts$/);
-    // createPartAsync stocks 1 at $1.00: $2.50 adds 150 cents.
-    await expect.poll(() => stockValueCentsAsync(page)).toBe(before + 150);
+    await expect
+      .poll(
+        async () => {
+          await page.goto("/");
+          await page.getByTestId("home-parts").click();
+          return await stockValueCentsAsync(page);
+        },
+        { timeout: 20_000, intervals: [2_000] },
+      )
+      .toBe(before + 150);
   });
 
   test("a long description ends with '…' at the column's edge and shows in full on hover", async ({ page }) => {

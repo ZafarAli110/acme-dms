@@ -65,8 +65,18 @@
   },
   "paging": {
     "rows": "{{from}}–{{to}} of {{total}}",
-    "cappedRows": "{{from}}–{{to}} of {{total}} (the list shows the first {{max}}: search or filter to narrow it)",
-    "limitedRows": "{{from}}–{{to}} of {{total}} (search or filter to narrow it)"
+    "lastRows": "Last {{count}} of {{total}}",
+    "beforeLast": "Rows before the last {{count}}",
+    "about": "about {{total}}",
+    "many": "many",
+    "rowsPerPage": "Rows per page:",
+    "page": "Page",
+    "first": "First page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "last": "Last page",
+    "pageTooDeep": "Up to page {{max}}: go further with Next or Last.",
+    "pageBeyondEnd": "The list has {{max}} pages."
   },
   "exports": {
     "export": "Export to Excel",
@@ -91,6 +101,8 @@
     "customersTitle": "Customers at the {{location}} location",
     "confirmTitle": "Export to Excel?",
     "confirmMessage": "{{total}} customers at {{location}}, with the search, sort, filter and columns shown now. A large export takes a few minutes; it runs in the background while you keep working.",
+    "confirmMessageAbout": "About {{total}} customers at {{location}}, with the search, sort, filter and columns shown now. A large export takes a few minutes; it runs in the background while you keep working.",
+    "confirmMessageMany": "All customers that match, at {{location}}, with the search, sort, filter and columns shown now. A large export takes a few minutes; it runs in the background while you keep working.",
     "panel": "Exports"
   },
   "revision": {

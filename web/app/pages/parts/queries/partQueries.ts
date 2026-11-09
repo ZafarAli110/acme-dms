@@ -1,5 +1,6 @@
 import { API_CONFIG } from "../../../core/config/api";
 import { apiClient, type RequestOptions } from "../../../core/services/apiClient";
+import type { ListTotal } from "../../../core/types/listTotal";
 import { FIRST_PAGE, type ListParams, toListApiQuery, toListSearchParams } from "../../../core/paging/listParams";
 import type { Bin, Part, PartInput, PartPage, PartQuestion, StockValue } from "../types/part";
 import { ifMatch } from "../../../core/services/ifMatch";
@@ -13,10 +14,7 @@ export const partQueries = {
     apiClient.getAsync<PartPage>(`${PARTS_URL}?${toListApiQuery(params)}`, options),
   /** How many parts the search and filter match at the location, exactly. */
   countPartsAsync: (question: PartQuestion, options?: RequestOptions) =>
-    apiClient.getAsync<{ total: number }>(
-      `${PARTS_URL}/count?${toListSearchParams({ ...FIRST_PAGE, ...question })}`,
-      options,
-    ),
+    apiClient.getAsync<ListTotal>(`${PARTS_URL}/count?${toListSearchParams({ ...FIRST_PAGE, ...question })}`, options),
   /** What the location's stock is worth: every part, not only the page shown. */
   getStockValueAsync: (options?: RequestOptions) => apiClient.getAsync<StockValue>(`${PARTS_URL}/stock-value`, options),
   getPartAsync: (partId: string, options?: RequestOptions) =>
