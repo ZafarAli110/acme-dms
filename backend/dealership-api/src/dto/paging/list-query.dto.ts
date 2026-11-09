@@ -14,6 +14,8 @@ export const FILTER_OPERATORS = {
   date: ["is", "not", "after", "onOrAfter", "before", "onOrBefore", "isEmpty", "isNotEmpty"],
   /** One of a fixed set of values (a status): the grid shows them in a dropdown. */
   choice: ["is", "not"],
+  /** A phone, by its digits alone: its start, its end, or all of it (ACME-129). */
+  phone: ["startsWith", "endsWith", "equals", "isEmpty", "isNotEmpty"],
 } as const;
 export type FilterOperator = (typeof FILTER_OPERATORS)[keyof typeof FILTER_OPERATORS][number];
 const ALL_OPERATORS = [...new Set(Object.values(FILTER_OPERATORS).flat())] as [FilterOperator, ...FilterOperator[]];
@@ -30,6 +32,18 @@ export const LIST_QUERY_ENTRIES = {
   filterValue: omittable(
     v.pipe(v.string(), v.maxLength(200), v.description("Not needed for isEmpty and isNotEmpty; a date is YYYY-MM-DD")),
   ),
+  // Keyset paging (ACME-129): the page after or before a page's cursor, or the last page. Without them, `page`.
+  after: omittable(v.pipe(v.string(), v.maxLength(2000), v.description("The page after this cursor: a page's `next`"))),
+  before: omittable(
+    v.pipe(v.string(), v.maxLength(2000), v.description("The page before this cursor: a page's `previous`")),
+  ),
+  last: omittable(
+    v.pipe(
+      v.picklist(["true"]),
+      v.transform(() => true as const),
+      v.description("The list's last page"),
+    ),
+  ),
 };
 
 /**
@@ -37,5 +51,11 @@ export const LIST_QUERY_ENTRIES = {
  * `?search=&page=&pageSize=&sort=city&direction=desc&filterField=status&filterOperator=equals&filterValue=active`.
  * Which fields can be sorted and filtered is each list's own; another field is a 400.
  */
-export const ListQuerySchema = v.strictObject(LIST_QUERY_ENTRIES);
+export const ListQuerySchema = v.pipe(
+  v.strictObject(LIST_QUERY_ENTRIES),
+  v.check(
+    (query) => [query.after, query.before, query.last].filter(Boolean).length <= 1,
+    "Send at most one of after, before and last.",
+  ),
+);
 export type ListQueryDto = v.InferOutput<typeof ListQuerySchema>;

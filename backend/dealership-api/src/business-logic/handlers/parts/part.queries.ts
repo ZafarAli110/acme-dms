@@ -6,7 +6,18 @@ import { parts, type Part } from "#persistence/schema/parts";
 import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
+import { estimateRowsAsync } from "../../list-query/estimate";
 import { escapeLike } from "../../list-query/like-pattern";
+import {
+  type KeyedRow,
+  type KeysetMove,
+  type CursorRow,
+  keyedFields,
+  keyedRowOf,
+  readKeysetPageAsync,
+  type SortSpec,
+  sortSpecOf,
+} from "../../list-query/keyset";
 import { listFilter, listOrderBy, type ListColumns } from "../../list-query/list-columns";
 import { pageOffset } from "../../list-query/page-offset";
 import { toPartWordsQuery } from "./get-list/part-words";
@@ -40,38 +51,85 @@ export const STOCKED_PART_COLUMNS: ListColumns = {
 export async function findStockedPartsAsync(
   db: Database,
   query: ListQueryDto,
-): Promise<{ items: StockedPart[]; hasMore: boolean }> {
+  move: KeysetMove | null = null,
+  cursor: CursorRow | null = null,
+): Promise<{ items: StockedPart[]; next: KeyedRow | null; previous: KeyedRow | null }> {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 25;
-  const from = db
-    .select({ id: parts.id })
-    .from(partInventories)
-    .innerJoin(parts, eq(parts.id, partInventories.partId))
-    .$dynamic();
+  const spec = partSortSpec(query);
+  const select = (where: SQL | undefined, orderBy: SQL[], limit: number) => {
+    const from = db
+      .select(keyedFields(spec))
+      .from(partInventories)
+      .innerJoin(parts, eq(parts.id, partInventories.partId))
+      .$dynamic();
+    return (needsBin(query) ? from.innerJoin(bins, eq(bins.id, partInventories.binId)) : from)
+      .where(and(liveBinStock(db), listFilter(STOCKED_PART_COLUMNS, query), where))
+      .orderBy(...orderBy)
+      .limit(limit);
+  };
+  if (move) {
+    // Keyset (ACME-129): the rows after (or before) the cursor's, from the part-number index.
+    const found = await readKeysetPageAsync(spec, move, cursor, pageSize, async (segment, limit) =>
+      (await select(segment.where, segment.orderBy, limit)).map((row) => keyedRowOf(spec, row)),
+    );
+    return {
+      ...found,
+      items: await findStockedPartsByIdsAsync(
+        db,
+        found.rows.map((row) => row.id),
+      ),
+    };
+  }
   // One more than the page says whether another follows, without counting.
-  const rows = await (needsBin(query) ? from.innerJoin(bins, eq(bins.id, partInventories.binId)) : from)
-    .where(and(liveBinStock(db), listFilter(STOCKED_PART_COLUMNS, query)))
-    .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, [asc(parts.partNumber)], [asc(parts.id)]))
-    .limit(pageSize + 1)
-    .offset(pageOffset(page, pageSize));
-  const ids = rows.slice(0, pageSize).map((row) => row.id);
-  return { items: await findStockedPartsByIdsAsync(db, ids), hasMore: rows.length > pageSize };
+  const rows = (
+    await select(
+      undefined,
+      listOrderBy(STOCKED_PART_COLUMNS, query, [asc(parts.partNumber)], [parts.id]),
+      pageSize + 1,
+    ).offset(pageOffset(page, pageSize))
+  ).map((row) => keyedRowOf(spec, row));
+  const onPage = rows.slice(0, pageSize);
+  return {
+    items: await findStockedPartsByIdsAsync(
+      db,
+      onPage.map((row) => row.id),
+    ),
+    next: rows.length > pageSize ? (onPage.at(-1) ?? null) : null,
+    previous: page > 1 ? (onPage[0] ?? null) : null,
+  };
+}
+
+/** The parts list's order as keyset paging reads it: the same as the list's `listOrderBy`. */
+export function partSortSpec(query: ListQueryDto): SortSpec {
+  return sortSpecOf(STOCKED_PART_COLUMNS, query, [parts.partNumber], parts.id);
 }
 
 /**
- * How many parts the request's location stocks in a live bin, narrowed by the query's filter: the rows the list's pages
- * show, counted exactly (ACME-124). A search counts with `countMatchingPartsAsync` instead.
+ * How many parts the request's location stocks in a live bin, narrowed by the query's filter, up to `limit`: the rows
+ * the list's pages show (ACME-124, 129). A search counts with `countMatchingPartsAsync` instead.
  */
-export async function countStockedPartsAsync(db: Database, query: ListQueryDto): Promise<number> {
+export async function countStockedPartsAsync(db: Database, query: ListQueryDto, limit: number): Promise<number> {
   const from = db
-    .select({ total: count() })
+    .select({ one: sql`1` })
     .from(partInventories)
     .innerJoin(parts, eq(parts.id, partInventories.partId))
     .$dynamic();
-  const [counted] = await (needsBin(query) ? from.innerJoin(bins, eq(bins.id, partInventories.binId)) : from).where(
-    and(liveBinStock(db), listFilter(STOCKED_PART_COLUMNS, query)),
-  );
+  const upTo = (needsBin(query) ? from.innerJoin(bins, eq(bins.id, partInventories.binId)) : from)
+    .where(and(liveBinStock(db), listFilter(STOCKED_PART_COLUMNS, query)))
+    .limit(limit)
+    .as("up_to_limit");
+  const [counted] = await db.select({ total: count() }).from(upTo);
   return counted?.total ?? 0;
+}
+
+/**
+ * How many parts Postgres expects the location to stock, from its statistics (ACME-129): its inventory rows, under the
+ * policy. The live-bins condition is left out, because Postgres cannot estimate it (14,101 expected for 24,221 at
+ * Northside) and a part in a deleted bin is rare; without it, 24,266 for 24,223.
+ */
+export async function estimateStockedPartsAsync(db: Database): Promise<number> {
+  return await estimateRowsAsync(db, db.select({ one: sql`1` }).from(partInventories));
 }
 
 /**
@@ -107,25 +165,29 @@ export async function findMatchingPartIdsAsync(
     .innerJoin(parts, eq(parts.id, partInventories.partId))
     .innerJoin(bins, eq(bins.id, partInventories.binId))
     .where(partSearchWhere(scope, query, search))
-    .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, bestFirst, [asc(parts.id)]))
+    .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, bestFirst, [parts.id]))
     .limit(pageSize + 1)
     .offset(pageOffset(page, pageSize));
   return { ids: rows.slice(0, pageSize).map((row) => row.id), hasMore: rows.length > pageSize };
 }
 
-/** How many parts a search matches at the location, exactly (ACME-124); `db` works as the tables' owner. */
+/** How many parts a search matches at the location, up to `limit` (ACME-124, 129); `db` works as the tables' owner. */
 export async function countMatchingPartsAsync(
   db: Database,
   scope: PartScope,
   query: ListQueryDto,
   search: string,
+  limit: number,
 ): Promise<number> {
-  const [counted] = await db
-    .select({ total: count() })
+  const upTo = db
+    .select({ one: sql`1` })
     .from(partInventories)
     .innerJoin(parts, eq(parts.id, partInventories.partId))
     .innerJoin(bins, eq(bins.id, partInventories.binId))
-    .where(partSearchWhere(scope, query, search));
+    .where(partSearchWhere(scope, query, search))
+    .limit(limit)
+    .as("up_to_limit");
+  const [counted] = await db.select({ total: count() }).from(upTo);
   return counted?.total ?? 0;
 }
 

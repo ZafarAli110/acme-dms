@@ -13,10 +13,13 @@ export const fr: Messages = {
     listCannotFilterBy: "Cette liste ne peut pas être filtrée par « {field} ». Elle peut l'être par : {fields}.",
     filterOperatorNotAllowed: "« {field} » ne peut pas être filtré avec « {operator} ». Possible avec : {operators}.",
     listPageTooDeep:
-      "Une liste affiche ses {max} premières lignes ({lastPage} pages à cette taille de page). Recherchez ou filtrez pour la réduire, ou exportez la liste entière.",
+      "Un numéro de page va jusqu'à la ligne {max} (page {lastPage} à cette taille de page). Allez plus loin avec Suivant ou Dernière, ou recherchez, filtrez ou exportez la liste.",
+    listCursorInvalid:
+      "Cette page ne correspond plus à la liste : sa recherche, son tri, son filtre ou son site a changé. Recommencez à la première page.",
     filterNeedsValue: "Le filtre « {operator} » a besoin d'une valeur.",
     notANumber: "« {value} » n'est pas un nombre.",
     notADate: "« {value} » n'est pas une date (AAAA-MM-JJ).",
+    notAPhone: "« {value} » n'est pas une partie de numéro de téléphone : saisissez ses chiffres.",
     customerNotFound: "Le client {customerId} est introuvable sur ce site.",
     binExists: "L'emplacement {code} existe déjà sur ce site.",
     binNotAtLocation: "L'emplacement {binId} n'appartient pas à ce site ; choisissez-en un dans GET /v1/bins.",

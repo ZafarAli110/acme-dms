@@ -1,3 +1,4 @@
+import { readSettings } from "#settings/settings";
 import { sql } from "drizzle-orm";
 import type { PoolClient, QueryConfig } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -9,6 +10,7 @@ import { NORTHSIDE, NORTHWIND, RIVERSIDE, TEST_USER_ID } from "#test-setup/postg
 import { createTestDatabaseAsync, type TestDatabase } from "#test-setup/postgres/test-database";
 import { AT_NORTHSIDE } from "#test-setup/users/test-users";
 import { CountCustomersQueryHandler } from "../../count/count-customers.query-handler";
+import { GetRecentCustomersQueryHandler } from "../../get-recent/get-recent-customers.query-handler";
 import { GetCustomerListQueryHandler } from "../get-customer-list.query-handler";
 
 /**
@@ -18,6 +20,8 @@ import { GetCustomerListQueryHandler } from "../get-customer-list.query-handler"
  * what holds at any size, and what broke before (a sort by name sorted every row; a later page read every row before it).
  */
 const AT_LOCATION = 120_000;
+// One key for the file, as every API instance shares EXPORT_LINK_KEY: a cursor from one call is read by the next.
+const SETTINGS = readSettings({});
 
 interface Recorded {
   text: string;
@@ -60,6 +64,16 @@ function expectNoFullRead(plans: Plan[]): void {
   }
   for (const { nodes } of plans.filter((plan) => !plan.isPage)) {
     expect(nodes.some((node) => node["Node Type"] === "Limit")).toBe(true);
+  }
+}
+
+/**
+ * The page comes in the index's own order: no sort at all, not even an incremental one. A tie-breaker that went the
+ * other way read every customer sharing the latest contact date and sorted them (149,452 at Northside, 80 ms: ACME-129).
+ */
+function expectNoSort(plans: Plan[]): void {
+  for (const { nodes } of plans.filter((plan) => plan.isPage)) {
+    expect(nodes.map((node) => node["Node Type"]).filter((type) => type.endsWith("Sort"))).toEqual([]);
   }
 }
 
@@ -142,10 +156,12 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
   });
 
   /** The plans of every query the list ran for `query`, each as it ran: as the request, or as the owner. */
-  async function plansAsync(query: ListQueryDto, handler: "list" | "count" = "list"): Promise<Plan[]> {
+  async function plansAsync(query: ListQueryDto, handler: "list" | "count" | "recent" = "list"): Promise<Plan[]> {
     recorded.length = 0;
     if (handler === "list") {
-      await asRequest(new GetCustomerListQueryHandler(factory)).executeAsync(AT_NORTHSIDE, query);
+      await asRequest(new GetCustomerListQueryHandler(factory, SETTINGS)).executeAsync(AT_NORTHSIDE, query);
+    } else if (handler === "recent") {
+      await asRequest(new GetRecentCustomersQueryHandler(factory)).executeAsync(AT_NORTHSIDE);
     } else {
       await asRequest(new CountCustomersQueryHandler(factory)).executeAsync(AT_NORTHSIDE, query);
     }
@@ -206,17 +222,73 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
       const plans = await plansAsync({ page: 2, pageSize: 25, sort: "name", direction });
 
       expectNoFullRead(plans);
-      // One sort at most: of the page's 25 rows, after they are fetched, never of the location.
-      const page = plans.find((plan) => plan.isPage)!;
-      expect(page.nodes.filter((node) => node["Node Type"] === "Sort").length).toBeLessThanOrEqual(1);
+      expectNoSort(plans);
       expect(indexesUsed(plans)).toContain("ix_customers_list_by_name");
     }
   });
 
-  it("sorts by last contact, newest first, from its index", async () => {
-    const plans = await plansAsync({ page: 1, pageSize: 25, sort: "lastContactDate", direction: "desc" });
+  it("sorts by last contact, either way, from its index, with no sort of a day's customers", async () => {
+    for (const direction of ["asc", "desc"] as const) {
+      const plans = await plansAsync({ page: 1, pageSize: 25, sort: "lastContactDate", direction });
+
+      expectNoFullRead(plans);
+      expectNoSort(plans);
+      expect(indexesUsed(plans)).toContain("ix_customers_list_by_last_contact");
+    }
+  });
+
+  it("sorts by every other column, either way, from that column's own index (ACME-129)", async () => {
+    const sorts = { companyName: "company_name", email: "email", phone: "phone", city: "city", status: "status" };
+    for (const [sort, column] of Object.entries(sorts)) {
+      for (const direction of ["asc", "desc"] as const) {
+        const plans = await plansAsync({ page: 2, pageSize: 25, sort, direction });
+
+        expectNoFullRead(plans);
+        expectNoSort(plans);
+        expect(indexesUsed(plans)).toContain(`ix_customers_sort_${column}`);
+      }
+    }
+  });
+
+  it("reads a keyset page, and the last page, from the index, with no sort, filled or empty values (ACME-129)", async () => {
+    for (const sort of [undefined, "email"]) {
+      for (const direction of ["asc", "desc"] as const) {
+        const query: ListQueryDto = sort ? { sort, direction } : {};
+        const first = await asRequest(new GetCustomerListQueryHandler(factory, SETTINGS)).executeAsync(AT_NORTHSIDE, {
+          ...query,
+          page: 1,
+          pageSize: 25,
+        });
+        for (const move of [{ after: first.next ?? "" }, { last: true as const }]) {
+          const plans = await plansAsync({ ...query, ...move, pageSize: 25 });
+
+          expectNoFullRead(plans);
+          expectNoSort(plans);
+          expect(indexesUsed(plans)).toContain(sort ? "ix_customers_sort_email" : "ix_customers_list_by_name");
+        }
+      }
+    }
+  });
+
+  it("finds a phone by its last digits, or its first, through the phone indexes (ACME-129)", async () => {
+    // The test's phones are "+44 7700 " and six digits: 447700 then the number.
+    const byEnd = await plansAsync({ page: 1, pageSize: 25, search: "04217" });
+    const byStart = await plansAsync({ page: 1, pageSize: 25, search: "+44 7700 0042" });
+    const counted = await plansAsync({ page: 1, pageSize: 25, search: "04217" }, "count");
+
+    for (const plans of [byEnd, byStart, counted]) {
+      expectNoFullRead(plans);
+    }
+    expect(indexesUsed(byEnd)).toContain("ix_customers_phone_end");
+    expect(indexesUsed(byStart)).toContain("ix_customers_phone_start");
+    expect(indexesUsed(counted)).toContain("ix_customers_phone_end");
+  });
+
+  it("reads recent customers from the last-contact index, with no sort (ACME-129)", async () => {
+    const plans = await plansAsync({}, "recent");
 
     expectNoFullRead(plans);
+    expectNoSort(plans);
     expect(indexesUsed(plans)).toContain("ix_customers_list_by_last_contact");
   });
 
@@ -231,13 +303,14 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
     }
   });
 
-  it("counts Northside up to 10,001, not its 118,403 live customers", async () => {
+  it("estimates Northside's total close to its 118,403 live customers, without counting them (ACME-129)", async () => {
     const counted = await asRequest(new CountCustomersQueryHandler(factory)).executeAsync(AT_NORTHSIDE, {
       page: 1,
       pageSize: 25,
     });
 
-    expect(counted.total).toBe(10_001);
+    expect(counted.kind).toBe("about");
+    expect(Math.abs((counted.value ?? 0) - 118_403) / 118_403).toBeLessThan(0.05);
   });
 
   // ACME-117: the total is asked once per question (the count endpoint), so paging and sorting count nothing.
@@ -275,11 +348,11 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
 
     const page = plans.find((plan) => plan.isPage && !/"id" in/i.test(recorded[plans.indexOf(plan)]?.text ?? ""))!;
     expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_list_by_name")).toBe(false);
-    expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_search")).toBe(true);
+    expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_search_text")).toBe(true);
   });
 
   it("still pages a search with more than 10,000 matches", async () => {
-    const page = await asRequest(new GetCustomerListQueryHandler(factory)).executeAsync(AT_NORTHSIDE, {
+    const page = await asRequest(new GetCustomerListQueryHandler(factory, SETTINGS)).executeAsync(AT_NORTHSIDE, {
       page: 1,
       pageSize: 25,
       search: "example.test",
@@ -315,14 +388,17 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
 
     expectNoFullRead(plans);
     expect(recorded.some((query) => /ilike/i.test(query.text))).toBe(true);
-    expect(indexesUsed(plans)).toContain("ix_customers_search");
+    expect(indexesUsed(plans)).toContain("ix_customers_search_text");
   });
 
-  it("finds a surname, and counts the matches, through the trigram index", async () => {
-    const plans = await plansAsync({ page: 1, pageSize: 25, search: "Surname04217" });
+  it("finds a surname's page, and counts its matches, through the trigram index", async () => {
+    const query = { page: 1, pageSize: 25, search: "Surname04217" };
+    const page = await plansAsync(query);
+    const counted = await plansAsync(query, "count");
 
-    expectNoFullRead(plans);
-    const count = plans.find((plan) => !plan.isPage)!;
-    expect(count.nodes.some((node) => node["Index Name"] === "ix_customers_search")).toBe(true);
+    expectNoFullRead(page);
+    expectNoFullRead(counted);
+    expect(indexesUsed(page)).toContain("ix_customers_search_text");
+    expect(indexesUsed(counted)).toContain("ix_customers_search_text");
   });
 });

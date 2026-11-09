@@ -1,8 +1,9 @@
 import { localized } from "#i18n/messages";
 import { BadRequestException } from "@nestjs/common";
-import { and, asc, desc, eq, gt, gte, ilike, isNotNull, isNull, lt, lte, ne, or, sql, type SQL } from "drizzle-orm";
-import type { PgColumn } from "drizzle-orm/pg-core";
+import { and, asc, desc, eq, gt, gte, ilike, is, isNotNull, isNull, lt, lte, ne, or, sql, type SQL } from "drizzle-orm";
+import { PgColumn } from "drizzle-orm/pg-core";
 import { FILTER_OPERATORS, type ListQueryDto } from "#dto/paging/list-query.dto";
+import { phoneDigits } from "#persistence/schema/customers";
 
 export type ListColumnType = keyof typeof FILTER_OPERATORS;
 
@@ -33,10 +34,40 @@ const TEXT_MATCHES: readonly string[] = ["contains", "equals", "startsWith", "en
  */
 export function matchesText(columns: ListColumns, query: ListQueryDto): boolean {
   const column = query.filterField ? columns[query.filterField] : undefined;
-  return column?.type === "text" && TEXT_MATCHES.includes(query.filterOperator ?? "");
+  return (column?.type === "text" || column?.type === "phone") && TEXT_MATCHES.includes(query.filterOperator ?? "");
 }
 
-function columnFor(
+/**
+ * The digits typed for a phone, when the text is one: digits, spaces, dashes, dots, brackets and "+" only ("0113 496",
+ * "+44 (0)7700", "4417"). Anything else (a letter, an @) is a name, a company or an email.
+ */
+export function phoneDigitsTyped(text: string): string | null {
+  const digits = text.replace(/\D/g, "");
+  return /^[\d\s().+-]+$/.test(text) && digits.length > 0 ? digits : null;
+}
+
+/**
+ * A phone by its digits (ACME-129): starting with them (`ix_customers_phone_start`), ending with them (the digits
+ * reversed, `ix_customers_phone_end`), or all of them. Each a range of a b-tree; the middle of a number is not searched.
+ */
+export function phoneMatching(phone: PgColumn, digits: string, how: "start" | "end" | "startOrEnd" | "all"): SQL {
+  const all = phoneDigits(phone);
+  const reversed = [...digits].toReversed().join("");
+  const start = sql`${all} like ${`${digits}%`}`;
+  const end = sql`reverse(${all}) like ${`${reversed}%`}`;
+  switch (how) {
+    case "start":
+      return start;
+    case "end":
+      return end;
+    case "all":
+      return sql`${all} = ${digits}`;
+    default:
+      return sql`(${start} or ${end})`;
+  }
+}
+
+export function columnFor(
   columns: ListColumns,
   field: string,
   refusal: "errors.listCannotSortBy" | "errors.listCannotFilterBy",
@@ -72,17 +103,29 @@ function valueFor(column: ListColumn, operator: string, value: string | undefine
 
 /**
  * The query's sort first, then `tieBreakers` (which end with the id, so equal values keep one order from page to
- * page). Without a sort, the list's own order (`defaults`).
+ * page). Without a sort, the list's own order (`defaults`), the tie-breakers ascending.
+ *
+ * The tie-breakers take the sort's direction (ACME-129): newest first breaks a tie by the newest id first. Each list
+ * index ends with the id, so one index read forwards or backwards serves both directions, and a keyset page compares
+ * one row of values. Ascending first, they made every descending sort read the whole tie and sort it again (80 ms at
+ * Northside, where 149,452 customers share the latest contact date). Nulls stay where Postgres puts them: last going
+ * up, first going down.
  */
-export function listOrderBy(columns: ListColumns, query: ListQueryDto, defaults: SQL[], tieBreakers: SQL[]): SQL[] {
+export function listOrderBy(
+  columns: ListColumns,
+  query: ListQueryDto,
+  defaults: SQL[],
+  tieBreakers: readonly PgColumn[],
+): SQL[] {
   if (!query.sort) {
-    return [...defaults, ...tieBreakers];
+    return [...defaults, ...tieBreakers.map((column) => asc(column))];
   }
   const column = columnFor(columns, query.sort, "errors.listCannotSortBy");
+  const descending = query.direction === "desc";
   const sorted = (column.sortBy ?? [column.source]).map((source) =>
-    query.direction === "desc" ? desc(sql`${source}`) : asc(sql`${source}`),
+    descending ? desc(sql`${source}`) : asc(sql`${source}`),
   );
-  return [...sorted, ...tieBreakers];
+  return [...sorted, ...tieBreakers.map((tie) => (descending ? desc(tie) : asc(tie)))];
 }
 
 /** The query's one filter as a condition, or undefined when it has none. */
@@ -103,13 +146,25 @@ export function listFilter(columns: ListColumns, query: ListQueryDto): SQL | und
   }
   // As an expression: a column or a computed value alike. Postgres types each parameter from what it is compared with.
   const source = sql`${column.source}`;
+  const texty = column.type === "text" || column.type === "phone";
   if (operator === "isEmpty") {
-    return column.type === "text" ? or(isNull(source), eq(source, "")) : isNull(source);
+    return texty ? or(isNull(source), eq(source, "")) : isNull(source);
   }
   if (operator === "isNotEmpty") {
-    return column.type === "text" ? and(isNotNull(source), ne(source, "")) : isNotNull(source);
+    return texty ? and(isNotNull(source), ne(source, "")) : isNotNull(source);
   }
   const value = valueFor(column, operator, query.filterValue);
+  if (column.type === "phone") {
+    const digits = phoneDigitsTyped(String(value));
+    if (!digits || !is(column.source, PgColumn)) {
+      throw new BadRequestException(localized("errors.notAPhone", { value: String(value) }));
+    }
+    return phoneMatching(
+      column.source,
+      digits,
+      operator === "startsWith" ? "start" : operator === "endsWith" ? "end" : "all",
+    );
+  }
   switch (operator) {
     case "contains":
       return ilike(source, likePattern(String(value), "%", "%"));

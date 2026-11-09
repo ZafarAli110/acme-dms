@@ -1,3 +1,4 @@
+import { readSettings } from "#settings/settings";
 import { beforeAll, describe, expect, it } from "vitest";
 import { AT_NORTHSIDE, AT_RIVERSIDE } from "#test-setup/users/test-users";
 import { NORTHSIDE, RIVERSIDE } from "#test-setup/postgres/seed-kit";
@@ -50,7 +51,8 @@ describe("GetCustomerListQueryHandler: close spellings", () => {
     }
   });
 
-  const handler = () => database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory));
+  const handler = () =>
+    database.asRequest(new GetCustomerListQueryHandler(database.unitOfWorkFactory, readSettings({})));
 
   it("finds Penwood for a letter missing, an extra letter, or two letters swapped, closest first", async () => {
     for (const search of ["penwod", "penwoood", "pnewood"]) {

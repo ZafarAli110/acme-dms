@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, desc, isNotNull } from "drizzle-orm";
+import { and, desc, isNotNull } from "drizzle-orm";
 import type { IGetRecentCustomersQueryHandler } from "#business-logic-abstractions/handlers/customers/get-recent/get-recent-customers.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerListItemDto } from "#dto/customers/customer-list-item.dto";
@@ -33,8 +33,9 @@ export class GetRecentCustomersQueryHandler implements IGetRecentCustomersQueryH
       .select()
       .from(customers)
       .where(and(isNotNull(customers.lastContactDate)))
-      // Ends with the id: two customers last contacted the same day with one surname keep their order.
-      .orderBy(desc(customers.lastContactDate), asc(customers.surname), asc(customers.id))
+      // The last-contact index's own order, read backwards: newest day first, then the newest id (ACME-129). A tie
+      // sorted by surname read every customer of the latest day first (149,452 at Northside).
+      .orderBy(desc(customers.lastContactDate), desc(customers.id))
       .limit(RECENT_CUSTOMERS_LIMIT);
     return recent.map(toCustomerListItemDto);
   }

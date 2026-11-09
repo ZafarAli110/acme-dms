@@ -8,7 +8,7 @@ import { CountPartsQueryHandler } from "../count-parts.query-handler";
 const page = { page: 1, pageSize: 25 };
 
 /**
- * ACME-124: the parts list's total, exact, asked once per search and filter. The plain list and a filter are counted
+ * ACME-124: the parts list's total, asked once per search and filter; ACME-129: exact while few (here, always). The plain list and a filter are counted
  * under the policies, a search as the owner with the scope written by hand (ACME-123), so these tests put another
  * location's, another dealer's, a deleted part and a part in a deleted bin beside the ones that count.
  */
@@ -40,12 +40,15 @@ describe("CountPartsQueryHandler", () => {
     });
     const searched = await handler.executeAsync(AT_NORTHSIDE, { ...page, search: "cnt" });
 
-    expect(plain.total).toBe(2);
-    expect(plenty.total).toBe(1);
-    expect(byBin.total).toBe(2);
-    expect(searched.total).toBe(2);
-    await expect(handler.executeAsync(AT_RIVERSIDE, { ...page, search: "cnt" })).resolves.toEqual({ total: 1 });
-    await expect(handler.executeAsync(AT_CENTRAL, page)).resolves.toEqual({ total: 1 });
+    expect(plain).toEqual({ kind: "exact", value: 2 });
+    expect(plenty).toEqual({ kind: "exact", value: 1 });
+    expect(byBin).toEqual({ kind: "exact", value: 2 });
+    expect(searched).toEqual({ kind: "exact", value: 2 });
+    await expect(handler.executeAsync(AT_RIVERSIDE, { ...page, search: "cnt" })).resolves.toEqual({
+      kind: "exact",
+      value: 1,
+    });
+    await expect(handler.executeAsync(AT_CENTRAL, page)).resolves.toEqual({ kind: "exact", value: 1 });
   });
 
   it("ignores the page, the page size and the sort", async () => {
@@ -53,14 +56,15 @@ describe("CountPartsQueryHandler", () => {
 
     const later = await handler.executeAsync(AT_NORTHSIDE, { page: 9, pageSize: 1, sort: "onHand", direction: "desc" });
 
-    expect(later.total).toBe(2);
+    expect(later).toEqual({ kind: "exact", value: 2 });
   });
 
   it("counts 0 for words nobody has", async () => {
     const handler = database.asRequest(new CountPartsQueryHandler(database.unitOfWorkFactory));
 
     await expect(handler.executeAsync(AT_NORTHSIDE, { ...page, search: "hovercraft skirt" })).resolves.toEqual({
-      total: 0,
+      kind: "exact",
+      value: 0,
     });
   });
 

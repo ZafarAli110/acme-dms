@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import type { IGetPartListQueryHandler } from "#business-logic-abstractions/handlers/parts/get-list/get-part-list.query-handler.interface";
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
@@ -7,6 +7,9 @@ import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
+import { localized } from "#i18n/messages";
+import { SETTINGS, type Settings } from "#settings/settings";
+import { CursorCodec, type KeyedRow, keysetMoveOf } from "../../../list-query/keyset";
 import { timesCents } from "../../../money/money";
 import { requireLocation } from "../../../user-context/require-location";
 import { toPartInventoryDto } from "../part.mapper";
@@ -28,17 +31,33 @@ import {
 export class GetPartListQueryHandler implements IGetPartListQueryHandler {
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
 
-  public constructor(@Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory) {
+  private readonly _cursorKey: string;
+
+  public constructor(
+    @Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory,
+    @Inject(SETTINGS) settings: Pick<Settings, "exportLinkKey">,
+  ) {
     this._unitOfWorkFactory = unitOfWorkFactory;
+    this._cursorKey = settings.exportLinkKey;
   }
 
   public async executeAsync(userContext: UserContext, query: ListQueryDto): Promise<PartPageResponseDto> {
     const locationId = requireLocation(userContext);
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
-    const { items, hasMore } = query.search
-      ? await this.searchAsync(userContext.dealerId, locationId, query, query.search)
-      : await this.listAsync(query);
+    const codec = new CursorCodec(this._cursorKey, { dealerId: userContext.dealerId, locationId }, query);
+    const move = keysetMoveOf(query);
+    if (move && query.search) {
+      // A search pages by number (its best-match order mixes directions and a rank: ACME-129, D4).
+      throw new BadRequestException(localized("errors.listCursorInvalid"));
+    }
+    const { items, hasMore, next, previous } = query.search
+      ? {
+          ...(await this.searchAsync(userContext.dealerId, locationId, query, query.search)),
+          next: null,
+          previous: null,
+        }
+      : await this.listAsync(query, codec);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const thumbnails = await findThumbnailsAsync(
       work.db,
@@ -55,16 +74,25 @@ export class GetPartListQueryHandler implements IGetPartListQueryHandler {
         inventory: toPartInventoryDto(inventory, bin),
         stockValueCents: timesCents(part.unitPriceCents, inventory.quantityOnHand),
       })),
-      page,
+      page: move ? null : page,
       pageSize,
       hasMore,
+      next: next ? codec.encode(next) : null,
+      previous: previous ? codec.encode(previous) : null,
     };
   }
 
-  private async listAsync(query: ListQueryDto): Promise<{ items: StockedPart[]; hasMore: boolean }> {
+  /** The list's page: by keyset after or before a cursor, or the last page; by its number otherwise (ACME-129). */
+  private async listAsync(
+    query: ListQueryDto,
+    codec: CursorCodec,
+  ): Promise<{ items: StockedPart[]; hasMore: boolean; next: KeyedRow | null; previous: KeyedRow | null }> {
+    const move = keysetMoveOf(query);
+    const cursor = move && !("last" in move) ? codec.decode("after" in move ? move.after : move.before) : null;
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     // Awaited here: returned unawaited, the unit of work would close before it ran.
-    return await findStockedPartsAsync(work.db, query);
+    const found = await findStockedPartsAsync(work.db, query, move, cursor);
+    return { ...found, hasMore: found.next !== null };
   }
 
   private async searchAsync(

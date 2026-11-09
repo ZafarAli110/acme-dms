@@ -1,3 +1,4 @@
+import { readSettings } from "#settings/settings";
 import { NotFoundException } from "@nestjs/common";
 import { beforeAll, describe, expect, it } from "vitest";
 import { type Customer, customers } from "#persistence/schema/customers";
@@ -114,7 +115,7 @@ describe("handlers and rows that are not the request's", () => {
   });
 
   it("the part, stock and bin lists show only the request's own location's rows, and each dealer sees its own", async () => {
-    const parts = database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory));
+    const parts = database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory, readSettings({})));
     const stock = database.asRequest(new GetStockListQueryHandler(database.unitOfWorkFactory));
     const bins = database.asRequest(new GetBinListQueryHandler(database.unitOfWorkFactory));
 

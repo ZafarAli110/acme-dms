@@ -1,3 +1,4 @@
+import { readSettings } from "#settings/settings";
 import { describe, expect, it } from "vitest";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
 import { AT_NORTHSIDE, AT_RIVERSIDE } from "#test-setup/users/test-users";
@@ -12,10 +13,12 @@ describe("GetPartListQueryHandler", () => {
   const database = useTestDatabase();
   const searchAsync = (search: string, more: { sort?: string; direction?: "asc" | "desc" } = {}, user = AT_NORTHSIDE) =>
     database
-      .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory))
+      .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory, readSettings({})))
       .executeAsync(user, { page: 1, pageSize: 25, search, ...more });
   const listAsync = (query: ListQueryDto) =>
-    database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory)).executeAsync(AT_NORTHSIDE, query);
+    database
+      .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory, readSettings({})))
+      .executeAsync(AT_NORTHSIDE, query);
   const sorted = async (sort: string, direction: "asc" | "desc") =>
     numbers(
       await listAsync({
@@ -39,7 +42,7 @@ describe("GetPartListQueryHandler", () => {
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "OLD-001", deleted: true });
 
     const list = await database
-      .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory))
+      .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory, readSettings({})))
       .executeAsync(AT_NORTHSIDE, {
         page: 1,
         pageSize: 25,
@@ -56,7 +59,7 @@ describe("GetPartListQueryHandler", () => {
   it("filters by an exact part number, case ignored, with % as the character", async () => {
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "PCT-50%" });
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "PCT-500" });
-    const handler = database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory));
+    const handler = database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory, readSettings({})));
 
     const list = await handler.executeAsync(AT_NORTHSIDE, {
       page: 1,
@@ -73,7 +76,7 @@ describe("GetPartListQueryHandler", () => {
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "BRK-777" });
 
     const list = await database
-      .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory))
+      .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory, readSettings({})))
       .executeAsync(AT_NORTHSIDE, {
         page: 1,
         pageSize: 25,
@@ -87,7 +90,7 @@ describe("GetPartListQueryHandler", () => {
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "QTY-1", quantityOnHand: 3 });
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "QTY-2", quantityOnHand: 9 });
     await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "QTY-3", quantityOnHand: 6 });
-    const handler = database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory));
+    const handler = database.asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory, readSettings({})));
 
     const list = await handler.executeAsync(AT_NORTHSIDE, {
       page: 1,
@@ -103,7 +106,7 @@ describe("GetPartListQueryHandler", () => {
     expect(list.hasMore).toBe(true);
     await expect(
       countAsync({ page: 1, pageSize: 2, filterField: "bin", filterOperator: "startsWith", filterValue: "B-QTY" }),
-    ).resolves.toEqual({ total: 3 });
+    ).resolves.toEqual({ kind: "exact", value: 3 });
   });
 
   // ACME-124: the page's ids come without the bins join; a part in a deleted bin is left out by a condition, so the page
@@ -121,7 +124,7 @@ describe("GetPartListQueryHandler", () => {
     expect([numbers(first), first.hasMore]).toEqual([["DBN-1", "DBN-3"], true]);
     expect([numbers(second), second.hasMore]).toEqual([["DBN-4", "DBN-5"], false]);
     expect([numbers(last), last.hasMore]).toEqual([[], false]);
-    await expect(countAsync({ page: 1, pageSize: 2, ...only })).resolves.toEqual({ total: 4 });
+    await expect(countAsync({ page: 1, pageSize: 2, ...only })).resolves.toEqual({ kind: "exact", value: 4 });
   });
 
   it("sorts by every column it shows, each way, ties by the part", async () => {
@@ -314,7 +317,7 @@ describe("GetPartListQueryHandler", () => {
       }
       // A page past the last is empty, and says nothing follows.
       const pastTheEnd = await database
-        .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory))
+        .asRequest(new GetPartListQueryHandler(database.unitOfWorkFactory, readSettings({})))
         .executeAsync(AT_NORTHSIDE, { page: 5, pageSize: 25, search: "tag" });
       expect(pastTheEnd.items).toEqual([]);
       expect(pastTheEnd.hasMore).toBe(false);

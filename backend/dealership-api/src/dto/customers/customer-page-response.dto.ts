@@ -15,8 +15,13 @@ export interface CustomerPageItemDto extends CustomerListItemDto {
 
 export interface CustomerPageResponseDto {
   items: CustomerPageItemDto[];
-  page: number;
+  /** The page's number when it was asked for by number; null for a page found by a cursor or the last page. */
+  page: number | null;
   pageSize: number;
-  /** Another page follows this one (and lies within the list's depth). */
+  /** Another page follows this one. */
   hasMore: boolean;
+  /** Send as `after` for the next page; null on the last page (ACME-129). */
+  next: string | null;
+  /** Send as `before` for the page before; null on the first page. */
+  previous: string | null;
 }

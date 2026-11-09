@@ -11,7 +11,27 @@ import {
   type IUnitOfWorkFactory,
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
-import { listFilter, listOrderBy, matchesText, type ListColumns } from "../../../list-query/list-columns";
+import { SETTINGS, type Settings } from "#settings/settings";
+import {
+  CursorCodec,
+  type KeyedRow,
+  type KeysetMove,
+  type SearchPath,
+  keyedFields,
+  keyedRowOf,
+  keysetMoveOf,
+  readKeysetPageAsync,
+  type SortSpec,
+  sortSpecOf,
+} from "../../../list-query/keyset";
+import {
+  listFilter,
+  listOrderBy,
+  matchesText,
+  phoneDigitsTyped,
+  phoneMatching,
+  type ListColumns,
+} from "../../../list-query/list-columns";
 import { MAX_LIST_DEPTH, pageOffset } from "../../../list-query/page-offset";
 import { requireLocation } from "../../../user-context/require-location";
 import { toCustomerListItemDto } from "../customer.mapper";
@@ -37,7 +57,7 @@ export const CUSTOMER_LIST_COLUMNS: ListColumns = {
   },
   companyName: { source: customers.companyName, type: "text" },
   email: { source: customers.email, type: "text" },
-  phone: { source: customers.phone, type: "text" },
+  phone: { source: customers.phone, type: "phone" },
   city: { source: customers.city, type: "text" },
   status: { source: customers.status, type: "choice" },
   lastContactDate: { source: customers.lastContactDate, type: "date" },
@@ -45,44 +65,49 @@ export const CUSTOMER_LIST_COLUMNS: ListColumns = {
 
 /**
  * Customers of the user's selected location, by name unless the query sorts otherwise; `search` matches name,
- * company, email or phone, and the query's filter narrows it further. `total` is exact up to `MAX_LIST_DEPTH` (10,000)
- * and `MAX_LIST_DEPTH + 1` past it, which the web app shows as "10,000+": the list cannot page further anyway, and the
- * exact number at a big location cost a read of the whole location on every page (ACME-119).
+ * company, email or phone, and the query's filter narrows it further.
+ *
+ * A page is found one of two ways (ACME-129): after or before a cursor, or the last page, by keyset (the rows after
+ * the cursor's row, from the sort's index: as quick at the end of the list as at its start); or by its number, by
+ * offset (a jump, up to row 10,000: `pageOffset`). Either way it answers `next` and `previous` cursors.
  */
 @Injectable()
 export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler {
   private readonly _unitOfWorkFactory: IUnitOfWorkFactory;
+  private readonly _cursorKey: string;
 
-  public constructor(@Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory) {
+  public constructor(
+    @Inject(UNIT_OF_WORK_FACTORY) unitOfWorkFactory: IUnitOfWorkFactory,
+    @Inject(SETTINGS) settings: Pick<Settings, "exportLinkKey">,
+  ) {
     this._unitOfWorkFactory = unitOfWorkFactory;
+    this._cursorKey = settings.exportLinkKey;
   }
 
   public async executeAsync(userContext: UserContext, query: ListQueryDto): Promise<CustomerPageResponseDto> {
-    const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     const locationId = requireLocation(userContext);
     const where = customerListWhere(query);
-    const order = customerListOrderBy(query);
+    const asked: AskedPage = {
+      spec: customerSortSpec(query),
+      order: customerListOrderBy(query),
+      move: keysetMoveOf(query),
+      page: query.page ?? 1,
+      pageSize,
+      codec: new CursorCodec(this._cursorKey, { dealerId: userContext.dealerId, locationId }, query),
+    };
 
-    // The page's ids first, from an index alone, then only those rows: a later page skips its offset in the index
-    // instead of reading every customer before it from the table (ACME-110).
+    // The page's ids first, from an index alone, then only those rows (ACME-110).
     // A search or a text filter matches with ILIKE, which no index can serve under row-level security (ACME-110, 119).
-    const { ids, hasMore } =
+    const found =
       query.search || matchesText(CUSTOMER_LIST_COLUMNS, query)
-        ? await this.findScopedAsync(
-            userContext.dealerId,
-            locationId,
-            where,
-            order,
-            page,
-            pageSize,
-            Boolean(query.search),
-          )
-        : await this.findListedAsync(where, order, page, pageSize);
+        ? await this.findScopedAsync(userContext.dealerId, locationId, where, asked, Boolean(query.search))
+        : await this.findListedAsync(where, asked);
+    const ids = found.rows.map((row) => row.id);
 
     // Fewer than a page match exactly: close spellings fill the rest of page 1 (ACME-120).
     const closeIds =
-      page === 1 && ids.length < pageSize
+      !asked.move && asked.page === 1 && ids.length < pageSize
         ? await this.findCloseAsync(userContext.dealerId, locationId, query, ids, pageSize - ids.length)
         : [];
 
@@ -99,7 +124,14 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
         ...toCustomerListItemDto(row),
         match: close.has(row.id) ? ("close" as const) : ("exact" as const),
       }));
-    return { items, page, pageSize, hasMore };
+    return {
+      items,
+      page: asked.move ? null : asked.page,
+      pageSize,
+      hasMore: found.next !== null,
+      next: found.next ? asked.codec.encode(found.next, found.path) : null,
+      previous: found.previous ? asked.codec.encode(found.previous, found.path) : null,
+    };
   }
 
   /**
@@ -166,15 +198,10 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     return found;
   }
 
-  private async findListedAsync(
-    where: SQL | undefined,
-    order: SQL[],
-    page: number,
-    pageSize: number,
-  ): Promise<PageOfIds> {
+  private async findListedAsync(where: SQL | undefined, asked: AskedPage): Promise<FoundPage> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     // Awaited here: returned unawaited, the unit of work would close (and drop the request's scope) before it ran.
-    return await findPageAsync(work.db, where, order, page, pageSize);
+    return await findPageAsync(work.db, where, asked);
   }
 
   /**
@@ -187,67 +214,100 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     dealerId: string,
     locationId: string,
     where: SQL | undefined,
-    order: SQL[],
-    page: number,
-    pageSize: number,
+    asked: AskedPage,
     searching: boolean,
-  ): Promise<PageOfIds> {
+  ): Promise<FoundPage> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
-    return await findPageAsync(work.db, ownerScoped(dealerId, locationId, where), order, page, pageSize, searching);
+    return await findPageAsync(work.db, ownerScoped(dealerId, locationId, where), asked, searching);
   }
 }
 
-/** A page's customer ids, and whether another page follows it. */
-interface PageOfIds {
-  ids: string[];
-  hasMore: boolean;
+/** The page a query asks for, and what finding it needs. */
+interface AskedPage {
+  spec: SortSpec;
+  /** The same order as `spec`, for a page by its number. */
+  order: SQL[];
+  move: KeysetMove | null;
+  page: number;
+  pageSize: number;
+  codec: CursorCodec;
+}
+
+/** A page's rows (ids and sort keys), the rows its next and previous cursors start from, and a search's path. */
+interface FoundPage {
+  rows: KeyedRow[];
+  next: KeyedRow | null;
+  previous: KeyedRow | null;
+  path: SearchPath | null;
 }
 
 /**
- * A page's ids, one more than the page to know whether another follows (within the list's depth). No count: the total
- * is the count endpoint's, asked once per search and filter (ACME-117). A search still counts first, because its count
- * decides how to find its page.
+ * A page's ids and sort keys, one more than the page to know whether another follows. No count: the total is the count
+ * endpoint's (ACME-117). A search's first page counts its matches up to 10,001, because that decides how to find its
+ * pages; the cursors carry the decision, so its later pages do not count again (ACME-129).
  */
 async function findPageAsync(
   db: Database,
   where: SQL | undefined,
-  order: SQL[],
-  page: number,
-  pageSize: number,
+  asked: AskedPage,
   searching = false,
-): Promise<PageOfIds> {
-  if (searching && (await countUpToDepthAsync(db, where)) <= MAX_LIST_DEPTH) {
-    // Postgres guesses ILIKE's matches poorly. For a term few or none have, it would walk the name index in order
-    // looking for a page, and at a big location read every customer ("ahed" at Northside: 6.5 s). With an exact count
-    // the matches are few enough to sort: find them through the trigram index only. Past 10,000 they are dense, and
-    // the walk finds a page at once. `set local` ends with this read-only transaction (ACME-119).
+): Promise<FoundPage> {
+  const { spec, move, page, pageSize } = asked;
+  const from = move && !("last" in move) ? asked.codec.decode("after" in move ? move.after : move.before) : null;
+  const path = searching ? (from?.path ?? (await searchPathAsync(db, where))) : null;
+  if (path === "few") {
+    // For a term few or none have, Postgres would walk the name index in order looking for a page, and at a big
+    // location read every customer ("ahed" at Northside: 3 to 6 s; "smith", all in the S's: 2.4 s). The matches are
+    // found through the trigram index only, then sorted (3 ms). Past 10,000 they are dense, and the walk finds a page
+    // at once ("gmail": 0.1 ms, against 36 ms sorted). Its estimate cannot choose: "ahed" expects 12,845 and has none,
+    // "gmail" expects 2,569 and has 222,815. `set local` ends with this read-only transaction (ACME-119).
     await db.execute(sql`set local enable_indexscan = off`);
     await db.execute(sql`set local enable_indexonlyscan = off`);
   }
-  const rows = await db
-    .select({ id: customers.id })
-    .from(customers)
-    .where(where)
-    .orderBy(...order)
-    .limit(pageSize + 1)
-    .offset(pageOffset(page, pageSize));
+  if (move) {
+    const keyset = await readKeysetPageAsync(spec, move, from, pageSize, async (segment, limit) => {
+      const rows = await db
+        .select(keyedFields(spec))
+        .from(customers)
+        .where(and(where, segment.where))
+        .orderBy(...segment.orderBy)
+        .limit(limit);
+      return rows.map((row) => keyedRowOf(spec, row));
+    });
+    return { ...keyset, path };
+  }
+  const rows = (
+    await db
+      .select(keyedFields(spec))
+      .from(customers)
+      .where(where)
+      .orderBy(...asked.order)
+      .limit(pageSize + 1)
+      .offset(pageOffset(page, pageSize))
+  ).map((row) => keyedRowOf(spec, row));
+  const onPage = rows.slice(0, pageSize);
   return {
-    ids: rows.slice(0, pageSize).map((row) => row.id),
-    hasMore: rows.length > pageSize && page * pageSize < MAX_LIST_DEPTH,
+    rows: onPage,
+    // Past row 10,000 a page has no number, but Next still goes on, by keyset (ACME-129).
+    next: rows.length > pageSize ? (onPage.at(-1) ?? null) : null,
+    previous: page > 1 ? (onPage[0] ?? null) : null,
+    path,
   };
 }
 
-/**
- * How many customers match, up to one past the list's depth: past it the screen says "10,000+", and the exact number
- * would cost a read of the whole location (ACME-119). Shared with the count endpoint (ACME-117).
- */
-export async function countUpToDepthAsync(db: Database, where: SQL | undefined): Promise<number> {
+/** A search's way to its pages: through the trigram index while its matches are 10,000 or fewer, else in sort order. */
+async function searchPathAsync(db: Database, where: SQL | undefined): Promise<SearchPath> {
+  return (await countUpToAsync(db, where, MAX_LIST_DEPTH + 1)) <= MAX_LIST_DEPTH ? "few" : "dense";
+}
+
+/** How many customers match, up to `limit`: the count endpoint's exact total, for a handful of matches (ACME-129). */
+export async function countUpToAsync(db: Database, where: SQL | undefined, limit: number): Promise<number> {
   const upToDepth = db
     .select({ one: sql`1` })
     .from(customers)
     .where(where)
-    .limit(MAX_LIST_DEPTH + 1)
-    .as("up_to_depth");
+    .limit(limit)
+    .as("up_to_limit");
   const [counted] = await db.select({ total: count() }).from(upToDepth);
   return counted?.total ?? 0;
 }
@@ -266,20 +326,29 @@ export function ownerScoped(dealerId: string, locationId: string, where: SQL | u
  * works outside a request, adds the dealer, the location and `notDeleted` itself. Shared with the export, so the file holds exactly the rows the list shows.
  */
 export function customerListWhere(query: ListQueryDto): SQL | undefined {
-  return and(query.search ? matching(`%${query.search}%`) : undefined, listFilter(CUSTOMER_LIST_COLUMNS, query));
+  return and(query.search ? searchMatching(query.search) : undefined, listFilter(CUSTOMER_LIST_COLUMNS, query));
+}
+
+/**
+ * What the search box matches: a phone by the start or the end of its digits when only a phone's characters were typed
+ * ("0113 496", "4417"), else anywhere in the name, company or email (ACME-129).
+ */
+function searchMatching(text: string): SQL {
+  const digits = phoneDigitsTyped(text);
+  return digits ? phoneMatching(customers.phone, digits, "startOrEnd") : matching(`%${text}%`);
+}
+
+/** The list's order as keyset paging reads it: the same as `customerListOrderBy`. */
+export function customerSortSpec(query: ListQueryDto): SortSpec {
+  return sortSpecOf(CUSTOMER_LIST_COLUMNS, query, [customers.surname, customers.firstName], customers.id);
 }
 
 /** The list's order: the query's sort, else by name; always ending with the id, so equal values keep one order. */
 export function customerListOrderBy(query: ListQueryDto): SQL[] {
-  return listOrderBy(
-    CUSTOMER_LIST_COLUMNS,
-    query,
-    [asc(customers.surname), asc(customers.firstName)],
-    [asc(customers.id)],
-  );
+  return listOrderBy(CUSTOMER_LIST_COLUMNS, query, [asc(customers.surname), asc(customers.firstName)], [customers.id]);
 }
 
-/** A match anywhere in the name, company, email or phone: one text, so one trigram index serves it (ACME-110). */
+/** A match anywhere in the name, company or email: one text, so one trigram index serves it (ACME-110). */
 function matching(pattern: string): SQL {
   return ilike(customerSearchText(customers), pattern);
 }

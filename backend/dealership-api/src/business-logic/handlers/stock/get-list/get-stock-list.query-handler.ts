@@ -30,7 +30,8 @@ export class GetStockListQueryHandler implements IGetStockListQueryHandler {
     const pageSize = query.pageSize ?? 25;
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     const { items } = await findStockedPartsAsync(work.db, query);
-    const total = await countStockedPartsAsync(work.db, query);
+    // This endpoint's total stays exact, as its callers read it: no limit.
+    const total = await countStockedPartsAsync(work.db, query, Number.MAX_SAFE_INTEGER);
     return {
       items: items.map(({ part, inventory, bin }) => toStockListItemDto(part, inventory, bin)),
       total,

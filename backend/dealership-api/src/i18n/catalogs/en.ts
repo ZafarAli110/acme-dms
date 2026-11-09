@@ -15,10 +15,13 @@ export const en = {
     listCannotFilterBy: 'This list cannot be filtered by "{field}". It can be by: {fields}.',
     filterOperatorNotAllowed: '"{field}" cannot be filtered with "{operator}". It can with: {operators}.',
     listPageTooDeep:
-      "A list shows its first {max} rows ({lastPage} pages at this page size). Search or filter to narrow it, or export the whole list.",
+      "A page number goes up to row {max} (page {lastPage} at this page size). Go further with Next or Last, or search, filter or export the list.",
+    listCursorInvalid:
+      "This page no longer matches the list: its search, sort, filter or location changed. Start again from the first page.",
     filterNeedsValue: 'The filter "{operator}" needs a value.',
     notANumber: '"{value}" is not a number.',
     notADate: '"{value}" is not a date (YYYY-MM-DD).',
+    notAPhone: '"{value}" is not part of a phone number: type its digits.',
     customerNotFound: "Customer {customerId} was not found at this location.",
     binExists: "Bin {code} already exists at this location.",
     binNotAtLocation: "Bin {binId} is not a bin of this location; pick one from GET /v1/bins.",

@@ -15,6 +15,6 @@ describe("pageOffset", () => {
 
   it("refuses a deeper page with a 400 that names the last page", () => {
     expect(() => pageOffset(MAX_LIST_DEPTH / 25 + 1, 25)).toThrow(BadRequestException);
-    expect(() => pageOffset(250_000, 25)).toThrow(/10,000 rows \(400 pages/);
+    expect(() => pageOffset(250_000, 25)).toThrow(/row 10,000 \(page 400 /);
   });
 });
