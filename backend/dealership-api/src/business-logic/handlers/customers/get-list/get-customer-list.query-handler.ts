@@ -142,8 +142,8 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
   /**
    * Close spellings' customers, to fill page 1 after `exactIds` (ACME-120): only for one word of three letters or more
    * that is not a name the location has (a known name is a correct spelling: today's list). The close names come from
-   * the location's name list, under the policy; each one's customers by the search's own trigram match, as the owner
-   * with the scope written out (as the search finds its ids), closest name first, in the list's name order within it.
+   * the location's name list, and each one's customers by its whole name, both as the owner with the scope written out
+   * (as the search finds its ids), closest name first, in the list's name order within it.
    * Phones and emails are never close-matched: the name list holds only names.
    */
   private async findCloseAsync(
@@ -159,11 +159,13 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     }
     let names: CloseName[];
     {
-      await using namesWork = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
-      if (await isKnownNameAsync(namesWork.db, word)) {
+      // As the owner, with the scope written out: under the policy no index could serve these (close-names.ts).
+      await using namesWork = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
+      const scope = { dealerId, locationId };
+      if (await isKnownNameAsync(namesWork.db, scope, word)) {
         return [];
       }
-      names = await closeNamesAsync(namesWork.db, word);
+      names = await closeNamesAsync(namesWork.db, scope, word);
     }
     if (names.length === 0) {
       return [];
