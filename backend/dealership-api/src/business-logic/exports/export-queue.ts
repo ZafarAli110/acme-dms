@@ -1,3 +1,4 @@
+import { runWithOwnConnectionWait } from "#request-scope/data-scope";
 import { localized } from "#i18n/messages";
 import { rm, stat } from "node:fs/promises";
 import {
@@ -232,7 +233,8 @@ export class ExportQueue implements IExportJobs, OnApplicationBootstrap, OnAppli
     const pollMs = this._settings.exportProgressPollMs;
     return timer(pollMs, pollMs).pipe(
       // A slow read is not queued up behind: the next tick that finds the last read done reads again.
-      exhaustMap(() => from(this.getAsync(userContext, jobId))),
+      // Each read its own connection wait: the request's one was spent by the first (the state sweep's F12).
+      exhaustMap(() => from(runWithOwnConnectionWait(() => this.getAsync(userContext, jobId)))),
       startWith(first),
       // The last state (completed, failed, cancelled) is sent, then the stream ends.
       takeWhile((job) => !FINISHED.has(job.status), true),

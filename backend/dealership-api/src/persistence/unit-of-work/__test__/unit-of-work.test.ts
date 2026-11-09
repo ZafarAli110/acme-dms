@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { runWithDataScope } from "#request-scope/data-scope";
+import { runWithDataScope, runWithOwnConnectionWait } from "#request-scope/data-scope";
 import { createTestDatabaseAsync, type TestDatabase } from "#test-setup/postgres/test-database";
 import { NORTHSIDE, NORTHWIND, SEEDED_AT, TEST_USER_ID } from "#test-setup/postgres/seed-kit";
 import { bins } from "#persistence/schema/bins";
@@ -178,6 +178,27 @@ describe("UnitOfWorkFactory on a busy system", () => {
 
     expect(failure).toBeInstanceOf(DatabaseBusyError);
     expect(performance.now() - started).toBeLessThan(800);
+  });
+
+  // The state sweep's F12: an export's progress stream reads every second for minutes in one request; its first read
+  // spent the request's one wait, so every later read was told busy after 100 ms.
+  it("gives a read run with its own connection wait the full wait again, late in a long request", async () => {
+    const outcome = await asRequest(false, async () => {
+      {
+        await using first = await factory.beginAsync({ readOnly: true });
+        // Past the request's 300 ms wait.
+        await first.db.execute(sql`select pg_sleep(0.4)`);
+      }
+      const held = await pools.lists.connect();
+      setTimeout(() => held.release(), 200);
+      return await runWithOwnConnectionWait(async () => {
+        await using later = await factory.beginAsync({ readOnly: true });
+        await later.db.execute(sql`select 1`);
+        return "answered";
+      });
+    });
+
+    expect(outcome).toBe("answered");
   });
 
   // The verifier's finding: a save's read after its commit shared the request's one wait, and could be answered busy,

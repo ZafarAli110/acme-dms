@@ -57,6 +57,19 @@ export function runDetachedFromCaller<T>(run: () => T): T {
   return storage.run({ scope: store?.scope ?? null, request: detached }, run);
 }
 
+/**
+ * Runs `run` in the current request, scope and cancellation alike, with a connection wait of its own: for a request that
+ * reads again and again for minutes (an export's progress stream), whose one wait its first read used up, so every
+ * later read was told "busy" after 100 ms (the state sweep's F12).
+ */
+export function runWithOwnConnectionWait<T>(run: () => T): T {
+  const store = storage.getStore();
+  if (!store?.request) {
+    return run();
+  }
+  return storage.run({ scope: store.scope, request: { ...store.request, connectBy: null } }, run);
+}
+
 /** The HTTP request being served, or null: outside a request, or a test that gives none. */
 export function currentRequest(): RequestInfo | null {
   return storage.getStore()?.request ?? null;
