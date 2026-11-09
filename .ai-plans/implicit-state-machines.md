@@ -91,7 +91,7 @@ stateDiagram-v2
 
 ## Findings, worst first
 
-- [ ] **F1** should-fix · checked · dealership-api ·
+- [x] **F1** fixed `51c2441` · should-fix · checked · dealership-api ·
       `business-logic/handlers/parts/upload-photo/upload-part-photo.command-handler.ts` (no version change) with
       `business-logic/handlers/parts/update/update-part.command-handler.ts:84-110,138-170` · part version
   - **A photo uploaded on its own is deleted by another person's save, without a 412.** The upload never bumps
@@ -99,19 +99,19 @@ stateDiagram-v2
   - Scenario: A opens a part at version 5 with P1. B uploads P2 (the version stays 5). A saves with `photos: [P1]`
     and If-Match "5": the check passes, P2 is soft-deleted and its document deleted.
   - Fix: bump the part's version in the upload's transaction. Test: an upload between a read and a save gets 412.
-- [ ] **F2** should-fix · inferred · web · `web/app/core/kernel/authKernel.ts:74,102-105,132-134,175-177` · sign-out
+- [x] **F2** fixed `97eda71` · should-fix · inferred · web · `web/app/core/kernel/authKernel.ts:74,102-105,132-134,175-177` · sign-out
   - Tab A signs out, the gateway is slow; the same person signs in again in tab B (clears the shared note); A ignores
     a sign-in by the same person, then writes the note back and leaves; A's next load revokes B's new session.
   - Fix: any `signed-in` message while this tab is signing out moves its generation. Test: authKernel, a same-user
     sign-in arriving before a slow revoke answers `false`; the note stays clear.
-- [ ] **F3** should-fix · checked · document-api · `DeadLetterReplay.cs:25`, `RabbitMqConnection.cs:69-71`,
+- [x] **F3** fixed `425df09` · should-fix · checked · document-api · `DeadLetterReplay.cs:25`, `RabbitMqConnection.cs:69-71`,
       `ProcessDocumentConsumer.cs:143,170` · dead letters
   - A replayed message keeps the queue's routing key; after three more failures the dead-letter exchange routes by
     that key, which the dead-letter queue is not bound to, and RabbitMQ drops it. A replayed `document.unclaimed`
     that fails again leaves its document for good.
   - Fix: bind the dead-letter queue to the process queue's key too, or replay through `acme.documents` with the
     message's type. Test: replay, fail three times, the message is back in the dead-letter queue.
-- [ ] **F4** should-fix · checked · document-api · `ProcessDocumentConsumer.cs:113,130-143`,
+- [x] **F4** fixed `425df09` · should-fix · checked · document-api · `ProcessDocumentConsumer.cs:113,130-143`,
       `ProcessDocumentCommandHandler.cs:53` · document and its delivery
   - The consumer marks the document Failed (final) before dead-lettering; Process skips anything not Pending, so a
     replay only acknowledges no-ops. An outage longer than the retries (2 s + 4 s) fails every document in flight for
@@ -123,46 +123,46 @@ stateDiagram-v2
   - Creates carry no idempotency key: a save whose answer is lost (a timeout after the commit) is saved twice when the
     person presses Save again (a second customer; a 409 for the part number). Exports already do this right.
   - Fix: ACME-125 (one key per submission, the service replays the stored answer).
-- [ ] **F6** should-fix · inferred · gateway · `GetAccessTokenCommandHandler.cs:73,110` · session renewal lease
+- [x] **F6** fixed `97eda71` · should-fix · inferred · gateway · `GetAccessTokenCommandHandler.cs:73,110` · session renewal lease
   - The lease UPDATE runs with the browser's cancellation: an abort after Postgres commits it, before the answer is
     read, leaves the lease held 15 s with no renewal behind it; requests with an expired token wait, then 503.
   - Fix: `CancellationToken.None` for the lease, as the renewal already uses. Test: cancel after the lease is taken;
     `renewing_until` is null.
-- [ ] **F7** should-fix · checked · dealership-api · `business-logic/exports/export-queue.ts:102-113` with
+- [x] **F7** fixed `acc6d3b` · should-fix · checked · dealership-api · `business-logic/exports/export-queue.ts:102-113` with
       `export-worker.ts:231-235` · export job
   - "No worker" fails a job 30 minutes after `created_at`, not after it became Queued: a job that waited in a long
     line, or was taken back from a dead worker, is failed while workers run, and the log says "is one running?".
   - Fix: a `queued_since` set on insert and on requeue. Test: a requeued job older than 30 minutes is not failed.
-- [ ] **F8** should-fix · inferred · dealership-api · `update-part.command-handler.ts:196-200,245-255`,
+- [x] **F8** fixed `c5efa1c` · should-fix · inferred · dealership-api · `update-part.command-handler.ts:196-200,245-255`,
       `upload-part-photo.command-handler.ts:75` · documents of removed photos
   - The document of a removed photo is deleted after the commit, best effort, with the request's cancellation: a
     closed tab or a failure leaves it in document-api for good, with a log line only.
   - Fix: on a failed delete, record the document as unclaimed (the 24-hour sweep then sends `document.unclaimed`).
-- [ ] **F9** should-fix · checked (web) / inferred (reachable) · web · `core/kernel/locationKernel.ts:78-79`,
+- [x] **F9** fixed `eff46eb` · should-fix · checked (web) / inferred (reachable) · web · `core/kernel/locationKernel.ts:78-79`,
       `core/middleware/authClientMiddleware.ts:15-16`, `pages/SignIn.tsx:35-36` · location
   - A signed-in user with no locations is sent to /sign-in, which sends a signed-in user to `/`: a loop with no exit.
   - Fix: a `no-location` state with its own page.
-- [ ] **F10** should-fix · checked · web · `pages/parts/formatters/photoProcessing.ts:10-21`, `pages/parts/hooks/usePart.ts:12`
+- [x] **F10** fixed `8c6cd1c` · should-fix · checked · web · `pages/parts/formatters/photoProcessing.ts:10-21`, `pages/parts/hooks/usePart.ts:12`
       · photo on screen
   - The page stops asking after 2 minutes; the server's way out of Pending is 10 minutes. A photo that finishes in
     between shows "taking long" until a reload, and the module-level first-seen time never polls it again in the tab.
   - Fix: ask more slowly until the server's deadline, or offer "check again"; forget a photo once it is not pending.
-- [ ] **F11** should-fix · checked · web · `core/kernel/exportKernel.ts:161-166,189-198`, `ExportCard.tsx:132` · export card
+- [x] **F11** fixed `a669b95` · should-fix · checked · web · `core/kernel/exportKernel.ts:161-166,189-198`, `ExportCard.tsx:132` · export card
   - Dismissing a running export cancels it without waiting or catching: a failed cancel leaves it running on the
     server, gone from the screen, back on the next reload; a cancel on a stalled card is never shown.
   - Fix: remove the card only when the cancel answers, or keep it with the problem shown.
-- [ ] **F12** should-fix · inferred · dealership-api · `export-queue.ts:229-238` with `unit-of-work.factory.ts:107-111` ·
+- [x] **F12** fixed `9a72a43` · should-fix · inferred · dealership-api · `export-queue.ts:229-238` with `unit-of-work.factory.ts:107-111` ·
       export progress stream
   - The request's one connection wait is spent by its first poll: every later poll waits 100 ms at most, so on a busy
     morning a followed export's stream dies "busy" while the export goes on.
   - Fix: each poll its own wait. Test: a poll after the list's wait still waits the full wait.
-- [ ] **F13** should-fix · checked · document-api · `DocumentsDbContext.cs:33,39-41` · document status
+- [x] **F13** fixed `121f124` · should-fix · checked · document-api · `DocumentsDbContext.cs:33,39-41` · document status
   - `status` has no CHECK; the allowed moves are repeated in each handler; nothing holds Failed ⇔ a reason.
   - Fix: a CHECK on the values and pairs, and `Document.MarkReady` / `MarkFailed` holding the Pending guard.
-- [ ] **F14** should-fix · checked · document-api · `tests/Acme.Documents.Tests/Handlers/Documents/*` · tests
+- [x] **F14** fixed `425df09` · should-fix · checked · document-api · `tests/Acme.Documents.Tests/Handlers/Documents/*` · tests
   - Untested: Fail, the consumer's retry and give-up, the relay, replay, a duplicate process message, Process on a
     Failed document, the sweep racing Process. F3 is the loss such a test would have caught.
-- [ ] **F15** should-fix · inferred · document-api · `OutboxRelay.cs:59-63` · outbox
+- [x] **F15** fixed `c81d19c` · should-fix · inferred · document-api · `OutboxRelay.cs:59-63` · outbox
   - Rows are read without a claim: two document-api instances (a rolling deploy) publish every row twice. Harmless
     today (one instance; dealership-api drops duplicates by message id). Fix: `FOR UPDATE SKIP LOCKED`.
 
@@ -191,6 +191,8 @@ Every other unfinished state found has a timed way out (leases 15 s, sweeps at 8
 
 ## Order of work
 
+Done except F5 (see "Fixed"). The original order:
+
 1. **F1** (data loss, small): bump the version in the upload; one ticket.
 2. **F3 + F4 + F14** (document-api's dead letters): one plan, decide which state is final, then the tests.
 3. **F2** (the web's sign-out race) and **F6** (the gateway's lease): small, each with its test.
@@ -200,6 +202,26 @@ Every other unfinished state found has a timed way out (leases 15 s, sweeps at 8
 7. **F13, F15**: guards in document-api.
 
 ## Fixed
+
+Fixed on 2026-11-09, each with a test that fails without the fix where one could be written (F6: no deterministic hook
+between Postgres's commit and the answer; F15: two relays need a broker), the gate and e2e 42 of 42 after:
+
+- **F1** `51c2441`: a photo upload moves the part's version (an older form's save gets 412).
+- **F2** `97eda71`: any sign-in announced while this tab signs out moves its generation.
+- **F3, F4, F14** `425df09`: retries wait in `document-api.process-document.retry` (6 attempts, 10 s apart); Failed is
+  final and the message acknowledged; the dead-letter queue is bound to the queue's own key; handler and consumer tests.
+- **F6** `97eda71`: the gateway's lease is taken with `CancellationToken.None`.
+- **F7** `acc6d3b`: `export_jobs.queued_at`; a takeback skips a job whose cancel was asked (note N1 too).
+- **F8** `c5efa1c`: `part_photos.document_released_at`; the photo sweep hands unreleased documents to document-api.
+- **F9** `eff46eb`: a `no-location` state and an error page.
+- **F10** `8c6cd1c`: polls every 15 s after 2 minutes, until 11; forgets a photo no longer pending.
+- **F11** `a669b95`: dismiss waits for the cancel; a failed cancel shows on the card; a stalled card is followed again.
+- **F12** `9a72a43`: `runWithOwnConnectionWait` for each progress read.
+- **F13** `121f124`: `Document.MarkReady` / `MarkFailed`; `ck_documents_status`, `ck_documents_outcome`.
+- **F15** `c81d19c`: the relay claims its batch with `FOR UPDATE SKIP LOCKED`, committing what was confirmed.
+
+Still open: **F5** is ACME-125, a ticket of its own (every save, the form's messages, a 24-hour window), to be built
+through `/implement-ticket ACME-125`. The notes below the findings are not fixed.
 
 - **The stock value's shared sum ended with its first caller** (dealership-api): a caller closing the parts page
   cancelled the one sum every waiting caller shared, answering them 503. Now run apart from the caller
