@@ -40,10 +40,10 @@ power, by the author and the verifier; each answered all 24,000:
 | ----------------------------------------------------------- | ---- | --------------------------------- | -------------------------- | ------------------ |
 | Straight to the gateway (as before)                         | 4    | 37, 40, 49, 67                    | 101–162                    | 134–185%           |
 | The web server's HTTPS, behind Aspire's proxy (first build) | 7    | 29, 31, 37, 48, **240, 316, 758** | 43–88, **845, 670, 1,562** | 134–174%           |
-| The web server's HTTPS, its own port (now)                  | 5    | 37, 43, 49, 53, 71                | 83–147                     | 147–175%           |
+| The web server's HTTPS, its own port (now)                  | 7    | 36, 37, 43, 49, 53, 53, 71        | 76–147                     | 141–175%           |
 
 Three runs in seven through Aspire's proxy waited seconds at the tail, with the client's connections piling up past
-its 512; none of the five without it did, and those sit in the gateway's own band. So `start:prod` now serves the web
+its 512; none of the seven without it did, and those sit in the gateway's own band. So `start:prod` now serves the web
 app on its own port (5100) with no proxy in front, as it already did the .NET services and dealership-api, for the
 same reason (AppHost.cs). What HTTPS itself costs is within the laptop's run-to-run swing: not a number to quote from
 one machine. Not in the table: the web server's own CPU (TLS, its hop to the gateway) is not in the load watcher's

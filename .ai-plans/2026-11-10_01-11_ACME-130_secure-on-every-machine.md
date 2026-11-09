@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-10 01:11
 
-**Status:** In progress
+**Status:** Done
 
 **Ticket:** ACME-130 · **Branch:** final
 
@@ -10,7 +10,10 @@
 
 **Design:** No screen
 
-**Now:** Done: steps 1–7 · Next: step 8, verify-ticket · Blocked: None
+**Now:** Done: verified (gate, verifier PASS after two fixes, [`docs/evidence/ACME-130.md`](../docs/evidence/ACME-130.md));
+not pushed · Next: Zafar Ali: push `final` (the Windows runner then tests the check); note the protocols (`h2` for
+page and API, start:prod and dev) on ACME-130 and move it to in-review; someone on Windows follows the setup once ·
+Blocked: None
 
 ## Requirement
 
@@ -29,25 +32,25 @@ it does live; where the browser can use its newer connection (HTTP/2), it is off
 
 Happy
 
-- [ ] After `dotnet dev-certs https --trust`, `bun run dev` and `bun run start:prod` open the DMS at an `https://`
+- [x] After `dotnet dev-certs https --trust`, `bun run dev` and `bun run start:prod` open the DMS at an `https://`
       address with no browser warning
-- [ ] Signed in, the browser holds `__Host-acme_session`: `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, no
+- [x] Signed in, the browser holds `__Host-acme_session`: `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, no
       `Domain`; the same in dev and start:prod (no `acme_session` any more)
-- [ ] Sign-in, sign-out in one tab and in two, a sign-in ended at the server (as one that ran out is), and a switch of
+- [x] Sign-in, sign-out in one tab and in two, a sign-in ended at the server (as one that ran out is), and a switch of
       location work as today
-- [ ] The connection the browser actually uses, read in the browser (`nextHopProtocol` of the page and of an `/api`
+- [x] The connection the browser actually uses, read in the browser (`nextHopProtocol` of the page and of an `/api`
       request), is `h2` in start:prod and in dev; recorded in the Log and the evidence, and noted on ACME-130
-- [ ] `bun run load-test --rate 800 --seconds 30` to the gateway compares with 9 Nov 23:00 (p95 42 ms, Postgres 141%)
+- [x] `bun run load-test --rate 800 --seconds 30` to the gateway compares with 9 Nov 23:00 (p95 42 ms, Postgres 141%)
       within the laptop's noise; one run `--through-web` (TLS and the web server's hop) written beside it, not mixed in
-- [ ] Every page as sam and as maria, in English and in French, opens with no error and no console error, over HTTPS;
+- [x] Every page as sam and as maria, in English and in French, opens with no error and no console error, over HTTPS;
       the whole e2e suite passes over HTTPS
 
 Failure
 
-- [ ] Without a trusted development certificate, `bun run dev`, `start` and `start:prod` stop before starting and say
-      the one command to run, never a broken page (on this Mac by hand; the message and the export also run on the
-      Windows runner)
-- [ ] A script that calls the gateway directly (`bun run api`, the seed, the load test) still works: it never went
+- [x] Without a trusted development certificate (or without `dotnet`), `bun run dev`, `start` and `start:prod` stop
+      before starting and say what to do, never a broken page (this Mac; the verifier with a fake `dotnet`)
+- [ ] The same check's tests on the Windows runner (on the push), and the setup followed once on Windows (a person)
+- [x] A script that calls the gateway directly (`bun run api`, the seed, the load test) still works: it never went
       through the browser's address
 
 ## Load before building
@@ -143,7 +146,7 @@ only); the gateway and the services are unchanged; the load test keeps measuring
 - [x] 6. Dev mode: `bun run dev` → verify: it opens at `https://` with no warning; `every-page.spec.ts` logs `h2`; then
       back to `start:prod --load-test`
 - [x] 7. Docs → verify: `docs:check`
-- [ ] 8. `verify-ticket` → `docs/evidence/ACME-130.md`; then, by a person: Zafar Ali notes the protocols on ACME-130 (the
+- [x] 8. `verify-ticket` → `docs/evidence/ACME-130.md`; then, by a person: Zafar Ali notes the protocols on ACME-130 (the
       tracker is not connected to this session), and someone on Windows follows the README's setup once
 
 ## Questions
@@ -166,7 +169,7 @@ None: Q1 is answered (D4).
   copy of the certificate serves the browser and Node's and Bun's trust (Claude, while building).
 - D9 In `start:prod` the web server has a fixed port (5100) and no Aspire proxy in front, as the .NET services and
   dealership-api already have there: through the proxy, three load-test runs in seven waited seconds at the tail; on
-  its own port, none in five (Claude, from the verifier's finding; same reason the AppHost already gives for the
+  its own port, none in seven (Claude, from the verifier's finding; same reason the AppHost already gives for the
   gateway). Dev mode keeps the proxy, as everything there does.
 - D5 The cookie keeps one name everywhere, so a sign-in from before the change is not read: one more sign-in, local
   only (Claude, default).
@@ -264,3 +267,8 @@ None: Q1 is answered (D4).
   on it). Then `--through-web` three times: p95 49, 71, 43, p99 84, 147, 91; the gateway between them p95 49, p99 101.
   Benchmarks section rewritten: every run of the day by way in (gateway 4, proxied web 7, own-port web 5); ARCHITECTURE
   names port 5100. The whole e2e suite 53/53 on it; gate 23/23.
+- 2026-11-10 02:25 Verifier, third round: PASS on both rows. Web at `:5100`, the listener serve-web itself, no proxy; its two
+  `--through-web` runs p95 36 and 53 ms, p99 76 and 107, under 512 in flight (added to the table: 7 runs on its own
+  port). The certificate check: 7 tests; for real 0.46 s, silent, `.certs/` untouched. Its gaps (Windows, the first
+  dialog only in a test, the thumbprint read from English output) are in the evidence. Step 8: evidence written;
+  Done. The Windows half of one failure box stays open until the push and a person on Windows.
