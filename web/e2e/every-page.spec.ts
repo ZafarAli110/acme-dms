@@ -31,12 +31,19 @@ for (const [language, errorTitle] of Object.entries(LANGUAGES)) {
   for (const user of [SAM, MARIA]) {
     test(`every page opens for ${user} in ${language}, over HTTP/2, with no error`, async ({ page }) => {
       const consoleErrors: string[] = [];
+      // The app's own errors, and any answer the services could not give. A refusal is not one: sam may not see the
+      // locations' users, and the browser logs that 403 as "Failed to load resource", as it does today.
       page.on("console", (message) => {
-        if (message.type() === "error") {
+        if (message.type() === "error" && !message.text().startsWith("Failed to load resource")) {
           consoleErrors.push(message.text());
         }
       });
       page.on("pageerror", (error) => consoleErrors.push(error.message));
+      page.on("response", (response) => {
+        if (response.status() >= 500) {
+          consoleErrors.push(`${response.status()} ${new URL(response.url()).pathname}`);
+        }
+      });
       await page.addInitScript((chosen) => window.localStorage.setItem("acme.language", chosen), language);
       await signInAsync(page, user);
 

@@ -10,7 +10,7 @@
 
 **Design:** No screen
 
-**Now:** Done: steps 1–4 (code, not yet run against the system) · Next: step 5, start:prod over HTTPS · Blocked: None
+**Now:** Done: steps 1–5 (start:prod over HTTPS and HTTP/2, all checks) · Next: step 6, dev mode · Blocked: None
 
 ## Requirement
 
@@ -137,7 +137,7 @@ only); the gateway and the services are unchanged; the load test keeps measuring
 - [x] 3. The web server on HTTPS and HTTP/2: AppHost, Vite, `serve-web.ts` and its test → verify: unit tests
 - [x] 4. Node and Bun trust, the scripts and the e2e: `NODE_EXTRA_CA_CERTS`, load-test's cookie and `--through-web`,
       the sign-out spec, `every-page.spec.ts` → verify: typecheck and lint (run in step 5)
-- [ ] 5. start:prod over HTTPS: restart it → verify: the whole e2e suite; `every-page.spec.ts` logs `h2`; the cookie
+- [x] 5. start:prod over HTTPS: restart it → verify: the whole e2e suite; `every-page.spec.ts` logs `h2`; the cookie
       read in the browser; check-in-browser at 1440 and 1024 (no warning); load test 800/s twice and once
       `--through-web`, compared with 9 Nov
 - [ ] 6. Dev mode: `bun run dev` → verify: it opens at `https://` with no warning; `every-page.spec.ts` logs `h2`; then
@@ -215,3 +215,16 @@ None: Q1 is answered (D4).
   copy of the cookie signs out) takes the open page to sign-in on its next request; `every-page.spec.ts`: five pages
   and a part's and a customer's own page, sam and maria, en and fr, no error title, no console error, page and API
   `nextHopProtocol` `h2` asserted and annotated. Typecheck and lint clean.
+- 2026-11-10 01:43 Step 5 on `start:prod --load-test`, restarted. The web build failed first: React Router's prerender runs
+  `vite preview`, which took the certificate from `server.https`, then requested `https:` over plain HTTP; fixed (the
+  dev server only, `!isPreview`), `web` restarted alone (`aspire resource web start`) at `https://localhost:53251`.
+  curl: page HTTP/2, certificate verified (0), `/api` HTTP/2. e2e: 51 passed, 2 failed (every-page for sam: the
+  browser's "Failed to load resource" for sam's two 403s on /locations, `/api/identity/v1/locations` and `/users`,
+  correct refusals as today); the spec now counts the app's errors and any 5xx, not refusals; every-page 4/4. Chrome
+  reports `nextHopProtocol` `h2` for the page and the API on all 7 pages, sam and maria, en and fr. Chrome holds
+  `__Host-acme_session`: secure, httpOnly, Strict, path `/`, no expiry. Screenshots sign-in 1440, customers 1024: as
+  before. Load test on mains, 800/s 30 s, all 24,000 answered each time: to the gateway, twice (Postgres 135–167%),
+  then saved: p50 11, p95 37, p99 155 ms, Postgres 165%, gateway 83%, API 29% each; `--through-web`: p50 13, p95 37,
+  p99 62 ms, Postgres 173%, gateway 87%, API 33% each (Bun's web server's CPU is not in the watcher's table). 9 Nov
+  23:00: p95 42 ms, Postgres 141%: p95 within it; Postgres higher, within today's own swing, and nothing in ACME-130
+  changes what Postgres is asked.
