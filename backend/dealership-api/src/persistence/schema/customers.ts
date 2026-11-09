@@ -64,27 +64,70 @@ export const customers = snakeCase.table(
     index("ix_customers_by_city")
       .on(table.dealerId, table.locationId, sql`lower(${table.city})`, table.surname, table.firstName, table.id)
       .where(sql`${table.isDeleted} = false`),
-    // The search box (a match anywhere in the name, company, email or phone): trigrams find the few matching rows
-    // among millions; an ordinary index cannot serve `ilike '%…%'`. It needs pg_trgm, and three letters or more.
-    index("ix_customers_search")
+    // The search box (a match anywhere in the name, company or email): trigrams find the few matching rows among
+    // millions; an ordinary index cannot serve `ilike '%…%'`. It needs pg_trgm, and three letters or more.
+    index("ix_customers_search_text")
       .using("gin", sql`(${customerSearchText(table)}) gin_trgm_ops`)
       .where(sql`${table.isDeleted} = false`),
+    // The search box before ACME-129, with the phone in it: the version before this one still searches through it
+    // while a deploy rolls out. Dropped in the release after (docs/standards/database.md, "Expand, then contract").
+    index("ix_customers_search")
+      .using("gin", sql`(${legacyCustomerSearchText(table)}) gin_trgm_ops`)
+      .where(sql`${table.isDeleted} = false`),
+    // A phone by the start or the end of its digits (ACME-129): `like '0300%'` on the digits, or on them reversed for
+    // the last digits, each a range of one index. `text_pattern_ops` lets a b-tree serve `like 'prefix%'`.
+    index("ix_customers_phone_start")
+      .on(table.dealerId, table.locationId, sql`(${phoneDigits(table.phone)}) text_pattern_ops`)
+      .where(sql`${table.isDeleted} = false`),
+    index("ix_customers_phone_end")
+      .on(table.dealerId, table.locationId, sql`(reverse(${phoneDigits(table.phone)})) text_pattern_ops`)
+      .where(sql`${table.isDeleted} = false`),
+    // One index for each sort the grid offers that the list indexes do not (ACME-129): a keyset page, the last page
+    // too, reads its 25 ids from the index, either way, whatever the location's size.
+    ...(["companyName", "email", "phone", "city", "status"] as const).map((column) =>
+      index(`ix_customers_sort_${snakeCaseOf(column)}`)
+        .on(table.dealerId, table.locationId, table[column], table.id)
+        .where(sql`${table.isDeleted} = false`),
+    ),
     softDeleteCheck("customers", table),
   ],
 );
 
 /**
- * The text the customer search looks in: name, company, email and phone, a unit separator (chr 31) between them so a
- * search never matches across two fields. The search and its index use this one expression, so they cannot drift.
+ * The text the customer search looks in: name, company and email, a unit separator (chr 31) between them so a search
+ * never matches across two fields. The search and its index use this one expression, so they cannot drift. The phone
+ * is searched by its digits instead (`phoneDigits`, ACME-129).
  */
 export function customerSearchText(columns: {
   firstName: AnyPgColumn;
   surname: AnyPgColumn;
   companyName: AnyPgColumn;
   email: AnyPgColumn;
+}): SQL {
+  return sql`${columns.firstName} || chr(31) || ${columns.surname} || chr(31) || coalesce(${columns.companyName}, '') || chr(31) || coalesce(${columns.email}, '')`;
+}
+
+/** Before ACME-129: the search text with the phone. Only for `ix_customers_search`'s declaration, until it is dropped. */
+function legacyCustomerSearchText(columns: {
+  firstName: AnyPgColumn;
+  surname: AnyPgColumn;
+  companyName: AnyPgColumn;
+  email: AnyPgColumn;
   phone: AnyPgColumn;
 }): SQL {
-  return sql`${columns.firstName} || chr(31) || ${columns.surname} || chr(31) || coalesce(${columns.companyName}, '') || chr(31) || coalesce(${columns.email}, '') || chr(31) || coalesce(${columns.phone}, '')`;
+  return sql`${customerSearchText(columns)} || chr(31) || coalesce(${columns.phone}, '')`;
+}
+
+/**
+ * A phone's digits alone: "+44 (0)113 496-0000" is 4401134960000. What the phone search compares, and what its two
+ * indexes hold, so they cannot drift.
+ */
+export function phoneDigits(phone: AnyPgColumn): SQL {
+  return sql`regexp_replace(coalesce(${phone}, ''), '[^0-9]', '', 'g')`;
+}
+
+function snakeCaseOf(name: string): string {
+  return name.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
 
 export type Customer = typeof customers.$inferSelect;

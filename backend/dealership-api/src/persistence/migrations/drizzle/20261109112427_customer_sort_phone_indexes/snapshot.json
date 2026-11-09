@@ -1,0 +1,469 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "64865ae9-d9a2-4406-bed0-5071766ddee2",
+  "prevIds": ["02590de9-6dba-44c9-89d9-f1c405e41383"],
+  "footprints": [
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_search_text"],
+      "writes": [
+        "s|idx|public.ix_customers_search_text",
+        "n|idx|public.ix_customers_search_text",
+        "e|idx|public.ix_customers_search_text",
+        "n|rel|public.ix_customers_search_text"
+      ],
+      "reads": ["n|tbl|public.customers", "n|sch|public"]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_phone_start"],
+      "writes": [
+        "s|idx|public.ix_customers_phone_start",
+        "n|idx|public.ix_customers_phone_start",
+        "e|idx|public.ix_customers_phone_start",
+        "n|rel|public.ix_customers_phone_start"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_phone_end"],
+      "writes": [
+        "s|idx|public.ix_customers_phone_end",
+        "n|idx|public.ix_customers_phone_end",
+        "e|idx|public.ix_customers_phone_end",
+        "n|rel|public.ix_customers_phone_end"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_sort_company_name"],
+      "writes": [
+        "s|idx|public.ix_customers_sort_company_name",
+        "n|idx|public.ix_customers_sort_company_name",
+        "e|idx|public.ix_customers_sort_company_name",
+        "n|rel|public.ix_customers_sort_company_name"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.company_name",
+        "n|col|public.customers.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_sort_email"],
+      "writes": [
+        "s|idx|public.ix_customers_sort_email",
+        "n|idx|public.ix_customers_sort_email",
+        "e|idx|public.ix_customers_sort_email",
+        "n|rel|public.ix_customers_sort_email"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.email",
+        "n|col|public.customers.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_sort_phone"],
+      "writes": [
+        "s|idx|public.ix_customers_sort_phone",
+        "n|idx|public.ix_customers_sort_phone",
+        "e|idx|public.ix_customers_sort_phone",
+        "n|rel|public.ix_customers_sort_phone"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.phone",
+        "n|col|public.customers.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_sort_city"],
+      "writes": [
+        "s|idx|public.ix_customers_sort_city",
+        "n|idx|public.ix_customers_sort_city",
+        "e|idx|public.ix_customers_sort_city",
+        "n|rel|public.ix_customers_sort_city"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.city",
+        "n|col|public.customers.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_sort_status"],
+      "writes": [
+        "s|idx|public.ix_customers_sort_status",
+        "n|idx|public.ix_customers_sort_status",
+        "e|idx|public.ix_customers_sort_status",
+        "n|rel|public.ix_customers_sort_status"
+      ],
+      "reads": [
+        "n|tbl|public.customers",
+        "n|sch|public",
+        "n|col|public.customers.dealer_id",
+        "n|col|public.customers.location_id",
+        "n|col|public.customers.status",
+        "n|col|public.customers.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_search_text",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "(\"first_name\" || chr(31) || \"surname\" || chr(31) || coalesce(\"company_name\", '') || chr(31) || coalesce(\"email\", '')) gin_trgm_ops",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "gin",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_phone_start",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "(regexp_replace(coalesce(\"phone\", ''), '[^0-9]', '', 'g')) text_pattern_ops",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_phone_end",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "(reverse(regexp_replace(coalesce(\"phone\", ''), '[^0-9]', '', 'g'))) text_pattern_ops",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_sort_company_name",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "company_name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_sort_email",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "email",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_sort_phone",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "phone",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_sort_city",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "city",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_sort_status",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "dealer_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "status",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}
