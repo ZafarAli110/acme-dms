@@ -187,4 +187,4 @@ None: the interview's answers are in Requirement and D1–D2.
   release and the answer detached, the answer never "busy"; a box for the first save never arriving; e2e says how an
   answer is lost; the real cost per save; `database.md` and `schema.test.ts` added; why one ticket (D7); D3 moved here.
   Also from the NestJS checklist: `Idempotent-Replayed: true` on a replay.
-- 2026-11-10 00:20 Go-ahead from Zafar Ali; the build starts next session at step 1 (after loading the rows).
+- 2026-11-10 00:07 Go-ahead from Zafar Ali; the build starts next session at step 1 (after loading the rows).
