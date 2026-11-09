@@ -10,6 +10,10 @@ import type { Database } from "#persistence/unit-of-work/unit-of-work";
 export const PHOTO_DEADLINE_MINUTES = 10;
 /** Why a photo was failed by the sweep. A late `processed` may still make it ready (`recordPhotoOutcomeAsync`). */
 export const PHOTO_TIMED_OUT = "Processing did not finish in time.";
+/** How long a removed photo's document waits for the save's own delete before the sweep hands it to document-api. */
+export const RELEASE_AFTER_MINUTES = 10;
+/** At most this many removed photos' documents a sweep hands over: a backlog drains over several minutes. */
+const RELEASES_PER_SWEEP = 200;
 
 /** What document-api said about a photo's document: processed (`ready`) or `failed`, with its reason. */
 export interface PhotoOutcome {
@@ -113,13 +117,29 @@ export async function sweepPhotosAsync(
     )
     .returning({ id: partPhotos.id });
   // An outcome no upload claimed in a day: its photo was never saved, so its document is nobody's (PhotoSweeper tells
-  // document-api, which deletes it).
+  // document-api, which deletes it). Removed photos' documents left behind join them, below.
   const unclaimed = await db
     .delete(earlyDocumentOutcomes)
     .where(lt(earlyDocumentOutcomes.receivedAt, now.subtract({ hours: 24 })))
     .returning({ documentId: earlyDocumentOutcomes.documentId, dealerId: earlyDocumentOutcomes.dealerId });
   await db.delete(processedMessages).where(lt(processedMessages.processedAt, now.subtract({ hours: 24 * 30 })));
-  return { timedOut: timedOut.length, unclaimed };
+  // A removed photo whose document the save could not delete: nobody else would (the state sweep's F8). Claimed under
+  // the row lock, so two instances never hand over one document twice.
+  const released = await db.execute<{ document_id: string; dealer_id: string }>(sql`
+    update ${partPhotos} set document_released_at = ${now.toString()}
+    where ${partPhotos.id} in (
+      select ${partPhotos.id} from ${partPhotos}
+      where ${partPhotos.isDeleted} and ${partPhotos.documentReleasedAt} is null
+        and ${partPhotos.deletedAt} < ${now.subtract({ minutes: RELEASE_AFTER_MINUTES }).toString()}
+      limit ${RELEASES_PER_SWEEP} for update skip locked)
+    returning document_id, dealer_id`);
+  return {
+    timedOut: timedOut.length,
+    unclaimed: [
+      ...unclaimed,
+      ...released.rows.map((row) => ({ documentId: row.document_id, dealerId: row.dealer_id })),
+    ],
+  };
 }
 
 /** One document's events and its upload take turns, until the transaction ends. */

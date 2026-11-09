@@ -193,11 +193,15 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
       throw error;
     }
 
-    // 4. The save is committed: the removed photos' files can go.
-    await this.deleteDocumentsAsync(
+    // 4. The save is committed: the removed photos' files can go. Those that went are marked released; the photo sweep
+    // hands the rest to document-api later (the state sweep's F8).
+    const deleted = await this.deleteDocumentsAsync(
       userContext,
       removed.map((photo) => photo.documentId),
     );
+    if (deleted.length > 0) {
+      await this.markReleasedAsync(userContext.dealerId, deleted);
+    }
 
     const { stocked, existing: photos } = await this.readPartAsync(partId);
     return toPartResponseDto(stocked.part, stocked.inventory, stocked.bin, photos);
@@ -241,17 +245,37 @@ export class UpdatePartCommandHandler implements IUpdatePartCommandHandler {
     return { stocked, existing: await findPhotosAsync(work.db, partId) };
   }
 
-  /** Best effort, all at once: a document left behind is logged, never turned into a failed save. */
-  private async deleteDocumentsAsync(userContext: UserContext, documentIds: string[]): Promise<void> {
+  /**
+   * Best effort, all at once: a document left behind is logged, never turned into a failed save. Returns the ones that
+   * were deleted.
+   */
+  private async deleteDocumentsAsync(userContext: UserContext, documentIds: string[]): Promise<string[]> {
     const results = await Promise.allSettled(
       documentIds.map((documentId) => this._documentApiClient.deleteDocumentAsync(userContext, documentId)),
     );
+    const deleted: string[] = [];
     for (const [index, result] of results.entries()) {
       if (result.status === "rejected") {
         this._logger.warn(
-          `Document ${documentIds[index]} could not be deleted and is left without an owner: ${String(result.reason)}`,
+          `Document ${documentIds[index]} could not be deleted; the photo sweep hands it to document-api later: ${String(result.reason)}`,
         );
+      } else {
+        deleted.push(documentIds[index]!);
       }
     }
+    return deleted;
+  }
+
+  /**
+   * Removed photos whose documents are gone: nothing is left for the photo sweep to hand over. As the table's owner with
+   * the dealer written out: the request's policy hides deleted photos, so its update would match none.
+   */
+  private async markReleasedAsync(dealerId: string, documentIds: string[]): Promise<void> {
+    await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: false, asOwner: true });
+    await work.db
+      .update(partPhotos)
+      .set({ documentReleasedAt: this._clock.now() })
+      .where(and(eq(partPhotos.dealerId, dealerId), inArray(partPhotos.documentId, documentIds)));
+    await work.commitAsync();
   }
 }

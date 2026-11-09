@@ -1,0 +1,37 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7a4b713c-d5ed-4476-a1a1-58b7065ef17c",
+  "prevIds": ["817800aa-b658-41f7-9c12-7d7592d88985"],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "part_photos", "document_released_at"],
+      "writes": [
+        "s|col|public.part_photos.document_released_at",
+        "n|col|public.part_photos.document_released_at",
+        "e|col|public.part_photos.document_released_at"
+      ],
+      "reads": ["n|tbl|public.part_photos", "n|sch|public"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "part_photos",
+        "name": "document_released_at",
+        "type": "timestamptz",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

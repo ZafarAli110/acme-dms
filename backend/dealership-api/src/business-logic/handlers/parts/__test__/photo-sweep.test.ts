@@ -14,6 +14,29 @@ describe("the photo sweep", () => {
   const database = useTestDatabase();
   const statusOf = async (id: string) => (await database.db.select().from(partPhotos).where(eq(partPhotos.id, id)))[0];
 
+  // The state sweep's F8: a removed photo's document the save could not delete was left in document-api for good.
+  it("hands a removed photo's document to document-api once, ten minutes after it was removed", async () => {
+    const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "SWP-REL" });
+    const removed = await database.seed.addPhotoAsync({ partId: part.id, isDefault: false, deleted: true });
+    const removedLater = await database.seed.addPhotoAsync({ partId: part.id, isDefault: false, deleted: true });
+    await database.db
+      .update(partPhotos)
+      .set({ deletedAt: TEST_NOW.add({ minutes: 5 }) })
+      .where(eq(partPhotos.id, removedLater.id));
+    const inUse = await database.seed.addPhotoAsync({ partId: part.id, isDefault: true });
+
+    const first = await sweepPhotosAsync(database.db, TEST_NOW.add({ minutes: 11 }));
+    const second = await sweepPhotosAsync(database.db, TEST_NOW.add({ minutes: 12 }));
+
+    const handedOver = first.unclaimed.map((each) => each.documentId);
+    expect(handedOver).toContain(removed.documentId);
+    expect(handedOver).not.toContain(removedLater.documentId);
+    expect(handedOver).not.toContain(inUse.documentId);
+    expect(second.unclaimed.map((each) => each.documentId)).not.toContain(removed.documentId);
+    expect((await statusOf(removed.id))?.documentReleasedAt).not.toBeNull();
+    expect((await statusOf(inUse.id))?.documentReleasedAt).toBeNull();
+  });
+
   it("fails a photo still processing after the deadline, and leaves a recent or removed one alone", async () => {
     const { part } = await database.seed.addStockedPartAsync({ locationId: NORTHSIDE, partNumber: "SWP-001" });
     const old = await database.seed.addPhotoAsync({ partId: part.id, isDefault: true, status: "pending" });

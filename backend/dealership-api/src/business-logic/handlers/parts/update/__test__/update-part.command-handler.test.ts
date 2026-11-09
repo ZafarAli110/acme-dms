@@ -62,7 +62,22 @@ describe("UpdatePartCommandHandler", () => {
     const [removed] = await database.db.select().from(partPhotos).where(eq(partPhotos.id, photoB.id));
     expect(saved.photos.map((photo) => photo.id)).toEqual([photoA.id]);
     expect(removed).toMatchObject({ isDeleted: true, deletedBy: AT_NORTHSIDE.userId });
+    expect(removed?.documentReleasedAt).not.toBeNull();
     expect(documents.deleteDocumentAsync).toHaveBeenCalledWith(AT_NORTHSIDE, photoB.documentId);
+  });
+
+  // The state sweep's F8: a document the save could not delete stays unreleased, for the photo sweep to hand over.
+  it("leaves a removed photo's document unreleased when deleting it fails after the save", async () => {
+    const { part, photoA, photoB } = await partWithTwoPhotosAsync("UPD-F8");
+    const documents = fakeDocumentApi();
+    documents.deleteDocumentAsync.mockRejectedValueOnce(new Error("document-api is down"));
+
+    await database
+      .asRequest(new UpdatePartCommandHandler(database.unitOfWorkFactory, documents.client, fixedClock()))
+      .executeAsync(AT_NORTHSIDE, part.id, { photos: [{ id: photoA.id, isDefault: true }] }, [], 1);
+
+    const [removed] = await database.db.select().from(partPhotos).where(eq(partPhotos.id, photoB.id));
+    expect(removed).toMatchObject({ isDeleted: true, documentReleasedAt: null });
   });
 
   it("deletes the uploaded documents when the save fails", async () => {

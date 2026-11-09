@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, index, snakeCase, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import { auditColumns, softDeleteCheck } from "./columns/audit-columns";
+import { instant } from "./columns/temporal-columns";
 import { parts } from "./parts";
 
 export type PartPhotoStatus = "pending" | "ready" | "failed";
@@ -24,6 +25,12 @@ export const partPhotos = snakeCase.table(
     status: varchar({ length: 20 }).$type<PartPhotoStatus>().notNull(),
     failureReason: varchar({ length: 1000 }),
     isDefault: boolean().notNull(),
+    /**
+     * When a removed photo's document was deleted in document-api. The save deletes it straight after its commit, best
+     * effort; one it could not delete (a closed tab, document-api down) is handed to document-api later by the photo
+     * sweep, as `document.unclaimed` (the state sweep's F8). Null for a photo still in use.
+     */
+    documentReleasedAt: instant(),
     ...auditColumns(),
   },
   (table) => [
