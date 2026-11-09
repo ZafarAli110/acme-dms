@@ -36,4 +36,36 @@ public sealed class Document : AuditedEntity
     public uint Version { get; set; }
 
     public ICollection<DocumentContent> Contents { get; } = [];
+
+    /// <summary>
+    /// Whether processing may still move it: Pending and not deleted. Ready and Failed are final, and a deleted document is
+    /// never processed (the state sweep's F13: the moves, in one place; the database's checks hold the values).
+    /// </summary>
+    public bool CanBeProcessed => Status == DocumentStatus.Pending && !IsDeleted;
+
+    /// <summary>Pending → Ready: its variants are made. Throws on any other move.</summary>
+    public void MarkReady(DateTimeOffset at)
+    {
+        EnsureCanBeProcessed();
+        Status = DocumentStatus.Ready;
+        ProcessedAt = at;
+    }
+
+    /// <summary>Pending → Failed, with why (at most 1,000 characters). Throws on any other move.</summary>
+    public void MarkFailed(string reason, DateTimeOffset at)
+    {
+        ArgumentNullException.ThrowIfNull(reason);
+        EnsureCanBeProcessed();
+        Status = DocumentStatus.Failed;
+        FailureReason = reason.Length > 1000 ? reason[..1000] : reason;
+        ProcessedAt = at;
+    }
+
+    private void EnsureCanBeProcessed()
+    {
+        if (!CanBeProcessed)
+        {
+            throw new InvalidOperationException($"Document {Id} is {Status}{(IsDeleted ? ", deleted" : "")}: it cannot be processed.");
+        }
+    }
 }

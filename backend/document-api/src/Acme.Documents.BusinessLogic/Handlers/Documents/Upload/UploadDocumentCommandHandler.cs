@@ -24,12 +24,14 @@ internal sealed class UploadDocumentCommandHandler : IUploadDocumentCommandHandl
     private readonly DocumentsDbContext _dbContext;
     private readonly IOutbox _outbox;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _timeProvider;
 
-    public UploadDocumentCommandHandler(DocumentsDbContext dbContext, IOutbox outbox, IUnitOfWork unitOfWork)
+    public UploadDocumentCommandHandler(DocumentsDbContext dbContext, IOutbox outbox, IUnitOfWork unitOfWork, TimeProvider timeProvider)
     {
         _dbContext = dbContext;
         _outbox = outbox;
         _unitOfWork = unitOfWork;
+        _timeProvider = timeProvider;
     }
 
     public async Task<DocumentResponseDto> ExecuteAsync(UserContext userContext, DocumentUploadRequestDto request, CancellationToken cancellationToken)
@@ -47,6 +49,8 @@ internal sealed class UploadDocumentCommandHandler : IUploadDocumentCommandHandl
             ContentType = request.ContentType,
             SizeBytes = request.Content.Length,
             Status = request.Variants.Count == 0 ? DocumentStatus.Ready : DocumentStatus.Pending,
+            // Nothing to make: ready, and so processed, as it is stored (ck_documents_outcome).
+            ProcessedAt = request.Variants.Count == 0 ? _timeProvider.GetUtcNow() : null,
             RequestedVariants = JsonSerializer.Serialize(request.Variants, _jsonOptions),
         };
         // The content's DocumentId is filled in from the document when it is saved.

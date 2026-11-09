@@ -81,6 +81,33 @@ public sealed class DocumentStatusGuardTests
         outbox.Verify(o => o.Add(MessageTypes.DocumentProcessed, It.IsAny<DocumentProcessedMessageDto>()), Times.Once);
     }
 
+    [TestMethod]
+    public async Task TheDatabase_RefusesAStatusItDoesNotKnow_AndAFailedDocumentWithNoReason()
+    {
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
+        var documentId = await TestDocuments.UploadPhotoAsync(database, TestContext.CancellationToken);
+        await using var context = database.CreateContext(dealerId: null);
+
+        await Assert.ThrowsAsync<Npgsql.PostgresException>(() => context.Database.ExecuteSqlInterpolatedAsync(
+            $"update documents set status = 'Lost' where id = {documentId}", TestContext.CancellationToken));
+        await Assert.ThrowsAsync<Npgsql.PostgresException>(() => context.Database.ExecuteSqlInterpolatedAsync(
+            $"update documents set status = 'Failed', processed_at = now() where id = {documentId}", TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task Upload_WithNoVariants_IsReadyAndProcessedAtOnce()
+    {
+        var database = await TestDatabase.CreateAsync(TestContext.CancellationToken);
+        await using var context = database.CreateContext(TestDocuments.Northwind);
+        var upload = TestDocuments.PhotoUpload() with { Variants = [] };
+
+        var saved = await TestDocuments.CreateUploadHandler(context).ExecuteAsync(TestDocuments.Alice, upload, TestContext.CancellationToken);
+
+        var document = await context.Documents.SingleAsync(d => d.Id == saved.Id, TestContext.CancellationToken);
+        Assert.AreEqual(DocumentStatus.Ready, document.Status);
+        Assert.IsNotNull(document.ProcessedAt);
+    }
+
     private static ProcessDocumentMessageDto Message(Guid documentId) => new(documentId, TestDocuments.Northwind);
 
     private static FailDocumentCommandHandler FailHandler(Persistence.Database.DocumentsDbContext context, Mock<IOutbox> outbox) =>

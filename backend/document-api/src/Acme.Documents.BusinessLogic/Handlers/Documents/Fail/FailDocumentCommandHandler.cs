@@ -32,14 +32,12 @@ internal sealed class FailDocumentCommandHandler : IFailDocumentCommandHandler
             .SingleOrDefaultAsync(d => d.Id == message.DocumentId && d.DealerId == message.DealerId, cancellationToken);
 
         // Background work lifts the query filters, so a deleted document is skipped here explicitly.
-        if (document is null || document.IsDeleted || document.Status != DocumentStatus.Pending)
+        if (document is null || !document.CanBeProcessed)
         {
             return;
         }
 
-        document.Status = DocumentStatus.Failed;
-        document.FailureReason = reason.Length > 1000 ? reason[..1000] : reason;
-        document.ProcessedAt = _timeProvider.GetUtcNow();
+        document.MarkFailed(reason, _timeProvider.GetUtcNow());
         _outbox.Add(
             MessageTypes.DocumentFailed,
             new DocumentFailedMessageDto(document.Id, document.DealerId, document.OwnerType, document.OwnerId, document.FailureReason));

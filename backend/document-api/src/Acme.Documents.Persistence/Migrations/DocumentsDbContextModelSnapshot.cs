@@ -123,6 +123,10 @@ namespace Acme.Documents.Persistence.Migrations
                     b.ToTable("documents", null, t =>
                         {
                             t.HasCheckConstraint("ck_documents_deleted", "is_deleted = (deleted_at IS NOT NULL) AND is_deleted = (deleted_by IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_documents_outcome", "(status = 'Pending') = (processed_at IS NULL) AND (status = 'Failed') = (failure_reason IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_documents_status", "status IN ('Pending', 'Ready', 'Failed')");
                         });
                 });
 

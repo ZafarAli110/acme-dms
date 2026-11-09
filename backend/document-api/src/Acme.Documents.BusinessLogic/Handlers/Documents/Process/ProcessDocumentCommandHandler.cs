@@ -50,7 +50,7 @@ internal sealed class ProcessDocumentCommandHandler : IProcessDocumentCommandHan
             .SingleOrDefaultAsync(d => d.Id == message.DocumentId && d.DealerId == message.DealerId, cancellationToken);
 
         // Background work lifts the query filters, so a deleted document is skipped here explicitly.
-        if (document is null || document.IsDeleted || document.Status != DocumentStatus.Pending)
+        if (document is null || !document.CanBeProcessed)
         {
             return;
         }
@@ -72,8 +72,7 @@ internal sealed class ProcessDocumentCommandHandler : IProcessDocumentCommandHan
             });
         }
 
-        document.Status = DocumentStatus.Ready;
-        document.ProcessedAt = _timeProvider.GetUtcNow();
+        document.MarkReady(_timeProvider.GetUtcNow());
         _outbox.Add(
             MessageTypes.DocumentProcessed,
             new DocumentProcessedMessageDto(document.Id, document.DealerId, document.OwnerType, document.OwnerId, DocumentMapper.ToVariantDtos(document.Contents)));

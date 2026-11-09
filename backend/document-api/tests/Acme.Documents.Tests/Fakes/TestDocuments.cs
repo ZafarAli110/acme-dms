@@ -17,7 +17,7 @@ internal static class TestDocuments
         new("part", Guid.NewGuid(), "brake-pads.jpg", "image/jpeg", new byte[] { 0xFF, 0xD8, 0xFF }, [new VariantSpecDto("display", 1200, 82)]);
 
     public static UploadDocumentCommandHandler CreateUploadHandler(DocumentsDbContext dbContext, IOutbox? outbox = null) =>
-        new(dbContext, outbox ?? Mock.Of<IOutbox>(), new TestUnitOfWork(dbContext));
+        new(dbContext, outbox ?? Mock.Of<IOutbox>(), new TestUnitOfWork(dbContext), TimeProvider.System);
 
     /// <summary>Uploads a photo for Alice (Northwind) and returns its id.</summary>
     public static async Task<Guid> UploadPhotoAsync(TestDatabase database, CancellationToken cancellationToken)

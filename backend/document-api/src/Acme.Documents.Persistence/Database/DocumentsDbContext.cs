@@ -36,9 +36,18 @@ public sealed class DocumentsDbContext : DbContext
             document.Property(d => d.Version).IsRowVersion();
             document.HasIndex(d => new { d.DealerId, d.OwnerType, d.OwnerId });
 
-            document.ToTable(table => table.HasCheckConstraint(
-                "ck_documents_deleted",
-                "is_deleted = (deleted_at IS NOT NULL) AND is_deleted = (deleted_by IS NOT NULL)"));
+            document.ToTable(table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_documents_deleted",
+                    "is_deleted = (deleted_at IS NOT NULL) AND is_deleted = (deleted_by IS NOT NULL)");
+                // The values, and what each brings: a document is finished (Ready or Failed) exactly when it has a processed
+                // time, and Failed exactly when it has a reason (the state sweep's F13). The moves are Document's.
+                table.HasCheckConstraint("ck_documents_status", "status IN ('Pending', 'Ready', 'Failed')");
+                table.HasCheckConstraint(
+                    "ck_documents_outcome",
+                    "(status = 'Pending') = (processed_at IS NULL) AND (status = 'Failed') = (failure_reason IS NOT NULL)");
+            });
 
             // Tenant isolation and soft delete, for every query: a request only ever sees its own dealer's documents,
             // and never a deleted one.
