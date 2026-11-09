@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Acme.Documents.Persistence.Auditing;
 
 namespace Acme.Documents.Persistence.Entities;
@@ -52,6 +53,8 @@ public sealed class Document : AuditedEntity
     }
 
     /// <summary>Pending → Failed, with why (at most 1,000 characters). Throws on any other move.</summary>
+    /// <remarks>Sets <see cref="FailureReason"/>: the compiler knows it is not null after this.</remarks>
+    [MemberNotNull(nameof(FailureReason))]
     public void MarkFailed(string reason, DateTimeOffset at)
     {
         ArgumentNullException.ThrowIfNull(reason);
