@@ -196,6 +196,17 @@ if ($LASTEXITCODE -ne 0) { throw "bun install failed" }
 git config core.hooksPath .githooks
 Note "pre-commit check switched on (.githooks)"
 
+# -- 8. HTTPS on this machine (ACME-130) -----------------------------------------------------------------------------
+# The DMS opens over HTTPS here as it does live, with the .NET development certificate. Trusting it asks you to
+# confirm (choose Yes), so a CI run, where nobody can, skips it; `bun run dev` says so if it was skipped.
+Say "HTTPS on this machine (dotnet dev-certs https --trust)"
+if ($env:CI) { Note "skipped on CI: trusting the certificate asks a person to confirm" } else {
+  dotnet dev-certs https --trust
+  if ($LASTEXITCODE -eq 0) { Note "the .NET development certificate is trusted" } else {
+    Write-Host "  Not trusted yet. Run 'dotnet dev-certs https --trust' and choose Yes." -ForegroundColor Yellow
+  }
+}
+
 # -- Done ------------------------------------------------------------------------------------------------------------
 Say "Installed"
 foreach ($check in @("git --version", "gh --version", "node -v", "bun --version", "dotnet --version", "aspire --version", "docker --version")) {

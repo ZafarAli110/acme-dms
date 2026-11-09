@@ -34,3 +34,5 @@ playwright-report/
 !.ai-observability/summary.jsonl
 # A session's handoff note (/handoff): personal, one per checkout or worktree
 .claude/handoff.md
+# The .NET development certificate, written for Node and Bun by scripts/check-certificate.ts (ACME-130).
+.certs/

@@ -15,9 +15,9 @@
     "apphost"
   ],
   "scripts": {
-    "dev": "bun scripts/check-node.ts && bun scripts/check-install.ts && aspire run",
-    "start": "bun scripts/check-node.ts && bun scripts/check-install.ts && aspire start",
-    "start:prod": "bun scripts/check-node.ts && bun scripts/check-install.ts && bun scripts/start-production-like.ts",
+    "dev": "bun scripts/check-node.ts && bun scripts/check-install.ts && bun scripts/check-certificate.ts && aspire run",
+    "start": "bun scripts/check-node.ts && bun scripts/check-install.ts && bun scripts/check-certificate.ts && aspire start",
+    "start:prod": "bun scripts/check-node.ts && bun scripts/check-install.ts && bun scripts/check-certificate.ts && bun scripts/start-production-like.ts",
     "stop": "aspire stop",
     "rebuild": "bun scripts/rebuild.ts",
     "resource": "aspire resource",

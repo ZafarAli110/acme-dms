@@ -10,7 +10,7 @@
 
 **Design:** No screen
 
-**Now:** Done: step 1 (the cookies) · Next: step 2, the certificate check · Blocked: None
+**Now:** Done: steps 1–2 (the cookies; the certificate check and setup) · Next: step 3, the web server on HTTPS · Blocked: None
 
 ## Requirement
 
@@ -131,7 +131,7 @@ only); the gateway and the services are unchanged; the load test keeps measuring
 ## Steps
 
 - [x] 1. The cookies: gateway and identity-api, their tests → verify: both projects' tests
-- [ ] 2. The certificate: `check-certificate.ts` and its test, `package.json`, `.gitignore`, `setup.ps1`, README →
+- [x] 2. The certificate: `check-certificate.ts` and its test, `package.json`, `.gitignore`, `setup.ps1`, README →
       verify: its tests; it passes on this Mac and writes `.certs/localhost.pem`; the Windows runner runs its tests
       (`windows-setup.yml` runs `bun test scripts` on a push to final)
 - [ ] 3. The web server on HTTPS and HTTP/2: AppHost, Vite, `serve-web.ts` and its test → verify: unit tests
@@ -193,3 +193,9 @@ None: Q1 is answered (D4).
   gateway tests' browser-like client is on `https://localhost` (a cookie client keeps a `Secure` cookie only there).
   The Development tests turned round. gateway-api 46/46, identity-api 66/66, a full Release build of each with no
   warning (one, my own field's name, fixed), format clean.
+- 2026-11-10 01:28 Step 2: `check-certificate.ts` (`--check --trust` exit 0 = trusted; then the PEM export, its key deleted at
+  once) and 5 tests (trusted → the file and no key; untrusted or no `dotnet` → the command, nothing written; an export
+  that fails; the Windows, Mac and Linux wording). On this Mac: exit 0, `.certs/localhost.pem` is `C890F392…`, the
+  trusted certificate. `dev`, `start`, `start:prod` run it; `.certs/` ignored; `setup.ps1` and `setup.sh` trust it,
+  skipped under `CI`; README (both setups, the https address, a troubleshooting row). scripts' tests pass, lint,
+  typecheck, `docs:check` clean. The Windows runner runs these tests on the push.

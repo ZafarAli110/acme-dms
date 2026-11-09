@@ -108,6 +108,18 @@ bun install
 git config core.hooksPath .githooks
 note "pre-commit check switched on (.githooks)"
 
+# ── 9. HTTPS on this machine (ACME-130) ─────────────────────────────────────────────────────────────────────────────
+# The DMS opens over HTTPS here as it does live, with the .NET development certificate. Trusting it asks for your
+# password (it goes in your keychain), so a CI run, where nobody can type it, skips it.
+say "HTTPS on this machine (dotnet dev-certs https --trust)"
+if [ -n "${CI:-}" ]; then
+  note "skipped on CI: trusting the certificate asks for a password"
+elif dotnet dev-certs https --trust; then
+  note "the .NET development certificate is trusted"
+else
+  echo "  Not trusted yet. Run 'dotnet dev-certs https --trust' and give your password."
+fi
+
 # ── Done ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 say "Installed"
 for check in "git --version" "gh --version" "node -v" "bun --version" "dotnet --version" "aspire --version" "docker --version"; do
