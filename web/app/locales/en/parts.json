@@ -44,7 +44,7 @@
       "ready": "Ready",
       "failed": "Could not be processed"
     },
-    "photosTakingLong": "A photo is taking longer than usual to process. Reload the page later to see it.",
+    "photosTakingLong": "A photo is taking longer than usual to process. This page shows it as soon as it is ready.",
     "saved": "Saved.",
     "notFound": "This part is not stocked at {{location}}.",
     "backToList": "Back to Parts",

@@ -44,7 +44,7 @@
       "ready": "Prête",
       "failed": "Traitement impossible"
     },
-    "photosTakingLong": "Le traitement d'une photo prend plus de temps que d'habitude. Rechargez la page plus tard pour la voir.",
+    "photosTakingLong": "Une photo prend plus de temps que d'habitude à traiter. Cette page l'affiche dès qu'elle est prête.",
     "saved": "Enregistré.",
     "notFound": "Cette pièce n'est pas en stock à {{location}}.",
     "backToList": "Retour aux pièces",

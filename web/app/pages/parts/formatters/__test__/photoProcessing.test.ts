@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { PartPhoto } from "../../types/part";
-import { isTakingLong, isWorthPolling, msUntilTakingLong, PHOTO_POLL_LIMIT_MS } from "../photoProcessing";
+import {
+  isTakingLong,
+  isWorthPolling,
+  msUntilTakingLong,
+  PHOTO_POLL_LIMIT_MS,
+  PHOTO_POLL_UNTIL_MS,
+  PHOTO_SLOW_POLL_MS,
+  pollIntervalMs,
+} from "../photoProcessing";
 
 let next = 0;
 /** A photo with an id of its own, so each test starts its clock afresh; `createdAt` is the server's and ignored. */
@@ -47,5 +55,23 @@ describe("photo processing", () => {
     expect(isWorthPolling(finished, seenAt)).toBe(false);
     expect(isTakingLong(finished, seenAt + PHOTO_POLL_LIMIT_MS * 10)).toBe(false);
     expect(msUntilTakingLong(finished, seenAt)).toBeNull();
+  });
+
+  // The state sweep's F10: asking stopped at 2 minutes, but the server decides by 10.
+  it("asks often, then slowly until past the server's deadline, then stops", () => {
+    const pending = [photo("pending")];
+
+    expect(pollIntervalMs(pending, seenAt)).toBe(2000);
+    expect(pollIntervalMs(pending, seenAt + PHOTO_POLL_LIMIT_MS)).toBe(PHOTO_SLOW_POLL_MS);
+    expect(pollIntervalMs(pending, seenAt + PHOTO_POLL_UNTIL_MS - 1)).toBe(PHOTO_SLOW_POLL_MS);
+    expect(pollIntervalMs(pending, seenAt + PHOTO_POLL_UNTIL_MS)).toBe(false);
+  });
+
+  it("forgets a photo once it is no longer pending, so seeing it pending again starts afresh", () => {
+    const pending = photo("pending");
+    pollIntervalMs([pending], seenAt);
+    pollIntervalMs([{ ...pending, status: "ready" }], seenAt + PHOTO_POLL_UNTIL_MS);
+
+    expect(pollIntervalMs([pending], seenAt + PHOTO_POLL_UNTIL_MS + 1)).toBe(2000);
   });
 });
