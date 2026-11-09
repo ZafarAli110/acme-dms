@@ -31,6 +31,7 @@
     "api": "bun scripts/api.ts",
     "sql:explain": "bun scripts/explain.ts",
     "sql:top": "bun scripts/sql-top.ts",
+    "trace-breakdown": "bun scripts/trace-breakdown.ts",
     "seed": "bun scripts/seed.ts",
     "seed:bulk": "bun scripts/seed-bulk.ts",
     "xlsx:inspect": "bun scripts/inspect-xlsx.ts",
