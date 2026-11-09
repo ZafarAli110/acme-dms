@@ -14,7 +14,17 @@ interface Entry<Value> {
  * at most four times per `ttlMs`.
  *
  * The key is the caller's to make, and it must hold everything the value depends on: for dealership data the dealer,
- * and for a location's data the location too (docs/standards/multi-tenancy.md, "Location", rule 3).
+ * and for a location's data the location too (docs/standards/multi-tenancy.md, "Location", rule 3). Not the user: a
+ * value every user at the location sees the same way is one entry; who may see it is checked before the cache.
+ *
+ * Concurrency: Node runs this process's JavaScript on one thread, and nothing awaits between finding no entry and
+ * storing the new read, so two callers cannot both start one. The read is shared, so it must not belong to the caller
+ * that started it: run it with `runDetachedFromCaller`, or that caller leaving cancels every waiter's answer.
+ *
+ * Where it stops fitting (docs/ARCHITECTURE.md, "Cache a total only where it may be old"): each instance keeps its
+ * own entries and nothing clears them early, so use it only for a value that may be `ttlMs` old. With many instances
+ * (each reads a key once per `ttlMs`), or for a value that must change everywhere the moment it changes, move to a
+ * shared cache (Redis), cleared by the outbox's events, as the 200,000-a-second design does.
  */
 export class TtlCache<Value> {
   private readonly _entries = new Map<string, Entry<Value>>();

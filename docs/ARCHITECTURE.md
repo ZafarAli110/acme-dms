@@ -235,6 +235,13 @@ sql:top`). A search's page still counts first, because its count decides whether
   customers at Northside and 8,400 matches in all, and sorting them all for each page took 9–17 ms; the exact names
   come from the surname and first-name indexes in their own order (0.1 ms), and the rest is read only when a page
   reaches it (`best-first.ts`). A column sort the user chooses keeps the plain order.
+- **Cache a total only where it may be old (ACME-129).** One value is cached: a location's stock value on the parts
+  page (on hand × price over about 24,000 rows, 20 ms at Northside, asked on every visit: 6% of the busy morning's
+  database work). The ticket lets it be 10 s old; a part's own stock shows a change at once. `TtlCache` keeps it in
+  each API instance, keyed by dealer and location, one read at a time per key, run apart from the caller that started
+  it (`runDetachedFromCaller`). Four instances sum a location at most four times in 10 s. Nothing else is cached:
+  lists and searches must show a save at once. A shared cache (Redis) cleared by the outbox's events is the next step,
+  when instances are many or a value must change everywhere at once.
 - **Past capacity, answer quickly and do the saves first (ACME-121).** Each dealership-api copy has 12 connections
   (`DATABASE_MAX_CONNECTIONS`; ACME-129 raised it from 5 when queries became short), and keeps 4 of them for saves (any request but GET and HEAD, its reads included), so lists can never take them all; a list
   waits at most 1.5 s for a connection and a save 5 s, then is answered 503 `urn:acme:error:busy` with `Retry-After`

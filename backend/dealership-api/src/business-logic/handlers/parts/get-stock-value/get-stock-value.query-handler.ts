@@ -11,6 +11,7 @@ import {
   UNIT_OF_WORK_FACTORY,
 } from "#persistence/unit-of-work/unit-of-work.factory.interface";
 import { CLOCK, type IClock } from "#business-logic-abstractions/time/clock.interface";
+import { runDetachedFromCaller } from "#request-scope/data-scope";
 import { TtlCache } from "../../../cache/ttl-cache";
 import { requireLocation } from "../../../user-context/require-location";
 import { liveBinStock } from "../part.queries";
@@ -45,7 +46,11 @@ export class GetStockValueQueryHandler implements IGetStockValueQueryHandler {
 
   public executeAsync(userContext: UserContext): Promise<StockValueResponseDto> {
     const locationId = requireLocation(userContext);
-    return this._values.getAsync(`${userContext.dealerId}:${locationId}`, () => this.sumAsync());
+    // One sum shared by every caller asking while it runs: run apart from this caller's request, so its leaving does
+    // not cancel the others' answer.
+    return this._values.getAsync(`${userContext.dealerId}:${locationId}`, () =>
+      runDetachedFromCaller(() => this.sumAsync()),
+    );
   }
 
   private async sumAsync(): Promise<StockValueResponseDto> {

@@ -42,6 +42,21 @@ export function runWithDataScope<T>(run: () => T, request: RequestInfo | null = 
   return storage.run({ scope: null, request }, run);
 }
 
+/**
+ * Runs `run` with the current request's scope (the same dealer, location and user) but not its lifetime: a read many
+ * callers share, such as a cached value (`TtlCache`), must not be cancelled when the caller that happened to start it
+ * goes away, or every caller waiting on it gets that cancellation (the state sweep's finding, ACME-129). It still reads
+ * as a list does: the list connections, the list's wait, "busy" when that runs out.
+ */
+export function runDetachedFromCaller<T>(run: () => T): T {
+  const store = storage.getStore();
+  const request = store?.request;
+  const detached: RequestInfo | null = request
+    ? { saves: request.saves, signal: new AbortController().signal, connectBy: null, committed: false }
+    : null;
+  return storage.run({ scope: store?.scope ?? null, request: detached }, run);
+}
+
 /** The HTTP request being served, or null: outside a request, or a test that gives none. */
 export function currentRequest(): RequestInfo | null {
   return storage.getStore()?.request ?? null;

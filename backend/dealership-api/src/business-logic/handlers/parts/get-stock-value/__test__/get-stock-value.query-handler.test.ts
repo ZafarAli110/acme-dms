@@ -7,6 +7,7 @@ import { useTestDatabase } from "#test-setup/postgres/use-test-database";
 import { GetPartListQueryHandler } from "../../get-list/get-part-list.query-handler";
 import type { IUnitOfWorkFactory } from "#persistence/unit-of-work/unit-of-work.factory.interface";
 import { fixedClock, TEST_NOW } from "#test-setup/time/fixed-clock";
+import { currentRequest, runWithDataScope, setDataScope } from "#request-scope/data-scope";
 import { GetStockValueQueryHandler, STOCK_VALUE_TTL_MS } from "../get-stock-value.query-handler";
 
 describe("GetStockValueQueryHandler", () => {
@@ -127,6 +128,40 @@ describe("GetStockValueQueryHandler", () => {
     expect(later).toEqual({ stockValueCents: 1500 });
     expect(elsewhere).toEqual({ stockValueCents: 0 });
     expect(sums).toBe(3);
+  });
+
+  // The state sweep's finding (ACME-129): the shared sum ran in the first caller's request, so that caller leaving
+  // cancelled it, and every caller waiting on it was answered 503.
+  it("runs the shared sum apart from the caller that started it: that caller leaving cancels nothing", async () => {
+    const signals: (AbortSignal | null)[] = [];
+    const factory: IUnitOfWorkFactory = {
+      ...database.unitOfWorkFactory,
+      beginAsync: (options) => {
+        signals.push(currentRequest()?.signal ?? null);
+        return database.unitOfWorkFactory.beginAsync(options);
+      },
+      beginHealthCheckAsync: () => database.unitOfWorkFactory.beginHealthCheckAsync(),
+    };
+    const handler = new GetStockValueQueryHandler(factory, fixedClock());
+    const asCaller = (signal: AbortSignal) =>
+      runWithDataScope(
+        () => {
+          setDataScope({ dealerId: AT_CENTRAL.dealerId, locationId: AT_CENTRAL.locationId, userId: AT_CENTRAL.userId });
+          return handler.executeAsync(AT_CENTRAL);
+        },
+        { saves: false, signal, connectBy: null, committed: false },
+      );
+    const leaving = new AbortController();
+
+    const first = asCaller(leaving.signal);
+    const second = asCaller(new AbortController().signal);
+    leaving.abort();
+
+    await expect(second).resolves.toEqual({ stockValueCents: 0 });
+    await expect(first).resolves.toEqual({ stockValueCents: 0 });
+    expect(signals).toHaveLength(1);
+    expect(signals[0]).not.toBe(leaving.signal);
+    expect(signals[0]?.aborted).toBe(false);
   });
 
   it("keeps no failed sum: the next caller sums again", async () => {
