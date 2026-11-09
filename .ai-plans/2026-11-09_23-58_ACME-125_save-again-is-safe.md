@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-09 23:58
 
-**Status:** In progress
+**Status:** Done
 
 **Ticket:** ACME-125 · **Branch:** final
 
@@ -11,8 +11,8 @@
 **Design:** Follows: the customer and part forms' save alert (`ErrorAlert during="save"`) and the edit forms'
 "changed elsewhere" alert; no new screen
 
-**Now:** Done: steps 1–5, on the running system (`start:prod --load-test`, rebuilt) · Next: step 6, `verify-ticket` ·
-Blocked: None
+**Now:** Done: verified (gate, verifier PASS, `docs/evidence/ACME-125.md`); not pushed · Next: Zafar Ali: the
+tracker (comment with the evidence, move to in-review), push `final` when he says · Blocked: None
 
 ## Requirement
 
@@ -28,35 +28,35 @@ save happens once, whether or not the first went through.
 
 Happy
 
-- [ ] Add a customer as `sam`; the request reaches the server and only its answer is lost → the form keeps every field
+- [x] Add a customer as `sam`; the request reaches the server and only its answer is lost → the form keeps every field
       and says "We could not confirm the save. Save again: it will never be added twice."
-- [ ] Save again, unchanged → the customer opens as saved; the list shows them once
-- [ ] Same, but change the phone before saving again → "Your first save went through", and the customer opens with the
+- [x] Save again, unchanged → the customer opens as saved; the list shows them once
+- [x] Same, but change the phone before saving again → "Your first save went through", and the customer opens with the
       first phone number
-- [ ] The first save never reaches the server (dropped before it is sent), change a field, save again → the changed
+- [x] The first save never reaches the server (dropped before it is sent), change a field, save again → the changed
       form is saved, once
-- [ ] Change a customer, lose the answer, save again → saved, never "someone else changed this record"
-- [ ] Change a part (with a new photo), lose the answer, save again → saved once: one new photo, no 412
-- [ ] Add a part in the dialog, lose the answer, save again → one part, never "part number already in use"
-- [ ] Double-click Save on a new customer → one customer
-- [ ] Through the API, the same key twice: a bin added once (the second answer the first's,
+- [x] Change a customer, lose the answer, save again → saved, never "someone else changed this record"
+- [x] Change a part (with a new photo), lose the answer, save again → saved once: one new photo, no 412
+- [x] Add a part in the dialog, lose the answer, save again → one part, never "part number already in use"
+- [x] Double-click Save on a new customer → one customer
+- [x] Through the API, the same key twice: a bin added once (the second answer the first's,
       `Idempotent-Replayed: true`), stock set once, one photo uploaded once
-- [ ] Save again while the first is still running → "Your first save is still going through. Wait a moment, then
+- [x] Save again while the first is still running → "Your first save is still going through. Wait a moment, then
       press Save again."; the next Save gets the first's answer
-- [ ] With a steady connection every save behaves as today (e2e all pass)
+- [x] With a steady connection every save behaves as today (e2e all pass)
 
 Failure: invalid input, absent data, not allowed, another service down
 
-- [ ] A save refused for something the person can fix (a missing field, part number in use) → as today; fixing it and
+- [x] A save refused for something the person can fix (a missing field, part number in use) → as today; fixing it and
       saving again with the same key saves it
-- [ ] A save told "busy" with a key → 503 `busy` as today ("nothing was saved"), within the save's 5 s wait; saving
+- [x] A save told "busy" with a key → 503 `busy` as today ("nothing was saved"), within the save's 5 s wait; saving
       again saves it once
-- [ ] A save that fails after its commit (a photo's document not deleted, the re-read) → saving again never runs it
+- [x] A save that fails after its commit (a photo's document not deleted, the re-read) → saving again never runs it
       again
-- [ ] A first save still running when its lease runs out, and a second taking over → one of them saves, never both
-- [ ] The same key 24 hours later → a new save
-- [ ] Another user, or another dealer, sending the same key → their own save, never someone else's answer
-- [ ] A key that is not 1–255 visible characters → 422, nothing saved
+- [x] A first save still running when its lease runs out, and a second taking over → one of them saves, never both
+- [x] The same key 24 hours later → a new save
+- [x] Another user, or another dealer, sending the same key → their own save, never someone else's answer
+- [x] A key that is not 1–255 visible characters → 422, nothing saved
 
 ## Load before building
 
@@ -157,7 +157,7 @@ is claimed or saved.
       tests; check-in-browser at 1440 and 1024
 - [x] 4. End to end: answers lost after and before the server, a changed second save, a double click → verify: e2e
 - [x] 5. Docs: `api-errors.md`, `contracts.md`, `database.md` → verify: `docs:check`
-- [ ] 6. `verify-ticket` → `docs/evidence/ACME-125.md`
+- [x] 6. `verify-ticket` → [`docs/evidence/ACME-125.md`](../docs/evidence/ACME-125.md)
 
 ## Questions
 
@@ -225,3 +225,7 @@ during="save"` now means a keyed save (its only user is the part dialog). Web ty
   through", first phone shown), the part dialog's alert, the part page's alert and its went-through: messages above
   the form, nothing overlapping or cut off. A first 1024 shot doubled the header (taken mid-resize; retaken at a set
   width: clean); Save looked disabled in one shot taken while the page revalidated (settled: enabled).
+- 2026-11-10 00:56 Step 6: `gate:fast` passed (8/8). The verifier (own context) returned PASS on every line of the ticket in the
+  running system, as sam, rita, tom and maria, with screenshots at both widths; `bun run errors` clean. Its gaps (24 h
+  and busy only in tests, "still going through" not seen on screen, cost under load not measured) are in the
+  evidence file. Tracker not touched: its MCP server is not connected to this session.
