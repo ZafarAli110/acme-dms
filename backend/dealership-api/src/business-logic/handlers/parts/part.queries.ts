@@ -29,6 +29,16 @@ export interface StockedPart {
   bin: Bin;
 }
 
+/**
+ * A stocked part as a list shows it (ACME-129): the whole rows held each part's search words and three tables'
+ * created and updated times, parsed for every row (a `Temporal.Instant` is 2 µs under Node's polyfill) and dropped.
+ */
+export interface ListedPart {
+  part: Pick<Part, "id" | "partNumber" | "description" | "unitPriceCents">;
+  inventory: Pick<PartInventory, "quantityOnHand" | "reorderLevel">;
+  bin: Pick<Bin, "id" | "code">;
+}
+
 /** What a list of stocked parts can be sorted and filtered by: the grid's field names. */
 export const STOCKED_PART_COLUMNS: ListColumns = {
   partNumber: { source: parts.partNumber, type: "text" },
@@ -53,7 +63,7 @@ export async function findStockedPartsAsync(
   query: ListQueryDto,
   move: KeysetMove | null = null,
   cursor: CursorRow | null = null,
-): Promise<{ items: StockedPart[]; next: KeyedRow | null; previous: KeyedRow | null }> {
+): Promise<{ items: ListedPart[]; next: KeyedRow | null; previous: KeyedRow | null }> {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 25;
   const spec = partSortSpec(query);
@@ -193,12 +203,26 @@ export async function countMatchingPartsAsync(
   return counted?.total ?? 0;
 }
 
-/** The parts with these ids as the request's location stocks them, in the ids' order (a search's page). */
-export async function findStockedPartsByIdsAsync(db: Database, ids: string[]): Promise<StockedPart[]> {
+/** The parts with these ids as the request's location stocks them, as a list shows them, in the ids' order. */
+export async function findStockedPartsByIdsAsync(db: Database, ids: string[]): Promise<ListedPart[]> {
   if (ids.length === 0) {
     return [];
   }
-  const found = await stockedParts(db, inArray(parts.id, ids));
+  const found = await db
+    .select({
+      part: {
+        id: parts.id,
+        partNumber: parts.partNumber,
+        description: parts.description,
+        unitPriceCents: parts.unitPriceCents,
+      },
+      inventory: { quantityOnHand: partInventories.quantityOnHand, reorderLevel: partInventories.reorderLevel },
+      bin: { id: bins.id, code: bins.code },
+    })
+    .from(partInventories)
+    .innerJoin(parts, eq(parts.id, partInventories.partId))
+    .innerJoin(bins, eq(bins.id, partInventories.binId))
+    .where(inArray(parts.id, ids));
   const byId = new Map(found.map((stocked) => [stocked.part.id, stocked]));
   return ids.flatMap((id) => {
     const stocked = byId.get(id);

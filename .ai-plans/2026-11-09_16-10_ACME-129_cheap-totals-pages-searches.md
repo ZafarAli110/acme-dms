@@ -334,3 +334,7 @@ None
   1,200/s the gateway died (the macOS listen-queue bug). This laptop has 4 performance and 6 efficiency cores, and a
   request costs about 6 ms of CPU across Postgres (2.7), the API (1.8) and the gateway (1.1): about 1,000/s is its
   limit; 3,300/s needs a server.
+- 2026-11-09 21:40 Parts and stock lists read only their columns (no search words, no created or updated times): the
+  polyfill's share of one API copy at 800/s 5.4% → 1.2% of its samples, the copy busy 39% → 35%. What is left in the
+  API is spread thin (OpenTelemetry about 10% of its work, Drizzle 8%, pg 8%, jose 4%); the gateway, at about 1.1 ms
+  a request and near one core at 800/s, needs `dotnet-trace` to see inside (not installed).

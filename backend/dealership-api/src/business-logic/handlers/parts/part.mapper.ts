@@ -7,7 +7,10 @@ import type { PartPhoto } from "#persistence/schema/part-photos";
 import type { Part } from "#persistence/schema/parts";
 import { toIsoString } from "#business-logic-abstractions/time/to-iso-string";
 
-export function toPartInventoryDto(inventory: PartInventory, bin: Bin): PartInventoryDto {
+export function toPartInventoryDto(
+  inventory: Pick<PartInventory, "quantityOnHand" | "reorderLevel">,
+  bin: Pick<Bin, "id" | "code">,
+): PartInventoryDto {
   return {
     binId: bin.id,
     binCode: bin.code,

@@ -18,7 +18,7 @@ import {
   findStockedPartsAsync,
   findStockedPartsByIdsAsync,
   findThumbnailsAsync,
-  type StockedPart,
+  type ListedPart,
 } from "../part.queries";
 
 /**
@@ -86,7 +86,7 @@ export class GetPartListQueryHandler implements IGetPartListQueryHandler {
   private async listAsync(
     query: ListQueryDto,
     codec: CursorCodec,
-  ): Promise<{ items: StockedPart[]; hasMore: boolean; next: KeyedRow | null; previous: KeyedRow | null }> {
+  ): Promise<{ items: ListedPart[]; hasMore: boolean; next: KeyedRow | null; previous: KeyedRow | null }> {
     const move = keysetMoveOf(query);
     const cursor = move && !("last" in move) ? codec.decode("after" in move ? move.after : move.before) : null;
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
@@ -100,7 +100,7 @@ export class GetPartListQueryHandler implements IGetPartListQueryHandler {
     locationId: string,
     query: ListQueryDto,
     search: string,
-  ): Promise<{ items: StockedPart[]; hasMore: boolean }> {
+  ): Promise<{ items: ListedPart[]; hasMore: boolean }> {
     const found = await this.findMatchingAsync(dealerId, locationId, query, search);
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true });
     return { items: await findStockedPartsByIdsAsync(work.db, found.ids), hasMore: found.hasMore };
