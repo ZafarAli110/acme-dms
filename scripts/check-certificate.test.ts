@@ -3,7 +3,14 @@ import { existsSync, mkdtempSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { CERTIFICATE_FILE, checkCertificate, KEY_FILE, type RunDotnet, untrustedMessage } from "./check-certificate";
+import {
+  CERTIFICATE_FILE,
+  checkCertificate,
+  KEY_FILE,
+  NO_DOTNET_MESSAGE,
+  type RunDotnet,
+  untrustedMessage,
+} from "./check-certificate";
 
 /** A stand-in for `dotnet`: the trust check answers `checkExit`; an export writes the two files `dotnet` writes. */
 function fakeDotnet(checkExit: number | null, exportExit = 0): { run: RunDotnet; calls: string[][] } {
@@ -58,10 +65,14 @@ describe("check-certificate", () => {
     expect(existsSync(join(root, ".certs"))).toBe(false);
   });
 
-  it("says the same when dotnet itself is not found", () => {
-    const result = checkCertificate(fakeDotnet(null).run, "darwin", mkdtempSync(join(tmpdir(), "acme-cert-")));
+  it("says the .NET SDK is missing when dotnet itself is not found, not to run a dotnet command", () => {
+    const root = mkdtempSync(join(tmpdir(), "acme-cert-"));
 
-    expect(result.trusted).toBe(false);
+    const result = checkCertificate(fakeDotnet(null).run, "darwin", root);
+
+    expect(result).toEqual({ trusted: false, message: NO_DOTNET_MESSAGE });
+    expect(NO_DOTNET_MESSAGE).not.toContain("dotnet dev-certs");
+    expect(existsSync(join(root, ".certs"))).toBe(false);
   });
 
   it("says a written certificate failed apart from an untrusted one", () => {

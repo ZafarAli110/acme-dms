@@ -18,6 +18,16 @@ export type RunDotnet = (args: string[]) => number | null;
 
 export type CertificateCheck = { trusted: true } | { trusted: false; message: string };
 
+/**
+ * No `dotnet` on the PATH: the trust command would not run either, so say what is missing first. The .NET SDK makes the
+ * certificate as well as running the services.
+ */
+export const NO_DOTNET_MESSAGE = [
+  "The .NET SDK (`dotnet`) was not found, and the DMS needs it: it runs the .NET services, and its development",
+  "certificate serves the DMS over HTTPS on this machine. Run the setup again (README, Setup), or install the .NET 10 SDK",
+  "from https://dotnet.microsoft.com/download, open a new terminal, then start again.",
+].join("\n");
+
 /** What to tell a developer whose machine does not trust the certificate: the one command, for their system. */
 export function untrustedMessage(platform: NodeJS.Platform): string {
   const how =
@@ -41,7 +51,11 @@ export function untrustedMessage(platform: NodeJS.Platform): string {
  * (`dotnet dev-certs` writes the key beside the certificate, unencrypted: `--no-password`), readable by the owner only.
  */
 export function checkCertificate(run: RunDotnet, platform: NodeJS.Platform, root: string): CertificateCheck {
-  if (run(["dev-certs", "https", "--check", "--trust"]) !== 0) {
+  const checked = run(["dev-certs", "https", "--check", "--trust"]);
+  if (checked === null) {
+    return { trusted: false, message: NO_DOTNET_MESSAGE };
+  }
+  if (checked !== 0) {
     return { trusted: false, message: untrustedMessage(platform) };
   }
   const file = join(root, CERTIFICATE_FILE);

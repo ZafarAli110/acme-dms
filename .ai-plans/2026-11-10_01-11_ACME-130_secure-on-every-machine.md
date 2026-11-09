@@ -241,3 +241,7 @@ None: Q1 is answered (D4).
   leaves out (the web server's CPU; Aspire's proxy in front of the web server in start:prod). Its other gaps: dev mode
   seen only by the author (sent back to it), Windows not run, the untrusted path only with a fake `dotnet`, "ran out"
   shown by a server-side end, the every-page spec blind to 4xx.
+- 2026-11-10 02:01 Zafar Ali: fix the dotnet-missing message (the verifier's note). `checkCertificate` tells a missing `dotnet`
+  (the runner's null) from an untrusted certificate: `NO_DOTNET_MESSAGE` names the .NET SDK and how to get it, never a
+  `dotnet` command. Test turned round (the message, nothing written); run for real with only `bun` on the PATH: the
+  new message, exit 1. scripts' typecheck and lint clean.
