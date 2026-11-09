@@ -301,3 +301,12 @@ None
   (its dual-stack socket's accept loop died under load on macOS). 800/s: 605 answered a second, the rest told busy at
   once, none failed; Postgres 652% (the laptop's limit). Left: the search page (64%, every match read through the
   trigram index and sorted) and the parts search (19%).
+- 2026-11-09 19:03 A narrow search table tried first, as a temporary copy: "ackroyd" 14 ms against 15, "smith" no faster: not
+  built. The cost was Postgres's memory: shared_buffers 128 MB (the container's default) against 3.4 GB of customers
+  and indexes, 8,232 of 10,800 pages read from outside it. start:prod now gives Postgres 2 GB (effective_cache_size
+  5 GB, work_mem 16 MB): 400/s Postgres 236% → 109%, p95 36 ms; 800/s all answered. The trigram index with the
+  location first (btree_gin, migration 8 s): "ackroyd" reads 7,672 pages, not 10,800; 800/s Postgres 425% → 359%.
+  At 1200/s the gateway died: on macOS a connection its client gave up on in the listen queue (128) makes .NET's
+  accept throw, unhandled. Behind Aspire's proxy it survived but 800/s p95 was 1.3 s; so the gateway stays direct and
+  the load test keeps at most 512 connections, as a load balancer would. 800/s: all answered, p95 166 ms, Postgres
+  341%; 1200/s: this laptop cannot send it (659 answered a second, the test fell behind), the gateway stayed up.

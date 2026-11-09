@@ -6,7 +6,7 @@ var username = builder.AddParameter("dev-username", "acme");
 var password = builder.AddParameter("dev-password", "acme", secret: true);
 
 // Infrastructure (containers)
-// Room for every instance's pool: each dealership-api holds up to DATABASE_MAX_CONNECTIONS (5) plus 2 control connections, and the .NET services
+// Room for every instance's pool: each dealership-api holds up to DATABASE_MAX_CONNECTIONS (12) plus 2 control connections, and the .NET services
 // their own. Postgres allows 100 by default.
 // pg_stat_statements: Postgres's own record of which statements took its time (`bun run sql:top`). Loaded at start, so
 // it is an argument here; managed Postgres (Azure, RDS, Cloud SQL) offers the same extension.
@@ -15,6 +15,17 @@ var postgres = builder.AddPostgres("postgres", username, password)
     .WithArgs("-c", "max_connections=300")
     .WithArgs("-c", "shared_preload_libraries=pg_stat_statements")
     .WithArgs("-c", "pg_stat_statements.track=top");
+// start:prod gives Postgres the memory a production server would (about a quarter of the machine's; Docker's VM has
+// 8 GB here): with the container's 128 MB of shared_buffers, the customers table and its indexes (3.4 GB at the bulk
+// sizes) were read again from outside Postgres on nearly every search ("ackroyd": 8,232 of 10,800 pages, ACME-129).
+// `bun run dev` keeps the defaults, so a smaller machine still runs it.
+if (builder.Configuration["ACME_PRODUCTION_LIKE"] == "1")
+{
+    postgres
+        .WithArgs("-c", "shared_buffers=2GB")
+        .WithArgs("-c", "effective_cache_size=5GB")
+        .WithArgs("-c", "work_mem=16MB");
+}
 var identityDb = postgres.AddDatabase("identity");
 var dealershipDb = postgres.AddDatabase("dealership");
 var documentsDb = postgres.AddDatabase("documents");
@@ -191,20 +202,25 @@ await builder.Build().RunAsync();
 // start:prod builds in Release (Configuration=Release), and the AppHost's references compile every service with it.
 // Like a project here: the port and environment its launch profile gives it (Properties/launchSettings.json), its
 // traces and logs sent to the dashboard, and other resources reach it by name.
-IResourceBuilder<ReleaseBuildResource> ReleaseBuild<TProject>(string name, int port)
+IResourceBuilder<ReleaseBuildResource> ReleaseBuild<TProject>(string name, int port, bool proxied = false)
     where TProject : IProjectMetadata, new()
 {
     var project = new TProject().ProjectPath;
     var directory = Path.GetDirectoryName(project)!;
     var assembly = Path.Combine(directory, "bin", "Release", "net10.0", $"{Path.GetFileNameWithoutExtension(project)}.dll");
-    return builder.AddResource(new ReleaseBuildResource(name, directory))
-        .WithArgs(assembly)
-        // Only start:prod runs a Release build: no proxy in front of it (see dealership-api above). It listens on
-        // localhost, which Kestrel opens as one IPv4 and one IPv6 socket: given only a port, it opened one dual-stack
-        // socket, whose accept loop failed for good on macOS under a load test's IPv4 connections ("The supplied
-        // SocketAddress is an invalid size for the IPEndPoint", ACME-129).
-        .WithHttpEndpoint(port: port, isProxied: false)
-        .WithEnvironment("ASPNETCORE_URLS", "http://localhost:" + port.ToString(System.Globalization.CultureInfo.InvariantCulture))
+    var resource = builder.AddResource(new ReleaseBuildResource(name, directory)).WithArgs(assembly);
+    // Only start:prod runs a Release build: no proxy in front of it (see dealership-api above), on localhost (an IPv4
+    // and an IPv6 socket). On macOS, a connection its client gave up on while it waited in the listen queue (128 deep)
+    // makes .NET's accept throw, unhandled ("The supplied SocketAddress is an invalid size for the IPEndPoint"), and the
+    // service exits; Linux, where production runs, does not. `bun run load-test` therefore keeps at most 512
+    // connections open, as a load balancer in front of the gateway would (ACME-129). Behind Aspire's proxy the gateway
+    // survived that, but the proxy was the limit (800 a second: p95 1.3 s, against 350 ms direct).
+    resource = proxied
+        ? resource.WithHttpEndpoint(port: port, env: "ASPNETCORE_HTTP_PORTS")
+        : resource
+            .WithHttpEndpoint(port: port, isProxied: false)
+            .WithEnvironment("ASPNETCORE_URLS", "http://localhost:" + port.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    return resource
         .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
         .WithOtlpExporter();
 }

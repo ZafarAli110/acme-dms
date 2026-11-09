@@ -1,0 +1,69 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "59d42a7d-8c03-4299-88fc-ccc77c7535be",
+  "prevIds": ["2209e801-7ae7-4ad9-9210-0395df36d118"],
+  "footprints": [
+    {
+      "statementType": "drop_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_search_text"],
+      "writes": [
+        "s|idx|public.ix_customers_search_text",
+        "n|idx|public.ix_customers_search_text",
+        "e|idx|public.ix_customers_search_text",
+        "n|rel|public.ix_customers_search_text"
+      ],
+      "reads": ["e|tbl|public.customers", "n|sch|public"],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "customers", "ix_customers_search_location"],
+      "writes": [
+        "s|idx|public.ix_customers_search_location",
+        "n|idx|public.ix_customers_search_location",
+        "e|idx|public.ix_customers_search_location",
+        "n|rel|public.ix_customers_search_location"
+      ],
+      "reads": ["n|tbl|public.customers", "n|sch|public", "n|col|public.customers.location_id"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "customers",
+        "name": "ix_customers_search_location",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "location_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "(\"first_name\" || chr(31) || \"surname\" || chr(31) || coalesce(\"company_name\", '') || chr(31) || coalesce(\"email\", '')) gin_trgm_ops",
+            "isExpression": true,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"is_deleted\" = false",
+        "with": "",
+        "method": "gin",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"ix_customers_search_text\"]"
+    }
+  ]
+}

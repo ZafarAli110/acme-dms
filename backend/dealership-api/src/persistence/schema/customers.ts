@@ -65,9 +65,11 @@ export const customers = snakeCase.table(
       .on(table.dealerId, table.locationId, sql`lower(${table.city})`, table.surname, table.firstName, table.id)
       .where(sql`${table.isDeleted} = false`),
     // The search box (a match anywhere in the name, company or email): trigrams find the few matching rows among
-    // millions; an ordinary index cannot serve `ilike '%…%'`. It needs pg_trgm, and three letters or more.
-    index("ix_customers_search_text")
-      .using("gin", sql`(${customerSearchText(table)}) gin_trgm_ops`)
+    // millions; an ordinary index cannot serve `ilike '%…%'`. It needs pg_trgm, and three letters or more. The location
+    // first (btree_gin): the index gives only that location's matches, where without it a common name brought every
+    // location's to be read and thrown away ("ackroyd" at Northside: 3,442 of 11,868, ACME-129).
+    index("ix_customers_search_location")
+      .using("gin", table.locationId, sql`(${customerSearchText(table)}) gin_trgm_ops`)
       .where(sql`${table.isDeleted} = false`),
     // The search box before ACME-129, with the phone in it: the version before this one still searches through it
     // while a deploy rolls out. Dropped in the release after (docs/standards/database.md, "Expand, then contract").

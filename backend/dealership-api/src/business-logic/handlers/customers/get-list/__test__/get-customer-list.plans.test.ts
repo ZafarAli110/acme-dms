@@ -348,7 +348,7 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
 
     const page = plans.find((plan) => plan.isPage && !/"id" in/i.test(recorded[plans.indexOf(plan)]?.text ?? ""))!;
     expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_list_by_name")).toBe(false);
-    expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_search_text")).toBe(true);
+    expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_search_location")).toBe(true);
   });
 
   it("still pages a search with more than 10,000 matches", async () => {
@@ -388,7 +388,7 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
 
     expectNoFullRead(plans);
     expect(recorded.some((query) => /ilike/i.test(query.text))).toBe(true);
-    expect(indexesUsed(plans)).toContain("ix_customers_search_text");
+    expect(indexesUsed(plans)).toContain("ix_customers_search_location");
   });
 
   it("finds a surname's page, and counts its matches, through the trigram index", async () => {
@@ -398,7 +398,7 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
 
     expectNoFullRead(page);
     expectNoFullRead(counted);
-    expect(indexesUsed(page)).toContain("ix_customers_search_text");
-    expect(indexesUsed(counted)).toContain("ix_customers_search_text");
+    expect(indexesUsed(page)).toContain("ix_customers_search_location");
+    expect(indexesUsed(counted)).toContain("ix_customers_search_location");
   });
 });

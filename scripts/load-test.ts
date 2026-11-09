@@ -579,11 +579,13 @@ function row(name: string, tally: Tally): string {
 }
 
 /**
- * Bun's fetch sends at most 256 requests at once unless told otherwise (`BUN_CONFIG_MAX_HTTP_REQUESTS`): past that the
- * test queues its own requests and counts the wait as the system's (at 300 a second it showed 7 s where the services
- * took 1). `bun run load-test` sets it; run directly, the test says so.
+ * How many requests the test has open at once (`BUN_CONFIG_MAX_HTTP_REQUESTS`, which `bun run load-test` sets; Bun's own
+ * default is 256): as many connections as a load balancer in front of the gateway would keep, reused. Past that the
+ * test queues its own requests, and the wait counts as the system's, as a person's would. At 8,192 it opened thousands
+ * of connections at once when the system fell behind; on macOS that overflowed the listen queue (128) and a .NET bug
+ * took the gateway down (ACME-129). At 256, 300 a second showed 7 s where the services took 1.
  */
-const CLIENT_MAX_REQUESTS = 8192;
+const CLIENT_MAX_REQUESTS = 512;
 
 async function main(): Promise<void> {
   if (Number(process.env.BUN_CONFIG_MAX_HTTP_REQUESTS ?? 256) < CLIENT_MAX_REQUESTS) {
