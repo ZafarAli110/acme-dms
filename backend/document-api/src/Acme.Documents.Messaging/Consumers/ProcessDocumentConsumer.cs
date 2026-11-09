@@ -14,13 +14,16 @@ using Acme.Documents.Messaging.RabbitMq;
 namespace Acme.Documents.Messaging.Consumers;
 
 /// <summary>
-/// Consumes document.process.v1 and hands each message to the business handler. A failed attempt is retried
-/// (with a growing delay) up to <see cref="MaxAttempts"/> times; after that the document is marked failed,
-/// document.failed.v1 is published, and the message goes to the dead-letter queue for inspection.
+/// Consumes document.process.v1 and hands each message to the business handler. A failed attempt waits in the retry
+/// queue (<see cref="RabbitMqConnection.RetryDelay"/>) and is tried again, up to <see cref="MaxAttempts"/> attempts in all,
+/// so a passing outage of about a minute fails nothing. After the last one the document is marked failed, which is final
+/// (document.failed.v1 goes out), and the message is acknowledged: replaying it could not revive the document. Only a
+/// message whose document could not be marked failed goes to the dead-letter queue, still Pending, so a replay does work
+/// (the state sweep's F4).
 /// </summary>
 public sealed partial class ProcessDocumentConsumer : BackgroundService
 {
-    public const int MaxAttempts = 3;
+    public const int MaxAttempts = 6;
     private const string AttemptHeader = "x-attempt";
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -73,7 +76,7 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
         }
     }
 
-    private async Task HandleAsync(IChannel channel, BasicDeliverEventArgs delivery, CancellationToken cancellationToken)
+    internal async Task HandleAsync(IChannel channel, BasicDeliverEventArgs delivery, CancellationToken cancellationToken)
     {
         MessageEnvelope<ProcessDocumentMessageDto>? envelope;
         try
@@ -110,7 +113,6 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
             if (attempt < MaxAttempts)
             {
                 LogRetrying(_logger, envelope.Data.DocumentId, attempt, ex);
-                await Task.Delay(TimeSpan.FromSeconds(2 * attempt), cancellationToken);
                 try
                 {
                     await RepublishAsync(channel, delivery, attempt + 1, cancellationToken);
@@ -136,11 +138,14 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
             }
             catch (Exception failError) when (failError is not OperationCanceledException)
             {
-                // The message still goes to the dead-letter queue, where it can be read and sent again.
+                // Still Pending: to the dead-letter queue, where a replay can process it (or the sweep fails it at 8 minutes).
                 LogCouldNotMarkFailed(_logger, envelope.Data.DocumentId, failError);
+                await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);
+                return;
             }
 
-            await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, cancellationToken);
+            // Failed is final, and document.failed.v1 says so: nothing is left for a replay to do.
+            await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken);
         }
     }
 
@@ -163,14 +168,15 @@ public sealed partial class ProcessDocumentConsumer : BackgroundService
     private static int ReadAttempt(IReadOnlyBasicProperties properties) =>
         properties.Headers is not null && properties.Headers.TryGetValue(AttemptHeader, out var value) && value is int attempt ? attempt : 1;
 
+    /// <summary>The next attempt, to the retry queue (default exchange), confirmed: it comes back after the delay.</summary>
     private static async Task RepublishAsync(IChannel channel, BasicDeliverEventArgs delivery, int attempt, CancellationToken cancellationToken)
     {
         var headers = new Dictionary<string, object?>(delivery.BasicProperties.Headers ?? new Dictionary<string, object?>()) { [AttemptHeader] = attempt };
         var properties = new BasicProperties(delivery.BasicProperties) { Headers = headers };
-        await channel.BasicPublishAsync(delivery.Exchange, delivery.RoutingKey, mandatory: false, properties, delivery.Body, cancellationToken);
+        await channel.BasicPublishAsync(string.Empty, RabbitMqConnection.ProcessDocumentRetryQueue, mandatory: true, properties, delivery.Body, cancellationToken);
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Processing document {DocumentId} failed on attempt {Attempt}; retrying")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Processing document {DocumentId} failed on attempt {Attempt}; retrying after the retry queue's delay")]
     private static partial void LogRetrying(ILogger logger, Guid documentId, int attempt, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Processing document {DocumentId} failed after {Attempt} attempts; marking it failed")]

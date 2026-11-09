@@ -10,4 +10,8 @@
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The consumer's settling (retry, give up, dead-letter) is tested against a mocked channel. -->
+    <InternalsVisibleTo Include="Acme.Documents.Tests" />
+  </ItemGroup>
 </Project>
