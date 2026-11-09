@@ -7,7 +7,7 @@ import { createWebHandler } from "./serve-web";
 
 describe("serve-web", () => {
   const root = mkdtempSync(join(tmpdir(), "acme-web-"));
-  const seen: { method: string; path: string; body: string }[] = [];
+  const seen: { method: string; path: string; body: string; forwardedProto: string | null }[] = [];
   let gateway: ReturnType<typeof Bun.serve>;
   let handle: (request: Request) => Promise<Response>;
 
@@ -21,7 +21,12 @@ describe("serve-web", () => {
       port: 0,
       fetch: async (request) => {
         const url = new URL(request.url);
-        seen.push({ method: request.method, path: `${url.pathname}${url.search}`, body: await request.text() });
+        seen.push({
+          method: request.method,
+          path: `${url.pathname}${url.search}`,
+          body: await request.text(),
+          forwardedProto: request.headers.get("x-forwarded-proto"),
+        });
         return Response.json({ ok: true }, { status: 201 });
       },
     });
@@ -65,6 +70,19 @@ describe("serve-web", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(seen.at(-1)).toEqual({ method: "POST", path: "/api/dealership/v1/parts?page=2", body: '{"a":1}' });
+    expect(seen.at(-1)).toEqual({
+      method: "POST",
+      path: "/api/dealership/v1/parts?page=2",
+      body: '{"a":1}',
+      forwardedProto: "http",
+    });
+  });
+
+  it("tells the gateway the browser's connection was HTTPS, as a load balancer does (ACME-130)", async () => {
+    seen.length = 0;
+    await handle(new Request("https://localhost/api/session", { method: "GET" }));
+    await handle(new Request("http://localhost/api/session", { method: "GET" }));
+
+    expect(seen.map((request) => request.forwardedProto)).toEqual(["https", "http"]);
   });
 });

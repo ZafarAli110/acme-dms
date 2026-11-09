@@ -177,8 +177,15 @@ builder.AddExecutable("seed", "bun", "../..", "scripts/seed.ts")
 var web = productionLike
     ? builder.AddExecutable("web", "bun", "../..", "scripts/serve-web.ts")
     : builder.AddExecutable("web", "bun", "../../web", "run", "dev");
+// HTTPS, with the ASP.NET Core development certificate, so the browser holds the sign-in under the rules it does live
+// and gets HTTP/2 (ACME-130). scripts/check-certificate.ts checks it is trusted before every start and writes it, with
+// its key, to .certs/ (ignored by git); Aspire's own certificate APIs are still experimental in 13.6. The gateway stays
+// plain HTTP behind the web server, as behind a load balancer live.
+var certificates = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", ".certs"));
 web
-    .WithHttpEndpoint(env: "PORT")
+    .WithHttpsEndpoint(env: "PORT")
+    .WithEnvironment("TLS_CERT_PATH", Path.Combine(certificates, "localhost.pem"))
+    .WithEnvironment("TLS_KEY_PATH", Path.Combine(certificates, "localhost.key"))
     .WithExternalHttpEndpoints()
     .WithReference(gateway)
     .WaitFor(gateway);

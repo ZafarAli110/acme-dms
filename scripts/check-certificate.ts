@@ -1,15 +1,17 @@
 // Stops `bun run dev`, `start` and `start:prod` before they start when this machine does not trust the ASP.NET Core
 // development certificate (ACME-130): the web app is served over HTTPS with it, so without it the browser would show a
-// warning page instead of the DMS. Trusted, it writes the certificate (not its key) to .certs/localhost.pem, where the
-// end-to-end tests and the load test point Node and Bun (NODE_EXTRA_CA_CERTS): they do not read the system's trust
-// store as a browser does.
+// warning page instead of the DMS. Trusted, it writes the certificate to .certs/localhost.pem and its key beside it
+// (.certs/ is ignored by git, the files readable by you alone): the web server serves HTTPS with them (the AppHost
+// passes the paths), and the end-to-end tests and the load test point Node and Bun at the certificate
+// (NODE_EXTRA_CA_CERTS), as they do not read the system's trust store as a browser does.
 //
 //   bun scripts/check-certificate.ts
-import { mkdirSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-/** Where the certificate is written for Node and Bun, from the repository's root. Ignored by git. */
+/** Where the certificate is written, from the repository's root; its key is `localhost.key` beside it. Ignored by git. */
 export const CERTIFICATE_FILE = join(".certs", "localhost.pem");
+export const KEY_FILE = join(".certs", "localhost.key");
 
 /** Runs `dotnet` with these arguments; its exit code, or null when `dotnet` itself is not found. */
 export type RunDotnet = (args: string[]) => number | null;
@@ -35,9 +37,8 @@ export function untrustedMessage(platform: NodeJS.Platform): string {
 }
 
 /**
- * Checks that the development certificate is there and trusted, and when it is, writes it for Node and Bun to
- * `root`/.certs/localhost.pem. `dotnet dev-certs` exports the private key beside it; the key is deleted at once: the
- * tests need only the certificate, and the web server gets the key from Aspire.
+ * Checks that the development certificate is there and trusted, and when it is, writes it and its key to `root`/.certs/
+ * (`dotnet dev-certs` writes the key beside the certificate, unencrypted: `--no-password`), readable by the owner only.
  */
 export function checkCertificate(run: RunDotnet, platform: NodeJS.Platform, root: string): CertificateCheck {
   if (run(["dev-certs", "https", "--check", "--trust"]) !== 0) {
@@ -46,10 +47,11 @@ export function checkCertificate(run: RunDotnet, platform: NodeJS.Platform, root
   const file = join(root, CERTIFICATE_FILE);
   mkdirSync(join(root, ".certs"), { recursive: true });
   const exported = run(["dev-certs", "https", "--export-path", file, "--format", "Pem", "--no-password"]);
-  rmSync(file.replace(/\.pem$/, ".key"), { force: true });
-  if (exported !== 0) {
+  if (exported !== 0 || !existsSync(join(root, KEY_FILE))) {
     return { trusted: false, message: `The development certificate is trusted, but could not be written to ${file}.` };
   }
+  // A private key: on macOS and Linux, readable by its owner only (Windows keeps the folder's own permissions).
+  chmodSync(join(root, KEY_FILE), 0o600);
   return { trusted: true };
 }
 

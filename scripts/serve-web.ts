@@ -6,8 +6,10 @@
 //   bun scripts/serve-web.ts --no-build serves the build already there
 //
 // What it does, and nothing more: a file of the build is sent as it is (the hashed files under /assets/ cached for a
-// year, everything else revalidated); /api/... goes to the gateway, as Vite's proxy does in development; any other
-// path gets index.html, since the app is a single-page app and its router reads the URL.
+// year, everything else revalidated); /api/... goes to the gateway, as Vite's proxy does in development, saying the
+// browser's connection was HTTPS (X-Forwarded-Proto, as a load balancer does); any other path gets index.html, since the
+// app is a single-page app and its router reads the URL. With TLS_CERT_PATH and TLS_KEY_PATH (Aspire passes the .NET
+// development certificate, ACME-130) it serves HTTPS, HTTP/2 to a browser that offers it and HTTP/1.1 to anything else.
 import { join, normalize, sep } from "node:path";
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
@@ -19,9 +21,11 @@ export function createWebHandler(root: string, gatewayUrl: string): (request: Re
   return async (request) => {
     const url = new URL(request.url);
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
+      const headers = new Headers(request.headers);
+      headers.set("x-forwarded-proto", url.protocol === "https:" ? "https" : "http");
       return fetch(`${gatewayUrl}${url.pathname}${url.search}`, {
         method: request.method,
-        headers: request.headers,
+        headers,
         body: request.method === "GET" || request.method === "HEAD" ? null : await request.arrayBuffer(),
         redirect: "manual",
         // Bun would unzip the gateway's answer and keep its Content-Encoding: the browser would unzip it again.
@@ -54,8 +58,15 @@ if (import.meta.main) {
   }
   // Aspire passes the gateway's address, as it does to Vite in development.
   const gatewayUrl = process.env["services__gateway-api__http__0"] ?? "http://localhost:8080";
+  const certificatePath = process.env["TLS_CERT_PATH"];
+  const keyPath = process.env["TLS_KEY_PATH"];
+  // HTTP/2 to a browser that offers it over TLS (ALPN), HTTP/1.1 to anything else. Experimental in Bun 1.4.4; the
+  // end-to-end suite runs over it.
+  const secure =
+    certificatePath && keyPath ? { tls: { cert: Bun.file(certificatePath), key: Bun.file(keyPath) }, http2: true } : {};
   const server = Bun.serve({
     port: Number(process.env["PORT"] ?? 4173),
+    ...secure,
     fetch: createWebHandler(join(web, "build", "client"), gatewayUrl),
   });
   console.log(`web (production build) on ${server.url}, /api → ${gatewayUrl}`);

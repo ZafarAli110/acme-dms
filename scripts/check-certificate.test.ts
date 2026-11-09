@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { CERTIFICATE_FILE, checkCertificate, type RunDotnet, untrustedMessage } from "./check-certificate";
+import { CERTIFICATE_FILE, checkCertificate, KEY_FILE, type RunDotnet, untrustedMessage } from "./check-certificate";
 
 /** A stand-in for `dotnet`: the trust check answers `checkExit`; an export writes the two files `dotnet` writes. */
 function fakeDotnet(checkExit: number | null, exportExit = 0): { run: RunDotnet; calls: string[][] } {
@@ -24,14 +24,17 @@ function fakeDotnet(checkExit: number | null, exportExit = 0): { run: RunDotnet;
 }
 
 describe("check-certificate", () => {
-  it("writes the trusted certificate for Node and Bun, and never leaves its private key there", () => {
+  it("writes the trusted certificate and its key for the web server, the key readable by its owner only", () => {
     const root = mkdtempSync(join(tmpdir(), "acme-cert-"));
     const dotnet = fakeDotnet(0);
 
     expect(checkCertificate(dotnet.run, "darwin", root)).toEqual({ trusted: true });
 
     expect(existsSync(join(root, CERTIFICATE_FILE))).toBe(true);
-    expect(existsSync(join(root, ".certs", "localhost.key"))).toBe(false);
+    expect(existsSync(join(root, KEY_FILE))).toBe(true);
+    if (process.platform !== "win32") {
+      expect(statSync(join(root, KEY_FILE)).mode & 0o777).toBe(0o600);
+    }
     expect(dotnet.calls[1]).toEqual([
       "dev-certs",
       "https",

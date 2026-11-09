@@ -10,7 +10,7 @@
 
 **Design:** No screen
 
-**Now:** Done: steps 1–2 (the cookies; the certificate check and setup) · Next: step 3, the web server on HTTPS · Blocked: None
+**Now:** Done: steps 1–3 (cookies; certificate check; the web server's code) · Next: step 4, Node and Bun trust, the scripts and the e2e · Blocked: None
 
 ## Requirement
 
@@ -83,7 +83,7 @@ Files (each checked to exist, or marked **new**):
    system, exit 1; trusted → exports the certificate's PEM to `.certs/localhost.pem` (`dotnet dev-certs https
 --export-path … --format Pem --no-password`, the same on Windows) for Node and Bun; `scripts/check-certificate.test.ts`
    (**new**): the message for Mac and Windows, the export path; `package.json`: `dev`, `start`, `start:prod` run it;
-   `.gitignore`: `.certs/`
+   `.gitignore`: `.certs/`; the key is kept beside it for the web server (D8)
 7. Node and Bun trust: `web/package.json` `e2e` and the root `load-test` script set `NODE_EXTRA_CA_CERTS` to that file
    (Bun's script shell sets it the same way on Windows). Probed: Node 26 and Bun refuse the certificate otherwise, even
    with `--use-system-ca`; with it, both accept it
@@ -134,7 +134,7 @@ only); the gateway and the services are unchanged; the load test keeps measuring
 - [x] 2. The certificate: `check-certificate.ts` and its test, `package.json`, `.gitignore`, `setup.ps1`, README →
       verify: its tests; it passes on this Mac and writes `.certs/localhost.pem`; the Windows runner runs its tests
       (`windows-setup.yml` runs `bun test scripts` on a push to final)
-- [ ] 3. The web server on HTTPS and HTTP/2: AppHost, Vite, `serve-web.ts` and its test → verify: unit tests
+- [x] 3. The web server on HTTPS and HTTP/2: AppHost, Vite, `serve-web.ts` and its test → verify: unit tests
 - [ ] 4. Node and Bun trust, the scripts and the e2e: `NODE_EXTRA_CA_CERTS`, load-test's cookie and `--through-web`,
       the sign-out spec, `every-page.spec.ts` → verify: typecheck and lint (run in step 5)
 - [ ] 5. start:prod over HTTPS: restart it → verify: the whole e2e suite; `every-page.spec.ts` logs `h2`; the cookie
@@ -159,6 +159,11 @@ None: Q1 is answered (D4).
 - D3 The build runs to the end, then reports (Zafar Ali, 10 Nov).
 - D4 No HSTS on a developer's machine: HSTS is kept per host name, so it would hold every app on `localhost` in that
   browser to HTTPS; one named difference from live, written in ARCHITECTURE and the evidence (Zafar Ali, 10 Nov, Q1).
+- D8 The web server gets the certificate and key from `.certs/` (written by `check-certificate.ts` before every start,
+  the key readable by its owner only, the folder ignored by git), passed by the AppHost with `WithEnvironment`, not by
+  `WithHttpsDeveloperCertificate`/`WithHttpsCertificateConfiguration`: both are experimental in Aspire 13.6.4
+  (`ASPIRECERTIFICATES001`, a build error unless suppressed) and nothing here uses an experimental Aspire API. One
+  copy of the certificate serves the browser and Node's and Bun's trust (Claude, while building).
 - D5 The cookie keeps one name everywhere, so a sign-in from before the change is not read: one more sign-in, local
   only (Claude, default).
 - D6 `serve-web.ts` keeps `Bun.serve` with its experimental `http2: true`, over `node:http2` (which also answers `h2`):
@@ -199,3 +204,8 @@ None: Q1 is answered (D4).
   trusted certificate. `dev`, `start`, `start:prod` run it; `.certs/` ignored; `setup.ps1` and `setup.sh` trust it,
   skipped under `CI`; README (both setups, the https address, a troubleshooting row). scripts' tests pass, lint,
   typecheck, `docs:check` clean. The Windows runner runs these tests on the push.
+- 2026-11-10 01:30 Step 3: AppHost `web` on `WithHttpsEndpoint(env: "PORT")` with `TLS_CERT_PATH`/`TLS_KEY_PATH` from `.certs/`
+  (D8: Aspire's certificate APIs failed the build as experimental, `ASPIRECERTIFICATES001`); Vite `server.https` from
+  them and `xfwd` on `/api`; `serve-web.ts` `tls` with `http2: true`, and `x-forwarded-proto` on `/api`. `check-certificate`
+  keeps the key, mode 600. scripts' tests 24/24 (a new one: the forwarded header, https and http), scripts' typecheck
+  and lint, web typecheck, the AppHost's Release build: clean. Not yet run: step 5.
