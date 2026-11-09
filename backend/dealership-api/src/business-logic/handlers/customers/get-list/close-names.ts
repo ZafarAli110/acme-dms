@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { customerNames } from "#persistence/schema/customer-names";
+import { type CustomerNameKind, customerNames } from "#persistence/schema/customer-names";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
 
 /** How far a close name may be from the word searched: two letters missing, extra, changed or swapped. */
@@ -9,10 +9,11 @@ const MAX_NAMES = 10;
 /** Candidates Postgres gives for ranking here: more than are tried, so the ranking can reorder them. */
 const CANDIDATES = 30;
 
-/** A name the location has, close to the word searched, and how many edits away (levenshtein). */
+/** A name the location has, close to the word searched, how many edits away, and what kinds of name it is. */
 export interface CloseName {
   name: string;
   distance: number;
+  kinds: CustomerNameKind[];
 }
 
 /**
@@ -37,8 +38,9 @@ export async function isKnownNameAsync(db: Database, word: string): Promise<bool
  */
 export async function closeNamesAsync(db: Database, word: string): Promise<CloseName[]> {
   const name = sql`lower(${customerNames.name})`;
-  const result = await db.execute<{ name: string; likeness: number }>(sql`
-    select min(${customerNames.name}) as name, max(similarity(${name}, ${word})) as likeness
+  const result = await db.execute<{ name: string; likeness: number; kinds: CustomerNameKind[] }>(sql`
+    select min(${customerNames.name}) as name, max(similarity(${name}, ${word})) as likeness,
+           array_agg(distinct ${customerNames.kind}) as kinds
     from ${customerNames}
     where (${name} % ${word} or levenshtein(${name}, ${word}) <= ${MAX_DISTANCE}) and ${name} <> ${word}
     group by ${name}
@@ -49,11 +51,12 @@ export async function closeNamesAsync(db: Database, word: string): Promise<Close
       name: row.name,
       distance: editDistance(row.name.toLowerCase(), word),
       likeness: Number(row.likeness),
+      kinds: row.kinds,
     }))
     .filter((candidate) => candidate.distance <= MAX_DISTANCE || candidate.likeness >= 0.3)
     .toSorted((a, b) => a.distance - b.distance || b.likeness - a.likeness)
     .slice(0, MAX_NAMES)
-    .map(({ name: closeName, distance }) => ({ name: closeName, distance }));
+    .map(({ name: closeName, distance, kinds }) => ({ name: closeName, distance, kinds }));
 }
 
 /**

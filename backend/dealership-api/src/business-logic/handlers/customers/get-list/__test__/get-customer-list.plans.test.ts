@@ -136,7 +136,7 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
           settings = [];
         } else if (/^\s*set local\b/i.test(text)) {
           settings.push(text);
-        } else if (/^\s*select\b/i.test(text) && /"customers"/.test(text)) {
+        } else if (/^\s*select\b/i.test(text) && /from "customers"/.test(text)) {
           recorded.push({
             text,
             values: (params as unknown[] | undefined) ?? [],

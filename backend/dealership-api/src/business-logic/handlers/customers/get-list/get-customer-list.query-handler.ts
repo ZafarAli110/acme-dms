@@ -4,6 +4,7 @@ import type { IGetCustomerListQueryHandler } from "#business-logic-abstractions/
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerPageResponseDto } from "#dto/customers/customer-page-response.dto";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
+import { customerNames } from "#persistence/schema/customer-names";
 import { customerSearchText, customers } from "#persistence/schema/customers";
 import { notDeleted } from "#persistence/schema/soft-delete/not-deleted";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
@@ -32,6 +33,7 @@ import {
   phoneMatching,
   type ListColumns,
 } from "../../../list-query/list-columns";
+import { escapeLike } from "../../../list-query/like-pattern";
 import { MAX_LIST_DEPTH, pageOffset } from "../../../list-query/page-offset";
 import { requireLocation } from "../../../user-context/require-location";
 import { toCustomerListItemDto } from "../customer.mapper";
@@ -95,6 +97,9 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
       page: query.page ?? 1,
       pageSize,
       codec: new CursorCodec(this._cursorKey, { dealerId: userContext.dealerId, locationId }, query),
+      search: query.search
+        ? { text: query.search, dealerId: userContext.dealerId, locationId, filtered: Boolean(query.filterField) }
+        : null,
     };
 
     // The page's ids first, from an index alone, then only those rows (ACME-110).
@@ -164,36 +169,19 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
       return [];
     }
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
-    // As a search's page: few matches each, so through the trigram index, never a walk in name order (ACME-119).
-    await work.db.execute(sql`set local enable_indexscan = off`);
-    await work.db.execute(sql`set local enable_indexonlyscan = off`);
     const found: string[] = [];
-    for (const { name } of names) {
+    for (const { name, kinds } of names) {
       if (found.length >= room) {
         break;
       }
-      const taken = [...exactIds, ...found];
-      const rows = await work.db
-        .select({ id: customers.id })
-        .from(customers)
-        .where(
-          and(
-            // The list's filter applies to close spellings as to exact matches.
-            ownerScoped(
-              dealerId,
-              locationId,
-              and(
-                matching(`%${name.replace(/[\\%_]/g, (character) => `\\${character}`)}%`),
-                listFilter(CUSTOMER_LIST_COLUMNS, query),
-              ),
-            ),
-            // Drizzle's and() takes SQL or undefined (not null) for "no condition".
-            taken.length > 0 ? notInArray(customers.id, taken) : undefined,
-          ),
-        )
-        .orderBy(asc(customers.surname), asc(customers.firstName), asc(customers.id))
-        .limit(Math.min(room - found.length, MAX_PER_CLOSE_NAME));
-      found.push(...rows.map((row) => row.id));
+      const ids = await closeNameCustomersAsync(work.db, {
+        where: ownerScoped(dealerId, locationId, listFilter(CUSTOMER_LIST_COLUMNS, query)),
+        name,
+        kinds,
+        taken: [...exactIds, ...found],
+        limit: Math.min(room - found.length, MAX_PER_CLOSE_NAME),
+      });
+      found.push(...ids);
     }
     return found;
   }
@@ -231,6 +219,8 @@ interface AskedPage {
   page: number;
   pageSize: number;
   codec: CursorCodec;
+  /** The search, for choosing its path; null without one. */
+  search: SearchScope | null;
 }
 
 /** A page's rows (ids and sort keys), the rows its next and previous cursors start from, and a search's path. */
@@ -254,7 +244,7 @@ async function findPageAsync(
 ): Promise<FoundPage> {
   const { spec, move, page, pageSize } = asked;
   const from = move && !("last" in move) ? asked.codec.decode("after" in move ? move.after : move.before) : null;
-  const path = searching ? (from?.path ?? (await searchPathAsync(db, where))) : null;
+  const path = searching ? (from?.path ?? (await searchPathAsync(db, where, asked.search))) : null;
   if (path === "few") {
     // For a term few or none have, Postgres would walk the name index in order looking for a page, and at a big
     // location read every customer ("ahed" at Northside: 3 to 6 s; "smith", all in the S's: 2.4 s). The matches are
@@ -295,9 +285,89 @@ async function findPageAsync(
   };
 }
 
-/** A search's way to its pages: through the trigram index while its matches are 10,000 or fewer, else in sort order. */
-async function searchPathAsync(db: Database, where: SQL | undefined): Promise<SearchPath> {
+/**
+ * A search's way to its pages (ACME-129): through the trigram index, then sorted, while its matches are few; walking the
+ * name order while they are many and spread through it. For one word of a name, the location's name list says how many
+ * customers have a name holding it, in about a millisecond (counting the customers up to 10,001 took 30 ms); when one
+ * surname holds most of them, they sit together in name order and a walk would read every name before them ("smith":
+ * 2.4 s), so they are sorted instead. Anything else (part of an email, two words, a filter as well) is counted.
+ */
+async function searchPathAsync(db: Database, where: SQL | undefined, search: SearchScope | null): Promise<SearchPath> {
+  const word = search?.text.trim().toLowerCase() ?? "";
+  if (search && !search.filtered && word.length >= MIN_CLOSE_LETTERS && NAME_WORD.test(word)) {
+    const [names] = await db
+      .select({
+        total: sql<number>`coalesce(sum(${customerNames.customers}), 0)::int`,
+        biggestSurname: sql<number>`coalesce(max(${customerNames.customers}) filter (where ${customerNames.kind} = 'surname'), 0)::int`,
+      })
+      .from(customerNames)
+      .where(
+        and(
+          eq(customerNames.dealerId, search.dealerId),
+          eq(customerNames.locationId, search.locationId),
+          sql`lower(${customerNames.name}) like ${`%${escapeLike(word)}%`}`,
+        ),
+      );
+    const total = names?.total ?? 0;
+    return total > MAX_LIST_DEPTH && (names?.biggestSurname ?? 0) * 2 < total ? "dense" : "few";
+  }
   return (await countUpToAsync(db, where, MAX_LIST_DEPTH + 1)) <= MAX_LIST_DEPTH ? "few" : "dense";
+}
+
+/** What a search's path is decided from: the words typed, where, and whether a filter narrows it too. */
+interface SearchScope {
+  text: string;
+  dealerId: string;
+  locationId: string;
+  filtered: boolean;
+}
+
+/**
+ * A close name's customers (ACME-120, 129): everyone whose surname or first name is that name, case ignored, each from
+ * its own index in name order, and those whose company has it as a word; the first `limit` of them in the list's order,
+ * leaving out `taken`. Whole names only: "Penwood" no longer finds "Penwoodson" (Zafar Ali, 9 Nov). A substring search
+ * per close name read every customer holding a common name and sorted them (47 to 88 ms a name).
+ */
+async function closeNameCustomersAsync(
+  db: Database,
+  close: { where: SQL | undefined; name: string; kinds: readonly string[]; taken: string[]; limit: number },
+): Promise<string[]> {
+  const lowered = close.name.toLowerCase();
+  const notTaken = close.taken.length > 0 ? notInArray(customers.id, close.taken) : undefined;
+  const byName = asc(customers.surname);
+  const runs: SQL[] = [];
+  if (close.kinds.includes("surname")) {
+    runs.push(sql`lower(${customers.surname}) = ${lowered}`);
+  }
+  if (close.kinds.includes("first")) {
+    runs.push(sql`lower(${customers.firstName}) = ${lowered}`);
+  }
+  if (close.kinds.includes("company_word")) {
+    runs.push(ilike(customers.companyName, `%${escapeLike(close.name)}%`));
+  }
+  const candidates = new Set<string>();
+  for (const condition of runs) {
+    const rows = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(and(close.where, condition, notTaken))
+      .orderBy(byName, asc(customers.firstName), asc(customers.id))
+      .limit(close.limit);
+    for (const row of rows) {
+      candidates.add(row.id);
+    }
+  }
+  if (runs.length < 2) {
+    return [...candidates];
+  }
+  // From more than one kind: the first `limit` of them all, in the list's order.
+  const merged = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(inArray(customers.id, [...candidates]))
+    .orderBy(byName, asc(customers.firstName), asc(customers.id))
+    .limit(close.limit);
+  return merged.map((row) => row.id);
 }
 
 /** How many customers match, up to `limit`: the count endpoint's exact total, for a handful of matches (ACME-129). */

@@ -293,3 +293,11 @@ None
   from the top; searches are about 80%: a search's first-page count to 10,001 (31%, 30 ms, 3,038 calls), its page (21%,
   21 ms), close spellings' customers by a substring per close name (12% at 88 ms and 8% at 47 ms), a dense search's
   walk (10%, 42 ms), the parts search (9%, 27 ms). Planning 10.7 s of 313 s (3%). `track_planning` still on.
+- 2026-11-09 18:33 Search work (Zafar Ali: "no ceremony, fix the performance"): a one-word name search chooses its path from
+  `customer_names` counts (dense only when over 10,000 and no surname holds half); close spellings by whole surname or
+  first name through `ix_customers_surname_ci` / `_first_name_ci` (migration 7.5 s), company words as before. 200/s:
+  Postgres 91% (407 this morning), p95 34 ms; 400/s all answered, p95 60 ms. Pools 12 a copy (8 lists, 4 saves): 600/s
+  p95 570 → 150 ms. start:prod without Aspire's dcp proxy (it was the limit past 600/s) and the gateway on localhost
+  (its dual-stack socket's accept loop died under load on macOS). 800/s: 605 answered a second, the rest told busy at
+  once, none failed; Postgres 652% (the laptop's limit). Left: the search page (64%, every match read through the
+  trigram index and sorted) and the parts search (19%).

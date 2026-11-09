@@ -76,9 +76,14 @@ IResourceBuilder<T> DocumentApi<T>(IResourceBuilder<T> service)
 var exportLinkKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
 // The Bun apps run as plain executables: `bun install` at the repo root already installs every workspace.
+// In start:prod every service listens on its own port with nothing in between, as in production: by default Aspire puts
+// its own proxy (dcp) in front of each endpoint, and under a load test that proxy, not the system, was the limit (at 800
+// requests a second it used most of a core while connections sat waiting, ACME-129). In `bun run dev` the proxy stays:
+// it lets a service restart on a rebuild without the others noticing.
+const int DealershipApiPort = 5301;
 var dealershipApi = builder.AddExecutable("dealership-api", "bun", "../../backend/dealership-api", "run", productionLike ? "serve" : "dev")
     .WithEnvironment("EXPORT_LINK_KEY", exportLinkKey)
-    .WithHttpEndpoint(env: "PORT")
+    .WithHttpEndpoint(port: productionLike ? DealershipApiPort : null, env: "PORT", isProxied: !productionLike)
     .WithHttpHealthCheck("/v1/system/health")
     .WithOtlpExporter()
     .WithReference(dealershipDb)
@@ -99,7 +104,7 @@ var instances = int.TryParse(builder.Configuration["DEALERSHIP_API_INSTANCES"], 
 var dealershipApiReplicas = Enumerable.Range(2, instances - 1)
     .Select(number => builder.AddExecutable($"dealership-api-{number}", "bun", "../../backend/dealership-api", productionLike ? ["run", "start"] : ["run", "dev", "replica"])
         .WithEnvironment("EXPORT_LINK_KEY", exportLinkKey)
-        .WithHttpEndpoint(env: "PORT")
+        .WithHttpEndpoint(port: productionLike ? DealershipApiPort + number - 1 : null, env: "PORT", isProxied: !productionLike)
         .WithHttpHealthCheck("/v1/system/health")
         .WithOtlpExporter()
         .WithReference(dealershipDb)
@@ -194,7 +199,12 @@ IResourceBuilder<ReleaseBuildResource> ReleaseBuild<TProject>(string name, int p
     var assembly = Path.Combine(directory, "bin", "Release", "net10.0", $"{Path.GetFileNameWithoutExtension(project)}.dll");
     return builder.AddResource(new ReleaseBuildResource(name, directory))
         .WithArgs(assembly)
-        .WithHttpEndpoint(port: port, env: "ASPNETCORE_HTTP_PORTS")
+        // Only start:prod runs a Release build: no proxy in front of it (see dealership-api above). It listens on
+        // localhost, which Kestrel opens as one IPv4 and one IPv6 socket: given only a port, it opened one dual-stack
+        // socket, whose accept loop failed for good on macOS under a load test's IPv4 connections ("The supplied
+        // SocketAddress is an invalid size for the IPEndPoint", ACME-129).
+        .WithHttpEndpoint(port: port, isProxied: false)
+        .WithEnvironment("ASPNETCORE_URLS", "http://localhost:" + port.ToString(System.Globalization.CultureInfo.InvariantCulture))
         .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
         .WithOtlpExporter();
 }

@@ -82,6 +82,14 @@ export const customers = snakeCase.table(
     index("ix_customers_phone_end")
       .on(table.dealerId, table.locationId, sql`(reverse(${phoneDigits(table.phone)})) text_pattern_ops`)
       .where(sql`${table.isDeleted} = false`),
+    // A close spelling's customers (ACME-120, 129): everyone with that surname, or that first name, case ignored, in
+    // the list's name order, read straight from the index instead of a substring search of the location.
+    index("ix_customers_surname_ci")
+      .on(table.dealerId, table.locationId, sql`lower(${table.surname})`, table.surname, table.firstName, table.id)
+      .where(sql`${table.isDeleted} = false`),
+    index("ix_customers_first_name_ci")
+      .on(table.dealerId, table.locationId, sql`lower(${table.firstName})`, table.surname, table.firstName, table.id)
+      .where(sql`${table.isDeleted} = false`),
     // One index for each sort the grid offers that the list indexes do not (ACME-129): a keyset page, the last page
     // too, reads its 25 ids from the index, either way, whatever the location's size.
     ...(["companyName", "email", "phone", "city", "status"] as const).map((column) =>

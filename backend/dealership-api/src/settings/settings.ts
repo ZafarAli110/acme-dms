@@ -133,16 +133,17 @@ export function readSettings(environment: Environment): Settings {
       environment.DATABASE_STATEMENT_TIMEOUT,
       "30s",
     ),
-    // 5 a copy (3 for lists, 2 for saves): Postgres's CPU is the limit, and queries beyond its cores only run slower.
-    // At 300 requests a second with 4 copies, 20 connections answered every request (an answer or "busy"); 40 left
-    // 8,059 unanswered and saves failing (ACME-121).
-    databaseMaxConnections: readWholeNumber("DATABASE_MAX_CONNECTIONS", environment.DATABASE_MAX_CONNECTIONS, 5),
+    // 12 a copy (8 for lists, 4 for saves). ACME-121 chose 5 while each query cost Postgres tens of milliseconds of
+    // CPU: then more connections only queued more work on its cores (at 300 a second, 40 left 8,059 unanswered).
+    // Since ACME-129 a query costs one to five: requests waited for a connection while Postgres used 4 of its 10
+    // cores (600 a second: p95 570 ms, 3.5 queries running at a time on 16 connections).
+    databaseMaxConnections: readWholeNumber("DATABASE_MAX_CONNECTIONS", environment.DATABASE_MAX_CONNECTIONS, 12),
     databaseConnectionTimeoutMs: readDuration(
       "DATABASE_CONNECTION_TIMEOUT",
       environment.DATABASE_CONNECTION_TIMEOUT,
       "10s",
     ),
-    databaseSaveConnections: readWholeNumber("DATABASE_SAVE_CONNECTIONS", environment.DATABASE_SAVE_CONNECTIONS, 2),
+    databaseSaveConnections: readWholeNumber("DATABASE_SAVE_CONNECTIONS", environment.DATABASE_SAVE_CONNECTIONS, 4),
     databaseListWaitMs: readDuration("DATABASE_LIST_WAIT", environment.DATABASE_LIST_WAIT, "1500ms"),
     databaseSaveWaitMs: readDuration("DATABASE_SAVE_WAIT", environment.DATABASE_SAVE_WAIT, "5s"),
     dealershipDatabase: environment.ConnectionStrings__dealership ?? null,
