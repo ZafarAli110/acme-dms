@@ -50,15 +50,18 @@ export function ListFooter({ params, update, rowsOnPage, total, paging, keyset, 
   const atLast = paging !== null && !paging.hasMore;
   const canGoLast = !atLast && (keyset || (lastNumbered !== null && lastNumbered <= deepest));
   const shownProblem = problem && problem.page === page ? problem.text : null;
-  const totalText = total ? formatListTotal(total, i18n.language, t) : "…";
+  const from = page === null || rowsOnPage === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = page === null || rowsOnPage === 0 ? 0 : from + rowsOnPage - 1;
+  // "Of many" until the last match is on screen: then its row number is the total (ACME-129).
+  const shownTotal: ListTotal | null =
+    total?.kind === "many" && page !== null && atLast ? { kind: "exact", value: to } : total;
+  const totalText = shownTotal ? formatListTotal(shownTotal, i18n.language, t) : "…";
 
   const text = (() => {
     if (label) {
       return label;
     }
     if (page !== null) {
-      const from = rowsOnPage === 0 ? 0 : (page - 1) * pageSize + 1;
-      const to = rowsOnPage === 0 ? 0 : from + rowsOnPage - 1;
       return t("paging.rows", {
         from: formatNumber(from, i18n.language),
         to: formatNumber(to, i18n.language),

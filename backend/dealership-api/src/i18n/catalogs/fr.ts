@@ -103,6 +103,8 @@ export const fr: Messages = {
     nestedValidation: "{property} doit être un objet ou une liste d'objets.",
     whitelistValidation: "{property} n'est pas un champ de cette requête.",
     codeFormat: "{property} ne peut contenir que des majuscules, des chiffres et des tirets.",
+    atMostOneListPosition: "Envoyez au plus un de after, before et last.",
+    invalid: "{property} n'est pas valide.",
   },
   fields: {
     binId: "Emplacement",

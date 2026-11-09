@@ -106,6 +106,8 @@ export const en = {
     nestedValidation: "{property} must be an object or a list of objects.",
     whitelistValidation: "{property} is not a field of this request.",
     codeFormat: "{property} may only contain capital letters, digits and dashes.",
+    atMostOneListPosition: "Send at most one of after, before and last.",
+    invalid: "{property} is not valid.",
   },
   /** Request fields as the screens name them, for `{property}`. A field missing here is shown as it is. */
   fields: {

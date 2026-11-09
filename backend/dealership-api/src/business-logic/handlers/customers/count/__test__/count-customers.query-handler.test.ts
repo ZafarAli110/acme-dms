@@ -10,8 +10,9 @@ const page = { page: 1, pageSize: 25 };
 
 /**
  * ACME-117: the customer list's total, asked once per search and filter. ACME-129: "about" for the whole list and a
- * status filter, exact up to 100 matches otherwise, then "many". A search or a text filter is counted as the owner with
- * the scope written by hand, so these tests put another location's and deleted customers beside the ones that count.
+ * status filter, exact otherwise while every match fits on the first page, then "many". A search or a text filter is
+ * counted as the owner with the scope written by hand, so these tests put another location's and deleted customers
+ * beside the ones that count.
  */
 describe("CountCustomersQueryHandler", () => {
   const database = useTestDatabase();
@@ -69,7 +70,7 @@ describe("CountCustomersQueryHandler", () => {
   });
 
   // Last: it fills Central with 30,000 customers. Central has no other test's customers.
-  it("estimates a big list close to its size; counts up to 100 matches exactly, then says many", async () => {
+  it("estimates a big list close to its size; counts exactly while every match fits on the first page, then says many", async () => {
     const addAtCentralAsync = (from: number, to: number) =>
       database.db.execute(sql`
         insert into customers (dealer_id, location_id, first_name, surname, status, created_at, created_by, updated_at,
@@ -85,6 +86,9 @@ describe("CountCustomersQueryHandler", () => {
     const about = await handler.executeAsync(AT_CENTRAL, page);
     const few = await handler.executeAsync(AT_CENTRAL, { ...page, search: "Surname2999" }); // 2999, 29990…29999
     const one = await handler.executeAsync(AT_CENTRAL, { ...page, search: "Surname9999" });
+    // The ticket's rule: 11 matches are exact on a page of 11, "many" on a page of 10 (ACME-129).
+    const fitsTheFirstPage = await handler.executeAsync(AT_CENTRAL, { ...page, pageSize: 11, search: "Surname2999" });
+    const pastTheFirstPage = await handler.executeAsync(AT_CENTRAL, { ...page, pageSize: 10, search: "Surname2999" });
     const many = await handler.executeAsync(AT_CENTRAL, { ...page, search: "Surname1" });
     const none = await handler.executeAsync(AT_CENTRAL, {
       ...page,
@@ -97,6 +101,8 @@ describe("CountCustomersQueryHandler", () => {
     expect(Math.abs((about.value ?? 0) - 30_000) / 30_000).toBeLessThan(0.05);
     expect(few).toEqual({ kind: "exact", value: 11 });
     expect(one).toEqual({ kind: "exact", value: 1 });
+    expect(fitsTheFirstPage).toEqual({ kind: "exact", value: 11 });
+    expect(pastTheFirstPage).toEqual({ kind: "many", value: null });
     expect(many).toEqual({ kind: "many", value: null });
     expect(none).toEqual({ kind: "exact", value: 0 });
   });

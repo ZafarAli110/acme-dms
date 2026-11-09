@@ -105,7 +105,7 @@ describe("GetPartListQueryHandler", () => {
     expect(list.items.map((item) => item.partNumber)).toEqual(["QTY-2", "QTY-3"]);
     expect(list.hasMore).toBe(true);
     await expect(
-      countAsync({ page: 1, pageSize: 2, filterField: "bin", filterOperator: "startsWith", filterValue: "B-QTY" }),
+      countAsync({ page: 1, pageSize: 25, filterField: "bin", filterOperator: "startsWith", filterValue: "B-QTY" }),
     ).resolves.toEqual({ kind: "exact", value: 3 });
   });
 
@@ -124,7 +124,7 @@ describe("GetPartListQueryHandler", () => {
     expect([numbers(first), first.hasMore]).toEqual([["DBN-1", "DBN-3"], true]);
     expect([numbers(second), second.hasMore]).toEqual([["DBN-4", "DBN-5"], false]);
     expect([numbers(last), last.hasMore]).toEqual([[], false]);
-    await expect(countAsync({ page: 1, pageSize: 2, ...only })).resolves.toEqual({ kind: "exact", value: 4 });
+    await expect(countAsync({ page: 1, pageSize: 25, ...only })).resolves.toEqual({ kind: "exact", value: 4 });
   });
 
   it("sorts by every column it shows, each way, ties by the part", async () => {

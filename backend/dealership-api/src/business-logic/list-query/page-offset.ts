@@ -15,7 +15,7 @@ export function pageOffset(page: number, pageSize: number): number {
   if (page * pageSize > MAX_LIST_DEPTH) {
     throw new BadRequestException(
       localized("errors.listPageTooDeep", {
-        max: MAX_LIST_DEPTH.toLocaleString("en-GB"),
+        max: MAX_LIST_DEPTH,
         lastPage: Math.floor(MAX_LIST_DEPTH / pageSize),
       }),
     );

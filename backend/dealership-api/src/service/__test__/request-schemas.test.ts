@@ -67,6 +67,12 @@ describe("request schemas", () => {
     expect(problems(ListQuerySchema, { filterOperator: "like" })[0]).toMatch(/^Filter must be one of: contains,/);
     expect(problems(ListQuerySchema, { sort: "x".repeat(51) })).toEqual(["Sort must be at most 50 characters."]);
     expect(problems(ListQuerySchema, { other: "1" })).toEqual(["other is not a field of this request."]);
+    expect(problems(ListQuerySchema, { after: "a", last: "true" })).toEqual([
+      "Send at most one of after, before and last.",
+    ]);
+    expect(problems(ListQuerySchema, { after: "a", before: "b" })).toEqual([
+      "Send at most one of after, before and last.",
+    ]);
   });
 
   it("refuse an export without columns, with too many, or with an empty heading", () => {

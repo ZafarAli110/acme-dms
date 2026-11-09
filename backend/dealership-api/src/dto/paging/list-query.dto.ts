@@ -55,7 +55,7 @@ export const ListQuerySchema = v.pipe(
   v.strictObject(LIST_QUERY_ENTRIES),
   v.check(
     (query) => [query.after, query.before, query.last].filter(Boolean).length <= 1,
-    "Send at most one of after, before and last.",
+    "validation.atMostOneListPosition",
   ),
 );
 export type ListQueryDto = v.InferOutput<typeof ListQuerySchema>;

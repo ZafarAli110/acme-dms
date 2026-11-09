@@ -42,7 +42,7 @@ function listOfValues(expected: string | null | undefined): string {
  * request schema and fails, naming the rule, until it has a case here (and one in `service/swagger/valibot-openapi.ts`).
  */
 export function toValidationMessage(issue: ValibotIssue): ValidationMessage {
-  const { type, requirement, input, received, expected, path } = issue;
+  const { type, requirement, input, received, expected, message, path } = issue;
   const property = String(path?.at(-1)?.key ?? "request");
   const constraint1 = String(requirement);
   const isList = Array.isArray(input);
@@ -78,8 +78,10 @@ export function toValidationMessage(issue: ValibotIssue): ValidationMessage {
     case "number":
     case "to_number":
     case "union":
-    case "check":
       return { key: "validation.isNumber", args: { property } };
+    case "check":
+      // A check across fields (`v.check(…, "validation.atMostOneListPosition")`) names its own catalog key.
+      return { key: message.startsWith("validation.") ? message : "validation.invalid", args: { property } };
     case "array":
       return { key: "validation.isArray", args: { property } };
     case "object":

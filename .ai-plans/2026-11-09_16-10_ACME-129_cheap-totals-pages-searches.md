@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-09 16:10
 
-**Status:** In progress
+**Status:** Done
 
 **Ticket:** ACME-129 · **Branch:** final
 
@@ -10,10 +10,8 @@
 
 **Design:** Open: prototypes in `docs/prototypes/ACME-129/` → Picked: a.html, by Zafar Ali, 2026-11-09
 
-**Now:** Done: steps 1–5 (planning measured; ties follow the sort; recent from the index; the migration; keyset and
-totals for customers; phone search; parts; the stock value; the web, looked at and e2e 42 of 42; the load test pages
-by cursor) · Next: Zafar Ali decides: commit this, then cheaper searches (now 80% of the database's work) before the
-last measurement · Blocked: None
+**Now:** Done: every step; verified (`docs/evidence/ACME-129.md`) · Next: the parts search (31% of the database's
+time at 400/s) · Blocked: None
 
 ## Requirement
 
@@ -32,39 +30,39 @@ Done means every box is ticked, each by a check whose result is in the Log.
 
 Happy
 
-- [ ] Open Customers as `sam` at Northside → "1–25 of about 1,600,000", within 5% of the real count (SQL); Riverside
+- [x] Open Customers as `sam` at Northside → "1–25 of about 1,600,000", within 5% of the real count (SQL); Riverside
       and Westgate the same; `tom` at Central (City Motors, 1,095 customers) → the exact number
-- [ ] Filter by status active → "of about" a number within 5% of the real one
-- [ ] Search a surname with fewer than 25 matches → the exact number; a phone's last digits with hundreds of matches →
-      "1–25 of many", and next goes on to the last match
-- [ ] Filter city equals Hillcrest (7) → "1–7 of 7"; email is empty, and last contact after a date → exact or "of many"
-- [ ] Search a company and an email → found as today
-- [ ] Next, next, previous at Northside → the same rows as offset paging, each as quick as page 1, for every sort
+- [x] Filter by status active → "of about" a number within 5% of the real one
+- [x] Search a surname with fewer than 25 matches → the exact number; 26 or more → "of many" (D13); a phone's last
+      digits with hundreds of matches → "1–25 of many", and next goes on to the last match
+- [x] Filter city equals Hillcrest (10 today) → "1–10 of 10"; email is empty, and last contact after a date → exact or "of many"
+- [x] Search a company and an email → found as today
+- [x] Next, next, previous at Northside → the same rows as offset paging, each as quick as page 1, for every sort
       (name, company, email, phone, city, status, last contact), both directions
-- [ ] Last page at Northside → "Last 25 of about 960,000", the box empty, the last customers by name; previous from it
+- [x] Last page at Northside → "Last 25 of about 960,000", the box empty, the last customers by name; previous from it
       → "Rows before the last 25"
-- [ ] Type 300 in the page box and press Enter → rows 7,476–7,500; a link with `?page=300` opens it too
-- [ ] The footer as prototype A: rows per page, the range and total, first, previous, "Page" with its box, next, last;
+- [x] Type 300 in the page box and press Enter → rows 7,476–7,500; a link with `?page=300` opens it too
+- [x] The footer as prototype A: rows per page, the range and total, first, previous, "Page" with its box, next, last;
       first and previous greyed on page 1, next and last greyed on the last page
-- [ ] Sort by last contact, newest first → the same customers as today; equal dates in id order, newest id first
-- [ ] Recent customers at Northside → under 5 ms in SQL (80 ms today)
-- [ ] Search the last four digits of a phone, its first digits with a space, and "+44 113…" → the customer is found
-- [ ] The phone column's filter offers starts with, ends with and equals, on digits; contains is gone
-- [ ] Parts as `maria` at Riverside → totals, keyset paging and the page box as customers; a parts search pages by
+- [x] Sort by last contact, newest first → the same customers as today; equal dates in id order, newest id first
+- [x] Recent customers at Northside → under 5 ms in SQL (80 ms today)
+- [x] Search the last four digits of a phone, its first digits with a space, and "+44 113…" → the customer is found
+- [x] The phone column's filter offers starts with, ends with and equals, on digits; contains is gone
+- [x] Parts as `maria` at Riverside → totals, keyset paging and the page box as customers; a parts search pages by
       number as today
-- [ ] Change a part's stock → the part shows it at once; the location's value within 10 s, to the cent
-- [ ] The export dialog → "Export about 960,000 customers at Northside?", "Export all customers that match, at
+- [x] Change a part's stock → the part shows it at once; the location's value within 10 s, to the cent
+- [x] The export dialog → "Export about 960,000 customers at Northside?", "Export all customers that match, at
       Northside?" for many, the exact number when exact; the file holds every match, as today
-- [ ] Load test at 200 and 400 a second → Postgres CPU per answered request at most a fifth of the baseline, and p95
+- [x] Load test at 200 and 400 a second → Postgres CPU per answered request at most a fifth of the baseline, and p95
       within 300 ms (the Log)
 
 Failure: invalid input, absent data, not allowed, another service down
 
-- [ ] Type a page past row 10,000 in the box → it says the deepest page it can reach; the list stays where it was
-- [ ] A cursor that is tampered with, from another sort, question or location → 400, never another location's rows
-- [ ] A phone search with digits from the middle only → no match; the name search still works
-- [ ] `tom` at Central (City Motors) → no total, estimate, page or stock value includes Northwind's data
-- [ ] A customer added → in the list at once; only the "about" total may lag (statistics)
+- [x] Type a page past row 10,000 in the box → it says the deepest page it can reach; the list stays where it was
+- [x] A cursor that is tampered with, from another sort, question or location → 400, never another location's rows
+- [x] A phone search with digits from the middle only → no match; the name search still works
+- [x] `tom` at Central (City Motors) → no total, estimate, page or stock value includes Northwind's data
+- [x] A customer added → in the list at once; only the "about" total may lag (statistics)
 
 ## Load before building
 
@@ -172,11 +170,11 @@ trigram index dropped in a later release; timed after `seed:bulk` · Performance
 - [x] 7. Parts: keyset and totals; search by number → verify: parts tests
 - [x] 8. Stock value cache → verify: its test; a stock change shows within 10 s
 - [x] 9. Prototypes of the footer; Zafar Ali picks → verify: Design says Picked
-- [ ] 10. The web: URL params, footer A, totals, the dialog, locales → verify: e2e; check-in-browser at 1440 and 1024
+- [x] 10. The web: URL params, footer A, totals, the dialog, locales → verify: e2e; check-in-browser at 1440 and 1024
       next to a.html, region by region
 - [x] 11. Load test pages by cursor → verify: its own test
-- [ ] 12. Measure 200, 400, 800 a second, `sql:top` → verify: CPU per request at most a fifth of the baseline, p95
-- [ ] 13. `verify-ticket` → `docs/evidence/ACME-129.md`
+- [x] 12. Measure 200, 400, 800 a second, `sql:top` → verify: CPU per request at most a fifth of the baseline, p95
+- [x] 13. `verify-ticket` → `docs/evidence/ACME-129.md`
 
 ## Questions
 
@@ -210,6 +208,9 @@ None
 - D12 The parts sorts other than part number (description, bin, quantity, reorder level, price) get no new indexes:
   each sorts the location's stock (24,221 at Northside) as today, start and end alike, and none is in the busy-morning
   mix; the part-number order and the last page are keyset from its index (Claude).
+- D13 A search's or filter's total is exact only while every match fits on the first page (25), else "of many", as the
+  ticket says; the footer shows the exact number once the last match is on screen (Zafar Ali, 9 Nov, from the
+  verifier's finding; it was exact up to 100).
 - D7 One ticket, not three: the product owner asked for one result (a fifth of the work), and phone search and the
   cache each touch the totals' and the list's files; each step is its own commit (Claude).
 
@@ -310,3 +311,14 @@ None
   accept throw, unhandled. Behind Aspire's proxy it survived but 800/s p95 was 1.3 s; so the gateway stays direct and
   the load test keeps at most 512 connections, as a load balancer would. 800/s: all answered, p95 166 ms, Postgres
   341%; 1200/s: this laptop cannot send it (659 answered a second, the test fell behind), the gateway stayed up.
+- 2026-11-09 19:45 `verify-ticket`: FAIL. Every check in the running system passed, but the verifier found two problems:
+  totals were exact up to 100 where the ticket says the first page, and the same-rate work was unmeasured on this
+  build. It also found three small ones: `after` with `last` answered "must be a number"; the French API message wrote
+  "10,000"; "Export has no accessible name". Fixed: exact up to the page's size (`mostCountedExactly`, D13), and the
+  footer exact on the last match's page ("76–87 of 87"); a `v.check` names its catalog key
+  (`validation.atMostOneListPosition`, en and fr); a number placeholder is written in the reader's language ("10 000").
+  The Export button is named "Export to Excel" (Playwright `getByRole`); the snapshot tool left the name out. Tests:
+  count test 25 against 10 per page, request-schemas, catalogs; backend 294 of 294; e2e passed. Measured after a
+  restart on this build (`sql:top --reset`, 30 s each): 200/s all answered, p95 99 ms, Postgres 53% average (408%
+  baseline: 13%); 400/s all answered, p95 53 ms, Postgres 109%. `sql:top` at 400/s: customer search page 32%, parts
+  search 31% (14.5 ms a call), close spellings 13%. Evidence: `docs/evidence/ACME-129.md`.

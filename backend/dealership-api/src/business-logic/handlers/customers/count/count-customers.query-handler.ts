@@ -4,7 +4,7 @@ import type { ICountCustomersQueryHandler } from "#business-logic-abstractions/h
 import type { UserContext } from "#business-logic-abstractions/user-context/user-context";
 import type { CustomerCountResponseDto } from "#dto/customers/customer-count-response.dto";
 import type { ListQueryDto } from "#dto/paging/list-query.dto";
-import { MAX_EXACT_TOTAL } from "#dto/paging/list-total.dto";
+import { mostCountedExactly } from "#dto/paging/list-total.dto";
 import type { Database } from "#persistence/unit-of-work/unit-of-work";
 import { customers } from "#persistence/schema/customers";
 import {
@@ -54,9 +54,9 @@ export class CountCustomersQueryHandler implements ICountCustomersQueryHandler {
     const found = await countUpToAsync(
       work.db,
       asOwner ? ownerScoped(userContext.dealerId, locationId, where) : where,
-      MAX_EXACT_TOTAL + 1,
+      mostCountedExactly(query) + 1,
     );
-    return found > MAX_EXACT_TOTAL ? { kind: "many", value: null } : { kind: "exact", value: found };
+    return found > mostCountedExactly(query) ? { kind: "many", value: null } : { kind: "exact", value: found };
   }
 }
 

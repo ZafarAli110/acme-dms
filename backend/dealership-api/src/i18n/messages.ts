@@ -50,6 +50,7 @@ export function englishMessage(key: string, args: MessageArgs = {}): string {
 /**
  * Fills `{name}` placeholders. `{property}`, the field a validation message is about, is shown under the name the
  * screens give it in that language (`surname` → "Surname", "Nom"); a field the catalog does not name stays as it is.
+ * A number is written as the language writes it.
  */
 export function fillPlaceholders(message: string, args: Record<string, unknown>, locale: string): string {
   const catalog = catalogFor(locale);
@@ -60,6 +61,10 @@ export function fillPlaceholders(message: string, args: Record<string, unknown>,
     const value = args[name];
     if (name === "property" && typeof value === "string") {
       return lookup(catalog.fields, value) ?? value;
+    }
+    if (typeof value === "number") {
+      // In the reader's language: 10,000 in English, 10 000 in French.
+      return value.toLocaleString(locale);
     }
     return Array.isArray(value) ? value.join(", ") : String(value);
   });

@@ -35,12 +35,15 @@ describe("catalogs", () => {
     }
   });
 
-  it("fills placeholders, names a field as its screen does, and leaves an unknown one as it is", () => {
+  it("fills placeholders, names a field as its screen does, writes a number as the language does, and leaves an unknown one as it is", () => {
     expect(englishMessage("errors.customerNotFound", { customerId: "c-1" })).toBe(
       "Customer c-1 was not found at this location.",
     );
     expect(fillPlaceholders(fr.validation.isNotEmpty, { property: "surname" }, "fr")).toBe("Nom est obligatoire.");
     expect(fillPlaceholders(en.validation.isNotEmpty, { property: "nickname" }, "en")).toBe("nickname is required.");
     expect(fillPlaceholders(en.validation.isNotEmpty, {}, "en")).toBe("{property} is required.");
+    // A number as each language writes it: the deepest row of a page by number (ACME-129).
+    expect(fillPlaceholders("{max}", { max: 10000 }, "en")).toBe("10,000");
+    expect(fillPlaceholders("{max}", { max: 10000 }, "fr")).toBe("10\u202f000");
   });
 });
