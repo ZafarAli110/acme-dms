@@ -17,7 +17,7 @@
 // that fell behind cannot hide it. The first --warm-up seconds (10) are sent but not counted (cold caches, the runtime
 // warming up), and a request that takes longer than --timeout ms (10,000) counts as failed: a person gives up too.
 //
-// What it sends, out of 100: customer list pages as the web asks for them (ACME-129: page 1, then Next and Previous by
+// What it sends, each kind in proportion to its weight: customer list pages as the web asks for them (ACME-129: page 1, then Next and Previous by
 // their cursors, the last page, now and then a jump by number), searches
 // (a surname, a misspelt one, part of a phone number), filters and sorts, one customer, recent customers, the parts
 // list, its count, one part, the stock value and who am I; with --writes, that share adds or edits a customer. The people are
@@ -163,7 +163,7 @@ function someCustomer(person: Person): KnownCustomer | undefined {
   return oneOf(person.place.customers);
 }
 
-/** What people do on a busy morning, and how often, out of 100. */
+/** What people do on a busy morning, and how often: each kind's share is its weight over all the weights. */
 /** Parts searches as the counter types them, over the large sample data's catalogue (ACME-123). */
 const PARTS_SEARCHES = [
   "brake pads front",
@@ -656,6 +656,9 @@ async function main(): Promise<void> {
           ...PAGE_HEADER,
           ...(call.body === undefined ? {} : { "content-type": "application/json" }),
           ...(call.ifMatch ? { "if-match": call.ifMatch } : {}),
+          // A save goes as the web sends it (ACME-125): one key per press of Save, so the test pays for the key's claim,
+          // its mark in the save's transaction and the kept answer. The test never sends a save again.
+          ...(call.method === "GET" ? {} : { "idempotency-key": crypto.randomUUID() }),
         },
         body: call.body === undefined ? null : JSON.stringify(call.body),
         signal: AbortSignal.timeout(options.timeoutMs),
