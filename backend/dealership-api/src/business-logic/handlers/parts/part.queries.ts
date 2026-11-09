@@ -159,12 +159,13 @@ export async function findMatchingPartIdsAsync(
     asc(parts.partNumber),
   ];
   // One more than the page says whether another follows, without counting.
-  const rows = await db
+  const stock = db
     .select({ id: parts.id })
     .from(partInventories)
     .innerJoin(parts, eq(parts.id, partInventories.partId))
-    .innerJoin(bins, eq(bins.id, partInventories.binId))
-    .where(partSearchWhere(scope, query, search))
+    .$dynamic();
+  const rows = await (needsBin(query) ? stock.innerJoin(bins, eq(bins.id, partInventories.binId)) : stock)
+    .where(partSearchWhere(db, scope, query, search))
     .orderBy(...listOrderBy(STOCKED_PART_COLUMNS, query, bestFirst, [parts.id]))
     .limit(pageSize + 1)
     .offset(pageOffset(page, pageSize));
@@ -179,12 +180,13 @@ export async function countMatchingPartsAsync(
   search: string,
   limit: number,
 ): Promise<number> {
-  const upTo = db
+  const stock = db
     .select({ one: sql`1` })
     .from(partInventories)
     .innerJoin(parts, eq(parts.id, partInventories.partId))
-    .innerJoin(bins, eq(bins.id, partInventories.binId))
-    .where(partSearchWhere(scope, query, search))
+    .$dynamic();
+  const upTo = (needsBin(query) ? stock.innerJoin(bins, eq(bins.id, partInventories.binId)) : stock)
+    .where(partSearchWhere(db, scope, query, search))
     .limit(limit)
     .as("up_to_limit");
   const [counted] = await db.select({ total: count() }).from(upTo);
@@ -280,18 +282,26 @@ function partSearchTerms(search: string) {
 
 /**
  * The rows a search matches, for the page and the count alike. Written for a `db` working as the tables' owner, so the
- * dealer, the location and live rows are written out, for the bin as for the part (a filter or sort may name the bin):
- * under row-level security no index could serve `@@` or LIKE, which are not leakproof (docs/standards/multi-tenancy.md).
+ * dealer, the location and live rows are written out, for the bin as for the part: under row-level security no index
+ * could serve `@@` or LIKE, which are not leakproof (docs/standards/multi-tenancy.md).
+ *
+ * The live bins are an array, as `liveBinStock` does under the policy, and the bins are joined only when the query sorts
+ * or filters by one. Joined, they made Postgres expect one bin at the location (Northside has 7) and walk its whole
+ * stock (24,234 rows, 73,000 pages, 40 ms for "brake pads front"); with the array it finds the matching parts through
+ * their indexes first (4,400 pages, 8 ms).
  */
-function partSearchWhere(scope: PartScope, query: ListQueryDto, search: string): SQL | undefined {
+function partSearchWhere(db: Database, scope: PartScope, query: ListQueryDto, search: string): SQL | undefined {
   const { holdsTyped, wordsQuery } = partSearchTerms(search);
+  const liveBins = db
+    .select({ id: bins.id })
+    .from(bins)
+    .where(and(eq(bins.dealerId, scope.dealerId), eq(bins.locationId, scope.locationId), notDeleted(bins)));
   return and(
     eq(parts.dealerId, scope.dealerId),
     eq(partInventories.locationId, scope.locationId),
-    eq(bins.locationId, scope.locationId),
+    sql`${partInventories.binId} = any(array(${liveBins}))`,
     notDeleted(parts),
     notDeleted(partInventories),
-    notDeleted(bins),
     wordsQuery === null ? holdsTyped : or(holdsTyped, sql`${parts.searchWords} @@ ${wordsQuery}`),
     listFilter(STOCKED_PART_COLUMNS, query),
   );
