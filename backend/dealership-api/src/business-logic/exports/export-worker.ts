@@ -230,8 +230,17 @@ export class ExportWorker implements OnApplicationBootstrap, BeforeApplicationSh
         .returning(done);
       const requeued = await work.db
         .update(exportJobs)
-        .set({ status: "queued", rows: 0, totalRows: null, firstRowAt: null, workerId: null, heartbeatAt: null })
-        .where(and(stale, lt(exportJobs.attempts, MAX_ATTEMPTS)))
+        .set({
+          status: "queued",
+          rows: 0,
+          totalRows: null,
+          firstRowAt: null,
+          workerId: null,
+          heartbeatAt: null,
+          queuedAt: now,
+        })
+        // Not one the user asked to cancel between the statement above and this one (the sweep's note N1).
+        .where(and(stale, lt(exportJobs.attempts, MAX_ATTEMPTS), isNull(exportJobs.cancelRequestedAt)))
         .returning(done);
       const failed = await work.db
         .update(exportJobs)

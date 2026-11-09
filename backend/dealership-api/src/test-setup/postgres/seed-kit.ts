@@ -149,6 +149,7 @@ export function seedKit(db: NodePgDatabase) {
         status: "queued",
         createdAt: SEEDED_AT,
         ...job,
+        queuedAt: job.queuedAt ?? job.createdAt ?? SEEDED_AT,
       })
       .returning();
     return row!;

@@ -108,7 +108,7 @@ export class ExportQueue implements IExportJobs, OnApplicationBootstrap, OnAppli
       .where(
         and(
           eq(exportJobs.status, "queued"),
-          lt(exportJobs.createdAt, now.subtract({ minutes: ExportQueue.UNCLAIMED_AFTER_MINUTES })),
+          lt(exportJobs.queuedAt, now.subtract({ minutes: ExportQueue.UNCLAIMED_AFTER_MINUTES })),
         ),
       )
       .returning({ id: exportJobs.id });
@@ -185,6 +185,7 @@ export class ExportQueue implements IExportJobs, OnApplicationBootstrap, OnAppli
       idempotencyKey,
       status: "queued",
       createdAt: now,
+      queuedAt: now,
     };
     const [inserted] = await work.db.insert(exportJobs).values(job).returning();
     const position = await this.queuePositionAsync(work.db, inserted!);

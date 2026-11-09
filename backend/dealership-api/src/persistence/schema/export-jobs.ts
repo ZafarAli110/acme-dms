@@ -42,6 +42,12 @@ export const exportJobs = snakeCase.table(
     /** Set by the API when the user cancels a running export; the worker stops at its next progress check. */
     cancelRequestedAt: instant(),
     createdAt: instant().notNull(),
+    /**
+     * When it last became queued: made, or taken back from a worker that stopped. "No worker took it" counts from here,
+     * not from `createdAt`, so a job that waited in a long line or was taken back is not failed while workers run (the
+     * state sweep's F7).
+     */
+    queuedAt: instant().notNull(),
     startedAt: instant(),
     /** When the first row was written: throughput counts from here, not from the wait for the sort. */
     firstRowAt: instant(),

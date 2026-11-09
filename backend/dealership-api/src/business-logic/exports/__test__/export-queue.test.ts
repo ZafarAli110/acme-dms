@@ -167,4 +167,19 @@ describe("ExportQueue", () => {
     expect(staleRow).toMatchObject({ status: "failed", error: "exports.failure.noWorker" });
     expect(recentRow?.status).toBe("queued");
   });
+
+  // The state sweep's F7: half an hour counts from when the job last became queued, not from when it was made.
+  it("leaves waiting an old export that was queued again lately, taken back from a worker that stopped", async () => {
+    const takenBack = await database.seed.addExportJobAsync({
+      locationId: NORTHSIDE,
+      createdAt: TEST_NOW.subtract({ minutes: 40 }),
+      queuedAt: TEST_NOW.subtract({ minutes: 2 }),
+      attempts: 1,
+    });
+
+    await new ExportQueue(database.unitOfWorkFactory, fixedClock(), readSettings({})).failUnclaimedAsync();
+
+    const [row] = await database.db.select().from(exportJobs).where(eq(exportJobs.id, takenBack.id));
+    expect(row?.status).toBe("queued");
+  });
 });

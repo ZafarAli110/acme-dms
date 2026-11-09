@@ -1,0 +1,37 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "817800aa-b658-41f7-9c12-7d7592d88985",
+  "prevIds": ["59d42a7d-8c03-4299-88fc-ccc77c7535be"],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": ["column", "public", "export_jobs", "queued_at"],
+      "writes": [
+        "s|col|public.export_jobs.queued_at",
+        "n|col|public.export_jobs.queued_at",
+        "e|col|public.export_jobs.queued_at"
+      ],
+      "reads": ["n|tbl|public.export_jobs", "n|sch|public"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "export_jobs",
+        "name": "queued_at",
+        "type": "timestamptz",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}
