@@ -279,7 +279,9 @@ In the same terminal, inside the `acme-dms` folder:
   It uses Homebrew (installing it first if needed) for fnm, the .NET SDK and Docker Desktop, the official installers
   for Bun and the Aspire CLI, and adds the `PATH` and fnm lines to `~/.zshrc` (or `~/.bash_profile` for bash). Its
   last step trusts the .NET development certificate (`dotnet dev-certs https --trust`), so the DMS opens over HTTPS
-  with no browser warning. It may ask for your password.
+  with no browser warning. It may ask for your password. The first `bun run dev` then copies the certificate's key
+  out of your keychain for the web server, and macOS may ask to allow that: choose **Always Allow** (it does not ask
+  again; the start says so before it asks).
 
 What it installs:
 

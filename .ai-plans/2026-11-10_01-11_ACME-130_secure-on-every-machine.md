@@ -245,3 +245,11 @@ None: Q1 is answered (D4).
   (the runner's null) from an untrusted certificate: `NO_DOTNET_MESSAGE` names the .NET SDK and how to get it, never a
   `dotnet` command. Test turned round (the message, nothing written); run for real with only `bun` on the PATH: the
   new message, exit 1. scripts' typecheck and lint clean.
+- 2026-11-10 02:11 Verifier, second round: dev mode PASS (its own run: page and `/api` HTTP/2, `ssl_verify=0`, the `__Host-` cookie,
+  no HSTS, every-page and sign-out 10/10; outputs in its scratch folder); the load figure FAIL again (its second
+  `--through-web`: p95 316, p99 670 ms, Postgres peak 294%, 523 in flight: the laptop does not explain it). It also
+  found the first dev start waiting about 4½ minutes on macOS's keychain dialog inside the certificate export. Fixed:
+  `check-certificate` exports only when `.certs/` does not already hold the trusted certificate (thumbprint from
+  `--check`'s output against the file's), and says so before it does (on macOS: "choose Always Allow"); 7 tests (two
+  new: no export when it is there; again when renewed or the key is gone); for real here: 0.5 s, silent, `.certs/`
+  untouched. README: the one dialog at the first start.
