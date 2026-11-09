@@ -11,9 +11,8 @@
 **Design:** Follows: the customer and part forms' save alert (`ErrorAlert during="save"`) and the edit forms'
 "changed elsewhere" alert; no new screen
 
-**Now:** Done: steps 1, 2, 5; step 3's code and step 4's specs written · Next: rebuild and restart the running system
-(it runs the `start:prod` build from before ACME-125), then step 3's browser check, step 4's e2e, step 6 · Blocked:
-the restart is Zafar Ali's to run or allow
+**Now:** Done: steps 1–5, on the running system (`start:prod --load-test`, rebuilt) · Next: step 6, `verify-ticket` ·
+Blocked: None
 
 ## Requirement
 
@@ -154,9 +153,9 @@ is claimed or saved.
 - [x] 1. The record: schema, migration, `idempotency-records.ts`, sweeper, `schema.test.ts` → verify: its tests
 - [x] 2. The interceptor, the commit marker, the detached claim and release, problem types and messages → verify:
       interceptor tests (all 7 writes, busy, after-commit failure, takeover, caller gone)
-- [ ] 3. The web: `useSaveKey`, the customer forms, the part form and dialog, the messages (en, fr) → verify: unit
+- [x] 3. The web: `useSaveKey`, the customer forms, the part form and dialog, the messages (en, fr) → verify: unit
       tests; check-in-browser at 1440 and 1024
-- [ ] 4. End to end: answers lost after and before the server, a changed second save, a double click → verify: e2e
+- [x] 4. End to end: answers lost after and before the server, a changed second save, a double click → verify: e2e
 - [x] 5. Docs: `api-errors.md`, `contracts.md`, `database.md` → verify: `docs:check`
 - [ ] 6. `verify-ticket` → `docs/evidence/ACME-125.md`
 
@@ -217,3 +216,12 @@ during="save"` now means a keyed save (its only user is the part dialog). Web ty
   photo → one photo, no 412; dialog → one part), typecheck and lint clean, not yet run. Step 5: `contracts.md`
   (Idempotency-Key answers), `api-errors.md` (three types, extension members, `@Idempotent` first), `database.md`
   (technical table), `web-architecture.md` (the form's key); `docs:check` 53/53.
+- 2026-11-10 00:46 Rebuilt dealership-api and restarted `start:prod --load-test` (Zafar Ali: "do it yourself"); all resources
+  healthy, `idempotency_records` migrated. `bun run api` takes `--idempotency-key` now: as maria a bin twice with one
+  key → 201, then 201 `idempotent-replayed: true`, same id, one bin; a changed body → 409 save-went-through
+  (`resource: null`); `bad key` → 422; tom with the same key → his own 201. sam has no `parts.write` (403 before the
+  key is looked at). Step 4: `save-again.spec.ts` 6/6, whole e2e 48/48. Step 3: screenshots at 1440 and 1024 of the
+  customer form ("could not confirm", fields kept), the customer opened after a changed save ("Your first save went
+  through", first phone shown), the part dialog's alert, the part page's alert and its went-through: messages above
+  the form, nothing overlapping or cut off. A first 1024 shot doubled the header (taken mid-resize; retaken at a set
+  width: clean); Save looked disabled in one shot taken while the page revalidated (settled: enabled).

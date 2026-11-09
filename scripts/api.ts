@@ -6,6 +6,7 @@
 //   bun run api as sam --body GET /api/dealership/v1/customers/recent | jq '.[].id'
 //   bun run api as rita --if-match 3 PUT /api/dealership/v1/customers/<id> '{…every field…}'
 //   bun run api as rita --lang fr POST /api/dealership/v1/customers '{"surname":""}'
+//   bun run api as sam --idempotency-key try-1 POST /api/dealership/v1/bins '{…}'   (twice: added once, ACME-125)
 //
 // It signs in through identity-api, starts at the user's default location unless --location is given, and prints the
 // status, the correlation id and the JSON body. With --body, standard output is the JSON body alone, ready for jq; the
@@ -17,7 +18,7 @@ import { DEMO_USERS, callAsync, resourceUrl, signInAsync } from "./running-syste
 
 function usage(message: string): never {
   console.error(
-    `${message}\n\nUsage: bun run api as <${Object.keys(DEMO_USERS).join("|")}> [--location <name|code>] [--body] [--if-match <version|*>] [--lang <en|fr>] <METHOD> <path> [json-body]`,
+    `${message}\n\nUsage: bun run api as <${Object.keys(DEMO_USERS).join("|")}> [--location <name|code>] [--body] [--if-match <version|*>] [--idempotency-key <key>] [--lang <en|fr>] <METHOD> <path> [json-body]`,
   );
   process.exit(1);
 }
@@ -52,6 +53,12 @@ while (rest[0]?.startsWith("--")) {
     }
     headers["if-match"] = value === "*" ? "*" : `"${value.replaceAll('"', "")}"`;
     rest = rest.slice(2);
+  } else if (option === "--idempotency-key") {
+    if (!value) {
+      usage("--idempotency-key needs a key, such as try-1.");
+    }
+    headers["idempotency-key"] = value;
+    rest = rest.slice(2);
   } else {
     usage(`Unknown option ${option}.`);
   }
@@ -76,7 +83,8 @@ const report = bodyOnly ? console.error : console.log;
 report(`${method.toUpperCase()} ${path} as ${user} @ ${location.name} (${location.role})`);
 report(
   `→ ${response.status} ${response.statusText}   correlation-id: ${response.headers.get("x-correlation-id") ?? "-"}` +
-    (response.headers.get("etag") ? `   etag: ${response.headers.get("etag")}` : ""),
+    (response.headers.get("etag") ? `   etag: ${response.headers.get("etag")}` : "") +
+    (response.headers.get("idempotent-replayed") ? "   idempotent-replayed: true" : ""),
 );
 try {
   console.log(JSON.stringify(JSON.parse(text), null, 2));
