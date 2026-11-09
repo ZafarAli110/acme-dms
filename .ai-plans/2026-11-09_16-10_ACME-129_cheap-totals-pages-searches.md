@@ -211,6 +211,8 @@ None
 - D13 A search's or filter's total is exact only while every match fits on the first page (25), else "of many", as the
   ticket says; the footer shows the exact number once the last match is on screen (Zafar Ali, 9 Nov, from the
   verifier's finding; it was exact up to 100).
+- D14 A search of one name word, with no column sort chosen, lists the exact names (surname or first name is the word)
+  first, then every other match, each in name order; the export follows the same order (Zafar Ali, 9 Nov).
 - D7 One ticket, not three: the product owner asked for one result (a fifth of the work), and phone search and the
   cache each touch the totals' and the list's files; each step is its own commit (Claude).
 
@@ -338,3 +340,11 @@ None
   polyfill's share of one API copy at 800/s 5.4% → 1.2% of its samples, the copy busy 39% → 35%. What is left in the
   API is spread thin (OpenTelemetry about 10% of its work, Drizzle 8%, pg 8%, jose 4%); the gateway, at about 1.1 ms
   a request and near one core at 800/s, needs `dotnet-trace` to see inside (not installed).
+- 2026-11-09 23:10 Exact names first (D14): `best-first.ts` reads them from `ix_customers_surname_ci` and
+  `ix_customers_first_name_ci` in name order and merges (one `or` walked the name index: 240 ms for "moore"); the rest
+  as before, the exact names left out, its path chosen only when a page reaches it; cursors carry the group; a page by
+  number counts the exact names past page 1; the export's order leads with the group. SQL at Northside: ackroyd 17 →
+  0.13 ms, moore 8.7 → 0.14 ms; through the API 29.6 → 5.1 ms, 17.7 → 4.1 ms. 800/s on mains: Postgres 213% → 141%,
+  p95 82 → 42 ms; trace-breakdown p50 7, p95 32, p99 61 ms, no database span over 50 ms. Tests: a best-first handler
+  test (order, cursor walks both ways, pages by number, a column sort, the export), a plan test for both indexes; 90
+  customer and export tests, e2e 42 of 42. 1,000/s again killed the gateway on macOS (not measured).

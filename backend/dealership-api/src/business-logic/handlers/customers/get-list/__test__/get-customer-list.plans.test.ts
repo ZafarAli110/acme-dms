@@ -112,6 +112,14 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
       select ${NORTHWIND}::uuid, ${NORTHSIDE}::uuid, 'Hill' || g, 'Crest' || g, 'Hillcrest', 'active', now(),
              ${TEST_USER_ID}::uuid, now(), ${TEST_USER_ID}::uuid
       from generate_series(1, 3) as g`);
+    // A surname and a first name of letters alone, as a name search ranks by (ACME-129's exact names first).
+    await database.db.execute(sql`
+      insert into customers (dealer_id, location_id, first_name, surname, status, created_at, created_by, updated_at,
+                             updated_by)
+      select ${NORTHWIND}::uuid, ${NORTHSIDE}::uuid, case when g <= 40 then 'First' || g else 'Ackroyd' end,
+             case when g <= 40 then 'Ackroyd' else 'Surname' || g end, 'active', now(), ${TEST_USER_ID}::uuid, now(),
+             ${TEST_USER_ID}::uuid
+      from generate_series(1, 60) as g`);
     // As autovacuum would on a real table: statistics for the planner, and the visibility map index-only scans need.
     await database.db.execute(sql`vacuum analyze customers`);
 
@@ -346,9 +354,24 @@ describe("the customer list's plans at a big location (ACME-110)", () => {
   it("pages a search nobody matches through the trigram index, never walking the location in name order", async () => {
     const plans = await plansAsync({ page: 1, pageSize: 25, search: "Zqxv" });
 
-    const page = plans.find((plan) => plan.isPage && !/"id" in/i.test(recorded[plans.indexOf(plan)]?.text ?? ""))!;
-    expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_list_by_name")).toBe(false);
-    expect(page.nodes.some((node) => node["Index Name"] === "ix_customers_search_location")).toBe(true);
+    // The exact names' read (none here) and the other matches' read: neither walks the name order.
+    const pages = plans.filter((plan) => plan.isPage && !/"id" in/i.test(plan.text));
+    expect(indexesUsed(pages)).not.toContain("ix_customers_list_by_name");
+    expect(indexesUsed(pages)).toContain("ix_customers_search_location");
+  });
+
+  // ACME-129: a search of one name word shows the customers with that surname or first name first, each read from its
+  // own name index in name order and merged; one condition with `or` walked the whole name index (240 ms for "moore").
+  it("reads a name search's exact names from the surname and first-name indexes, in their order", async () => {
+    const plans = await plansAsync({ page: 1, pageSize: 25, search: "ackroyd" });
+
+    const exact = plans.find((plan) => plan.isPage && /union/i.test(plan.text));
+    expect(exact).toBeDefined();
+    expect(indexesUsed([exact!])).toEqual(
+      expect.arrayContaining(["ix_customers_surname_ci", "ix_customers_first_name_ci"]),
+    );
+    expect(indexesUsed([exact!])).not.toContain("ix_customers_list_by_name");
+    expect(indexesUsed([exact!])).not.toContain("ix_customers_search_location");
   });
 
   it("still pages a search with more than 10,000 matches", async () => {

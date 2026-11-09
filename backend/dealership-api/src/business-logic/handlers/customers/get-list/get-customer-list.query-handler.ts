@@ -15,6 +15,7 @@ import {
 import { SETTINGS, type Settings } from "#settings/settings";
 import {
   CursorCodec,
+  type CursorRow,
   type KeyedRow,
   type KeysetMove,
   type SearchPath,
@@ -23,6 +24,7 @@ import {
   keysetMoveOf,
   readKeysetPageAsync,
   type SortSpec,
+  segments,
   sortSpecOf,
 } from "../../../list-query/keyset";
 import {
@@ -37,15 +39,15 @@ import { escapeLike } from "../../../list-query/like-pattern";
 import { MAX_LIST_DEPTH, pageOffset } from "../../../list-query/page-offset";
 import { requireLocation } from "../../../user-context/require-location";
 import { CUSTOMER_LIST_ITEM_COLUMNS, toCustomerListItemDto } from "../customer.mapper";
+import {
+  bestFirstWord,
+  exactNamesFirst,
+  MIN_CLOSE_LETTERS,
+  NAME_WORD,
+  othersOf,
+  readBestFirstPageAsync,
+} from "./best-first";
 import { type CloseName, closeNamesAsync, isKnownNameAsync } from "./close-names";
-
-/** A search shorter than this stays exact: too few letters to compare spellings (ACME-120). */
-const MIN_CLOSE_LETTERS = 3;
-/**
- * Only a word of letters (a name may have ' and -) is compared with names: anything with @, a dot, a digit or a space
- * is part of an email or a phone, or several words, and stays exact as today (Zafar Ali, 8 Nov).
- */
-const NAME_WORD = /^[\p{L}'-]+$/u;
 /** At most this many customers a close name, so one common name cannot fill the page (the verifier's "hpoper"). */
 const MAX_PER_CLOSE_NAME = 10;
 
@@ -100,6 +102,15 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
       search: query.search
         ? { text: query.search, dealerId: userContext.dealerId, locationId, filtered: Boolean(query.filterField) }
         : null,
+      bestFirst: (() => {
+        const word = bestFirstWord(query);
+        return word
+          ? {
+              word,
+              scope: ownerScoped(userContext.dealerId, locationId, listFilter(CUSTOMER_LIST_COLUMNS, query)),
+            }
+          : null;
+      })(),
     };
 
     // The page's ids first, from an index alone, then only those rows (ACME-110).
@@ -211,7 +222,10 @@ export class GetCustomerListQueryHandler implements IGetCustomerListQueryHandler
     searching: boolean,
   ): Promise<FoundPage> {
     await using work = await this._unitOfWorkFactory.beginAsync({ readOnly: true, asOwner: true });
-    return await findPageAsync(work.db, ownerScoped(dealerId, locationId, where), asked, searching);
+    const scoped = ownerScoped(dealerId, locationId, where);
+    return asked.bestFirst
+      ? await findBestFirstPageAsync(work.db, scoped, asked, asked.bestFirst)
+      : await findPageAsync(work.db, scoped, asked, searching);
   }
 }
 
@@ -226,6 +240,8 @@ interface AskedPage {
   codec: CursorCodec;
   /** The search, for choosing its path; null without one. */
   search: SearchScope | null;
+  /** A search of one name word in the list's own order: its exact names first (`best-first.ts`); null otherwise. */
+  bestFirst: { word: string; scope: SQL | undefined } | null;
 }
 
 /** A page's rows (ids and sort keys), the rows its next and previous cursors start from, and a search's path. */
@@ -288,6 +304,54 @@ async function findPageAsync(
     previous: page > 1 ? (onPage[0] ?? null) : null,
     path,
   };
+}
+
+/**
+ * A best-first search's page (ACME-129): the exact names from the name indexes, then the other matches the way any
+ * search reads them, its path chosen when they are first needed and carried by the cursors. A "few" path turns the
+ * indexes off for its read only: the exact names need them.
+ */
+async function findBestFirstPageAsync(
+  db: Database,
+  where: SQL | undefined,
+  asked: AskedPage,
+  bestFirst: { word: string; scope: SQL | undefined },
+): Promise<FoundPage> {
+  const { spec, move, page, pageSize } = asked;
+  const cursor = move && !("last" in move) ? asked.codec.decode("after" in move ? move.after : move.before) : null;
+  let path: SearchPath | null = cursor?.path ?? null;
+  const others = othersOf(bestFirst.word, where);
+  const readOthersAsync = async (from: CursorRow | null, reversed: boolean, limit: number, offset: number) => {
+    path ??= await searchPathAsync(db, where, asked.search);
+    const few = path === "few";
+    if (few) {
+      await db.execute(sql`set local enable_indexscan = off`);
+      await db.execute(sql`set local enable_indexonlyscan = off`);
+    }
+    try {
+      const [run] = segments(spec, from, reversed);
+      const rows = await db
+        .select(keyedFields(spec))
+        .from(customers)
+        .where(and(others, run?.where))
+        .orderBy(...(run?.orderBy ?? []))
+        .limit(limit)
+        .offset(offset);
+      return rows.map((row) => keyedRowOf(spec, row));
+    } finally {
+      if (few) {
+        await db.execute(sql`set local enable_indexscan = on`);
+        await db.execute(sql`set local enable_indexonlyscan = on`);
+      }
+    }
+  };
+  const found = await readBestFirstPageAsync(
+    db,
+    { word: bestFirst.word, scope: bestFirst.scope, readOthersAsync },
+    spec,
+    { move, cursor, page, offset: move ? 0 : pageOffset(page, pageSize), pageSize },
+  );
+  return { ...found, path };
 }
 
 /**
@@ -420,7 +484,15 @@ export function customerSortSpec(query: ListQueryDto): SortSpec {
 
 /** The list's order: the query's sort, else by name; always ending with the id, so equal values keep one order. */
 export function customerListOrderBy(query: ListQueryDto): SQL[] {
-  return listOrderBy(CUSTOMER_LIST_COLUMNS, query, [asc(customers.surname), asc(customers.firstName)], [customers.id]);
+  const order = listOrderBy(
+    CUSTOMER_LIST_COLUMNS,
+    query,
+    [asc(customers.surname), asc(customers.firstName)],
+    [customers.id],
+  );
+  // A search of one name word: its exact names first, as the list shows them (`best-first.ts`); the export follows.
+  const word = bestFirstWord(query);
+  return word ? [asc(exactNamesFirst(word)), ...order] : order;
 }
 
 /** A match anywhere in the name, company or email: one text, so one trigram index serves it (ACME-110). */

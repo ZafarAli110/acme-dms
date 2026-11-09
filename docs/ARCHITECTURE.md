@@ -229,8 +229,14 @@ sql:top`). A search's page still counts first, because its count decides whether
   with the location's names (`customer_names`: first names, surnames, company words; 6,980 for 2.25 million customers),
   kept in step by statement-level triggers, so a bulk insert updates it once. Close names cost about 3 ms; their
   customers come through the search's own trigram index.
-- **Past capacity, answer quickly and do the saves first (ACME-121).** Each dealership-api copy has 5 connections, as
-  many queries as Postgres's cores run well once there are 4 copies (more only run slower), and keeps 2 of them for saves (any request but GET and HEAD, its reads included), so lists can never take them all; a list
+- **A name search shows the exact names first (ACME-129).** A search of one name word, in the list's own order,
+  lists the customers whose surname or first name is that word first, then every other match (company, email, a
+  longer name), each in name order; pages, cursors and the export follow it. A common surname has about 1,900
+  customers at Northside and 8,400 matches in all, and sorting them all for each page took 9–17 ms; the exact names
+  come from the surname and first-name indexes in their own order (0.1 ms), and the rest is read only when a page
+  reaches it (`best-first.ts`). A column sort the user chooses keeps the plain order.
+- **Past capacity, answer quickly and do the saves first (ACME-121).** Each dealership-api copy has 12 connections
+  (`DATABASE_MAX_CONNECTIONS`; ACME-129 raised it from 5 when queries became short), and keeps 4 of them for saves (any request but GET and HEAD, its reads included), so lists can never take them all; a list
   waits at most 1.5 s for a connection and a save 5 s, then is answered 503 `urn:acme:error:busy` with `Retry-After`
   before anything is written. When a caller goes away (a closed page, a client's timeout), its running statement is
   cancelled, so the queue holds no answers nobody will read. The health check (readiness) and the cancels have a
