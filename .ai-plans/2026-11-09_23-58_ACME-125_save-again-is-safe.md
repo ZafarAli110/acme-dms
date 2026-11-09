@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-09 23:58
 
-**Status:** Waiting on answers
+**Status:** Draft
 
 **Ticket:** ACME-125 · **Branch:** final
 
@@ -11,8 +11,9 @@
 **Design:** Follows: the customer and part forms' save alert (`ErrorAlert during="save"`) and the edit forms'
 "changed elsewhere" alert; no new screen
 
-**Now:** Done: research, interview, plan, architect round (CHANGES, 10 findings, fixed) · Next: Zafar Ali's go-ahead,
-then steps 1–6 run to the end and reported (his answer, 9 Nov) · Blocked: None
+**Now:** Done: research, interview, plan, architect round (CHANGES, 10 findings, fixed), go-ahead from Zafar Ali (10
+Nov) · Next: next session: load every row of "Load before building", tick it, set In progress, then steps 1–6 to the
+end and report · Blocked: None
 
 ## Requirement
 
@@ -186,3 +187,4 @@ None: the interview's answers are in Requirement and D1–D2.
   release and the answer detached, the answer never "busy"; a box for the first save never arriving; e2e says how an
   answer is lost; the real cost per save; `database.md` and `schema.test.ts` added; why one ticket (D7); D3 moved here.
   Also from the NestJS checklist: `Idempotent-Replayed: true` on a replay.
+- 2026-11-10 00:20 Go-ahead from Zafar Ali; the build starts next session at step 1 (after loading the rows).
