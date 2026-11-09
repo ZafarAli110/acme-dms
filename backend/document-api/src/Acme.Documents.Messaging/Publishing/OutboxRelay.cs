@@ -15,7 +15,9 @@ namespace Acme.Documents.Messaging.Publishing;
 
 /// <summary>
 /// Publishes outbox messages to RabbitMQ in the order they were written, and marks them published only once the
-/// broker has confirmed them. If publishing fails, the messages stay in the outbox and are retried.
+/// broker has confirmed them. If publishing fails, the messages stay in the outbox and are retried. Each batch is
+/// claimed (<c>FOR UPDATE SKIP LOCKED</c>), so two instances (a rolling deploy) never publish one row twice (the state
+/// sweep's F15).
 /// </summary>
 public sealed partial class OutboxRelay : BackgroundService
 {
@@ -56,10 +58,10 @@ public sealed partial class OutboxRelay : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<DocumentsDbContext>();
+        // The batch is this instance's until the transaction ends; another instance skips it and takes the next rows.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var pending = await dbContext.OutboxMessages
-            .Where(m => m.PublishedAt == null)
-            .OrderBy(m => m.OccurredAt)
-            .Take(50)
+            .FromSql($"SELECT * FROM outbox_messages WHERE published_at IS NULL ORDER BY occurred_at LIMIT 50 FOR UPDATE SKIP LOCKED")
             .ToListAsync(cancellationToken);
 
         if (pending.Count == 0)
@@ -67,6 +69,19 @@ public sealed partial class OutboxRelay : BackgroundService
             return;
         }
 
+        try
+        {
+            await PublishAsync(dbContext, pending, cancellationToken);
+        }
+        finally
+        {
+            // What the broker confirmed is kept even when a later message fails: it is never sent again.
+            await transaction.CommitAsync(CancellationToken.None);
+        }
+    }
+
+    private async Task PublishAsync(DocumentsDbContext dbContext, List<Persistence.Entities.OutboxMessage> pending, CancellationToken cancellationToken)
+    {
         await using var channel = await _rabbitMq.CreateChannelAsync(publisherConfirms: true, cancellationToken);
         foreach (var message in pending)
         {
