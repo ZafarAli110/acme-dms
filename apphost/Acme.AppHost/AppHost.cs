@@ -191,6 +191,16 @@ if (productionLike)
         builder.CreateResourceBuilder(service)
             .WithEnvironment("LOG_LEVEL", "warn")
             .WithEnvironment("Logging__LogLevel__Default", "Warning");
+        // A load test keeps one request's trace in ten, as production would: every request's spans (about ten SQL
+        // statements each) sent to the dashboard on the same machine is work production does not do. The gateway
+        // decides for the request; the services behind it follow its decision (parent-based). Both the .NET and the
+        // Node SDK read these.
+        if (loadTest)
+        {
+            builder.CreateResourceBuilder(service)
+                .WithEnvironment("OTEL_TRACES_SAMPLER", "parentbased_traceidratio")
+                .WithEnvironment("OTEL_TRACES_SAMPLER_ARG", "0.1");
+        }
     }
 }
 
